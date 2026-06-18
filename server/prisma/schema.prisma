@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  phone     String?
+  address   String?
+  interests String?
+  password  String
+  role      String   @default("AUTHOR") // AUTHOR, ADMIN, CUSTOMER
+  createdAt DateTime @default(now())
+}
+
+
+model Author {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  phone     String
+  bio       String
+  photoUrl  String?
+  status    String   @default("Pending") // Pending, Approved
+  books     Book[]
+  createdAt DateTime @default(now())
+}
+
+model Book {
+  id        Int      @id @default(autoincrement())
+  title     String
+  genre     String
+  subGenre  String?
+  synopsis  String
+  pages     Int?
+  mrp       Float
+  coverUrl  String?
+  status    String   @default("Pending") // Pending, Approved
+  authorId  Int
+  author    Author   @relation(fields: [authorId], references: [id])
+  orderItems OrderItem[]
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id                Int         @id @default(autoincrement())
+  customerName      String
+  customerEmail     String?
+  customerPhone     String?
+  address           String?
+  amount            Float
+  paymentScreenshot String?
+  items             OrderItem[]
+  createdAt         DateTime    @default(now())
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bookId    Int
+  book      Book     @relation(fields: [bookId], references: [id])
+  quantity  Int      @default(1)
+  status    String   @default("Pending Verification") // Pending Verification, Approved, Dispatched, Completed
+  createdAt DateTime @default(now())
+}
+
+model ContactInquiry {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model GalleryEvent {
+  id          Int      @id @default(autoincrement())
+  location    String
+  place       String
+  city        String
+  date        DateTime
+  duration    String
+  authors     Int
+  booksSold   Int
+  type        String
+  description String
+  photoUrl    String
+  createdAt   DateTime @default(now())
+}

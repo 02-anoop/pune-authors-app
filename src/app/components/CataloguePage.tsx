@@ -19,6 +19,7 @@ export function CataloguePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<number[]>([]);
   const [books, setBooks] = useState<any[]>([]);
+  const userRole = localStorage.getItem("userRole");
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/books`)
@@ -52,10 +53,12 @@ export function CataloguePage() {
             </div>
 
             {/* Cart indicator */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#1a1a2e", color: "#fff", padding: "0.6rem 1rem", borderRadius: 10, cursor: "pointer" }}>
-              <ShoppingCart size={16} />
-              <span style={{ fontSize: 14, fontWeight: 600 }}>{cart.length} in cart</span>
-            </div>
+            {userRole !== 'AUTHOR' && userRole !== 'ADMIN' && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#1a1a2e", color: "#fff", padding: "0.6rem 1rem", borderRadius: 10, cursor: "pointer" }}>
+                <ShoppingCart size={16} />
+                <span style={{ fontSize: 14, fontWeight: 600 }}>{cart.length} in cart</span>
+              </div>
+            )}
           </div>
 
           {/* Search + Filter row */}
@@ -144,7 +147,7 @@ export function CataloguePage() {
                 >
                   {/* Cover */}
                   <div style={{ position: "relative", height: 220, background: "#f7f7f9", overflow: "hidden" }}>
-                    <img src={book.coverUrl || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=420&fit=crop"} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={book.coverUrl ? (book.coverUrl.startsWith('http') ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=420&fit=crop"} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     {gMeta && (
                       <div style={{ position: "absolute", top: 10, left: 10, background: gMeta.bg, color: gMeta.color, border: "1px solid " + gMeta.border, fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, padding: "0.2rem 0.5rem", borderRadius: 5, letterSpacing: "0.05em" }}>
                         {book.genre}
@@ -178,27 +181,29 @@ export function CataloguePage() {
                         <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 800, color: "#1a1a2e" }}>₹{book.mrp}</span>
                         <span style={{ fontSize: 11, color: "#6b6b80", marginLeft: 4 }}>MRP</span>
                       </div>
-                      <button
-                        onClick={() => addToCart(book.id)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.4rem",
-                          background: inCart ? gMeta.color : "#1a1a2e",
-                          color: "#fff",
-                          border: "none",
-                          padding: "0.5rem 1rem",
-                          borderRadius: 8,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          fontFamily: "var(--font-body)",
-                          transition: "background 0.15s",
-                        }}
-                      >
-                        <ShoppingCart size={13} />
-                        {inCart ? "In Cart" : "Click to Buy"}
-                      </button>
+                      {userRole !== 'AUTHOR' && userRole !== 'ADMIN' && (
+                        <button
+                          onClick={() => addToCart(book.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                            background: inCart ? gMeta.color : "#1a1a2e",
+                            color: "#fff",
+                            border: "none",
+                            padding: "0.5rem 1rem",
+                            borderRadius: 8,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            fontFamily: "var(--font-body)",
+                            transition: "background 0.15s",
+                          }}
+                        >
+                          <ShoppingCart size={13} />
+                          {inCart ? "In Cart" : "Click to Buy"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

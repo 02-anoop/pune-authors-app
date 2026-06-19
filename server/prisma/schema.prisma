@@ -27,8 +27,11 @@ model Author {
   phone     String
   bio       String
   photoUrl  String?
+  whatsapp  String?
   status    String   @default("Pending") // Pending, Approved
   books     Book[]
+  eventRegistrations EventRegistration[]
+  formResponses      FormResponse[]
   createdAt DateTime @default(now())
 }
 
@@ -41,6 +44,10 @@ model Book {
   pages     Int?
   mrp       Float
   coverUrl  String?
+  stock     Int      @default(0)
+  airportStock Int   @default(0)
+  fairStock Int      @default(0)
+  overpriced Boolean @default(false)
   status    String   @default("Pending") // Pending, Approved
   authorId  Int
   author    Author   @relation(fields: [authorId], references: [id])
@@ -56,6 +63,7 @@ model Order {
   address           String?
   amount            Float
   paymentScreenshot String?
+  status            String      @default("Pending Verification")
   items             OrderItem[]
   createdAt         DateTime    @default(now())
 }
@@ -68,6 +76,7 @@ model OrderItem {
   book      Book     @relation(fields: [bookId], references: [id])
   quantity  Int      @default(1)
   status    String   @default("Pending Verification") // Pending Verification, Approved, Dispatched, Completed
+  trackingNumber String?
   createdAt DateTime @default(now())
 }
 
@@ -92,4 +101,50 @@ model GalleryEvent {
   description String
   photoUrl    String
   createdAt   DateTime @default(now())
+}
+
+model Activity {
+  id        Int      @id @default(autoincrement())
+  name      String
+  date      String
+  city      String
+  charges   Float
+  type      String   // 'Literary Events', 'Book Fairs', 'Flybraries', 'Cafe'
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+  registrations EventRegistration[]
+}
+
+model EventRegistration {
+  id                Int      @id @default(autoincrement())
+  authorId          Int
+  author            Author   @relation(fields: [authorId], references: [id])
+  activityId        Int
+  activity          Activity @relation(fields: [activityId], references: [id])
+  booksIds          String   // JSON string of book IDs registered for this event
+  paymentScreenshot String?
+  amount            Float
+  status            String   @default("Pending Verification") // Pending Verification, Approved
+  createdAt         DateTime @default(now())
+}
+
+model FormTemplate {
+  id          Int      @id @default(autoincrement())
+  title       String
+  type        String   @default("Literary Events")
+  description String?
+  fields      Json     // Array of field definitions
+  createdAt   DateTime @default(now())
+  responses   FormResponse[]
+}
+
+model FormResponse {
+  id             Int          @id @default(autoincrement())
+  formTemplateId Int
+  authorId       Int
+  answers        Json         // Key-value pairs of responses
+  createdAt      DateTime     @default(now())
+  
+  formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id])
+  author         Author       @relation(fields: [authorId], references: [id])
 }

@@ -1,516 +1,1231 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { AlertTriangle, TrendingDown, Search, Filter, Download, CheckCircle, Image as ImageIcon } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { 
+  Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search, 
+  Eye, Edit, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle, 
+  TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
+  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon
+} from 'lucide-react';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
+} from 'recharts';
+import { useNavigate } from 'react-router';
 
-const genreConfig = {
-  NF: { color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
-  F: { color: "#db2777", bg: "#fdf2f8", border: "#fbcfe8" },
-  P: { color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  C: { color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
-};
-
-type Genre = keyof typeof genreConfig;
-
-interface BookStock {
-  id: number;
-  title: string;
-  author: string;
-  genre: Genre;
-  qtySold: number;
-  qtyAirport1: number;
-  qtyAirport2: number;
-  qtyAirport3: number;
-  qtyPuneFair: number;
-  qtyGoaFair: number;
-  inStock: number;
-}
-
-const stockData: BookStock[] = [
-  { id: 1, title: "The Forgotten Equation", author: "Dr. Anita Rao", genre: "NF", qtySold: 187, qtyAirport1: 20, qtyAirport2: 15, qtyAirport3: 10, qtyPuneFair: 25, qtyGoaFair: 12, inStock: 31 },
-  { id: 2, title: "Monsoon Letters", author: "Priya Deshmukh", genre: "F", qtySold: 143, qtyAirport1: 18, qtyAirport2: 12, qtyAirport3: 8, qtyPuneFair: 20, qtyGoaFair: 10, inStock: 7 },
-  { id: 3, title: "Pebbles on the Ghat", author: "Suresh Kulkarni", genre: "P", qtySold: 98, qtyAirport1: 10, qtyAirport2: 8, qtyAirport3: 5, qtyPuneFair: 15, qtyGoaFair: 8, inStock: 4 },
-  { id: 4, title: "Adventures of Tara & Tiger", author: "Meera Shah", genre: "C", qtySold: 204, qtyAirport1: 25, qtyAirport2: 20, qtyAirport3: 15, qtyPuneFair: 30, qtyGoaFair: 18, inStock: 48 },
-  { id: 5, title: "Startup India: Real Stories", author: "Rahul Joshi", genre: "NF", qtySold: 92, qtyAirport1: 12, qtyAirport2: 10, qtyAirport3: 6, qtyPuneFair: 15, qtyGoaFair: 8, inStock: 57 },
-  { id: 6, title: "The Vermillion Sky", author: "Kavita Nair", genre: "F", qtySold: 76, qtyAirport1: 8, qtyAirport2: 6, qtyAirport3: 4, qtyPuneFair: 10, qtyGoaFair: 5, inStock: 9 },
-  { id: 7, title: "Grandmother's Spice Box", author: "Lalita Iyer", genre: "NF", qtySold: 128, qtyAirport1: 15, qtyAirport2: 12, qtyAirport3: 8, qtyPuneFair: 20, qtyGoaFair: 10, inStock: 23 },
-  { id: 8, title: "Whispers in Sanskrit", author: "Prof. Vijay Nadkarni", genre: "P", qtySold: 45, qtyAirport1: 6, qtyAirport2: 4, qtyAirport3: 3, qtyPuneFair: 8, qtyGoaFair: 4, inStock: 8 },
-  { id: 9, title: "Raju Goes to the Moon", author: "Anjali Wagh", genre: "C", qtySold: 167, qtyAirport1: 20, qtyAirport2: 15, qtyAirport3: 10, qtyPuneFair: 22, qtyGoaFair: 14, inStock: 66 },
-  { id: 10, title: "Crossroads at Forty", author: "Deepa Menon", genre: "F", qtySold: 89, qtyAirport1: 10, qtyAirport2: 8, qtyAirport3: 5, qtyPuneFair: 12, qtyGoaFair: 7, inStock: 3 },
-  { id: 11, title: "Mindful Mornings", author: "Dr. Sandeep Agarwal", genre: "NF", qtySold: 112, qtyAirport1: 14, qtyAirport2: 11, qtyAirport3: 7, qtyPuneFair: 18, qtyGoaFair: 9, inStock: 39 },
-  { id: 12, title: "The River Knows", author: "Chandrika Deshpande", genre: "P", qtySold: 67, qtyAirport1: 8, qtyAirport2: 6, qtyAirport3: 4, qtyPuneFair: 10, qtyGoaFair: 5, inStock: 6 },
-  { id: 13, title: "Numbers in Nature", author: "Dr. Anita Rao", genre: "NF", qtySold: 92, qtyAirport1: 10, qtyAirport2: 8, qtyAirport3: 5, qtyPuneFair: 12, qtyGoaFair: 7, inStock: 26 },
-  { id: 14, title: "Zero to Infinity", author: "Dr. Anita Rao", genre: "NF", qtySold: 34, qtyAirport1: 4, qtyAirport2: 3, qtyAirport3: 2, qtyPuneFair: 5, qtyGoaFair: 3, inStock: 53 },
-];
-
-export function OperationsDashboardPage() {
-  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "gallery">("inventory");
-  const [search, setSearch] = useState("");
-  const [galleryForm, setGalleryForm] = useState({
-    location: "", place: "", city: "", date: "", duration: "", authors: "", booksSold: "", type: "Literary Event", description: ""
-  });
-  const [galleryFile, setGalleryFile] = useState<File | null>(null);
-  const [galleryList, setGalleryList] = useState<any[]>([]);
-  const [editingGalleryId, setEditingGalleryId] = useState<number | null>(null);
-  const [genreFilter, setGenreFilter] = useState("All");
-  const [sortCol, setSortCol] = useState<string>("qtySold");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [orders, setOrders] = useState<any[]>([]);
+const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => void }) => {
+  const [activeProfileTab, setActiveProfileTab] = useState<'inventory' | 'orders' | 'events' | 'distribution' | 'forms'>('inventory');
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
   useEffect(() => {
-    if (activeTab === "orders") {
-      axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/admin/orders`)
-        .then(res => setOrders(res.data))
-        .catch(console.error);
-    } else if (activeTab === "gallery") {
-      fetchGallery();
-    }
-  }, [activeTab]);
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get(`${API}/api/admin/authors/${author.id}/dashboard-data`);
+        setProfileData(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [author.id]);
+
+  if (loading) return <div className="p-8 text-center text-paa-navy font-bold bg-white border border-paa-navy/10 shadow-sm animate-pulse">Loading author details...</div>;
+  if (!profileData) return <div className="p-8 text-center text-red-500 font-bold bg-white border border-red-200">Error loading author details.</div>;
+
+  const { authorProfile, authorOrders } = profileData;
+
+  return (
+    <div className="bg-white border border-paa-navy/10 shadow-sm flex flex-col">
+      <div className="p-6 border-b border-paa-navy/10 bg-[#e4ebf5] flex items-start justify-between">
+         <div className="flex gap-4 items-center">
+            <button onClick={onBack} className="p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded shadow-sm transition-colors">
+               <ArrowLeft className="w-5 h-5 text-paa-navy" />
+            </button>
+            <div className="w-14 h-14 bg-white border border-paa-navy/10 text-paa-navy flex items-center justify-center font-bold font-serif text-3xl shadow-sm">
+              {authorProfile.name.charAt(0)}
+            </div>
+            <div>
+               <h2 className="text-2xl font-bold text-paa-navy uppercase tracking-widest">{authorProfile.name}</h2>
+               <p className="text-sm font-medium text-paa-gray-text">{authorProfile.email} | {authorProfile.phone}</p>
+               <p className="text-xs text-paa-navy mt-1 uppercase tracking-widest font-bold bg-[#b3d4ff] inline-block px-2 py-0.5">Joined: {new Date(authorProfile.createdAt).toLocaleDateString()}</p>
+            </div>
+         </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row flex-1">
+        <div className="w-full md:w-56 bg-white border-b md:border-b-0 md:border-r border-paa-navy/10 p-4 flex flex-col gap-2 shrink-0 md:sticky md:top-0 h-fit text-xs font-bold uppercase tracking-widest">
+           <button onClick={() => setActiveProfileTab('inventory')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'inventory' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Inventory</button>
+           <button onClick={() => setActiveProfileTab('orders')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'orders' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Web Orders</button>
+           <button onClick={() => setActiveProfileTab('events')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'events' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Events</button>
+           <button onClick={() => setActiveProfileTab('distribution')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'distribution' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Distribution</button>
+           <button onClick={() => setActiveProfileTab('forms')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'forms' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Forms</button>
+        </div>
+        
+        <div className="flex-1 p-6 bg-gray-50/50 min-h-[500px]">
+        {activeProfileTab === 'inventory' && (
+        <div id="inventory">
+          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Books & Inventory</h3>
+          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+               <thead className="bg-[#b3d4ff] text-paa-navy text-xs uppercase tracking-widest font-bold">
+                 <tr>
+                   <th className="px-4 py-3">Title</th>
+                   <th className="px-4 py-3 text-center">MRP</th>
+                   <th className="px-4 py-3 text-center">Stock</th>
+                   <th className="px-4 py-3 text-center">Status</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-paa-navy/5">
+                 {authorProfile.books.length === 0 ? <tr><td colSpan={4} className="text-center py-4 text-paa-gray-text">No books published.</td></tr> : authorProfile.books.map((b: any) => (
+                   <tr key={b.id} className="hover:bg-gray-50 transition-colors">
+                     <td className="px-4 py-3 font-bold text-paa-navy">{b.title} <span className="text-xs text-gray-500 font-medium block">{b.genre}</span></td>
+                     <td className="px-4 py-3 text-center font-bold text-paa-navy">₹{b.mrp}</td>
+                     <td className="px-4 py-3 text-center font-bold text-paa-navy">{b.stock}</td>
+                     <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${b.status === 'Approved' ? 'bg-[#5cb85c]/10 text-green-700 border-[#4cae4c]/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
+                          {b.status}
+                        </span>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+            </table>
+          </div>
+        </div>
+        )}
+
+        {activeProfileTab === 'orders' && (
+        <div id="orders">
+          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Web Orders</h3>
+          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+               <thead className="bg-[#ccffcc] text-paa-navy text-xs uppercase tracking-widest font-bold">
+                 <tr>
+                   <th className="px-4 py-3">Order ID</th>
+                   <th className="px-4 py-3">Customer</th>
+                   <th className="px-4 py-3">Book</th>
+                   <th className="px-4 py-3 text-center">Qty / Amt</th>
+                   <th className="px-4 py-3 text-center">Status</th>
+                   <th className="px-4 py-3 text-center">Payment</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-paa-navy/5">
+                 {authorOrders.length === 0 ? <tr><td colSpan={6} className="text-center py-4 text-paa-gray-text">No web orders yet.</td></tr> : authorOrders.map((o: any) => (
+                   <tr key={o.id} className="hover:bg-gray-50 transition-colors">
+                     <td className="px-4 py-3 font-bold text-paa-navy">ORD-{o.orderId}<span className="text-[10px] block text-gray-500">{o.date}</span></td>
+                     <td className="px-4 py-3 font-medium text-paa-navy">{o.customerName}</td>
+                     <td className="px-4 py-3 font-medium text-paa-navy">{o.bookTitle}</td>
+                     <td className="px-4 py-3 text-center font-bold text-paa-navy">{o.quantity} <span className="text-gray-400 font-medium px-1">/</span> ₹{o.amount}</td>
+                     <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${o.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                          {o.status}
+                        </span>
+                     </td>
+                     <td className="px-4 py-3 text-center">
+                        {o.paymentVerified ? <span className="text-green-600 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1"><Check size={10}/> Verified</span> : o.paymentFailed ? <span className="text-red-600 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1"><XCircle size={10}/> Failed</span> : <span className="text-yellow-600 font-bold text-[10px] uppercase tracking-widest">Pending</span>}
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+            </table>
+          </div>
+        </div>
+        )}
+
+        {activeProfileTab === 'events' && (
+        <div id="events">
+          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Event Participations</h3>
+          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+               <thead className="bg-[#e4ebf5] text-paa-navy text-xs uppercase tracking-widest font-bold">
+                 <tr>
+                   <th className="px-4 py-3">Event Name</th>
+                   <th className="px-4 py-3">City</th>
+                   <th className="px-4 py-3 text-center">Amount Paid</th>
+                   <th className="px-4 py-3 text-center">Date</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-paa-navy/5">
+                 {authorProfile.eventRegistrations.length === 0 ? <tr><td colSpan={4} className="text-center py-4 text-paa-gray-text">No events attended.</td></tr> : authorProfile.eventRegistrations.map((e: any) => (
+                   <tr key={e.id} className="hover:bg-gray-50 transition-colors">
+                     <td className="px-4 py-3 font-bold text-paa-navy">{e.activity?.name}</td>
+                     <td className="px-4 py-3 font-medium text-paa-navy">{e.activity?.city}</td>
+                     <td className="px-4 py-3 text-center font-bold text-green-700">₹{e.amount}</td>
+                     <td className="px-4 py-3 text-center font-medium text-paa-gray-text">{e.activity?.date}</td>
+                   </tr>
+                 ))}
+               </tbody>
+            </table>
+          </div>
+        </div>
+        )}
+
+        {activeProfileTab === 'distribution' && (
+        <div id="distribution">
+          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Books Distribution Record</h3>
+          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+               <thead className="bg-[#5bc0de] text-white text-xs uppercase tracking-widest font-bold">
+                 <tr>
+                   <th className="px-4 py-3">Title</th>
+                   <th className="px-4 py-3 text-center">Qty Sold</th>
+                   <th className="px-4 py-3 text-center">Airport Stock</th>
+                   <th className="px-4 py-3 text-center">Fair Stock</th>
+                   <th className="px-4 py-3 text-center">In Stock</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-paa-navy/5">
+                 {authorProfile.books.length === 0 ? <tr><td colSpan={5} className="text-center py-4 text-paa-gray-text">No distribution records.</td></tr> : authorProfile.books.map((b: any) => {
+                   const qtySold = authorOrders.filter((o: any) => o.bookTitle === b.title && (o.status === 'Completed' || o.status === 'Dispatched')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
+                   return (
+                   <tr key={b.id} className="hover:bg-gray-50 transition-colors">
+                     <td className="px-4 py-3 font-bold text-paa-navy">{b.title}</td>
+                     <td className="px-4 py-3 text-center font-bold text-green-700">{qtySold}</td>
+                     <td className="px-4 py-3 text-center">{b.airportStock || 0}</td>
+                     <td className="px-4 py-3 text-center">{b.fairStock || 0}</td>
+                     <td className="px-4 py-3 text-center font-bold">{b.stock}</td>
+                   </tr>
+                 )})}
+               </tbody>
+            </table>
+          </div>
+        </div>
+        )}
+
+        {activeProfileTab === 'forms' && (
+        <div id="forms">
+          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Author Registration Data</h3>
+          <div className="bg-white border border-paa-navy/10 shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Full Name</p>
+                <p className="text-sm font-medium text-paa-navy border-b pb-2">{authorProfile.name}</p>
+             </div>
+             <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Email Address</p>
+                <p className="text-sm font-medium text-paa-navy border-b pb-2">{authorProfile.email}</p>
+             </div>
+             <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Phone Number</p>
+                <p className="text-sm font-medium text-paa-navy border-b pb-2">{authorProfile.phone}</p>
+             </div>
+             <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">WhatsApp Number</p>
+                <p className="text-sm font-medium text-paa-navy border-b pb-2">{authorProfile.whatsapp || 'Not Provided'}</p>
+             </div>
+             <div className="md:col-span-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Author Bio</p>
+                <p className="text-sm font-medium text-paa-navy bg-gray-50 p-4 border rounded leading-relaxed">{authorProfile.bio || 'No biography provided.'}</p>
+             </div>
+          </div>
+        </div>
+        )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export function OperationsDashboardPage() {
+  const [activeTab, setActiveTab] = useState<'overview' | 'authors' | 'books' | 'events' | 'orders' | 'settings' | 'forms' | 'gallery'>('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+  
+  // State for data
+  const [stats, setStats] = useState({ totalAuthors: 0, totalBooks: 0, eventParticipations: 0, totalRevenue: 0, revenueData: [], recentActivities: [] });
+  const [authors, setAuthors] = useState<any[]>([]);
+  const [books, setBooks] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+
+  // Modals state
+  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
+  
+  const [forms, setForms] = useState<any[]>([]);
+  const [gallery, setGallery] = useState<any[]>([]);
+  const [selectedFormResponses, setSelectedFormResponses] = useState<any>(null);
+  
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+  
+  const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+  const fetchOverview = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/dashboard-stats`);
+      setStats(res.data);
+    } catch(err) {}
+  };
+
+  const fetchAuthors = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/authors`);
+      setAuthors(res.data);
+    } catch(err) {}
+  };
+
+  const fetchBooks = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/books`);
+      setBooks(res.data);
+    } catch(err) {}
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/activities`);
+      setEvents(res.data);
+    } catch(err) {}
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/orders`);
+      setOrders(res.data);
+    } catch(err) {}
+  };
+
+  const fetchForms = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API}/api/admin/forms`, { headers: { Authorization: `Bearer ${token}` }});
+      setForms(res.data);
+    } catch(err) {}
+  };
 
   const fetchGallery = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/gallery`);
-      setGalleryList(res.data);
-    } catch (err) {
-      console.error(err);
+      const res = await axios.get(`${API}/api/gallery`);
+      setGallery(res.data);
+    } catch(err) {}
+  };
+
+  useEffect(() => {
+    fetchOverview();
+    fetchAuthors();
+    fetchBooks();
+    fetchEvents();
+    fetchOrders();
+    fetchForms();
+    fetchGallery();
+  }, []);
+
+  // Handlers
+  const handleDeleteAuthor = async (id: number) => {
+    if (window.confirm('Are you sure you want to remove this author?')) {
+      await axios.delete(`${API}/api/admin/authors/${id}`);
+      fetchAuthors();
+      fetchOverview();
     }
   };
 
-  const handleGallerySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData();
-    Object.entries(galleryForm).forEach(([key, value]) => formData.append(key, value));
-    if (galleryFile) formData.append("photo", galleryFile);
+  const handleApproveAuthor = async (id: number) => {
+    await axios.post(`${API}/api/admin/authors/${id}/approve`);
+    fetchAuthors();
+  };
 
-    try {
-      if (editingGalleryId) {
-        await axios.put(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/admin/gallery/${editingGalleryId}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
-        alert("Gallery event updated!");
-      } else {
-        await axios.post(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/admin/gallery`, formData, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
-        alert("Gallery event uploaded!");
-      }
-      setGalleryForm({ location: "", place: "", city: "", date: "", duration: "", authors: "", booksSold: "", type: "Literary Event", description: "" });
-      setGalleryFile(null);
-      setEditingGalleryId(null);
-      fetchGallery();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save gallery event");
+  const handleDeleteBook = async (id: number) => {
+    if (window.confirm('Are you sure you want to remove this book?')) {
+      await axios.delete(`${API}/api/admin/books/${id}`);
+      fetchBooks();
+      fetchOverview();
     }
   };
 
-  const handleEditGallery = (item: any) => {
-    setEditingGalleryId(item.id);
-    setGalleryForm({
-      location: item.location, place: item.place, city: item.city,
-      date: new Date(item.date).toISOString().split('T')[0],
-      duration: item.duration, authors: item.authors, booksSold: item.booksSold,
-      type: item.type, description: item.description
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleDeleteGallery = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this event?")) return;
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/admin/gallery/${id}`);
-      fetchGallery();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete event");
+  const handleVerifyOrder = async (id: number) => {
+    if (window.confirm('Are you sure you want to verify this payment?')) {
+      await axios.post(`${API}/api/admin/orders/${id}/verify`);
+      fetchOrders();
+      setSelectedOrder(null);
     }
   };
 
-  const verifyOrder = async (id: number) => {
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/admin/orders/${id}/verify`);
-      setOrders(orders.map(o => o.id === id ? { ...o, status: "Completed" } : o));
-    } catch (e) {
-      console.error(e);
-      alert("Failed to verify order");
+  const handleRejectOrder = async (id: number) => {
+    if (window.confirm('Are you sure you want to mark this payment as not received?')) {
+      await axios.post(`${API}/api/admin/orders/${id}/reject-payment`);
+      fetchOrders();
+      setSelectedOrder(null);
     }
   };
 
-  const handleSort = (col: string) => {
-    if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortCol(col); setSortDir("desc"); }
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    navigate('/login');
   };
 
-  const filtered = stockData
-    .filter((b) => {
-      const matchSearch = b.title.toLowerCase().includes(search.toLowerCase()) || b.author.toLowerCase().includes(search.toLowerCase());
-      const matchGenre = genreFilter === "All" || b.genre === genreFilter;
-      return matchSearch && matchGenre;
-    })
-    .sort((a, b) => {
-      const aVal = (a as any)[sortCol];
-      const bVal = (b as any)[sortCol];
-      if (typeof aVal === "string") return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      return sortDir === "asc" ? aVal - bVal : bVal - aVal;
-    });
+  const OverviewTab = () => (
+    <div className="space-y-6">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Total Authors', value: stats.totalAuthors, trend: '+12%', trendUp: true, icon: Users, color: 'bg-[#5bc0de]' },
+          { label: 'Books Published', value: stats.totalBooks, trend: '+8 new', trendUp: true, icon: BookOpen, color: 'bg-[#5cb85c]' },
+          { label: 'Event Participations', value: stats.eventParticipations, trend: '+45 this month', trendUp: true, icon: CalendarIcon, color: 'bg-[#f0ad4e]' },
+          { label: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, trend: '+15.3%', trendUp: true, icon: TrendingUp, color: 'bg-[#d9534f]' },
+        ].map((kpi, i) => (
+          <div key={i} className="bg-white p-6 border border-paa-navy/10 flex items-start justify-between shadow-sm">
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+              <h3 className="text-3xl font-serif font-medium text-paa-navy mb-2">{kpi.value}</h3>
+              <p className={`text-xs font-bold flex items-center gap-1 ${kpi.trendUp ? 'text-green-600' : 'text-red-600'}`}>
+                {kpi.trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 transform rotate-180" />}
+                {kpi.trend}
+              </p>
+            </div>
+            <div className={`w-10 h-10 flex items-center justify-center text-white font-bold ${kpi.color}`}>
+              <kpi.icon className="w-5 h-5" />
+            </div>
+          </div>
+        ))}
+      </div>
 
-  const lowStockCount = stockData.filter((b) => b.inStock < 10).length;
-  const totalSold = stockData.reduce((acc, b) => acc + b.qtySold, 0);
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Chart */}
+        <div className="lg:col-span-2 bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
+           <div className="bg-[#e4ebf5] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Revenue & Registrations</h3>
+              <select className="text-xs border border-paa-navy/20 bg-white text-paa-navy px-3 py-1.5 outline-none font-bold uppercase tracking-widest">
+                <option>Last 6 Months</option>
+                <option>This Year</option>
+              </select>
+           </div>
+           <div className="h-[300px] p-6">
+             <ResponsiveContainer width="100%" height="100%">
+               <AreaChart data={stats.revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                 <defs>
+                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="5%" stopColor="#0b1a2e" stopOpacity={0.1}/>
+                     <stop offset="95%" stopColor="#0b1a2e" stopOpacity={0}/>
+                   </linearGradient>
+                 </defs>
+                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(11, 26, 46, 0.1)" />
+                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
+                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+                 <RechartsTooltip 
+                   contentStyle={{ borderRadius: '0px', border: '1px solid rgba(11,26,46,0.1)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                   cursor={{ stroke: 'rgba(11,26,46,0.1)', strokeWidth: 2 }}
+                 />
+                 <Area type="monotone" dataKey="revenue" stroke="#0b1a2e" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" />
+               </AreaChart>
+             </ResponsiveContainer>
+           </div>
+        </div>
 
-  const SortArrow = ({ col }: { col: string }) => (
-    <span style={{ fontSize: 10, opacity: sortCol === col ? 1 : 0.3 }}>{sortDir === "asc" && sortCol === col ? " ↑" : " ↓"}</span>
+        {/* Recent Activity */}
+        <div className="bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
+           <div className="bg-[#ffff99] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Recent Activity</h3>
+              <button className="text-xs font-bold text-paa-navy hover:underline uppercase tracking-widest">View All</button>
+           </div>
+           <div className="p-6 space-y-6 overflow-auto">
+             {stats.recentActivities && stats.recentActivities.map((activity: any) => {
+               const style = activity.type === 'author' ? { icon: Users, color: 'text-blue-600', bg: 'bg-[#b3d4ff]' } :
+                             activity.type === 'order' ? { icon: CreditCard, color: 'text-green-600', bg: 'bg-[#ccffcc]' } :
+                             activity.type === 'event' ? { icon: CalendarIcon, color: 'text-purple-600', bg: 'bg-purple-200' } :
+                             { icon: Bell, color: 'text-gray-600', bg: 'bg-gray-200' };
+               const Icon = style.icon;
+               return (
+               <div key={activity.id} className="flex gap-4">
+                 <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${style.bg} ${style.color} border border-paa-navy/10`}>
+                   <Icon className="w-4 h-4" />
+                 </div>
+                 <div>
+                   <p className="text-sm font-bold text-paa-navy">{activity.action}</p>
+                   <p className="text-xs text-paa-gray-text mt-0.5 font-medium">{activity.subject}</p>
+                   <p className="text-[10px] uppercase tracking-widest text-paa-gray-text mt-1">{new Date(activity.createdAt).toLocaleString()}</p>
+                 </div>
+               </div>
+             )})}
+           </div>
+        </div>
+      </div>
+    </div>
   );
 
-  const thStyle = {
-    padding: "0.65rem 0.9rem",
-    textAlign: "left" as const,
-    fontSize: 10,
-    fontWeight: 700 as const,
-    color: "#6b6b80",
-    fontFamily: "var(--font-mono)",
-    letterSpacing: "0.06em",
-    textTransform: "uppercase" as const,
-    whiteSpace: "nowrap" as const,
-    cursor: "pointer",
-    userSelect: "none" as const,
+  const AuthorsTab = () => {
+    if (selectedAuthor) {
+      return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;
+    }
+    
+    return (
+    <div className="bg-white border border-paa-navy/10 shadow-sm flex flex-col">
+       <div className="p-4 border-b border-paa-navy/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e4ebf5]">
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Authors Directory</h3>
+            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-sm">{authors.length} Total</span>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                <input 
+                  type="text" 
+                  placeholder="SEARCH AUTHORS..." 
+                  className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+             </div>
+             {/* <button onClick={() => setIsAuthorModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
+               <Plus className="w-4 h-4" /> Add Author
+             </button> */}
+          </div>
+       </div>
+       
+       <div className="overflow-x-auto">
+         <table className="w-full text-left text-sm whitespace-nowrap">
+           <thead className="bg-[#b3d4ff] text-paa-navy text-xs uppercase tracking-widest font-bold">
+             <tr>
+               <th className="px-6 py-4">Author Details</th>
+               <th className="px-6 py-4">Contact</th>
+               <th className="px-6 py-4 text-center">Status</th>
+               <th className="px-6 py-4 text-center">Books</th>
+               <th className="px-6 py-4 text-center">Events</th>
+               <th className="px-6 py-4 text-center">Actions</th>
+             </tr>
+           </thead>
+           <tbody className="divide-y divide-paa-navy/5">
+             {authors.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase())).map((author) => (
+               <tr key={author.id} className="hover:bg-gray-50 bg-white transition-colors">
+                 <td className="px-6 py-4">
+                   <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-[#e4ebf5] border border-paa-navy/10 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
+                       {author.name.charAt(0)}
+                     </div>
+                     <div>
+                       <p className="font-bold text-paa-navy">{author.name}</p>
+                       <p className="text-xs text-paa-gray-text flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3"/> Joined {author.joined}</p>
+                     </div>
+                   </div>
+                 </td>
+                 <td className="px-6 py-4">
+                    <p className="text-paa-navy font-medium">{author.email}</p>
+                    <p className="text-paa-gray-text text-xs mt-0.5 font-medium">{author.phone}</p>
+                 </td>
+                 <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${author.status === 'Active' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : 'bg-[#f0ad4e] text-white border-[#eea236]'}`}>
+                      {author.status}
+                    </span>
+                 </td>
+                 <td className="px-6 py-4 text-center font-bold text-paa-navy bg-gray-50 border-x border-paa-navy/5">
+                    {author.totalBooks}
+                 </td>
+                 <td className="px-6 py-4 text-center font-bold text-paa-navy">
+                    {author.eventsPart}
+                 </td>
+                 <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                       {author.status === 'Pending' && (
+                         <button onClick={() => handleApproveAuthor(author.id)} className="p-1.5 text-white bg-[#5cb85c] hover:bg-[#4cae4c] border border-[transparent] shadow" title="Approve">
+                           <Check className="w-4 h-4" />
+                         </button>
+                       )}
+                       <button onClick={() => setSelectedAuthor(author)} className="p-1.5 text-paa-navy bg-gray-100 hover:bg-gray-200 border border-paa-navy/10 transition-colors shadow" title="Details">
+                         <Eye className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => handleDeleteAuthor(author.id)} className="p-1.5 text-white bg-[#d9534f] hover:bg-[#c9302c] transition-colors shadow" title="Delete">
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                    </div>
+                 </td>
+               </tr>
+             ))}
+             {authors.length === 0 && (
+               <tr>
+                 <td colSpan={6} className="text-center py-8 text-paa-gray-text bg-white">No authors found.</td>
+               </tr>
+             )}
+           </tbody>
+         </table>
+       </div>
+    </div>
+    );
   };
 
-  return (
-    <main style={{ fontFamily: "var(--font-body)", minHeight: "100vh", background: "#f7f7f9" }}>
-      {/* Header */}
-      <section style={{ background: "#1a1a2e", padding: "2.5rem 1.5rem" }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: "0.4rem" }}>Internal Operations</div>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800, color: "#fff" }}>Stock Telemetry Dashboard</h1>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: "0.4rem" }}>Live inventory tracking across all PAA distribution channels</p>
-
-          {/* Summary cards */}
-          <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
-            {[
-              { label: "Total Books Sold", value: totalSold.toLocaleString(), color: "#16a34a" },
-              { label: "Titles Tracked", value: stockData.length, color: "#2563eb" },
-              { label: "Low Stock Alerts", value: lowStockCount, color: "#f59e0b" },
-            ].map((s) => (
-              <div key={s.label} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 12, padding: "0.9rem 1.25rem", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: "0.2rem" }}>{s.label}</div>
-              </div>
-            ))}
-            {lowStockCount > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(251, 191, 36, 0.15)", borderRadius: 12, padding: "0.9rem 1.25rem", border: "1px solid rgba(251, 191, 36, 0.3)" }}>
-                <AlertTriangle size={18} color="#f59e0b" />
-                <span style={{ fontSize: 13, color: "#fbbf24", fontWeight: 600 }}>{lowStockCount} titles need urgent restocking</span>
-              </div>
-            )}
+  const BooksTab = () => (
+    <div className="bg-white border border-paa-navy/10 shadow-sm flex flex-col">
+       <div className="p-4 border-b border-paa-navy/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#ccffcc]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Inventory Management</h3>
           </div>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: "1rem", marginTop: "2rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "1rem" }}>
-          <button 
-            onClick={() => setActiveTab("inventory")}
-            style={{ background: activeTab === "inventory" ? "#fff" : "transparent", color: activeTab === "inventory" ? "#1a1a2e" : "#fff", border: "1px solid rgba(255,255,255,0.2)", padding: "0.6rem 1.25rem", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-body)" }}
-          >
-            Inventory Telemetry
-          </button>
-          <button 
-            onClick={() => setActiveTab("orders")}
-            style={{ background: activeTab === "orders" ? "#fff" : "transparent", color: activeTab === "orders" ? "#1a1a2e" : "#fff", border: "1px solid rgba(255,255,255,0.2)", padding: "0.6rem 1.25rem", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-body)" }}
-          >
-            Order & Payment Verification
-          </button>
-          <button 
-            onClick={() => setActiveTab("gallery")}
-            style={{ background: activeTab === "gallery" ? "#fff" : "transparent", color: activeTab === "gallery" ? "#1a1a2e" : "#fff", border: "1px solid rgba(255,255,255,0.2)", padding: "0.6rem 1.25rem", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-body)" }}
-          >
-            Gallery Management
-          </button>
-        </div>
-      </section>
-
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "2rem 1.5rem" }}>
-        {activeTab === "inventory" ? (
-          <>
-            {/* Filter bar */}
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-            <Search size={14} color="#6b6b80" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
-            <input
-              type="text"
-              placeholder="Search title or author…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ width: "100%", padding: "0.55rem 0.75rem 0.55rem 2rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontFamily: "var(--font-body)", fontSize: 13, background: "#fff", outline: "none", boxSizing: "border-box" }}
-            />
+          <div className="flex items-center gap-3">
+             <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                <input type="text" placeholder="SEARCH BOOKS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
+             </div>
+             {/* <button onClick={() => setIsBookModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
+               <Plus className="w-4 h-4" /> Add Book
+             </button> */}
           </div>
-          <div style={{ display: "flex", gap: "0.4rem" }}>
-            {["All", "NF", "F", "P", "C"].map((g) => {
-              const gConf = g !== "All" ? genreConfig[g as Genre] : null;
-              const isActive = genreFilter === g;
-              return (
-                <button
-                  key={g}
-                  onClick={() => setGenreFilter(g)}
-                  style={{
-                    padding: "0.45rem 0.75rem",
-                    borderRadius: 7,
-                    border: isActive ? "1.5px solid " + (gConf?.color || "#1a1a2e") : "1px solid rgba(0,0,0,0.1)",
-                    background: isActive ? (gConf ? gConf.bg : "#1a1a2e") : "#fff",
-                    color: isActive ? (gConf ? gConf.color : "#fff") : "#6b6b80",
-                    fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-mono)",
-                  }}
-                >
-                  {g}
-                </button>
-              );
-            })}
-          </div>
-          <button style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "#1a1a2e", color: "#fff", border: "none", padding: "0.55rem 1rem", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)" }}>
-            <Download size={14} /> Export CSV
-          </button>
-        </div>
+       </div>
+       
+       <div className="overflow-x-auto">
+         <table className="w-full text-left text-sm whitespace-nowrap">
+           <thead className="bg-[#b3d4ff] text-paa-navy text-xs uppercase tracking-widest font-bold">
+             <tr>
+               <th className="px-6 py-4">Book Info</th>
+               <th className="px-6 py-4">Author</th>
+               <th className="px-6 py-4 text-center">Price</th>
+               <th className="px-6 py-4 text-center bg-yellow-100 border-x border-paa-navy/10">Stock</th>
+               <th className="px-6 py-4 text-center bg-green-100">Sales</th>
+             </tr>
+           </thead>
+           <tbody className="divide-y divide-paa-navy/5">
+             {books.map((book) => (
+               <tr key={book.id} className="hover:bg-gray-50 bg-white transition-colors">
+                 <td className="px-6 py-4">
+                   <p className="font-bold text-paa-navy mb-1">{book.title}</p>
+                   <div className="flex items-center gap-2 text-xs font-medium">
+                     <span className="text-paa-gray-text">ISBN: {book.isbn}</span>
+                     <span className="text-gray-300">•</span>
+                     <span className="text-[#5bc0de] font-bold uppercase">{book.genre}</span>
+                   </div>
+                 </td>
+                 <td className="px-6 py-4">
+                    <p className="text-paa-navy font-bold">{book.authorName}</p>
+                 </td>
+                 <td className="px-6 py-4 text-center font-bold text-paa-navy">
+                    ₹{book.mrp}
+                 </td>
+                 <td className="px-6 py-4 text-center bg-yellow-50 border-x border-paa-navy/10">
+                    {book.stock > 10 ? (
+                      <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-[10px] font-bold uppercase border border-green-200">{book.stock} left</span>
+                    ) : book.stock > 0 ? (
+                      <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-[10px] font-bold uppercase border border-yellow-200">Only {book.stock} left</span>
+                    ) : (
+                      <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-[10px] font-bold uppercase border border-red-200">Out of Stock</span>
+                    )}
+                 </td>
+                 <td className="px-6 py-4 text-center font-bold text-paa-navy bg-green-50">
+                    {book.sales}
+                 </td>
+               </tr>
+             ))}
+             {books.length === 0 && (
+               <tr>
+                 <td colSpan={5} className="text-center py-8 text-paa-gray-text bg-white">No books found.</td>
+               </tr>
+             )}
+           </tbody>
+         </table>
+       </div>
+    </div>
+  );
 
-        {/* Table */}
-        <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f7f7f9", borderBottom: "2px solid rgba(0,0,0,0.06)" }}>
-                  {[
-                    { label: "Title", col: "title" },
-                    { label: "Author", col: "author" },
-                    { label: "Genre", col: "genre" },
-                    { label: "Qty Sold", col: "qtySold" },
-                    { label: "Airport 1 (BOM)", col: "qtyAirport1" },
-                    { label: "Airport 2 (PNQ)", col: "qtyAirport2" },
-                    { label: "Airport 3 (GOI)", col: "qtyAirport3" },
-                    { label: "Pune Fair", col: "qtyPuneFair" },
-                    { label: "Goa Fair", col: "qtyGoaFair" },
-                    { label: "In-Stock", col: "inStock" },
-                    { label: "Alert", col: "" },
-                  ].map((h) => (
-                    <th
-                      key={h.label}
-                      style={{ ...thStyle }}
-                      onClick={() => h.col && handleSort(h.col)}
-                    >
-                      {h.label}{h.col && <SortArrow col={h.col} />}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((book, i) => {
-                  const gConf = genreConfig[book.genre];
-                  const isLowStock = book.inStock < 10;
-                  return (
-                    <tr
-                      key={book.id}
-                      style={{
-                        borderTop: "1px solid rgba(0,0,0,0.04)",
-                        background: isLowStock ? "rgba(251, 191, 36, 0.04)" : (i % 2 === 0 ? "#fff" : "#fafafa"),
-                        transition: "background 0.1s",
-                      }}
-                    >
-                      <td style={{ padding: "0.9rem 0.9rem", fontSize: 13, fontWeight: 600, color: "#1a1a2e", maxWidth: 200 }}>
-                        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{book.title}</div>
-                      </td>
-                      <td style={{ padding: "0.9rem 0.9rem", fontSize: 12, color: "#6b6b80", whiteSpace: "nowrap" }}>{book.author}</td>
-                      <td style={{ padding: "0.9rem 0.9rem" }}>
-                        <span style={{ background: gConf.bg, color: gConf.color, border: "1px solid " + gConf.border, fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, padding: "0.2rem 0.5rem", borderRadius: 5 }}>
-                          {book.genre}
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.9rem 0.9rem", fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "#1a1a2e" }}>{book.qtySold}</td>
-                      {["qtyAirport1", "qtyAirport2", "qtyAirport3", "qtyPuneFair", "qtyGoaFair"].map((key) => (
-                        <td key={key} style={{ padding: "0.9rem 0.9rem", fontFamily: "var(--font-mono)", fontSize: 13, color: "#444", textAlign: "center" }}>
-                          {(book as any)[key]}
-                        </td>
+  const EventsTab = () => (
+    <div className="space-y-6">
+       <div className="flex items-center justify-between border-b border-paa-navy/10 pb-4">
+          <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Management</h3>
+          <button onClick={() => setIsEventModalOpen(true)} className="flex items-center gap-2 px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy transition-colors">
+            <Plus className="w-4 h-4" /> Create Event
+          </button>
+       </div>
+
+       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {events.map((evt) => (
+             <div key={evt.id} className="bg-white border border-paa-navy/10 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                <div className={`${evt.color} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center`}>
+                   <span>{evt.status}</span>
+                   <span className="bg-white/20 px-2 py-0.5">{evt.type}</span>
+                </div>
+                <div className="p-6">
+                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
+                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-paa-gray-text">
+                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50"/> {evt.date}</p>
+                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-paa-navy/50"/> {evt.city}</p>
+                  </div>
+                  <div className="pt-4 border-t border-paa-navy/10 flex items-center justify-between">
+                     <div className="flex items-center justify-center bg-[#ffff99] px-3 py-1 text-xs font-bold text-paa-navy border border-paa-navy/20">
+                        {evt.registeredAuthors} Registered
+                     </div>
+                     <button className="text-[#5bc0de] text-xs font-bold uppercase tracking-widest hover:text-paa-navy transition-colors">Manage</button>
+                  </div>
+                </div>
+             </div>
+          ))}
+       </div>
+    </div>
+  );
+
+  const OrdersTab = () => (
+    <div className="bg-white border border-paa-navy/10 shadow-sm flex flex-col">
+       <div className="p-4 border-b border-paa-navy/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e4ebf5]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Web Orders</h3>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                <input type="text" placeholder="SEARCH ORDERS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
+             </div>
+          </div>
+       </div>
+       
+       <div className="overflow-x-auto">
+         <table className="w-full text-left text-sm whitespace-nowrap">
+           <thead className="bg-[#b3d4ff] text-paa-navy text-xs uppercase tracking-widest font-bold">
+             <tr>
+               <th className="px-6 py-4">Order ID & Date</th>
+               <th className="px-6 py-4">Customer</th>
+               <th className="px-6 py-4">Items / Books</th>
+               <th className="px-6 py-4 text-center">Amount</th>
+               <th className="px-6 py-4 text-center">Status</th>
+               <th className="px-6 py-4 text-center">Actions</th>
+             </tr>
+           </thead>
+           <tbody className="divide-y divide-paa-navy/5">
+             {orders.map((ord) => (
+               <tr key={ord.dbId} className="hover:bg-gray-50 bg-white transition-colors">
+                 <td className="px-6 py-4">
+                   <p className="font-bold text-paa-navy mb-1">{ord.id}</p>
+                   <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3"/> {ord.date}</p>
+                 </td>
+                 <td className="px-6 py-4 font-bold text-paa-navy">
+                    {ord.customer}
+                 </td>
+                 <td className="px-6 py-4">
+                    <ul className="text-xs text-paa-gray-text font-medium space-y-1">
+                      {ord.items.map((it: any, idx: number) => (
+                        <li key={idx} className="flex gap-2"><span className="text-paa-navy font-bold">{it.qty}x</span> <span>{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span></li>
                       ))}
-                      <td style={{ padding: "0.9rem 0.9rem", textAlign: "center" }}>
-                        <span style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: 14,
-                          fontWeight: 800,
-                          color: isLowStock ? "#d97706" : "#16a34a",
-                          background: isLowStock ? "#fffbeb" : "#f0fdf4",
-                          padding: "0.25rem 0.6rem",
-                          borderRadius: 6,
-                          border: "1px solid " + (isLowStock ? "#fde68a" : "#bbf7d0"),
-                        }}>
-                          {book.inStock}
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.9rem 0.9rem" }}>
-                        {isLowStock ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "0.35rem 0.65rem", width: "fit-content" }}>
-                            <AlertTriangle size={13} color="#d97706" />
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706", whiteSpace: "nowrap" }}>LOW STOCK</span>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: 11, color: "#6b6b80" }}>—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    </ul>
+                 </td>
+                 <td className="px-6 py-4 text-center font-bold text-paa-navy bg-gray-50">
+                    ₹{ord.total}
+                 </td>
+                 <td className="px-6 py-4 text-center">
+                    <span className={`inline-block px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${ord.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : ord.status === 'Payment Not Received' ? 'bg-[#d9534f] text-white border-[#c9302c]' : 'bg-[#f0ad4e] text-white border-[#eea236]'}`}>
+                      {ord.status === 'Completed' ? 'Payment Verified' : ord.status === 'Payment Not Received' ? 'Payment Failed' : 'Pending Verification'}
+                    </span>
+                 </td>
+                 <td className="px-6 py-4 text-center">
+                    <button onClick={() => setSelectedOrder(ord)} className="text-[#5bc0de] text-xs font-bold uppercase tracking-widest hover:text-paa-navy transition-colors">Details</button>
+                 </td>
+               </tr>
+             ))}
+             {orders.length === 0 && (
+               <tr><td colSpan={6} className="text-center py-8">No orders yet.</td></tr>
+             )}
+           </tbody>
+         </table>
+       </div>
+    </div>
+  );
+
+  const SettingsTab = () => (
+    <div className="bg-white p-8 border border-paa-navy/10 shadow-sm max-w-2xl">
+       <div className="border-b border-paa-navy/10 pb-4 mb-8">
+          <h2 className="text-xl font-serif font-medium text-paa-navy mb-1">System Settings</h2>
+          <p className="text-paa-gray-text text-sm">Configure global application parameters, notification rules, and access control here.</p>
+       </div>
+       
+       <div className="space-y-6">
+          <div>
+            <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Platform Name</label>
+            <input type="text" defaultValue="Pune Authors' Association" className="w-full border border-paa-navy/20 bg-gray-50 rounded-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Support Email</label>
+            <input type="email" defaultValue="support@puneauthors.com" className="w-full border border-paa-navy/20 bg-gray-50 rounded-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
+          </div>
+          
+          <div className="pt-6 border-t border-paa-navy/10">
+            <h3 className="text-xs font-bold tracking-widest uppercase text-paa-navy mb-4">Default Email Notifications</h3>
+            <div className="space-y-4 bg-gray-50 p-4 border border-paa-navy/10">
+               <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
+                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> New Author Registered Alert
+               </label>
+               <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
+                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> Book Out of Stock Alert
+               </label>
+               <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
+                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> Event Registration Alert
+               </label>
+            </div>
           </div>
 
-          <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid rgba(0,0,0,0.05)", background: "#f7f7f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#6b6b80" }}>
-              Showing {filtered.length} of {stockData.length} titles
-            </span>
-            <span style={{ fontSize: 12, color: "#6b6b80" }}>Last updated: {new Date().toLocaleString("en-IN")}</span>
+          <div className="pt-6 border-t border-paa-navy/10 flex justify-end">
+             <button className="px-8 py-3 bg-[#5bc0de] text-white text-xs font-bold tracking-widest uppercase hover:bg-paa-navy transition-colors" onClick={() => alert('Settings Saved!')}>
+               Save Changes
+             </button>
+          </div>
+       </div>
+    </div>
+  );
+
+  const Modal = ({ isOpen, onClose, title, children }: any) => {
+    if (!isOpen) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
+        <div className="bg-white border text-paa-navy border-paa-navy/10 shadow-xl w-full max-w-lg">
+          <div className="bg-[#b3d4ff] p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center border-b border-paa-navy/10">
+            {title}
+            <button type="button" onClick={onClose} className="text-paa-navy hover:text-black">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-6">
+            {children}
           </div>
         </div>
+      </div>
+    );
+  };
 
-          </>
-        ) : activeTab === "orders" ? (
-          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f7f7f9", borderBottom: "2px solid rgba(0,0,0,0.06)" }}>
-                  <th style={thStyle}>Order ID</th>
-                  <th style={thStyle}>Customer</th>
-                  <th style={thStyle}>Contact</th>
-                  <th style={thStyle}>Amount</th>
-                  <th style={thStyle}>Screenshot</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Action</th>
+  const FormsTab = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy border-l-4 border-paa-navy pl-2">Forms Management</h3>
+        <button 
+          onClick={() => setIsFormModalOpen(true)}
+          className="px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase transition hover:bg-paa-gold"
+        >
+          Create Form
+        </button>
+      </div>
+
+      {selectedFormResponses ? (
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setSelectedFormResponses(null)}
+              className="text-paa-navy hover:text-paa-gold"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h4 className="font-bold text-paa-navy">Responses for: {selectedFormResponses.formTitle}</h4>
+          </div>
+          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-paa-navy/5 text-xs uppercase font-bold text-paa-navy/60">
+                <tr>
+                  <th className="px-4 py-3">Author</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Answers</th>
                 </tr>
               </thead>
-              <tbody>
-                {orders.map((order: any, i: number) => (
-                  <tr key={order.id} style={{ borderTop: "1px solid rgba(0,0,0,0.04)", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                    <td style={{ padding: "1rem", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600 }}>#{order.id}</td>
-                    <td style={{ padding: "1rem", fontSize: 13, fontWeight: 600 }}>{order.customerName}</td>
-                    <td style={{ padding: "1rem", fontSize: 12, color: "#6b6b80" }}>
-                      <div>{order.customerEmail}</div>
-                      <div>{order.customerPhone}</div>
-                    </td>
-                    <td style={{ padding: "1rem", fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700 }}>₹{order.amount}</td>
-                    <td style={{ padding: "1rem" }}>
-                      {order.paymentScreenshot ? (
-                        <a href={`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}${order.paymentScreenshot}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#2563eb", fontSize: 12, textDecoration: "none", fontWeight: 600 }}>
-                          <ImageIcon size={14} /> View
-                        </a>
-                      ) : (
-                        <span style={{ fontSize: 12, color: "#6b6b80" }}>None</span>
-                      )}
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: "0.3rem 0.6rem", borderRadius: 6, background: order.status === "Completed" ? "#f0fdf4" : "#fffbeb", color: order.status === "Completed" ? "#16a34a" : "#d97706" }}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      {order.status !== "Completed" ? (
-                        <button onClick={() => verifyOrder(order.id)} style={{ background: "#1a1a2e", color: "#fff", border: "none", padding: "0.4rem 0.8rem", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                          Verify Payment
-                        </button>
-                      ) : (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#16a34a", fontSize: 12, fontWeight: 600 }}>
-                          <CheckCircle size={14} /> Verified
-                        </div>
-                      )}
+              <tbody className="divide-y divide-paa-navy/10">
+                {selectedFormResponses.responses.map((r: any) => (
+                  <tr key={r.id} className="hover:bg-paa-navy/5">
+                    <td className="px-4 py-3 font-medium text-paa-navy">{r.author?.name}</td>
+                    <td className="px-4 py-3 text-paa-gray-text">{new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-paa-gray-text max-w-sm truncate">
+                      {JSON.stringify(r.answers)}
                     </td>
                   </tr>
                 ))}
-                {orders.length === 0 && (
-                  <tr><td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#6b6b80", fontSize: 13 }}>No orders found.</td></tr>
-                )}
               </tbody>
             </table>
           </div>
-        ) : activeTab === "gallery" ? (
-          <div style={{ background: "#fff", borderRadius: 16, padding: "2rem", border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 2px 12px rgba(0,0,0,0.04)", maxWidth: 800, margin: "0 auto" }}>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: "#1a1a2e", marginBottom: "1.5rem" }}>Upload Gallery Event</h2>
-            <form onSubmit={handleGallerySubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Title / Location</label>
-                  <input type="text" required value={galleryForm.location} onChange={e => setGalleryForm({...galleryForm, location: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box" }} placeholder="e.g. Pune Book Fair" />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Event Type</label>
-                  <select required value={galleryForm.type} onChange={e => setGalleryForm({...galleryForm, type: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box" }}>
-                    <option>Literary Event</option>
-                    <option>Book Fair</option>
-                    <option>Corporate Activation</option>
-                    <option>Airport Library</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Venue / Place</label>
-                  <input type="text" required value={galleryForm.place} onChange={e => setGalleryForm({...galleryForm, place: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box" }} placeholder="e.g. Bal Gandharva Rang Mandir" />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>City</label>
-                  <input type="text" required value={galleryForm.city} onChange={e => setGalleryForm({...galleryForm, city: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box" }} placeholder="e.g. Pune" />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Date</label>
-                  <input type="date" required value={galleryForm.date} onChange={e => setGalleryForm({...galleryForm, date: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box" }} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Duration</label>
-                  <input type="text" required value={galleryForm.duration} onChange={e => setGalleryForm({...galleryForm, duration: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box" }} placeholder="e.g. 2 days or Ongoing" />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Authors Present</label>
-                  <input type="number" required value={galleryForm.authors} onChange={e => setGalleryForm({...galleryForm, authors: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box" }} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Books Sold</label>
-                  <input type="number" required value={galleryForm.booksSold} onChange={e => setGalleryForm({...galleryForm, booksSold: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box" }} />
-                </div>
-              </div>
-              
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Description</label>
-                <textarea required value={galleryForm.description} onChange={e => setGalleryForm({...galleryForm, description: e.target.value})} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box", minHeight: 80 }} placeholder="Write a short recap..." />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Upload Photo {editingGalleryId && <span style={{ color: "#6b6b80", fontWeight: 400 }}>(Leave empty to keep existing)</span>}</label>
-                <input type="file" accept="image/*" onChange={e => setGalleryFile(e.target.files ? e.target.files[0] : null)} style={{ width: "100%", padding: "0.6rem 0.8rem", border: "1px dashed rgba(0,0,0,0.2)", borderRadius: 8, fontSize: 13, fontFamily: "var(--font-body)", boxSizing: "border-box", background: "#f9f9fb" }} />
-              </div>
-
-              <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
-                <button type="submit" style={{ background: "#2563eb", color: "#fff", border: "none", padding: "0.8rem 1.5rem", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-body)" }}>
-                  {editingGalleryId ? "Update Gallery Event" : "Upload to Gallery"}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {forms.map((f: any) => (
+            <div key={f.id} className="p-4 bg-white border border-paa-navy/10 flex flex-col gap-2 hover:shadow-md transition">
+              <div className="font-bold text-paa-navy text-lg">{f.title}</div>
+              <div className="text-sm text-paa-gray-text">{f.description}</div>
+              <div className="text-xs text-paa-gray-text">Fields: {f.fields.length}</div>
+              <div className="flex gap-2 mt-4">
+                <button 
+                  className="px-3 py-1.5 bg-paa-navy/10 text-paa-navy text-xs font-bold uppercase hover:bg-paa-navy hover:text-white transition"
+                  onClick={() => {
+                    axios.get(`${API}/api/admin/forms/${f.id}/responses`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }})
+                      .then(res => setSelectedFormResponses({ formTitle: f.title, responses: res.data }));
+                  }}
+                >
+                  View Responses
                 </button>
-                {editingGalleryId && (
-                  <button type="button" onClick={() => { setEditingGalleryId(null); setGalleryForm({ location: "", place: "", city: "", date: "", duration: "", authors: "", booksSold: "", type: "Literary Event", description: "" }); }} style={{ background: "transparent", color: "#1a1a2e", border: "1px solid rgba(0,0,0,0.2)", padding: "0.8rem 1.5rem", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-body)" }}>
-                    Cancel Edit
-                  </button>
-                )}
+                <button 
+                  className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold uppercase hover:bg-red-600 hover:text-white transition"
+                  onClick={() => {
+                    if (window.confirm("Delete this form and all its responses?")) {
+                      axios.delete(`${API}/api/admin/forms/${f.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }})
+                        .then(() => fetchForms());
+                    }
+                  }}
+                >
+                  Delete
+                </button>
               </div>
-            </form>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: "#1a1a2e", marginTop: "3rem", marginBottom: "1rem", borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: "2rem" }}>Existing Gallery Events</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {galleryList.map(item => (
-                <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, background: "#f9f9fb" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-                    {item.photoUrl && <img src={`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}${item.photoUrl}`} style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 6 }} />}
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.2rem" }}>{item.location}</div>
-                      <div style={{ fontSize: 12, color: "#6b6b80" }}>{item.city} • {new Date(item.date).toLocaleDateString()} • {item.type}</div>
+  const GalleryTab = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy border-l-4 border-paa-navy pl-2">Gallery Management</h3>
+        <button 
+          onClick={() => setIsGalleryModalOpen(true)}
+          className="px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase transition hover:bg-paa-gold"
+        >
+          Add Gallery Event
+        </button>
+      </div>
+
+      <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+        <table className="w-full text-left text-sm whitespace-nowrap">
+          <thead className="bg-paa-navy/5 text-xs uppercase font-bold text-paa-navy/60">
+            <tr>
+              <th className="px-4 py-3">Photo</th>
+              <th className="px-4 py-3">Location</th>
+              <th className="px-4 py-3">City</th>
+              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Date</th>
+              <th className="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-paa-navy/10">
+            {gallery.map((g: any) => (
+              <tr key={g.id} className="hover:bg-paa-navy/5 transition-colors">
+                <td className="px-4 py-3">
+                  <img src={g.photoUrl ? (g.photoUrl.startsWith('http') ? g.photoUrl : `${API}${g.photoUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded" />
+                </td>
+                <td className="px-4 py-3 font-medium text-paa-navy">{g.location}</td>
+                <td className="px-4 py-3 text-paa-gray-text">{g.city}</td>
+                <td className="px-4 py-3 text-paa-gray-text">{g.type}</td>
+                <td className="px-4 py-3 text-paa-gray-text">{new Date(g.date).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-right">
+                  <button 
+                    onClick={() => {
+                      if (window.confirm("Delete this gallery event?")) {
+                        axios.delete(`${API}/api/admin/gallery/${g.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }})
+                          .then(() => fetchGallery());
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-700 text-xs font-bold uppercase ml-3"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-paa-cream flex flex-col md:flex-row font-sans text-paa-navy selection:bg-paa-gold selection:text-white">
+      
+      {/* SIDEBAR */}
+      <aside className="w-full md:w-64 flex flex-col hidden md:flex shrink-0 h-screen sticky top-0 bg-paa-cream">
+        <div className="p-6 h-20 flex items-center shrink-0">
+          {/* Logo Removed */}
+        </div>
+
+        <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+           {[
+             { id: 'overview', label: 'Overview', icon: BarChart3 },
+             { id: 'authors', label: 'Authors Menu', icon: Users },
+             { id: 'books', label: 'Inventory / Books', icon: BookOpen },
+             { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
+             { id: 'orders', label: 'Web Orders', icon: ShoppingCart },
+             { id: 'forms', label: 'Forms Management', icon: ClipboardList },
+             { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
+             { id: 'settings', label: 'System Settings', icon: Settings },
+           ].map((item) => (
+              <button 
+                key={item.id}
+                onClick={() => setActiveTab(item.id as any)}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-bold tracking-widest uppercase transition-colors border ${
+                  activeTab === item.id 
+                  ? 'bg-paa-navy text-paa-cream border-paa-navy' 
+                  : 'text-paa-navy border-[transparent] hover:bg-paa-navy/5 border border-paa-navy/0 hover:border-paa-navy/10'
+                }`}
+              >
+                <item.icon className="w-4 h-4" /> 
+                {item.label}
+              </button>
+           ))}
+        </nav>
+
+        <div className="p-4 shrink-0 flex gap-2">
+           <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-paa-navy/10 bg-white text-xs font-bold uppercase hover:bg-red-50 text-red-600 transition-colors">
+              <LogOut size={14} /> Logout
+           </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-paa-cream">
+        
+        {/* Top Header */}
+        <header className="h-20 flex items-center justify-between px-8 shrink-0 bg-paa-cream">
+           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-paa-gray-text">
+              <span>Admin Portal</span>
+              <span className="text-paa-navy/30">/</span>
+              <span className="text-paa-navy">{activeTab.replace('-', ' ')}</span>
+           </div>
+           
+           <div className="flex items-center gap-4">
+              <button className="relative p-2 text-paa-navy border border-paa-navy/10 bg-white hover:bg-paa-navy hover:text-paa-cream transition-colors">
+                 <Bell className="w-4 h-4" />
+                 <span className="absolute top-1 right-1 w-2 h-2 bg-[#d9534f] rounded-full border border-white"></span>
+              </button>
+              <button className="md:hidden p-2 text-paa-navy border border-paa-navy/10 bg-white hover:bg-paa-navy hover:text-paa-cream transition-colors">
+                 <Menu className="w-4 h-4" />
+              </button>
+           </div>
+        </header>
+
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-auto p-4 sm:p-8 pt-0">
+           {activeTab === 'overview' && <OverviewTab />}
+           {activeTab === 'authors' && <AuthorsTab />}
+           {activeTab === 'books' && <BooksTab />}
+           {activeTab === 'events' && <EventsTab />}
+           {activeTab === 'orders' && <OrdersTab />}
+           {activeTab === 'forms' && <FormsTab />}
+           {activeTab === 'gallery' && <GalleryTab />}
+           {activeTab === 'settings' && <SettingsTab />}
+        </div>
+      </main>
+
+      <Modal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} title="Create Event">
+        <form className="space-y-4" onSubmit={async (e) => {
+          e.preventDefault();
+          const target = e.target as any;
+          await axios.post(`${API}/api/admin/activities`, {
+            name: target.name.value,
+            date: target.date.value,
+            location: target.location.value,
+            type: target.type.value
+          });
+          fetchEvents();
+          setIsEventModalOpen(false);
+        }}>
+          <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Name</label><input required name="name" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Date (e.g. 15 Aug 2026)</label><input required name="date" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Type</label><select name="type" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy"><option>Book Fairs</option><option>Literary Events</option><option>Meetup</option></select></div>
+          </div>
+          <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Location</label><input required name="location" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+          <div className="pt-4 mt-4 border-t border-paa-navy/10 flex justify-end">
+            <button type="submit" className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">Create Event</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Order Details Modal */}
+      <Modal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} title={`Order Details: ${selectedOrder?.id}`}>
+        {selectedOrder && (
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 border border-paa-navy/10 flex justify-between items-start">
+              <div>
+                <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">Customer Details</p>
+                <p className="font-bold text-paa-navy">{selectedOrder.customer}</p>
+                <p className="text-sm font-medium text-paa-gray-text mt-1">Placed on: {selectedOrder.date}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Amount</p>
+                <p className="font-bold text-xl text-paa-navy">₹{selectedOrder.total}</p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-3">Ordered Books</h3>
+              <ul className="space-y-2">
+                {selectedOrder.items.map((it: any, idx: number) => (
+                  <li key={idx} className="flex justify-between items-center border-b border-paa-navy/5 pb-2">
+                    <span className="font-medium text-sm text-paa-navy">{it.title} <span className="text-gray-400 italic font-normal text-xs ml-1">by {it.authorName}</span></span>
+                    <span className="font-bold text-paa-navy text-sm">Qty: {it.qty}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-3">Payment Information</h3>
+              {selectedOrder.payment === 'Paid' ? (
+                <div className="bg-[#e4ebf5] p-4 border border-paa-navy/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-paa-navy mb-1 uppercase tracking-widest">Payment Uploaded</p>
+                    <a href={`${API}${selectedOrder.paymentScreenshot}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">View Screenshot</a>
+                  </div>
+                  {selectedOrder.status === 'Completed' ? (
+                    <div className="flex items-center gap-2 text-green-700 bg-green-100 px-3 py-1 border border-green-300">
+                      <CheckCircle2 className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">Verified</span>
                     </div>
-                  </div>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button onClick={() => handleEditGallery(item)} style={{ background: "rgba(37,99,235,0.1)", color: "#2563eb", border: "none", padding: "0.4rem 0.8rem", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Edit</button>
-                    <button onClick={() => handleDeleteGallery(item.id)} style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "none", padding: "0.4rem 0.8rem", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Delete</button>
-                  </div>
+                  ) : selectedOrder.status === 'Payment Not Received' ? (
+                    <div className="flex items-center gap-2 text-red-700 bg-red-100 px-3 py-1 border border-red-300">
+                      <XCircle className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">Rejected</span>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">
+                        Verify
+                      </button>
+                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
-              {galleryList.length === 0 && <div style={{ fontSize: 13, color: "#6b6b80", textAlign: "center", padding: "1rem" }}>No events found.</div>}
+              ) : (
+                <div className="bg-red-50 p-4 border border-red-200 text-red-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-5 h-5" />
+                    <span className="text-sm font-bold">No payment screenshot uploaded</span>
+                  </div>
+                  {selectedOrder.status !== 'Payment Not Received' && (
+                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">
+                      Mark Failed
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-        ) : null}
-      </div>
-    </main>
+        )}
+      </Modal>
+
+      <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Create New Form">
+        <form className="space-y-4" onSubmit={async (e) => {
+          e.preventDefault();
+          const target = e.target as any;
+          const title = target.formTitle.value;
+          const type = target.formType.value;
+          const description = target.formDescription.value;
+          const fieldsJson = target.formFields.value;
+          let fields = [];
+          try { 
+            fields = JSON.parse(fieldsJson || "[]"); 
+          } catch(e) { 
+            alert("Invalid fields JSON. Please provide a valid JSON array."); 
+            return; 
+          }
+          try {
+            await axios.post(`${API}/api/admin/forms`, { title, type, description, fields }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+            fetchForms();
+            setIsFormModalOpen(false);
+          } catch (err) {
+            alert("Error creating form");
+          }
+        }}>
+          <div>
+            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Form Title</label>
+            <input name="formTitle" required className="w-full p-2 border border-paa-navy/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Category / Type</label>
+            <select name="formType" required className="w-full p-2 border border-paa-navy/20 bg-white">
+              <option value="Literary Events">Literary Events</option>
+              <option value="Book Fairs">Book Fairs</option>
+              <option value="Flybraries">Flybraries</option>
+              <option value="Book Café">Book Café</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Description (Optional)</label>
+            <textarea name="formDescription" className="w-full p-2 border border-paa-navy/20" rows={2}></textarea>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Fields (JSON Array)</label>
+            <textarea name="formFields" required className="w-full p-2 border border-paa-navy/20 font-mono text-xs" rows={4} defaultValue={`[\n  {"name": "Name", "type": "text"},\n  {"name": "Feedback", "type": "textarea"}\n]`}></textarea>
+            <p className="text-xs text-gray-500 mt-1">Supported types: text, textarea, select (needs "options": ["A","B"])</p>
+          </div>
+          <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition">
+            Create Form
+          </button>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isGalleryModalOpen} onClose={() => setIsGalleryModalOpen(false)} title="Add Gallery Event">
+        <form className="space-y-4" onSubmit={async (e) => {
+          e.preventDefault();
+          const target = e.target as any;
+          const file = target.photo.files[0];
+          if (!file) {
+            alert("Photo is required");
+            return;
+          }
+          const fd = new FormData();
+          fd.append('photo', file);
+          fd.append('location', target.loc.value);
+          fd.append('place', target.place.value);
+          fd.append('city', target.city.value);
+          fd.append('type', target.type.value);
+          fd.append('date', target.date.value);
+          fd.append('description', target.description.value);
+          fd.append('duration', target.duration.value || '1 Day');
+          fd.append('authors', target.authors.value || '0');
+          fd.append('booksSold', target.booksSold.value || '0');
+          
+          try {
+            await axios.post(`${API}/api/admin/gallery`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+            fetchGallery();
+            setIsGalleryModalOpen(false);
+          } catch(err) {
+            alert("Error adding gallery event");
+          }
+        }}>
+          <div>
+            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Event Title / Location</label>
+            <input name="loc" required className="w-full p-2 border border-paa-navy/20" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Place</label>
+              <input name="place" required className="w-full p-2 border border-paa-navy/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">City</label>
+              <input name="city" required className="w-full p-2 border border-paa-navy/20" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Date</label>
+              <input type="date" name="date" required className="w-full p-2 border border-paa-navy/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Type</label>
+              <select name="type" required className="w-full p-2 border border-paa-navy/20 bg-white">
+                <option value="Literary Event">Literary Event</option>
+                <option value="Book Fair">Book Fair</option>
+                <option value="Corporate Activation">Corporate Activation</option>
+                <option value="Airport Library">Airport Library</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Duration</label>
+              <input name="duration" placeholder="e.g. 2 Days" className="w-full p-2 border border-paa-navy/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Authors</label>
+              <input type="number" name="authors" placeholder="Count" className="w-full p-2 border border-paa-navy/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Books Sold</label>
+              <input type="number" name="booksSold" placeholder="Count" className="w-full p-2 border border-paa-navy/20" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Description</label>
+            <textarea name="description" required className="w-full p-2 border border-paa-navy/20" rows={2}></textarea>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Photo</label>
+            <input type="file" accept="image/*" name="photo" required className="w-full p-2 border border-paa-navy/20 bg-white" />
+          </div>
+          <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition">
+            Add Gallery Event
+          </button>
+        </form>
+      </Modal>
+
+    </div>
   );
 }

@@ -193,8 +193,8 @@ export function LandingPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "2rem" }}>
           {filteredGallery.slice(0, 4).map((book, i) => (
             <div key={i} style={{ background: "#fff", border: "1px solid #f3f4f6", padding: "1.5rem", borderRadius: 4 }}>
-              <div style={{ height: 200, background: "#f9fafb", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.5rem" }}>
-                <img src={book.coverUrl || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=200&h=280&fit=crop"} alt={book.title} style={{ height: "100%", width: "100%", objectFit: "cover" }} />
+              <div style={{ background: "#f7f7f9", height: 280, position: "relative", overflow: "hidden" }}>
+                <img src={book.coverUrl ? (book.coverUrl.startsWith('http') ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=200&h=280&fit=crop"} alt={book.title} style={{ height: "100%", width: "100%", objectFit: "cover" }} />
               </div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#b44d28", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>{book.genre === "NF" ? "NON-FICTION" : book.genre === "F" ? "FICTION" : book.genre === "C" ? "CHILDREN'S BOOK" : "POETRY"}</div>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h3>

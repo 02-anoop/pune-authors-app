@@ -2,3 +2,10 @@
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
+
+@theme {
+  --color-paa-navy: #1a1a2e;
+  --color-paa-cream: #fdfbf7;
+  --color-paa-gold: #d4af37;
+  --color-paa-gray-text: #6b6b80;
+}

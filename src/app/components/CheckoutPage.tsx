@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import axios from "axios";
-import { CheckCircle, Circle, Package, MessageSquare, Truck, CheckSquare, BarChart2, CreditCard, MapPin, Minus, Plus } from "lucide-react";
-
-const workflowSteps = [
-  { icon: <Package size={18} />, title: "Order Acceptance", desc: "Buyer's order is received and payment confirmed by PAA system.", color: "#2563eb" },
-  { icon: <MessageSquare size={18} />, title: "Confirmation to Buyer", desc: "Automated WhatsApp/Email confirmation sent with order details and tracking.", color: "#db2777" },
-  { icon: <Truck size={18} />, title: "Order Dispatched", desc: "The author ships your book and a tracking code is shared.", color: "#d97706" },
-  { icon: <CheckSquare size={18} />, title: "Delivery Confirmed", desc: "You receive the book safely at your doorstep.", color: "#16a34a" },
-];
+import { CheckCircle, Circle, Package, MessageSquare, Truck, CheckSquare, BarChart2, CreditCard, MapPin, Minus, Plus, User, Phone, Mail } from "lucide-react";
 
 export function CheckoutPage() {
   const navigate = useNavigate();
@@ -20,7 +13,6 @@ export function CheckoutPage() {
     cartIds.reduce((acc, id) => ({ ...acc, [id]: 1 }), {})
   );
 
-  const [activeStep, setActiveStep] = useState(0);
   const [form, setForm] = useState({ name: "", phone: "", pincode: "", address: "", city: "", state: "Maharashtra" });
   const [paymentDone, setPaymentDone] = useState(false);
   const [paymentFile, setPaymentFile] = useState<File | null>(null);
@@ -35,7 +27,7 @@ export function CheckoutPage() {
       navigate("/login?role=CUSTOMER");
       return;
     }
-    axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => {
         const u = res.data.user;
         setForm(prev => ({
@@ -50,13 +42,13 @@ export function CheckoutPage() {
         navigate("/login");
       });
 
-    axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/books`)
+    axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/books`)
       .then(res => {
         const cartBooks = res.data.filter((b: any) => cartIds.includes(b.id));
         setBooks(cartBooks.length > 0 ? cartBooks : res.data.slice(0, 1));
       })
       .catch(console.error);
-  }, [navigate]);
+  }, [navigate, cartIds]);
 
   const updateQty = (id: number, delta: number) => {
     setQuantities(prev => ({ ...prev, [id]: Math.max(1, (prev[id] || 1) + delta) }));
@@ -76,45 +68,39 @@ export function CheckoutPage() {
     try {
       const token = localStorage.getItem("token");
 
-      // We send a SINGLE order containing all items
+      const itemsPayload = books.map(book => ({
+        bookId: book.id,
+        quantity: quantities[book.id] || 1
+      }));
+
       const formData = new FormData();
       formData.append("amount", totalAmount.toString());
       formData.append("customerName", form.name);
       formData.append("customerPhone", form.phone);
       formData.append("address", `${form.address}, ${form.city}, ${form.state} - ${form.pincode}`);
-      formData.append("paymentScreenshot", paymentFile);
-      
-      const itemsPayload = books.map(book => ({
-        bookId: book.id,
-        quantity: quantities[book.id] || 1
-      }));
       formData.append("items", JSON.stringify(itemsPayload));
+      formData.append("paymentScreenshot", paymentFile);
 
-      await axios.post(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/orders`, formData, {
+      await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/orders`, formData, {
         headers: { 
-          "Content-Type": "multipart/form-data",
           "Authorization": `Bearer ${token}`
         }
       });
 
       setUploading(false);
       setPaymentDone(true);
-      let s = 0;
-      const interval = setInterval(() => {
-        s++;
-        setActiveStep(s);
-        if (s >= workflowSteps.length - 1) clearInterval(interval);
-      }, 1200);
     } catch (e) {
       setUploading(false);
       console.error(e);
-      alert("Payment failed");
+      alert("Order placement failed");
     }
   };
 
+  // Extract unique authors for the success screen
+  const authors = Array.from(new Map(books.map(b => [b.author?.id, b.author])).values()).filter(Boolean);
+
   return (
     <main style={{ fontFamily: "var(--font-body)", minHeight: "100vh" }}>
-      {/* Header */}
       <section style={{ background: "#f7f7f9", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "2rem 1.5rem" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#6b6b80", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.4rem" }}>Secure Checkout</div>
@@ -126,9 +112,47 @@ export function CheckoutPage() {
         {paymentDone ? (
           <div style={{ maxWidth: 800, margin: "0 auto", background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 16, padding: "3rem 2rem", textAlign: "center" }}>
             <CheckCircle size={56} color="#16a34a" style={{ margin: "0 auto 1.5rem" }} />
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem" }}>Payment Successful!</h2>
-            <p style={{ fontSize: 16, color: "#6b6b80", marginBottom: "2rem" }}>Your order has been placed successfully. You can view your order details, address, and payment screenshot in your My Profile section.</p>
-            <button onClick={() => navigate("/profile")} style={{ background: "#16a34a", color: "#fff", border: "none", padding: "0.85rem 2rem", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem" }}>Order Placed Successfully!</h2>
+            <p style={{ fontSize: 16, color: "#6b6b80", marginBottom: "2rem" }}>Your order has been sent to the respective authors. Please contact them below to arrange payment and shipping.</p>
+            
+            <div style={{ marginBottom: "2.5rem", textAlign: "left" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem", borderBottom: "1px solid rgba(0,0,0,0.1)", paddingBottom: "0.5rem" }}>Contact The Authors</h3>
+              <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+                {authors.map((author: any) => (
+                  <div key={author.id} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 12, padding: "1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#f0f0f4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <User size={20} color="#1a1a2e" />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e" }}>{author.name}</div>
+                        <div style={{ fontSize: 13, color: "#6b6b80" }}>Author</div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
+                      {author.whatsapp && (
+                        <a href={`https://wa.me/${author.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#16a34a", textDecoration: "none", fontSize: 14, fontWeight: 600, background: "#f0fdf4", padding: "0.5rem 1rem", borderRadius: 8 }}>
+                          <MessageSquare size={16} /> WhatsApp: {author.whatsapp}
+                        </a>
+                      )}
+                      {author.email && (
+                        <a href={`mailto:${author.email}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#2563eb", textDecoration: "none", fontSize: 14, fontWeight: 600, background: "#eff6ff", padding: "0.5rem 1rem", borderRadius: 8 }}>
+                          <Mail size={16} /> {author.email}
+                        </a>
+                      )}
+                      {author.phone && !author.whatsapp && (
+                        <a href={`tel:${author.phone}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#475569", textDecoration: "none", fontSize: 14, fontWeight: 600, background: "#f8fafc", padding: "0.5rem 1rem", borderRadius: 8 }}>
+                          <Phone size={16} /> Call: {author.phone}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={() => navigate("/profile")} style={{ background: "#1a1a2e", color: "#fff", border: "none", padding: "0.85rem 2rem", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
               Go to My Profile
             </button>
           </div>
@@ -201,7 +225,7 @@ export function CheckoutPage() {
               </div>
             </div>
 
-            {/* RIGHT — Payment */}
+            {/* RIGHT — Payment Details */}
             <div>
               <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16, padding: "1.75rem", position: "sticky", top: 80 }}>
                 <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: "#1a1a2e", marginBottom: "1.25rem" }}>Payment Details</h3>
@@ -254,7 +278,7 @@ export function CheckoutPage() {
                       opacity: uploading ? 0.7 : 1,
                     }}
                   >
-                    <CreditCard size={18} />
+                    <Package size={18} />
                     {uploading ? "Processing..." : "Place Order"}
                   </button>
                 </div>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import axios from "axios";
-import { User, LogOut, Package, ArrowRight } from "lucide-react";
+import { User, LogOut, Package, ArrowRight, MessageSquare, Mail, Phone, Check } from "lucide-react";
+import { OrderFulfillmentTimeline } from "./OrderFulfillmentTimeline";
 
 export function CustomerProfilePage() {
   const [userData, setUserData] = useState<any>(null);
@@ -12,18 +13,18 @@ export function CustomerProfilePage() {
   const [editAddress, setEditAddress] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [acknowledging, setAcknowledging] = useState<number | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const fetchProfile = () => {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
       return;
     }
-    axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => {
         if (res.data.user.role !== "CUSTOMER") {
-          // If they aren't a customer, redirect them to their respective dashboard
           navigate(res.data.user.role === "ADMIN" ? "/operations" : "/dashboard");
           return;
         }
@@ -31,6 +32,13 @@ export function CustomerProfilePage() {
         setEditName(res.data.user.name);
         setEditAddress(res.data.user.address || "");
         setOrders(res.data.customerOrders || []);
+        
+        // Update selectedOrder if it's currently open
+        if (selectedOrder) {
+          const updatedOrder = (res.data.customerOrders || []).find((o: any) => o.id === selectedOrder.id);
+          if (updatedOrder) setSelectedOrder(updatedOrder);
+        }
+
         setLoading(false);
       })
       .catch(err => {
@@ -38,6 +46,10 @@ export function CustomerProfilePage() {
         localStorage.removeItem("token");
         navigate("/login");
       });
+  };
+
+  useEffect(() => {
+    fetchProfile();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -50,7 +62,7 @@ export function CustomerProfilePage() {
     setSaving(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.put(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/auth/profile`, 
+      const res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/profile`, 
         { name: editName, address: editAddress },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -63,13 +75,28 @@ export function CustomerProfilePage() {
     }
   };
 
+  const handleAcknowledge = async (itemId: number) => {
+    setAcknowledging(itemId);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/order-items/${itemId}/acknowledge`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchProfile();
+    } catch (err) {
+      alert("Failed to acknowledge order");
+      console.error(err);
+    } finally {
+      setAcknowledging(null);
+    }
+  };
+
   if (loading) return <div style={{ padding: "4rem", textAlign: "center", fontFamily: "var(--font-body)" }}>Loading your profile...</div>;
 
   return (
     <main style={{ fontFamily: "var(--font-body)", minHeight: "calc(100vh - 64px)", background: "#f7f7f9", padding: "3rem 1.5rem" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         
-        {/* Header section */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" }}>
           <div>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 800, color: "#1a1a2e", marginBottom: "0.4rem" }}>
@@ -87,7 +114,6 @@ export function CustomerProfilePage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "2rem" }} className="profile-grid">
           
-          {/* Profile Card */}
           <div>
             <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(0,0,0,0.07)", padding: "2rem", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -148,7 +174,6 @@ export function CustomerProfilePage() {
             </div>
           </div>
 
-          {/* Orders Section */}
           <div>
             <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}>
               <div style={{ padding: "1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: "0.6rem" }}>
@@ -174,10 +199,7 @@ export function CustomerProfilePage() {
                       <tr style={{ background: "#f7f7f9", borderBottom: "1px solid rgba(0,0,0,0.05)", textAlign: "left" }}>
                         <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Order ID</th>
                         <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Item</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Qty</th>
                         <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Payment</th>
                         <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
                         <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}></th>
                       </tr>
@@ -192,18 +214,8 @@ export function CustomerProfilePage() {
                             <td style={{ padding: "1rem 1.5rem", fontFamily: "var(--font-mono)", fontSize: 12, color: "#6b6b80" }}>
                               {new Date(o.createdAt).toLocaleDateString()}
                             </td>
-                            <td colSpan={2} style={{ padding: "1rem 1.5rem", fontSize: 13, color: "#6b6b80" }}>
-                              {o.items?.length || 0} books
-                            </td>
                             <td style={{ padding: "1rem 1.5rem", fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "#1a1a2e" }}>
                               ₹{o.amount}
-                            </td>
-                            <td style={{ padding: "1rem 1.5rem" }}>
-                              {o.paymentScreenshot ? (
-                                <a href={`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}${o.paymentScreenshot}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>Screenshot</a>
-                              ) : (
-                                <span style={{ fontSize: 12, color: "#6b6b80" }}>-</span>
-                              )}
                             </td>
                             <td style={{ padding: "1rem 1.5rem" }}>
                               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
@@ -238,16 +250,15 @@ export function CustomerProfilePage() {
         </div>
       </div>
 
-      {/* Order Details Modal */}
       {selectedOrder && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}>
-          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 600, padding: "2rem", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={{ background: "#f7f7f9", borderRadius: 16, width: "100%", maxWidth: 700, padding: "2rem", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", fontFamily: "var(--font-display)" }}>Order Details</h2>
               <button onClick={() => setSelectedOrder(null)} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#6b6b80" }}>&times;</button>
             </div>
             
-            <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#f7f7f9", borderRadius: 8 }}>
+            <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#fff", borderRadius: 8, border: "1px solid rgba(0,0,0,0.06)" }}>
               <p style={{ margin: "0 0 0.5rem 0", fontSize: 13, color: "#1a1a2e" }}><strong>Order ID:</strong> #PAA-{selectedOrder.id.toString().padStart(4, '0')}</p>
               <p style={{ margin: "0 0 0.5rem 0", fontSize: 13, color: "#1a1a2e" }}><strong>Date:</strong> {new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
               <p style={{ margin: "0 0 0.5rem 0", fontSize: 13, color: "#1a1a2e" }}><strong>Total Amount:</strong> ₹{selectedOrder.amount}</p>
@@ -255,37 +266,59 @@ export function CustomerProfilePage() {
             </div>
             
             <h3 style={{ fontSize: 15, fontWeight: 600, color: "#1a1a2e", marginBottom: "1rem" }}>Purchased Items</h3>
-            <div style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#f7f7f9", textAlign: "left", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-                    <th style={{ padding: "0.8rem", fontSize: 12, fontWeight: 600, color: "#6b6b80" }}>Book Title</th>
-                    <th style={{ padding: "0.8rem", fontSize: 12, fontWeight: 600, color: "#6b6b80" }}>Price</th>
-                    <th style={{ padding: "0.8rem", fontSize: 12, fontWeight: 600, color: "#6b6b80" }}>Qty</th>
-                    <th style={{ padding: "0.8rem", fontSize: 12, fontWeight: 600, color: "#6b6b80" }}>Subtotal</th>
-                    <th style={{ padding: "0.8rem", fontSize: 12, fontWeight: 600, color: "#6b6b80" }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedOrder.items?.map((item: any) => (
-                    <tr key={item.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                      <td style={{ padding: "0.8rem", fontSize: 13, color: "#1a1a2e", fontWeight: 600 }}>{item.book?.title}</td>
-                      <td style={{ padding: "0.8rem", fontSize: 13, color: "#1a1a2e" }}>₹{item.book?.mrp || 0}</td>
-                      <td style={{ padding: "0.8rem", fontSize: 13, color: "#1a1a2e" }}>× {item.quantity}</td>
-                      <td style={{ padding: "0.8rem", fontSize: 13, color: "#1a1a2e", fontWeight: 600 }}>₹{(item.book?.mrp || 0) * item.quantity}</td>
-                      <td style={{ padding: "0.8rem" }}>
-                        <span style={{ 
-                          background: item.status.includes('Pending') ? '#fffbeb' : item.status === 'Completed' ? '#f0fdf4' : '#eff6ff', 
-                          color: item.status.includes('Pending') ? '#d97706' : item.status === 'Completed' ? '#16a34a' : '#2563eb', 
-                          padding: "0.2rem 0.5rem", borderRadius: 4, fontSize: 11, fontWeight: 600 
-                        }}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {selectedOrder.items?.map((item: any) => (
+                <div key={item.id} style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "1.5rem", background: "#fff" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+                    <div>
+                      <h4 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.2rem" }}>{item.book?.title}</h4>
+                      <div style={{ fontSize: 13, color: "#6b6b80" }}>₹{item.book?.mrp} × {item.quantity} = ₹{(item.book?.mrp || 0) * item.quantity}</div>
+                    </div>
+                    <span style={{ 
+                      background: item.status.includes('Pending') ? '#fffbeb' : item.status === 'Completed' ? '#f0fdf4' : '#eff6ff', 
+                      color: item.status.includes('Pending') ? '#d97706' : item.status === 'Completed' ? '#16a34a' : '#2563eb', 
+                      padding: "0.3rem 0.8rem", borderRadius: 6, fontSize: 12, fontWeight: 700 
+                    }}>
+                      {item.status}
+                    </span>
+                  </div>
+
+                  <OrderFulfillmentTimeline currentStatus={item.status} trackingNumber={item.trackingNumber} />
+
+                  <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px dashed rgba(0,0,0,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#6b6b80", marginBottom: "0.6rem" }}>Contact Author</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {item.book?.author?.whatsapp && (
+                          <a href={`https://wa.me/${item.book.author.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#16a34a", textDecoration: "none", fontSize: 12, fontWeight: 600, background: "#f0fdf4", padding: "0.5rem 0.8rem", borderRadius: 6 }}>
+                            <MessageSquare size={14} /> WhatsApp: {item.book.author.whatsapp}
+                          </a>
+                        )}
+                        {item.book?.author?.email && (
+                          <a href={`mailto:${item.book.author.email}`} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#2563eb", textDecoration: "none", fontSize: 12, fontWeight: 600, background: "#eff6ff", padding: "0.5rem 0.8rem", borderRadius: 6 }}>
+                            <Mail size={14} /> {item.book.author.email}
+                          </a>
+                        )}
+                        {item.book?.author?.phone && !item.book?.author?.whatsapp && (
+                          <a href={`tel:${item.book.author.phone}`} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#475569", textDecoration: "none", fontSize: 12, fontWeight: 600, background: "#f8fafc", padding: "0.5rem 0.8rem", borderRadius: 6 }}>
+                            <Phone size={14} /> Call: {item.book.author.phone}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {item.status === 'Dispatched' && (
+                      <button 
+                        onClick={() => handleAcknowledge(item.id)}
+                        disabled={acknowledging === item.id}
+                        style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "#16a34a", color: "#fff", border: "none", padding: "0.7rem 1.2rem", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: acknowledging === item.id ? 0.7 : 1 }}
+                      >
+                        <Check size={16} strokeWidth={3} /> I Received This
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

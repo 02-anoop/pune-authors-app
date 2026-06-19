@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import { NavBar } from "./components/NavBar";
 import { Footer } from "./components/Footer";
 import { LandingPage } from "./components/LandingPage";
-import { ChannelsPage } from "./components/ChannelsPage";
 import { CataloguePage } from "./components/CataloguePage";
 import { CheckoutPage } from "./components/CheckoutPage";
 import { AuthorRegistrationPage } from "./components/AuthorRegistrationPage";
@@ -36,7 +35,7 @@ export default function App() {
             <Route path="/register" element={<AuthorRegistrationPage />} />
             <Route path="/login" element={<AuthPage type="login" />} />
             <Route path="/signup" element={<AuthPage type="signup" />} />
-            <Route path="/dashboard" element={<AuthorDashboardPage />} />
+            <Route path="/dashboard/*" element={<AuthorDashboardPage />} />
             <Route path="/operations" element={<OperationsDashboardPage />} />
             <Route path="/profile" element={<CustomerProfilePage />} />
             <Route path="/book-cafe" element={<GoaCafePage />} />

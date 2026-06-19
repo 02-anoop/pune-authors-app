@@ -30,6 +30,7 @@ export function AuthorRegistrationPage() {
     email: "",
     password: "",
     phone: "",
+    whatsapp: "",
     bio: "",
     title: "",
     genre: "",
@@ -444,12 +445,11 @@ export function AuthorRegistrationPage() {
                       if (authorBlob) formData.append("photo", authorBlob);
                       if (coverBlob) formData.append("cover", coverBlob);
                       
-                      await axios.post(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/authors/register`, formData, {
-                        headers: { "Content-Type": "multipart/form-data" }
-                      });
+                      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/authors/register`, formData);
                       setSubmitted(true);
-                    } catch (e) {
-                      alert("Failed to submit. Please try again.");
+                    } catch (e: any) {
+                      const msg = e.response?.data?.error || e.message || "Unknown error";
+                      alert(`Failed to submit: ${msg}`);
                       console.error(e);
                     } finally {
                       setIsSubmitting(false);
@@ -475,9 +475,9 @@ export function AuthorRegistrationPage() {
             </div>
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800, color: "#1a1a2e", marginBottom: "0.5rem" }}>Application Submitted!</h2>
             <p style={{ fontSize: 14, color: "#6b6b80", lineHeight: 1.7, maxWidth: 440, margin: "0 auto 1.5rem" }}>
-              Thank you, <strong>{form.name || "Author"}</strong>! Your application for <em>"{form.title || "your book"}"</em> has been received. Our editorial team will review it within 5-7 working days.
+              Thank you, <strong>{form.name || "Author"}</strong>! Your application for <em>"{form.title || "your book"}"</em> has been received. <br/><br/>
+              <strong style={{ color: "#d97706" }}>Approval Pending:</strong> You must wait for the Admin to approve your account. Once approved, you will be able to log in to your Author Dashboard.
             </p>
-
             {/* Receipt */}
             <div style={{ background: "#f7f7f9", borderRadius: 14, padding: "1.5rem", maxWidth: 380, margin: "0 auto", textAlign: "left", border: "1px dashed rgba(0,0,0,0.12)" }}>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#6b6b80", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.75rem", textAlign: "center" }}>Application Receipt</div>

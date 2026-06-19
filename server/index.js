@@ -1,4 +1,5 @@
 require('dotenv').config();
+// Reload trigger - database synced
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -74,10 +75,11 @@ app.post('/api/auth/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ error: 'Invalid credentials' });
 
+    // Allow Pending authors to login so they can view their status dashboard
     if (user.role === 'AUTHOR') {
       const author = await prisma.author.findUnique({ where: { email } });
-      if (author && author.status === 'Pending') {
-        return res.status(403).json({ error: 'Approval Pending. You can login after the admin approves your account.' });
+      if (author && author.status === 'Rejected') {
+        // We still allow login if rejected, we will show rejected status in AuthorDashboardPage
       }
     }
 
@@ -175,13 +177,66 @@ app.get('/api/books', async (req, res) => {
   res.json(books);
 });
 
-// 2. Author Registration (creates author, user login, and their first book)
-app.post('/api/authors/register', upload.fields([
-  { name: 'photo', maxCount: 1 },
-  { name: 'cover', maxCount: 1 }
-]), async (req, res) => {
+// 1b. Get single book by ID (with author + reviews)
+app.get('/api/books/:id', async (req, res) => {
   try {
-    const { name, email, phone, password, bio, title, genre, synopsis, pages, mrp, whatsapp } = req.body;
+    const book = await prisma.book.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        author: true,
+        reviews: { orderBy: { createdAt: 'desc' } }
+      }
+    });
+    if (!book) return res.status(404).json({ error: 'Book not found' });
+    res.json(book);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch book' });
+  }
+});
+
+// Get reviews for a book
+app.get('/api/books/:id/reviews', async (req, res) => {
+  try {
+    const reviews = await prisma.bookReview.findMany({
+      where: { bookId: parseInt(req.params.id) },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+// Submit a review for a book
+app.post('/api/books/:id/reviews', async (req, res) => {
+  try {
+    const { reviewerName, rating, comment } = req.body;
+    if (!reviewerName || !rating || !comment) {
+      return res.status(400).json({ error: 'Name, rating and comment are required' });
+    }
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+    const review = await prisma.bookReview.create({
+      data: {
+        bookId: parseInt(req.params.id),
+        reviewerName,
+        rating: parseInt(rating),
+        comment
+      }
+    });
+    res.status(201).json(review);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to submit review' });
+  }
+});
+
+
+// 2. Author Registration (creates author, user login, and their first book)
+app.post('/api/authors/register', upload.any(), async (req, res) => {
+  try {
+    const { name, email, phone, password, bio, title, genre, synopsis, pages, mrp, whatsapp, transactionId, stock } = req.body;
     
     // Check if email already in use
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -190,8 +245,18 @@ app.post('/api/authors/register', upload.fields([
     }
 
     // In local dev, store local URL. In prod, this would be an S3 URL.
-    const photoUrl = req.files['photo'] ? `/uploads/${req.files['photo'][0].filename}` : null;
-    const coverUrl = req.files['cover'] ? `/uploads/${req.files['cover'][0].filename}` : null;
+    let photoUrl = null, coverUrl = null, paymentScreenshotUrl = null;
+    if (Array.isArray(req.files)) {
+       for (const file of req.files) {
+          if (file.fieldname === 'photo') photoUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'cover') coverUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'paymentScreenshot') paymentScreenshotUrl = `/uploads/${file.filename}`;
+       }
+    } else if (req.files) {
+       photoUrl = req.files['photo'] ? `/uploads/${req.files['photo'][0].filename}` : null;
+       coverUrl = req.files['cover'] ? `/uploads/${req.files['cover'][0].filename}` : null;
+       paymentScreenshotUrl = req.files['paymentScreenshot'] ? `/uploads/${req.files['paymentScreenshot'][0].filename}` : null;
+    }
 
     // Create login user
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -199,7 +264,9 @@ app.post('/api/authors/register', upload.fields([
       data: { name, email, password: hashedPassword, role: 'AUTHOR' }
     });
 
-    const author = await prisma.author.create({
+    let author;
+    try {
+      author = await prisma.author.create({
       data: {
         name,
         email,
@@ -207,6 +274,8 @@ app.post('/api/authors/register', upload.fields([
         whatsapp,
         bio,
         photoUrl,
+        transactionId,
+        paymentScreenshot: paymentScreenshotUrl,
         books: {
           create: {
             title,
@@ -214,18 +283,25 @@ app.post('/api/authors/register', upload.fields([
             synopsis,
             pages: parseInt(pages) || null,
             mrp: parseFloat(mrp),
+            stock: parseInt(stock) || 0,
             coverUrl,
-            status: 'Approved'
+            status: 'Pending'
           }
         }
       },
       include: { books: true }
     });
+    } catch (dbError) {
+      // Rollback user if author fails
+      await prisma.user.delete({ where: { email } });
+      throw dbError;
+    }
 
     res.status(201).json(author);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Registration failed' });
+    require('fs').writeFileSync('last_error.log', error.stack || error.toString());
+    res.status(500).json({ error: 'Registration failed', details: error.message });
   }
 });
 
@@ -285,7 +361,7 @@ app.post('/api/admin/authors/:id/approve', async (req, res) => {
   const id = parseInt(req.params.id);
   const author = await prisma.author.update({
     where: { id },
-    data: { status: 'Active' }
+    data: { status: 'Active', rejectionReason: null }
   });
   // Approve their books too
   await prisma.book.updateMany({
@@ -293,6 +369,43 @@ app.post('/api/admin/authors/:id/approve', async (req, res) => {
     data: { status: 'Approved' }
   });
   res.json(author);
+});
+
+// 5b. Operations Dashboard - Reject Author (with reason)
+app.post('/api/admin/authors/:id/reject', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { reason } = req.body;
+    const author = await prisma.author.update({
+      where: { id },
+      data: { status: 'Rejected', rejectionReason: reason || 'No reason provided.' }
+    });
+    res.json(author);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reject author' });
+  }
+});
+
+// Admin: Edit author profile (bio, name, phone, whatsapp)
+app.put('/api/admin/authors/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, bio, phone, whatsapp } = req.body;
+    const author = await prisma.author.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(bio !== undefined && { bio }),
+        ...(phone !== undefined && { phone }),
+        ...(whatsapp !== undefined && { whatsapp }),
+      }
+    });
+    res.json(author);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update author' });
+  }
 });
 
 // Admin Dashboard Overview Stats
@@ -395,6 +508,54 @@ app.delete('/api/admin/books/:id', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// Admin: Edit book details (title, genre, subGenre, mrp, stock, synopsis)
+app.put('/api/admin/books/:id', async (req, res) => {
+  try {
+    const { title, genre, subGenre, mrp, stock, synopsis } = req.body;
+    const book = await prisma.book.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        ...(title !== undefined && { title }),
+        ...(genre !== undefined && { genre }),
+        ...(subGenre !== undefined && { subGenre: subGenre || null }),
+        ...(mrp !== undefined && { mrp: parseFloat(mrp) }),
+        ...(stock !== undefined && { stock: parseInt(stock) }),
+        ...(synopsis !== undefined && { synopsis }),
+      }
+    });
+    res.json(book);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update book' });
+  }
+});
+
+
+app.post('/api/admin/books/:id/approve', async (req, res) => {
+  try {
+    const book = await prisma.book.update({
+      where: { id: parseInt(req.params.id) },
+      data: { status: 'Approved', rejectionReason: null }
+    });
+    res.json(book);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to approve book' });
+  }
+});
+
+app.post('/api/admin/books/:id/reject', async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const book = await prisma.book.update({
+      where: { id: parseInt(req.params.id) },
+      data: { status: 'Rejected', rejectionReason: reason || "No reason provided." }
+    });
+    res.json(book);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reject book' });
   }
 });
 
@@ -548,6 +709,57 @@ app.put('/api/author/inventory/:id', verifyToken, async (req, res) => {
   }
 });
 
+// Author: Update own bio / profile info
+app.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async (req, res) => {
+  try {
+    const { bio, phone, whatsapp } = req.body;
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    const updateData = {
+      ...(bio !== undefined && { bio }),
+      ...(phone !== undefined && { phone }),
+      ...(whatsapp !== undefined && { whatsapp }),
+    };
+    if (req.file) {
+      updateData.photoUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const updated = await prisma.author.update({
+      where: { id: author.id },
+      data: updateData
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Author: Update book cover image
+app.put('/api/author/books/:id/cover', verifyToken, upload.single('cover'), async (req, res) => {
+  try {
+    const bookId = parseInt(req.params.id);
+    if (!req.file) return res.status(400).json({ error: 'No cover image uploaded' });
+
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    const book = await prisma.book.findUnique({ where: { id: bookId } });
+    if (!book || book.authorId !== author.id) return res.status(403).json({ error: 'Not authorized' });
+
+    const coverUrl = `/uploads/${req.file.filename}`;
+    const updated = await prisma.book.update({
+      where: { id: bookId },
+      data: { coverUrl }
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update cover' });
+  }
+});
+
 // Add New Book by Existing Author
 app.post('/api/author/books', verifyToken, upload.single('cover'), async (req, res) => {
   try {
@@ -568,7 +780,7 @@ app.post('/api/author/books', verifyToken, upload.single('cover'), async (req, r
         overpriced: overpriced === 'true',
         coverUrl,
         authorId: author.id,
-        status: 'Approved'
+        status: 'Pending'
       }
     });
 
@@ -978,6 +1190,237 @@ app.post('/api/author/forms/:id/submit', verifyToken, async (req, res) => {
 });
 
 // Start server
+// --- DYNAMIC AUTHOR FIELDS ---
+app.get('/api/admin/author-fields', verifyToken, (req, res) => {
+    try {
+        const settings = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'settings.json')));
+        res.json(settings.authorDynamicFields || []);
+    } catch (e) {
+        res.json([]);
+    }
+});
+
+app.post('/api/admin/author-fields', verifyToken, (req, res) => {
+    try {
+        const fields = req.body.fields;
+        const settingsPath = require('path').join(__dirname, 'settings.json');
+        let settings = {};
+        if (require('fs').existsSync(settingsPath)) {
+            settings = JSON.parse(require('fs').readFileSync(settingsPath));
+        }
+        settings.authorDynamicFields = fields;
+        require('fs').writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to save fields' });
+    }
+});
+
+app.put('/api/author/profile/extra', verifyToken, async (req, res) => {
+    try {
+        const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+        if (!author) return res.status(404).json({ error: "Author not found" });
+        await prisma.author.update({
+            where: { id: author.id },
+            data: { extraData: req.body.extraData }
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update extra data' });
+    }
+});
+
+
+// --- DYNAMIC AUTHOR FIELDS ---
+app.get('/api/admin/author-fields', verifyToken, (req, res) => {
+    try {
+        const settings = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'settings.json')));
+        res.json(settings.authorDynamicFields || []);
+    } catch(e) { res.json([]); }
+});
+
+app.post('/api/admin/author-fields', verifyToken, (req, res) => {
+    try {
+        const p = require('path').join(__dirname, 'settings.json');
+        const settings = require('fs').existsSync(p) ? JSON.parse(require('fs').readFileSync(p)) : {};
+        settings.authorDynamicFields = req.body.fields;
+        require('fs').writeFileSync(p, JSON.stringify(settings, null, 2));
+        res.json({ success: true });
+    } catch(e) { res.status(500).json({ error: 'Failed to save settings' }); }
+});
+
+app.put('/api/author/profile/extra', verifyToken, async (req, res) => {
+    try {
+        const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+        await prisma.author.update({
+            where: { id: author.id },
+            data: { extraData: req.body }
+        });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to save extra data' });
+    }
+});
+
+
+
+// --- AUTHOR EVENTS MANAGEMENT ---
+app.get('/api/author/events', verifyToken, async (req, res) => {
+  try {
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+
+    const eventInvites = await prisma.eventAuthor.findMany({
+      where: { authorId: author.id },
+      include: { event: true }
+    });
+    
+    const books = await prisma.book.findMany({ where: { authorId: author.id, status: 'Active' }});
+    const listedBooks = await prisma.eventBook.findMany({ where: { authorId: author.id } });
+
+    res.json({ eventInvites, books, listedBooks });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+app.post('/api/author/events/:eventId/opt-in', verifyToken, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.eventId);
+    const { booksToLink } = req.body; // Array of { bookId, stock }
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    
+    await prisma.eventAuthor.updateMany({
+      where: { eventId, authorId: author.id },
+      data: { optInStatus: 'Opted-In' }
+    });
+    
+    // Remove old mappings for this event/author and recreate
+    await prisma.eventBook.deleteMany({ where: { eventId, authorId: author.id } });
+    
+    if (booksToLink && booksToLink.length > 0) {
+       const eventBooksData = booksToLink.map((b) => ({
+          eventId,
+          authorId: author.id,
+          bookId: parseInt(b.bookId),
+          listedStock: parseInt(b.stock)
+       }));
+       await prisma.eventBook.createMany({ data: eventBooksData });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to opt in' });
+  }
+});
+
+
+// PUBLIC EVENTS ENDPOINT
+app.get('/api/public/events', async (req, res) => {
+  try {
+    const events = await prisma.event.findMany({
+      where: {
+        OR: [
+          { broadcastStatus: 'CustomersAlso' },
+          { broadcastStatus: 'AuthorsOnly' } // let's show all active events? Or just CustomersAlso? Let's show CustomersAlso
+        ]
+      },
+      include: {
+         _count: { select: { eventBooks: true, eventAuthors: true } }
+      },
+      orderBy: { id: 'desc' }
+    });
+    // Actually let's just fetch all events that are CustomersAlso
+    const publicEvents = events.filter(e => e.broadcastStatus === 'CustomersAlso');
+    res.json(publicEvents);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch public events' });
+  }
+});
+
+// GET PUBLIC EVENT CATALOGUE
+app.get('/api/events/:eventId/catalogue', async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.eventId);
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    
+    const listedBooks = await prisma.eventBook.findMany({
+      where: { eventId },
+      include: {
+         book: true,
+         author: { select: { name: true, bio: true, photoUrl: true } }
+      }
+    });
+    
+    res.json({ event, catalogue: listedBooks });
+  } catch(err) {
+    res.status(500).json({ error: 'Failed to fetch catalogue' });
+  }
+});
+
+// --- EVENTS MANAGEMENT (PHASE 1) ---
+
+app.post('/api/admin/events', verifyToken, async (req, res) => {
+  try {
+    const { name, location, date, duration } = req.body;
+    const event = await prisma.event.create({
+      data: { name, location, date, duration, status: 'Upcoming' }
+    });
+    res.status(201).json(event);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+app.get('/api/admin/events', verifyToken, async (req, res) => {
+  try {
+    const events = await prisma.event.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+         _count: { select: { eventAuthors: true, eventBooks: true } },
+         eventBooks: { select: { listedStock: true } }
+      }
+    });
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+app.post('/api/admin/events/:id/broadcast', verifyToken, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const { target } = req.body; // 'Authors' or 'Customers'
+    
+    if (target === 'Authors') {
+       await prisma.event.update({
+         where: { id: eventId },
+         data: { broadcastStatus: 'AuthorsOnly' }
+       });
+       
+       // Here NodeMailer logic would go to email authors
+       // For now we just create EventAuthor records for all Active authors
+       const activeAuthors = await prisma.author.findMany({ where: { status: 'Active' } });
+       const eventAuthorsData = activeAuthors.map(a => ({ eventId, authorId: a.id, optInStatus: 'Pending' }));
+       await prisma.eventAuthor.createMany({ data: eventAuthorsData, skipDuplicates: true });
+       
+       res.json({ success: true, message: 'Broadcast sent to authors. Opt-in requests created.' });
+    } else if (target === 'Customers') {
+       await prisma.event.update({
+         where: { id: eventId },
+         data: { broadcastStatus: 'CustomersAlso' }
+       });
+       res.json({ success: true, message: 'Catalogue generated and broadcasted to customers!' });
+    } else {
+       res.status(400).json({ error: 'Invalid broadcast target' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Broadcast failed' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

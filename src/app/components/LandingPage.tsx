@@ -5,26 +5,34 @@ import { ArrowRight, Book, Megaphone, Store, Mic, GraduationCap, Building2, Mail
 
 export function LandingPage() {
   const [activeGenre, setActiveGenre] = useState<string>("All Books");
-  const [galleryItems, setGalleryItems] = useState<any[]>([]);
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [galleryItems, setGalleryItems] = useState<any[]>([]);
+
   useEffect(() => {
-    axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/books`)
-      .then(res => setGalleryItems(res.data))
-      .catch(err => console.error(err));
+    axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/books`)
+      .then((res) => {
+        const mapped = res.data.map((b: any) => ({
+          ...b,
+          authorName: b.author?.name || "Unknown",
+          genre: b.genre === "Non-Fiction" ? "NF" : b.genre === "Children's corner" ? "C" : "F",
+          description: b.synopsis
+        }));
+        setGalleryItems(mapped);
+      })
+      .catch((err) => console.error(err));
   }, []);
 
-  const genres = ["All Books", "Fiction", "Non-Fiction", "Children's corner"];
-  
-  const mappedGenre = activeGenre === "All Books" ? null : 
-                      activeGenre === "Fiction" ? "F" : 
-                      activeGenre === "Non-Fiction" ? "NF" : "C";
+  const mappedGenre =
+    activeGenre === "All Books" ? null :
+    activeGenre === "Non-Fiction" ? "NF" :
+    activeGenre === "Fiction" ? "F" : null;
 
   const filteredGallery = mappedGenre
-    ? galleryItems.filter((b) => b.genre === mappedGenre)
+    ? galleryItems.filter((b: any) => b.genre === mappedGenre)
     : galleryItems;
 
   return (
@@ -161,53 +169,107 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Books Preview */}
+      {/* Books Preview — Featured Books / Buy Our Books */}
       <section style={{ maxWidth: 1280, margin: "0 auto", padding: "6rem 1.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem", flexWrap: "wrap", gap: "2rem" }}>
+        {/* Section header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1.5rem" }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#b44d28", letterSpacing: "0.1em", marginBottom: "0.5rem", textTransform: "uppercase" }}>Featured Books</div>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 700, color: "#111827" }}>Buy Our Books</h2>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 700, color: "#111827", margin: 0 }}>Buy Our Books</h2>
+            <p style={{ fontSize: 14, color: "#6b7280", marginTop: "0.5rem" }}>Browse by category — Fiction, Non-Fiction &amp; Children's</p>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            {genres.map(g => (
-              <button
-                key={g}
-                onClick={() => setActiveGenre(g)}
-                style={{
-                  background: activeGenre === g ? "#111827" : "#fff",
-                  color: activeGenre === g ? "#fff" : "#4b5563",
-                  border: "1px solid " + (activeGenre === g ? "#111827" : "#e5e7eb"),
-                  padding: "0.5rem 1rem",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  borderRadius: 4,
-                  cursor: "pointer",
-                }}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
+          <Link to="/catalogue" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: "#111827", color: "#fff", padding: "0.75rem 1.5rem", borderRadius: 6, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+            View Full Catalogue →
+          </Link>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "2rem" }}>
-          {filteredGallery.slice(0, 4).map((book, i) => (
-            <div key={i} style={{ background: "#fff", border: "1px solid #f3f4f6", padding: "1.5rem", borderRadius: 4 }}>
-              <div style={{ background: "#f7f7f9", height: 280, position: "relative", overflow: "hidden" }}>
-                <img src={book.coverUrl ? (book.coverUrl.startsWith('http') ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=200&h=280&fit=crop"} alt={book.title} style={{ height: "100%", width: "100%", objectFit: "cover" }} />
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#b44d28", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>{book.genre === "NF" ? "NON-FICTION" : book.genre === "F" ? "FICTION" : book.genre === "C" ? "CHILDREN'S BOOK" : "POETRY"}</div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h3>
-              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: "1rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>BY {book.author?.name}</div>
-              <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, marginBottom: "1.5rem", height: 40, overflow: "hidden" }}>
-                {book.synopsis || "An exploration into mindfulness and personal discovery."}
-              </p>
-              <Link to="/catalogue" style={{ display: "block", textAlign: "center", background: "#b44d28", color: "#fff", padding: "0.8rem", borderRadius: 4, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-                BUY NOW — ₹{book.mrp}
-              </Link>
-            </div>
+        {/* Category tabs */}
+        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+          {[
+            { label: "All Books", key: "All Books", icon: "📚", color: "#111827", bg: "#f3f4f6" },
+            { label: "Non-Fiction", key: "Non-Fiction", icon: "📘", color: "#2563eb", bg: "#eff6ff" },
+            { label: "Fiction", key: "Fiction", icon: "📖", color: "#db2777", bg: "#fdf2f8" },
+            { label: "Children's", key: "Children's corner", icon: "🧒", color: "#16a34a", bg: "#f0fdf4" },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveGenre(tab.key)}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.4rem",
+                background: activeGenre === tab.key ? tab.bg : "#fff",
+                color: activeGenre === tab.key ? tab.color : "#4b5563",
+                border: `2px solid ${activeGenre === tab.key ? tab.color : "#e5e7eb"}`,
+                padding: "0.55rem 1.1rem", fontSize: 13, fontWeight: 700,
+                borderRadius: 8, cursor: "pointer", transition: "all 0.15s",
+              }}
+            >
+              <span>{tab.icon}</span>{tab.label}
+            </button>
           ))}
         </div>
+
+        {/* Subcategory chips — shown when a specific category is selected */}
+        {activeGenre === "Non-Fiction" && (
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+            {["Spiritual/Self-Help", "Geopolitics", "Historical", "Biographies", "Short Stories"].map(sg => (
+              <span key={sg} style={{ background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 20, padding: "0.25rem 0.75rem", fontSize: 11, fontWeight: 600 }}>{sg}</span>
+            ))}
+          </div>
+        )}
+        {activeGenre === "Fiction" && (
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+            {["Romance", "Thriller", "Mysteries", "Sci-Fi", "Poetry"].map(sg => (
+              <span key={sg} style={{ background: "#fdf2f8", color: "#db2777", border: "1px solid #fbcfe8", borderRadius: 20, padding: "0.25rem 0.75rem", fontSize: 11, fontWeight: 600 }}>{sg}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Book cards grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "2rem" }}>
+          {filteredGallery.slice(0, 4).map((book, i) => {
+            const genreColor = book.genre === "NF" ? "#2563eb" : book.genre === "F" ? "#db2777" : "#16a34a";
+            const genreBg = book.genre === "NF" ? "#eff6ff" : book.genre === "F" ? "#fdf2f8" : "#f0fdf4";
+            const genreLabel = book.genre === "NF" ? "Non-Fiction" : book.genre === "F" ? "Fiction" : "Children's";
+            return (
+              <div
+                key={i}
+                style={{ background: "#fff", border: "1px solid #f3f4f6", borderRadius: 10, overflow: "hidden", transition: "box-shadow 0.2s, transform 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 32px rgba(0,0,0,0.1)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
+              >
+                <div style={{ background: "#f7f7f9", height: 260, position: "relative", overflow: "hidden" }}>
+                  <img
+                    src={book.coverUrl ? (book.coverUrl.startsWith("http") ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=200&h=280&fit=crop"}
+                    alt={book.title}
+                    style={{ height: "100%", width: "100%", objectFit: "cover" }}
+                  />
+                  <div style={{ position: "absolute", top: 10, left: 10, background: genreBg, color: genreColor, fontSize: 10, fontWeight: 700, padding: "0.2rem 0.6rem", borderRadius: 6 }}>
+                    {genreLabel}
+                  </div>
+                </div>
+                <div style={{ padding: "1.25rem" }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h3>
+                  <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>by {book.authorName}</div>
+                  <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: "1.25rem", height: 38, overflow: "hidden" }}>
+                    {book.description || book.synopsis || "A captivating read from a PAA author."}
+                  </p>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>₹{book.mrp}</span>
+                    <Link to="/catalogue" style={{ background: "#b44d28", color: "#fff", padding: "0.5rem 1rem", borderRadius: 6, fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
+                      Buy Now
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {filteredGallery.length === 0 && (
+          <div style={{ textAlign: "center", padding: "4rem", color: "#9ca3af" }}>
+            <p style={{ fontSize: 15 }}>No books in this category yet. <Link to="/catalogue" style={{ color: "#b44d28" }}>Browse full catalogue →</Link></p>
+          </div>
+        )}
       </section>
 
       {/* Contact Section */}

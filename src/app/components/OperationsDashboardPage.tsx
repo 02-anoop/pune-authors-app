@@ -10,6 +10,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
 import { useNavigate } from 'react-router';
+import { toast } from 'sonner';
 
 const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => void }) => {
   const [activeProfileTab, setActiveProfileTab] = useState<'inventory' | 'orders' | 'events' | 'distribution' | 'forms'>('inventory');
@@ -31,7 +32,15 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
     fetchProfile();
   }, [author.id]);
 
-  if (loading) return <div className="p-8 text-center text-paa-navy font-bold bg-white border border-paa-navy/10 shadow-sm animate-pulse">Loading author details...</div>;
+  if (loading) return (
+    <div className="p-8 bg-white border border-paa-navy/10 shadow-sm space-y-6">
+       <div className="flex gap-4 items-center">
+          <div className="w-14 h-14 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div>
+       </div>
+       <div className="h-64 bg-gray-200 animate-pulse rounded w-full"></div>
+    </div>
+  );
   if (!profileData) return <div className="p-8 text-center text-red-500 font-bold bg-white border border-red-200">Error loading author details.</div>;
 
   const { authorProfile, authorOrders } = profileData;
@@ -218,6 +227,40 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
                 <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Author Bio</p>
                 <p className="text-sm font-medium text-paa-navy bg-gray-50 p-4 border rounded leading-relaxed">{authorProfile.bio || 'No biography provided.'}</p>
              </div>
+             
+             {authorProfile.extraData && Object.keys(authorProfile.extraData).length > 0 && (
+                <div className="md:col-span-2 mt-4">
+                   <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-2 border-b pb-1">Additional Required Details</p>
+                   <div className="grid grid-cols-2 gap-4">
+                     {Object.entries(authorProfile.extraData).map(([key, val]) => (
+                        <div key={key}>
+                           <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">{key}</p>
+                           <p className="text-sm font-medium text-paa-navy">{String(val)}</p>
+                        </div>
+                     ))}
+                   </div>
+                </div>
+             )}
+
+             <div className="md:col-span-2 mt-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-2 border-b pb-1">Registration Payment Details</p>
+                <div className="grid grid-cols-2 gap-4">
+                   <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Transaction ID</p>
+                      <p className="text-sm font-medium text-paa-navy">{authorProfile.transactionId || 'No Transaction ID Provided'}</p>
+                   </div>
+                   <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Payment Screenshot</p>
+                      {authorProfile.paymentScreenshot ? (
+                         <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + authorProfile.paymentScreenshot : "http://localhost:3001" + authorProfile.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 underline hover:text-blue-800">
+                            View Uploaded Receipt
+                         </a>
+                      ) : (
+                         <p className="text-sm font-medium text-red-500">No Receipt Uploaded</p>
+                      )}
+                   </div>
+                </div>
+             </div>
           </div>
         </div>
         )}
@@ -228,8 +271,11 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
 };
 
 export function OperationsDashboardPage() {
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'authors' | 'books' | 'events' | 'orders' | 'settings' | 'forms' | 'gallery'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
+  const [authorStatusFilter, setAuthorStatusFilter] = useState('All');
+  const [bookStatusFilter, setBookStatusFilter] = useState('All');
   const navigate = useNavigate();
   
   // State for data
@@ -245,6 +291,13 @@ export function OperationsDashboardPage() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
+  const [editingBook, setEditingBook] = useState<any>(null);
+  const [isEditBookModalOpen, setIsEditBookModalOpen] = useState(false);
+  const [rejectAuthorTarget, setRejectAuthorTarget] = useState<any>(null);
+  const [rejectReasons, setRejectReasons] = useState<string[]>([]);
+  const [otherReason, setOtherReason] = useState('');
+  const [editingAuthor, setEditingAuthor] = useState<any>(null);
+  const [isEditAuthorModalOpen, setIsEditAuthorModalOpen] = useState(false);
   
   const [forms, setForms] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
@@ -278,9 +331,19 @@ export function OperationsDashboardPage() {
 
   const fetchEvents = async () => {
     try {
-      const res = await axios.get(`${API}/api/admin/activities`);
+      const res = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       setEvents(res.data);
     } catch(err) {}
+  };
+
+  const handleBroadcastEvent = async (eventId: number, target: 'Authors' | 'Customers') => {
+    try {
+      const res = await axios.post(`${API}/api/admin/events/${eventId}/broadcast`, { target }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success(res.data.message);
+      fetchEvents();
+    } catch(err) {
+      toast.error('Failed to broadcast event');
+    }
   };
 
   const fetchOrders = async () => {
@@ -306,27 +369,96 @@ export function OperationsDashboardPage() {
   };
 
   useEffect(() => {
-    fetchOverview();
-    fetchAuthors();
-    fetchBooks();
-    fetchEvents();
-    fetchOrders();
-    fetchForms();
-    fetchGallery();
+    Promise.all([
+      fetchOverview(),
+      fetchAuthors(),
+      fetchBooks(),
+      fetchEvents(),
+      fetchOrders(),
+      fetchForms(),
+      fetchGallery()
+    ]).finally(() => setLoading(false));
   }, []);
 
   // Handlers
   const handleDeleteAuthor = async (id: number) => {
     if (window.confirm('Are you sure you want to remove this author?')) {
-      await axios.delete(`${API}/api/admin/authors/${id}`);
-      fetchAuthors();
-      fetchOverview();
+      try {
+        await axios.delete(`${API}/api/admin/authors/${id}`);
+        toast.success('Author Removed');
+        fetchAuthors();
+        fetchOverview();
+      } catch(err) {
+        toast.error('Failed to remove author');
+      }
     }
   };
 
   const handleApproveAuthor = async (id: number) => {
-    await axios.post(`${API}/api/admin/authors/${id}/approve`);
-    fetchAuthors();
+    try {
+      await axios.post(`${API}/api/admin/authors/${id}/approve`);
+      toast.success('Author Approved!');
+      fetchAuthors();
+    } catch(err) {
+      toast.error('Failed to approve author');
+    }
+  };
+
+  const AUTHOR_REJECTION_REASONS = [
+    'Book cover image not provided or incorrect',
+    'Book title is missing or unclear',
+    'Author bio is too short or missing',
+    'Incomplete registration details',
+    'Duplicate registration detected',
+    'Book synopsis not provided',
+    'Contact information incorrect',
+    'Payment not verified',
+    'Content policy violation',
+  ];
+
+  const openRejectAuthorModal = (author: any) => {
+    setRejectAuthorTarget(author);
+    setRejectReasons([]);
+    setOtherReason('');
+  };
+
+  const handleRejectAuthorSubmit = async () => {
+    const reasons = [...rejectReasons];
+    if (otherReason.trim()) reasons.push(otherReason.trim());
+    if (reasons.length === 0) { alert('Please select or enter at least one reason.'); return; }
+    const reason = reasons.join('; ');
+    try {
+      await axios.post(`${API}/api/admin/authors/${rejectAuthorTarget.id}/reject`, { reason });
+      toast.success('Author Rejected');
+      setRejectAuthorTarget(null);
+      fetchAuthors();
+    } catch (err) {
+      toast.error('Failed to reject author');
+    }
+  };
+
+  const handleEditAuthorClick = (author: any) => {
+    setEditingAuthor({ id: author.id, name: author.name, bio: author.bio || '', phone: author.phone || '', whatsapp: author.whatsapp || '' });
+    setIsEditAuthorModalOpen(true);
+  };
+
+  const handleUpdateAuthor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAuthor) return;
+    try {
+      await axios.put(`${API}/api/admin/authors/${editingAuthor.id}`, {
+        name: editingAuthor.name,
+        bio: editingAuthor.bio,
+        phone: editingAuthor.phone,
+        whatsapp: editingAuthor.whatsapp,
+      });
+      setIsEditAuthorModalOpen(false);
+      setEditingAuthor(null);
+      fetchAuthors();
+      alert('Author profile updated!');
+    } catch (err) {
+      alert('Failed to update author');
+    }
   };
 
   const handleDeleteBook = async (id: number) => {
@@ -334,6 +466,60 @@ export function OperationsDashboardPage() {
       await axios.delete(`${API}/api/admin/books/${id}`);
       fetchBooks();
       fetchOverview();
+    }
+  };
+
+  const handleApproveBook = async (id: number) => {
+    try {
+      await axios.post(`${API}/api/admin/books/${id}/approve`);
+      fetchBooks();
+    } catch (err) {
+      alert("Failed to approve book");
+    }
+  };
+
+  const handleRejectBook = async (id: number) => {
+    const reason = window.prompt("Please provide a reason for rejecting this book:");
+    if (reason === null) return; // User cancelled
+    try {
+      await axios.post(`${API}/api/admin/books/${id}/reject`, { reason });
+      fetchBooks();
+    } catch (err) {
+      alert("Failed to reject book");
+    }
+  };
+
+  const handleEditBookClick = (book: any) => {
+    setEditingBook({
+      id: book.id,
+      title: book.title,
+      genre: book.genre,
+      subGenre: book.subGenre || '',
+      mrp: book.mrp,
+      stock: book.stock,
+      synopsis: book.synopsis || ''
+    });
+    setIsEditBookModalOpen(true);
+  };
+
+  const handleUpdateBook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBook) return;
+    try {
+      await axios.put(`${API}/api/admin/books/${editingBook.id}`, {
+        title: editingBook.title,
+        genre: editingBook.genre,
+        subGenre: editingBook.subGenre,
+        mrp: parseFloat(editingBook.mrp),
+        stock: parseInt(editingBook.stock),
+        synopsis: editingBook.synopsis
+      });
+      setIsEditBookModalOpen(false);
+      setEditingBook(null);
+      fetchBooks();
+      alert("Book updated successfully!");
+    } catch (err) {
+      alert("Failed to update book details");
     }
   };
 
@@ -461,15 +647,28 @@ export function OperationsDashboardPage() {
             <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-sm">{authors.length} Total</span>
           </div>
           <div className="flex items-center gap-3">
-             <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                <input 
-                  type="text" 
-                  placeholder="SEARCH AUTHORS..." 
-                  className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+             <div className="flex items-center gap-2">
+                <div className="flex bg-gray-100 rounded p-1">
+                  {['All', 'Pending', 'Active', 'Rejected'].map(status => (
+                    <button 
+                      key={status}
+                      onClick={() => setAuthorStatusFilter(status)}
+                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-paa-navy'}`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                  <input 
+                    type="text" 
+                    placeholder="SEARCH AUTHORS..." 
+                    className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
              </div>
              {/* <button onClick={() => setIsAuthorModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
                <Plus className="w-4 h-4" /> Add Author
@@ -483,6 +682,7 @@ export function OperationsDashboardPage() {
              <tr>
                <th className="px-6 py-4">Author Details</th>
                <th className="px-6 py-4">Contact</th>
+               <th className="px-6 py-4">Payment Info</th>
                <th className="px-6 py-4 text-center">Status</th>
                <th className="px-6 py-4 text-center">Books</th>
                <th className="px-6 py-4 text-center">Events</th>
@@ -490,7 +690,7 @@ export function OperationsDashboardPage() {
              </tr>
            </thead>
            <tbody className="divide-y divide-paa-navy/5">
-             {authors.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase())).map((author) => (
+             {authors.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) && (authorStatusFilter === 'All' || a.status === authorStatusFilter)).map((author) => (
                <tr key={author.id} className="hover:bg-gray-50 bg-white transition-colors">
                  <td className="px-6 py-4">
                    <div className="flex items-center gap-3">
@@ -507,8 +707,23 @@ export function OperationsDashboardPage() {
                     <p className="text-paa-navy font-medium">{author.email}</p>
                     <p className="text-paa-gray-text text-xs mt-0.5 font-medium">{author.phone}</p>
                  </td>
+                 <td className="px-6 py-4">
+                    {author.transactionId ? (
+                      <div>
+                        <p className="text-[10px] font-bold text-paa-navy uppercase bg-gray-100 inline-block px-1 mb-1">TXN: {author.transactionId}</p>
+                        <br />
+                        {author.paymentScreenshot ? (
+                           <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + author.paymentScreenshot : "http://localhost:3001" + author.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline font-medium mt-1 inline-block hover:text-blue-800">View Receipt</a>
+                        ) : (
+                           <span className="text-[10px] text-red-500 font-bold uppercase block mt-1">No Receipt</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-400 font-bold uppercase">No Payment Info</span>
+                    )}
+                 </td>
                  <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${author.status === 'Active' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : 'bg-[#f0ad4e] text-white border-[#eea236]'}`}>
+                    <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${author.status === 'Active' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : author.status === 'Rejected' ? 'bg-[#d9534f] text-white border-[#c9302c]' : 'bg-[#f0ad4e] text-white border-[#eea236]'}`}>
                       {author.status}
                     </span>
                  </td>
@@ -519,12 +734,20 @@ export function OperationsDashboardPage() {
                     {author.eventsPart}
                  </td>
                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
                        {author.status === 'Pending' && (
-                         <button onClick={() => handleApproveAuthor(author.id)} className="p-1.5 text-white bg-[#5cb85c] hover:bg-[#4cae4c] border border-[transparent] shadow" title="Approve">
-                           <Check className="w-4 h-4" />
-                         </button>
+                         <>
+                           <button onClick={() => handleApproveAuthor(author.id)} className="p-1.5 text-white bg-[#5cb85c] hover:bg-[#4cae4c] border border-[transparent] shadow" title="Approve">
+                             <Check className="w-4 h-4" />
+                           </button>
+                           <button onClick={() => openRejectAuthorModal(author)} className="p-1.5 text-white bg-orange-500 hover:bg-orange-600 border border-[transparent] shadow" title="Reject">
+                             <X className="w-4 h-4" />
+                           </button>
+                         </>
                        )}
+                       <button onClick={() => handleEditAuthorClick(author)} className="p-1.5 text-white bg-blue-500 hover:bg-blue-600 border border-[transparent] shadow" title="Edit Profile">
+                         <Edit className="w-4 h-4" />
+                       </button>
                        <button onClick={() => setSelectedAuthor(author)} className="p-1.5 text-paa-navy bg-gray-100 hover:bg-gray-200 border border-paa-navy/10 transition-colors shadow" title="Details">
                          <Eye className="w-4 h-4" />
                        </button>
@@ -532,12 +755,17 @@ export function OperationsDashboardPage() {
                          <Trash2 className="w-4 h-4" />
                        </button>
                     </div>
+                    {author.status === 'Rejected' && author.rejectionReason && (
+                      <div className="mt-1 text-[10px] text-red-600 font-medium max-w-[200px] text-left leading-tight">
+                        Reason: {author.rejectionReason}
+                      </div>
+                    )}
                  </td>
                </tr>
              ))}
              {authors.length === 0 && (
                <tr>
-                 <td colSpan={6} className="text-center py-8 text-paa-gray-text bg-white">No authors found.</td>
+                 <td colSpan={7} className="text-center py-8 text-paa-gray-text bg-white">No authors found.</td>
                </tr>
              )}
            </tbody>
@@ -554,9 +782,22 @@ export function OperationsDashboardPage() {
             <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Inventory Management</h3>
           </div>
           <div className="flex items-center gap-3">
-             <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                <input type="text" placeholder="SEARCH BOOKS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
+             <div className="flex items-center gap-2">
+                <div className="flex bg-gray-100 rounded p-1">
+                  {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
+                    <button 
+                      key={status}
+                      onClick={() => setBookStatusFilter(status)}
+                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded ${bookStatusFilter === status ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-paa-navy'}`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                  <input type="text" placeholder="SEARCH BOOKS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
+                </div>
              </div>
              {/* <button onClick={() => setIsBookModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
                <Plus className="w-4 h-4" /> Add Book
@@ -570,24 +811,29 @@ export function OperationsDashboardPage() {
              <tr>
                <th className="px-6 py-4">Book Info</th>
                <th className="px-6 py-4">Author</th>
+               <th className="px-6 py-4 text-center">Status</th>
                <th className="px-6 py-4 text-center">Price</th>
                <th className="px-6 py-4 text-center bg-yellow-100 border-x border-paa-navy/10">Stock</th>
                <th className="px-6 py-4 text-center bg-green-100">Sales</th>
+               <th className="px-6 py-4 text-center">Actions</th>
              </tr>
            </thead>
            <tbody className="divide-y divide-paa-navy/5">
-             {books.map((book) => (
+             {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter)).map((book) => (
                <tr key={book.id} className="hover:bg-gray-50 bg-white transition-colors">
                  <td className="px-6 py-4">
                    <p className="font-bold text-paa-navy mb-1">{book.title}</p>
                    <div className="flex items-center gap-2 text-xs font-medium">
-                     <span className="text-paa-gray-text">ISBN: {book.isbn}</span>
-                     <span className="text-gray-300">•</span>
                      <span className="text-[#5bc0de] font-bold uppercase">{book.genre}</span>
                    </div>
                  </td>
                  <td className="px-6 py-4">
                     <p className="text-paa-navy font-bold">{book.authorName}</p>
+                 </td>
+                 <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${book.status === 'Approved' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : book.status === 'Rejected' ? 'bg-[#d9534f] text-white border-[#c9302c]' : 'bg-[#f0ad4e] text-white border-[#eea236]'}`}>
+                      {book.status}
+                    </span>
                  </td>
                  <td className="px-6 py-4 text-center font-bold text-paa-navy">
                     ₹{book.mrp}
@@ -604,11 +850,31 @@ export function OperationsDashboardPage() {
                  <td className="px-6 py-4 text-center font-bold text-paa-navy bg-green-50">
                     {book.sales}
                  </td>
+                 <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                       {book.status === 'Pending' && (
+                         <button onClick={() => handleApproveBook(book.id)} className="p-1.5 text-white bg-[#5cb85c] hover:bg-[#4cae4c] border border-[transparent] shadow" title="Approve">
+                           <Check className="w-4 h-4" />
+                         </button>
+                       )}
+                       {book.status !== 'Rejected' && (
+                         <button onClick={() => handleRejectBook(book.id)} className="p-1.5 text-white bg-orange-500 hover:bg-orange-600 border border-[transparent] shadow" title="Reject">
+                           <X className="w-4 h-4" />
+                         </button>
+                       )}
+                                                      <button onClick={() => handleEditBookClick(book)} className="p-1.5 text-white bg-blue-500 hover:bg-blue-600 border border-[transparent] shadow" title="Edit Details">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDeleteBook(book.id)} className="p-1.5 text-white bg-[#d9534f] hover:bg-[#c9302c] transition-colors shadow" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                     </div>
+                 </td>
                </tr>
              ))}
              {books.length === 0 && (
                <tr>
-                 <td colSpan={5} className="text-center py-8 text-paa-gray-text bg-white">No books found.</td>
+                 <td colSpan={7} className="text-center py-8 text-paa-gray-text bg-white">No books found.</td>
                </tr>
              )}
            </tbody>
@@ -620,7 +886,7 @@ export function OperationsDashboardPage() {
   const EventsTab = () => (
     <div className="space-y-6">
        <div className="flex items-center justify-between border-b border-paa-navy/10 pb-4">
-          <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Management</h3>
+          <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Ecosystem</h3>
           <button onClick={() => setIsEventModalOpen(true)} className="flex items-center gap-2 px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy transition-colors">
             <Plus className="w-4 h-4" /> Create Event
           </button>
@@ -628,26 +894,49 @@ export function OperationsDashboardPage() {
 
        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map((evt) => (
-             <div key={evt.id} className="bg-white border border-paa-navy/10 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                <div className={`${evt.color} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center`}>
+             <div key={evt.id} className="bg-white border border-paa-navy/10 shadow-sm hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
+                <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center`}>
                    <span>{evt.status}</span>
-                   <span className="bg-white/20 px-2 py-0.5">{evt.type}</span>
+                   {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded text-[10px]">Authors Notified</span>}
+                   {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded text-[10px]">Public</span>}
                 </div>
                 <div className="p-6">
                   <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
                   <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-paa-gray-text">
-                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50"/> {evt.date}</p>
-                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-paa-navy/50"/> {evt.city}</p>
+                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50"/> {evt.date} &bull; {evt.duration}</p>
+                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-paa-navy/50"/> {evt.location}</p>
                   </div>
-                  <div className="pt-4 border-t border-paa-navy/10 flex items-center justify-between">
-                     <div className="flex items-center justify-center bg-[#ffff99] px-3 py-1 text-xs font-bold text-paa-navy border border-paa-navy/20">
-                        {evt.registeredAuthors} Registered
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                     <div className="bg-gray-50 p-2 text-center rounded border border-gray-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Authors</p>
+                        <p className="text-lg font-black text-paa-navy">{evt._count?.eventAuthors || 0}</p>
                      </div>
-                     <button className="text-[#5bc0de] text-xs font-bold uppercase tracking-widest hover:text-paa-navy transition-colors">Manage</button>
+                     <div className="bg-gray-50 p-2 text-center rounded border border-gray-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Linked</p>
+                        <p className="text-lg font-black text-paa-navy">{evt._count?.eventBooks || 0}</p>
+                     </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-paa-navy/10 flex flex-col gap-2">
+                     <button onClick={() => handleBroadcastEvent(evt.id, 'Authors')} className="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-widest transition-colors border border-blue-200">
+                        1. Broadcast to Authors
+                     </button>
+                     <button onClick={() => handleBroadcastEvent(evt.id, 'Customers')} className="w-full py-2 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold uppercase tracking-widest transition-colors border border-green-200">
+                        2. Generate Catalogue & Publish
+                     </button>
+                     <a href={`/events/${evt.id}/catalogue`} target="_blank" rel="noopener noreferrer" className="block text-center w-full py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase tracking-widest transition-colors">
+                        View Live Catalogue
+                     </a>
                   </div>
                 </div>
              </div>
           ))}
+          {events.length === 0 && (
+             <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                No events created yet.
+             </div>
+          )}
        </div>
     </div>
   );
@@ -717,46 +1006,91 @@ export function OperationsDashboardPage() {
     </div>
   );
 
-  const SettingsTab = () => (
-    <div className="bg-white p-8 border border-paa-navy/10 shadow-sm max-w-2xl">
-       <div className="border-b border-paa-navy/10 pb-4 mb-8">
-          <h2 className="text-xl font-serif font-medium text-paa-navy mb-1">System Settings</h2>
-          <p className="text-paa-gray-text text-sm">Configure global application parameters, notification rules, and access control here.</p>
-       </div>
-       
-       <div className="space-y-6">
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Platform Name</label>
-            <input type="text" defaultValue="Pune Authors' Association" className="w-full border border-paa-navy/20 bg-gray-50 rounded-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Support Email</label>
-            <input type="email" defaultValue="support@puneauthors.com" className="w-full border border-paa-navy/20 bg-gray-50 rounded-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
-          </div>
-          
-          <div className="pt-6 border-t border-paa-navy/10">
-            <h3 className="text-xs font-bold tracking-widest uppercase text-paa-navy mb-4">Default Email Notifications</h3>
-            <div className="space-y-4 bg-gray-50 p-4 border border-paa-navy/10">
-               <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
-                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> New Author Registered Alert
-               </label>
-               <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
-                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> Book Out of Stock Alert
-               </label>
-               <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
-                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> Event Registration Alert
-               </label>
-            </div>
-          </div>
+  const SettingsTab = () => {
+    const [fields, setFields] = useState<any[]>([]);
+    useEffect(() => {
+      axios.get(`${API}/api/admin/author-fields`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+        .then(res => setFields(res.data));
+    }, []);
 
-          <div className="pt-6 border-t border-paa-navy/10 flex justify-end">
-             <button className="px-8 py-3 bg-[#5bc0de] text-white text-xs font-bold tracking-widest uppercase hover:bg-paa-navy transition-colors" onClick={() => alert('Settings Saved!')}>
-               Save Changes
-             </button>
-          </div>
-       </div>
+    const addField = () => setFields([...fields, { name: '', type: 'text', required: true }]);
+    
+    const saveFields = () => {
+      axios.post(`${API}/api/admin/author-fields`, { fields }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+        .then(() => alert('Fields saved!'))
+        .catch(() => alert('Failed to save'));
+    };
+
+    return (
+    <div className="space-y-8 max-w-2xl">
+      <div className="bg-white p-8 border border-paa-navy/10 shadow-sm">
+         <div className="border-b border-paa-navy/10 pb-4 mb-8">
+            <h2 className="text-xl font-serif font-medium text-paa-navy mb-1">System Settings</h2>
+            <p className="text-paa-gray-text text-sm">Configure global application parameters, notification rules, and access control here.</p>
+         </div>
+         
+         <div className="space-y-6">
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Platform Name</label>
+              <input type="text" defaultValue="Pune Authors' Association" className="w-full border border-paa-navy/20 bg-gray-50 rounded-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Support Email</label>
+              <input type="email" defaultValue="support@puneauthors.com" className="w-full border border-paa-navy/20 bg-gray-50 rounded-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
+            </div>
+            
+            <div className="pt-6 border-t border-paa-navy/10">
+              <h3 className="text-xs font-bold tracking-widest uppercase text-paa-navy mb-4">Default Email Notifications</h3>
+              <div className="space-y-4 bg-gray-50 p-4 border border-paa-navy/10">
+                 <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
+                   <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> New Author Registered Alert
+                 </label>
+                 <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
+                   <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> Book Out of Stock Alert
+                 </label>
+                 <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
+                   <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> Event Registration Alert
+                 </label>
+              </div>
+            </div>
+         </div>
+      </div>
+
+      <div className="bg-white p-8 border border-paa-navy/10 shadow-sm">
+        <h3 className="text-xl font-serif font-medium text-paa-navy mb-1">Author Dynamic Fields</h3>
+        <p className="text-paa-gray-text text-sm mb-6 border-b border-paa-navy/10 pb-4">Define extra information that all authors must provide. This will appear on their dashboard until filled.</p>
+        
+        <div className="space-y-4 mb-6">
+          {fields.map((f, i) => (
+            <div key={i} className="flex items-center gap-4 bg-gray-50 p-3 rounded border border-paa-navy/10">
+              <input 
+                className="border border-paa-navy/20 p-2 text-sm flex-1 outline-none focus:border-paa-navy bg-white" 
+                placeholder="Field Name (e.g. Aadhar Number)" 
+                value={f.name} 
+                onChange={e => { const nf = [...fields]; nf[i].name = e.target.value; setFields(nf); }} 
+              />
+              <select 
+                className="border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy bg-white" 
+                value={f.type} 
+                onChange={e => { const nf = [...fields]; nf[i].type = e.target.value; setFields(nf); }}
+              >
+                <option value="text">Text</option>
+                <option value="number">Number</option>
+                <option value="date">Date</option>
+              </select>
+              <button className="text-red-500 text-xs font-bold uppercase tracking-widest hover:text-red-700" onClick={() => setFields(fields.filter((_, idx) => idx !== i))}>Remove</button>
+            </div>
+          ))}
+        </div>
+        
+        <div className="flex gap-4">
+          <button onClick={addField} className="px-4 py-2 border border-paa-navy text-paa-navy text-xs font-bold uppercase tracking-widest hover:bg-paa-navy hover:text-white transition-colors">Add Field</button>
+          <button onClick={saveFields} className="px-4 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">Save Fields Settings</button>
+        </div>
+      </div>
     </div>
-  );
+    );
+  };
 
   const Modal = ({ isOpen, onClose, title, children }: any) => {
     if (!isOpen) return null;
@@ -914,6 +1248,29 @@ export function OperationsDashboardPage() {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-paa-cream flex flex-col md:flex-row p-6 font-sans">
+        <div className="w-64 shrink-0 h-screen hidden md:block space-y-4">
+          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+        <div className="flex-1 space-y-6 md:pl-6">
+          <div className="h-16 bg-gray-200 animate-pulse rounded w-full"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="h-32 bg-gray-200 animate-pulse rounded w-full"></div>
+            <div className="h-32 bg-gray-200 animate-pulse rounded w-full"></div>
+            <div className="h-32 bg-gray-200 animate-pulse rounded w-full"></div>
+            <div className="h-32 bg-gray-200 animate-pulse rounded w-full"></div>
+          </div>
+          <div className="h-96 bg-gray-200 animate-pulse rounded w-full"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-paa-cream flex flex-col md:flex-row font-sans text-paa-navy selection:bg-paa-gold selection:text-white">
       
@@ -995,19 +1352,23 @@ export function OperationsDashboardPage() {
         <form className="space-y-4" onSubmit={async (e) => {
           e.preventDefault();
           const target = e.target as any;
-          await axios.post(`${API}/api/admin/activities`, {
-            name: target.name.value,
-            date: target.date.value,
-            location: target.location.value,
-            type: target.type.value
-          });
-          fetchEvents();
-          setIsEventModalOpen(false);
+          try {
+            await axios.post(`${API}/api/admin/events`, {
+              name: target.name.value,
+              date: target.date.value,
+              location: target.location.value,
+              duration: target.duration.value
+            }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+            fetchEvents();
+            setIsEventModalOpen(false);
+          } catch (err: any) {
+            alert(err.response?.data?.error || err.message);
+          }
         }}>
           <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Name</label><input required name="name" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
           <div className="grid grid-cols-2 gap-4">
             <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Date (e.g. 15 Aug 2026)</label><input required name="date" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
-            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Type</label><select name="type" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy"><option>Book Fairs</option><option>Literary Events</option><option>Meetup</option></select></div>
+            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Duration (e.g. 3 days)</label><input required name="duration" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
           </div>
           <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Location</label><input required name="location" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
           <div className="pt-4 mt-4 border-t border-paa-navy/10 flex justify-end">
@@ -1224,6 +1585,128 @@ export function OperationsDashboardPage() {
             Add Gallery Event
           </button>
         </form>
+      </Modal>
+
+      <Modal isOpen={isEditBookModalOpen} onClose={() => { setIsEditBookModalOpen(false); setEditingBook(null); }} title="Edit Book Details">
+        {editingBook && (
+          <form className="space-y-4" onSubmit={handleUpdateBook}>
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Title</label>
+              <input required type="text" value={editingBook.title} onChange={(e) => setEditingBook({ ...editingBook, title: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Genre</label>
+                <select value={editingBook.genre} onChange={(e) => setEditingBook({ ...editingBook, genre: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy">
+                  <option value="Fiction">Fiction</option>
+                  <option value="Non-Fiction">Non-Fiction</option>
+                  <option value="Children's corner">Children's corner</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Subgenre</label>
+                <input type="text" value={editingBook.subGenre} onChange={(e) => setEditingBook({ ...editingBook, subGenre: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" placeholder="e.g. Thriller, Biography" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">MRP (Price in ₹)</label>
+                <input required type="number" step="any" value={editingBook.mrp} onChange={(e) => setEditingBook({ ...editingBook, mrp: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Stock</label>
+                <input required type="number" value={editingBook.stock} onChange={(e) => setEditingBook({ ...editingBook, stock: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Synopsis</label>
+              <textarea value={editingBook.synopsis} onChange={(e) => setEditingBook({ ...editingBook, synopsis: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" rows={4}></textarea>
+            </div>
+            <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow">
+              Save Changes
+            </button>
+          </form>
+        )}
+      </Modal>
+
+      {/* Reject Author Modal */}
+      {rejectAuthorTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
+          <div className="bg-white border border-paa-navy/10 shadow-xl w-full max-w-lg">
+            <div className="bg-[#d9534f] p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center border-b border-paa-navy/10 text-white">
+              Reject Author: {rejectAuthorTarget.name}
+              <button type="button" onClick={() => setRejectAuthorTarget(null)} className="hover:opacity-70">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4">Select rejection reason(s):</p>
+              <div className="space-y-3 mb-4 max-h-60 overflow-y-auto bg-gray-50 p-3 border border-paa-navy/10">
+                {AUTHOR_REJECTION_REASONS.map((reason) => (
+                  <label key={reason} className="flex items-start gap-3 cursor-pointer text-sm font-medium text-paa-navy hover:text-paa-gold">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 accent-paa-navy"
+                      checked={rejectReasons.includes(reason)}
+                      onChange={(e) => {
+                        if (e.target.checked) setRejectReasons([...rejectReasons, reason]);
+                        else setRejectReasons(rejectReasons.filter(r => r !== reason));
+                      }}
+                    />
+                    {reason}
+                  </label>
+                ))}
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Other (specify):</label>
+                <input
+                  type="text"
+                  value={otherReason}
+                  onChange={(e) => setOtherReason(e.target.value)}
+                  placeholder="Enter additional reason..."
+                  className="w-full border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setRejectAuthorTarget(null)} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy font-bold uppercase tracking-widest">
+                  Cancel
+                </button>
+                <button onClick={handleRejectAuthorSubmit} className="px-6 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow transition-colors">
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Author Modal */}
+      <Modal isOpen={isEditAuthorModalOpen} onClose={() => { setIsEditAuthorModalOpen(false); setEditingAuthor(null); }} title="Edit Author Profile">
+        {editingAuthor && (
+          <form className="space-y-4" onSubmit={handleUpdateAuthor}>
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Full Name</label>
+              <input required type="text" value={editingAuthor.name} onChange={(e) => setEditingAuthor({ ...editingAuthor, name: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Phone</label>
+                <input type="text" value={editingAuthor.phone} onChange={(e) => setEditingAuthor({ ...editingAuthor, phone: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">WhatsApp</label>
+                <input type="text" value={editingAuthor.whatsapp} onChange={(e) => setEditingAuthor({ ...editingAuthor, whatsapp: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Author Bio</label>
+              <textarea required value={editingAuthor.bio} onChange={(e) => setEditingAuthor({ ...editingAuthor, bio: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" rows={5} />
+            </div>
+            <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow">
+              Save Author Profile
+            </button>
+          </form>
+        )}
       </Modal>
 
     </div>

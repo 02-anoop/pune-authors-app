@@ -9,6 +9,7 @@ export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
+  const [extraDataState, setExtraDataState] = useState<any>({});
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -41,13 +42,140 @@ export function AuthorDashboardPage() {
     fetchDashboardData();
   }, []);
 
+  useEffect(() => {
+    if (dashboardData?.authorProfile?.extraData) {
+      setExtraDataState(dashboardData.authorProfile.extraData);
+    }
+  }, [dashboardData]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
   };
 
   if (loading || !dashboardData) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-paa-navy" /></div>;
+    return (
+      <div className="min-h-screen bg-paa-cream p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+           <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="h-32 bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-32 bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-32 bg-gray-200 animate-pulse rounded"></div>
+           </div>
+           <div className="h-64 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const { status, rejectionReason, name, email, phone, bio, photoUrl, transactionId, paymentScreenshot, extraData } = dashboardData.authorProfile;
+  const dynamicFields = dashboardData.dynamicFields || [];
+
+  const missingFields = dynamicFields.filter((f: any) => !extraDataState[f.name]);
+
+  const handleSaveExtraData = async () => {
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/extra`, { extraData: extraDataState }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Information saved!');
+      fetchDashboardData();
+    } catch (err) {
+      toast.error('Failed to save information');
+    }
+  };
+
+  if (status === 'Approved' && missingFields.length > 0) {
+    return (
+      <div className="min-h-screen bg-paa-cream font-sans flex items-center justify-center p-6">
+        <div className="bg-white max-w-lg w-full p-8 rounded border border-paa-navy/10 shadow-sm">
+          <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Action Required</h2>
+          <p className="text-sm text-gray-600 mb-6">The administration requires some additional information to complete your profile setup. Please fill out the following fields to proceed to your dashboard.</p>
+          <div className="space-y-4 mb-6">
+            {missingFields.map((f: any) => (
+              <div key={f.name}>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">{f.name}</label>
+                {f.type === 'number' ? (
+                  <input type="number" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                ) : f.type === 'date' ? (
+                  <input type="date" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                ) : (
+                  <input type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                )}
+              </div>
+            ))}
+          </div>
+          <button onClick={handleSaveExtraData} className="w-full py-3 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">Save & Continue</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'Pending' || status === 'Rejected') {
+    return (
+      <div className="min-h-screen bg-paa-cream font-sans flex items-center justify-center p-6">
+        <div className="bg-white max-w-2xl w-full p-8 rounded-lg shadow border border-paa-navy/10">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-serif text-paa-navy">Author Application Status</h1>
+            <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold uppercase"><LogOut size={16}/> Logout</button>
+          </div>
+          
+          <div className={`p-4 mb-8 rounded border ${status === 'Pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+            <h2 className="text-xl font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+              {status === 'Pending' ? <AlertCircle size={20} /> : <AlertCircle size={20} />}
+              Status: {status}
+            </h2>
+            {status === 'Pending' ? (
+              <p className="text-sm">Your author application has been submitted and is currently pending review by the admin team. You will be notified via email once approved. Check back here for updates.</p>
+            ) : (
+              <div>
+                <p className="text-sm mb-2">Unfortunately, your author application has been rejected.</p>
+                {rejectionReason && <p className="text-sm font-bold bg-white p-3 rounded border border-red-100">Reason: {rejectionReason}</p>}
+              </div>
+            )}
+          </div>
+
+          <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Submitted Details</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+            <div><span className="text-gray-500 block text-xs uppercase font-bold">Name</span> {name}</div>
+            <div><span className="text-gray-500 block text-xs uppercase font-bold">Email</span> {email}</div>
+            <div><span className="text-gray-500 block text-xs uppercase font-bold">Phone</span> {phone}</div>
+            <div><span className="text-gray-500 block text-xs uppercase font-bold">Transaction ID</span> {transactionId || 'N/A'}</div>
+          </div>
+          
+          <div className="mb-4">
+            <span className="text-gray-500 block text-xs uppercase font-bold mb-1">Bio</span>
+            <p className="text-sm bg-gray-50 p-3 rounded">{bio}</p>
+          </div>
+          {extraData && Object.keys(extraData).length > 0 && (
+            <div className="mt-4">
+               <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy border-b pb-1 mb-3">Additional Details</h4>
+               <div className="grid grid-cols-2 gap-4 text-sm">
+                 {Object.entries(extraData).map(([key, val]) => (
+                    <div key={key}><span className="text-gray-500 block text-xs uppercase font-bold">{key}</span> {String(val)}</div>
+                 ))}
+               </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            {photoUrl && (
+              <div>
+                <span className="text-gray-500 block text-xs uppercase font-bold mb-2">Profile Photo</span>
+                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${photoUrl}`} alt="Profile" className="w-24 h-24 object-cover rounded shadow" />
+              </div>
+            )}
+            {paymentScreenshot && (
+              <div>
+                <span className="text-gray-500 block text-xs uppercase font-bold mb-2">Payment Screenshot</span>
+                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${paymentScreenshot}`} alt="Payment" className="w-full max-w-xs object-contain border rounded shadow-sm" />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -55,6 +183,7 @@ export function AuthorDashboardPage() {
       <div className="bg-white border-b border-paa-navy/10 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-3 flex gap-6 text-xs font-bold tracking-widest uppercase overflow-x-auto hide-scrollbar items-center">
           <Link to="/dashboard" className={`${location.pathname === '/dashboard' ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Overview</Link>
+          <Link to="/dashboard/catalogue" className={`${location.pathname.includes('/catalogue') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Catalogue Books</Link>
           <Link to="/dashboard/activities" className={`${location.pathname.includes('/activities') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Activities</Link>
           <Link to="/dashboard/orders" className={`${location.pathname.includes('/orders') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>My Orders</Link>
           <Link to="/dashboard/forms" className={`${location.pathname.includes('/forms') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Forms</Link>
@@ -68,7 +197,8 @@ export function AuthorDashboardPage() {
 
       <div className="max-w-7xl mx-auto p-6">
         <Routes>
-          <Route path="/" element={<DashboardMain data={dashboardData} />} />
+          <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={fetchDashboardData} />} />
+          <Route path="/catalogue" element={<AuthorCatalogueTab />} />
           <Route path="/activities" element={<ActivityRegistration activities={activities} books={dashboardData.authorProfile.books} onRefresh={fetchDashboardData} registrations={dashboardData.authorProfile.eventRegistrations} />} />
           <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={fetchDashboardData} />} />
           <Route path="/forms/*" element={<FormsWrapper />} />
@@ -82,11 +212,18 @@ export function AuthorDashboardPage() {
   );
 }
 
-function DashboardMain({ data }: { data: any }) {
+function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) {
   const [filter, setFilter] = useState('all');
   const [showAddBook, setShowAddBook] = useState(false);
   const [newBook, setNewBook] = useState({ title: '', genre: '', synopsis: '', mrp: '', stock: '' });
   const [cover, setCover] = useState<File | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editBio, setEditBio] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editWhatsapp, setEditWhatsapp] = useState('');
+  const [editPhoto, setEditPhoto] = useState<File | null>(null);
+  const [editCoverBookId, setEditCoverBookId] = useState<number | null>(null);
+  const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
 
   const authorProfile = data.authorProfile;
   const authorBooks = authorProfile.books;
@@ -104,7 +241,9 @@ function DashboardMain({ data }: { data: any }) {
       pub: 'Self-Published',
       genre: b.genre,
       sold: sold,
-      status: b.status
+      status: b.status,
+      rejectionReason: b.rejectionReason,
+      stock: b.stock
     };
   });
 
@@ -145,14 +284,112 @@ function DashboardMain({ data }: { data: any }) {
     }
   };
 
+  const handleEditProfileOpen = () => {
+    setEditBio(authorProfile.bio || '');
+    setEditPhone(authorProfile.phone || '');
+    setEditWhatsapp(authorProfile.whatsapp || '');
+    setEditPhoto(null);
+    setShowEditProfile(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append('bio', editBio);
+      formData.append('phone', editPhone);
+      formData.append('whatsapp', editWhatsapp);
+      if (editPhoto) formData.append('photo', editPhoto);
+      const token = localStorage.getItem('token');
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/bio`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Profile updated successfully!');
+      setShowEditProfile(false);
+      onRefresh();
+    } catch (err) {
+      toast.error('Failed to update profile');
+    }
+  };
+
+  const handleUpdateCover = async (bookId: number) => {
+    if (!newCoverFile) { toast.error('Please select a cover image'); return; }
+    try {
+      const formData = new FormData();
+      formData.append('cover', newCoverFile);
+      const token = localStorage.getItem('token');
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/books/${bookId}/cover`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Book cover updated!');
+      setEditCoverBookId(null);
+      setNewCoverFile(null);
+      onRefresh();
+    } catch (err) {
+      toast.error('Failed to update cover');
+    }
+  };
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 flex-wrap gap-3">
         <h1 className="text-4xl font-serif text-paa-navy">Author Dashboard</h1>
-        <button onClick={() => setShowAddBook(true)} className="bg-paa-gold text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-paa-gold transition-colors">
-          + Add New Book
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleEditProfileOpen} className="bg-white border border-paa-navy text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-white transition-colors">
+            ✎ Edit My Profile
+          </button>
+          <button onClick={() => setShowAddBook(true)} className="bg-paa-gold text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-paa-gold transition-colors">
+            + Add New Book
+          </button>
+        </div>
       </div>
+
+      {showEditProfile && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Edit My Profile</h2>
+            <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio</label>
+                <textarea required className="border p-2 w-full text-sm" rows={5} value={editBio} onChange={e => setEditBio(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
+                  <input className="border p-2 w-full text-sm" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
+                  <input className="border p-2 w-full text-sm" value={editWhatsapp} onChange={e => setEditWhatsapp(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Update Profile Photo</label>
+                <input type="file" accept="image/*" className="border p-2 text-xs w-full" onChange={e => setEditPhoto(e.target.files?.[0] || null)} />
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <button type="button" onClick={() => setShowEditProfile(false)} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
+                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editCoverBookId !== null && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 max-w-sm w-full">
+            <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Update Book Cover</h2>
+            <div className="flex flex-col gap-4">
+              <input type="file" accept="image/*" className="border p-2 text-xs" onChange={e => setNewCoverFile(e.target.files?.[0] || null)} />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => { setEditCoverBookId(null); setNewCoverFile(null); }} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
+                <button onClick={() => handleUpdateCover(editCoverBookId)} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold">Upload Cover</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {showAddBook && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -211,26 +448,44 @@ function DashboardMain({ data }: { data: any }) {
             <thead className="bg-[#b3d4ff] text-paa-navy">
               <tr>
                 <th className="p-3 border-r border-[#8faadc]">S.No</th>
+                <th className="p-3 border-r border-[#8faadc]">Cover</th>
                 <th className="p-3 border-r border-[#8faadc]">Title</th>
                 <th className="p-3 border-r border-[#8faadc]">Status</th>
                 <th className="p-3 border-r border-[#8faadc]">Date Joined</th>
                 <th className="p-3 border-r border-[#8faadc]">MRP</th>
                 <th className="p-3 border-r border-[#8faadc]">Genre</th>
+                <th className="p-3 border-r border-[#8faadc]">Stock</th>
                 <th className="p-3 border-r border-[#8faadc]">Books Sold</th>
+                <th className="p-3">Change Cover</th>
               </tr>
             </thead>
             <tbody>
               {filteredTitles.map((row: any) => (
                 <tr key={row.id} className="border-b border-paa-navy/5 even:bg-gray-50">
                   <td className="p-3 border-r border-paa-navy/5 text-center">{row.sno}</td>
+                  <td className="p-3 border-r border-paa-navy/5">
+                    {authorBooks.find((b: any) => b.id === row.id)?.coverUrl
+                      ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-10 h-14 object-cover rounded shadow" />
+                      : <div className="w-10 h-14 bg-gray-100 flex items-center justify-center text-gray-400 text-xs rounded border">No Cover</div>
+                    }
+                  </td>
                   <td className="p-3 border-r border-paa-navy/5 font-medium">{row.title}</td>
                   <td className="p-3 border-r border-paa-navy/5">
-                    <span className={`px-2 py-1 text-xs rounded ${row.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{row.status}</span>
+                    <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded ${row.status === 'Approved' ? 'bg-green-100 text-green-800' : row.status === 'Rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{row.status}</span>
+                    {row.status === 'Rejected' && row.rejectionReason && (
+                       <div className="mt-1 text-xs text-red-600 font-medium">Reason: {row.rejectionReason}</div>
+                    )}
                   </td>
                   <td className="p-3 border-r border-paa-navy/5">{row.date}</td>
                   <td className="p-3 border-r border-paa-navy/5">{row.mrp}</td>
                   <td className="p-3 border-r border-paa-navy/5">{row.genre}</td>
+                  <td className="p-3 border-r border-paa-navy/5 font-bold bg-yellow-50">{row.stock}</td>
                   <td className="p-3 border-r border-paa-navy/5 font-bold text-paa-navy">{row.sold}</td>
+                  <td className="p-3 text-center">
+                    <button onClick={() => { setEditCoverBookId(row.id); setNewCoverFile(null); }} className="bg-[#5bc0de] text-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest hover:bg-paa-navy transition-colors rounded">
+                      Change Cover
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -406,7 +661,7 @@ function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => vo
 function ActivityRegistration({ activities, books, onRefresh, registrations }: { activities: any[], books: any[], onRefresh: () => void, registrations: any[] }) {
   const [showDialog, setShowDialog] = useState(false);
   const [selectedAct, setSelectedAct] = useState<any>(null);
-  const [selectedBooks, setSelectedBooks] = useState<number[]>([]);
+  const [selectedBooks, setSelectedBooks] = useState<{id: number, qty: number}[]>([]);
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -455,7 +710,17 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
   };
 
   const toggleBook = (id: number) => {
-    setSelectedBooks(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]);
+    setSelectedBooks(prev => {
+      if (prev.find(b => b.id === id)) {
+        return prev.filter(b => b.id !== id);
+      } else {
+        return [...prev, { id, qty: 1 }];
+      }
+    });
+  };
+  
+  const updateBookQty = (id: number, qty: number) => {
+    setSelectedBooks(prev => prev.map(b => b.id === id ? { ...b, qty } : b));
   };
 
   return (
@@ -468,14 +733,22 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
                  <h3 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Register for {selectedAct?.name}</h3>
                  
                  <div className="mb-4">
-                   <p className="text-sm font-bold text-paa-navy mb-2">1. Select Books for this event:</p>
+                   <p className="text-sm font-bold text-paa-navy mb-2">1. Select Books and Quantity for this event:</p>
                    <div className="flex flex-col gap-2 max-h-32 overflow-y-auto border p-2 bg-gray-50">
-                     {books.map(b => (
-                       <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                         <input type="checkbox" checked={selectedBooks.includes(b.id)} onChange={() => toggleBook(b.id)} />
-                         {b.title}
-                       </label>
-                     ))}
+                     {books.map(b => {
+                       const selected = selectedBooks.find(sb => sb.id === b.id);
+                       return (
+                         <div key={b.id} className="flex items-center justify-between gap-2 text-sm">
+                           <label className="flex items-center gap-2 cursor-pointer flex-1">
+                             <input type="checkbox" checked={!!selected} onChange={() => toggleBook(b.id)} />
+                             {b.title}
+                           </label>
+                           {selected && (
+                             <input type="number" min="1" placeholder="Qty" value={selected.qty} onChange={(e) => updateBookQty(b.id, parseInt(e.target.value) || 1)} className="w-16 p-1 text-xs border" />
+                           )}
+                         </div>
+                       )
+                     })}
                    </div>
                  </div>
 
@@ -898,49 +1171,210 @@ function BookFairDashboard({ registrations, books }: { registrations: any[], boo
   );
 }
 
-function EventsDashboard({ registrations }: { registrations: any[] }) {
-  const eventRegs = registrations.filter(r => r.activity?.type.includes('Event'));
+function EventsDashboard() {
+  const [invites, setInvites] = useState<any[]>([]);
+  const [books, setBooks] = useState<any[]>([]);
+  const [listedBooks, setListedBooks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [optInEventId, setOptInEventId] = useState<number | null>(null);
+  const [selectedBooksToLink, setSelectedBooksToLink] = useState<{bookId: string, stock: string}[]>([]);
+
+  useEffect(() => {
+    fetchAuthorEvents();
+  }, []);
+
+  const fetchAuthorEvents = async () => {
+    try {
+       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+       });
+       setInvites(res.data.eventInvites || []);
+       setBooks(res.data.books || []);
+       setListedBooks(res.data.listedBooks || []);
+    } catch(err) {
+       toast.error('Failed to load events');
+    } finally {
+       setLoading(false);
+    }
+  };
+
+  const submitOptIn = async (eventId: number) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/opt-in`, {
+        booksToLink: selectedBooksToLink
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success("Successfully opted in to Event!");
+      setOptInEventId(null);
+      fetchAuthorEvents();
+    } catch (err) {
+      toast.error('Opt-in failed');
+    }
+  };
+
+  if (loading) return <div>Loading events...</div>;
 
   return (
     <div>
-      <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">EVENTS DASHBOARD</h1>
+      <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">EVENTS ECOSYSTEM</h1>
+      
+      {invites.length === 0 ? (
+         <div className="p-8 text-center text-gray-500 bg-white border border-gray-100 shadow-sm">
+            You do not have any active event invitations right now.
+         </div>
+      ) : (
+         <div className="grid md:grid-cols-2 gap-6">
+            {invites.map((invite) => {
+               const evt = invite.event;
+               const isOptedIn = invite.optInStatus === 'Opted-In';
+               const myBooksForEvent = listedBooks.filter(lb => lb.eventId === evt.id);
+               
+               return (
+                 <div key={invite.id} className={`bg-white border shadow-sm relative overflow-hidden ${isOptedIn ? 'border-green-300' : 'border-paa-navy/20'}`}>
+                    <div className={`px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center ${isOptedIn ? 'bg-green-600' : 'bg-blue-600'}`}>
+                       <span>{evt.status}</span>
+                       <span>{isOptedIn ? 'Opted In' : 'Action Required'}</span>
+                    </div>
+                    <div className="p-6">
+                       <h4 className="text-xl font-serif font-medium text-paa-navy mb-3">{evt.name}</h4>
+                       <p className="text-sm font-medium text-gray-600 mb-1">📅 {evt.date} &bull; {evt.duration}</p>
+                       <p className="text-sm font-medium text-gray-600 mb-6">📍 {evt.location}</p>
+                       
+                       {isOptedIn ? (
+                          <div className="bg-green-50 p-4 border border-green-200">
+                             <p className="text-xs font-bold uppercase tracking-widest text-green-800 mb-2 border-b border-green-200 pb-1">Your Listed Inventory</p>
+                             <ul className="space-y-1">
+                               {myBooksForEvent.map(mb => {
+                                  const bDetails = books.find(b => b.id === mb.bookId);
+                                  return (
+                                     <li key={mb.id} className="text-sm flex justify-between text-green-900">
+                                        <span>{bDetails?.title || 'Unknown Book'}</span>
+                                        <span className="font-bold">{mb.listedStock} units</span>
+                                     </li>
+                                  )
+                               })}
+                             </ul>
+                          </div>
+                       ) : (
+                          <div className="pt-4 border-t border-gray-100">
+                             {optInEventId === evt.id ? (
+                               <div className="space-y-4">
+                                  <p className="text-xs font-bold uppercase text-paa-navy mb-2">Select Books to List:</p>
+                                  {books.map(b => {
+                                     const isSelected = selectedBooksToLink.find(sb => sb.bookId === String(b.id));
+                                     return (
+                                        <div key={b.id} className="flex items-center gap-3 bg-gray-50 p-2 border border-gray-200">
+                                           <input type="checkbox" checked={!!isSelected} onChange={(e) => {
+                                              if (e.target.checked) setSelectedBooksToLink([...selectedBooksToLink, {bookId: String(b.id), stock: '5'}])
+                                              else setSelectedBooksToLink(selectedBooksToLink.filter(sb => sb.bookId !== String(b.id)))
+                                           }} />
+                                           <span className="text-sm flex-1">{b.title}</span>
+                                           {isSelected && (
+                                              <input type="number" min="1" className="w-20 p-1 text-sm border outline-none" value={isSelected.stock} onChange={(e) => {
+                                                 setSelectedBooksToLink(selectedBooksToLink.map(sb => sb.bookId === String(b.id) ? {...sb, stock: e.target.value} : sb))
+                                              }} placeholder="Qty" />
+                                           )}
+                                        </div>
+                                     );
+                                  })}
+                                  <div className="flex gap-2 pt-2">
+                                     <button onClick={() => setOptInEventId(null)} className="flex-1 py-2 bg-gray-200 text-gray-700 text-xs font-bold uppercase transition-colors">Cancel</button>
+                                     <button onClick={() => submitOptIn(evt.id)} className="flex-1 py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase transition-colors">Confirm</button>
+                                  </div>
+                               </div>
+                             ) : (
+                               <button onClick={() => { setOptInEventId(evt.id); setSelectedBooksToLink([]); }} className="w-full py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase tracking-widest transition-colors">
+                                  Opt-In & List Books
+                               </button>
+                             )}
+                          </div>
+                       )}
+                    </div>
+                 </div>
+               )
+            })}
+         </div>
+      )}
+    </div>
+  );
+}
+
+// ── PAA Catalogue Books List ────────────────────────────────────────────────
+import fictionData from './data/fiction_catalogue.json';
+import nonFictionData from './data/non_fiction_catalogue.json';
+import { Search } from 'lucide-react';
+
+function AuthorCatalogueTab() {
+  const [search, setSearch] = useState('');
+
+  const allCatalogueBooks = [
+    ...(nonFictionData as any).non_fiction_catalogue.flatMap((entry: any) =>
+      entry.books.map((b: any) => ({ ...b, authorName: entry.author, genre: "Non-Fiction", bio: entry.bio }))
+    ),
+    ...(fictionData as any).fiction_catalogue.flatMap((entry: any) =>
+      entry.books.map((b: any) => ({ ...b, authorName: entry.author, genre: "Fiction/Children", bio: entry.bio }))
+    ),
+  ];
+
+  const filtered = allCatalogueBooks.filter(b => 
+    b.title.toLowerCase().includes(search.toLowerCase()) || 
+    b.authorName.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-serif text-paa-navy">PAA Public Catalogue</h1>
+      </div>
+      <p className="text-sm text-gray-600 mb-6 max-w-3xl">
+        This tab displays the static PAA book catalogue shown on the public website. 
+        If your books are missing or incorrect here, you can verify it and contact the Operations team 
+        to update the main JSON catalogue. Your personal uploaded books are managed in the Overview tab.
+      </p>
+
       <div className="bg-white border text-sm border-paa-navy/10 overflow-hidden mb-12">
-        <div className="bg-[#5bc0de] text-white p-3 font-bold text-center border-b uppercase tracking-widest text-xs">
-           PAST LITERARY EVENTS / STALLS ORGANISED
+        <div className="p-4 border-b border-paa-navy/10 flex items-center justify-between">
+           <h2 className="font-bold tracking-widest text-paa-navy uppercase">Static Catalogue Entries</h2>
+           <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search Title or Author..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-4 py-2 border rounded text-xs w-64 outline-none focus:border-paa-gold" 
+              />
+           </div>
         </div>
-        
-        {eventRegs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-             You have not participated in any literary events yet.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-[#e0f2f7] border-b text-paa-navy text-xs uppercase tracking-wider">
-                <tr>
-                  <th className="p-4">Event Name</th>
-                  <th className="p-4">Date</th>
-                  <th className="p-4">City</th>
-                  <th className="p-4 text-center">Status</th>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b text-paa-navy text-xs uppercase tracking-wider">
+              <tr>
+                <th className="p-4">Title</th>
+                <th className="p-4">Author</th>
+                <th className="p-4">Genre</th>
+                <th className="p-4 text-center">MRP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((b, i) => (
+                <tr key={i} className="border-b last:border-0 hover:bg-gray-50">
+                  <td className="p-4 font-bold text-paa-navy">{b.title}</td>
+                  <td className="p-4">{b.authorName}</td>
+                  <td className="p-4 text-xs">{b.genre}</td>
+                  <td className="p-4 text-center">₹{parseFloat((b.mrp || "0").replace(/[^\d.]/g, "")) || 0}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {eventRegs.map(reg => (
-                  <tr key={reg.id} className="border-b last:border-0 border-gray-100">
-                    <td className="p-4 font-bold text-paa-navy">{reg.activity.name}</td>
-                    <td className="p-4 text-gray-600">{reg.activity.date}</td>
-                    <td className="p-4 text-gray-600">{reg.activity.city}</td>
-                    <td className="p-4 text-center">
-                      <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${reg.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {reg.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-gray-500">No books found matching your search.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

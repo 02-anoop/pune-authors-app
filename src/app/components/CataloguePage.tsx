@@ -90,7 +90,7 @@ export function CataloguePage() {
   const [activeSubGenre, setActiveSubGenre] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "title">("default");
-  const [cart, setCart] = useState<string[]>([]);
+  const [cart, setCart] = useState<number[]>([]);
   const [tooltip, setTooltip] = useState<{ name: string; bio: string; x: number; y: number } | null>(null);
   const [allBooks, setAllBooks] = useState<CatalogueBook[]>([]);
   const userRole = localStorage.getItem("userRole");
@@ -163,8 +163,10 @@ export function CataloguePage() {
     return list;
   }, [activeCategory, activeSubGenre, searchQuery, sortBy, allBooks]);
 
-  const addToCart = (id: string) =>
-    setCart((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const addToCart = (id: string) => {
+    const numId = parseInt(id);
+    setCart((prev) => (prev.includes(numId) ? prev.filter((x) => x !== numId) : [...prev, numId]));
+  };
 
   const cartTotal = cart.reduce((acc, id) => {
     const book = allBooks.find((b) => b.id === id);
@@ -469,7 +471,7 @@ export function CataloguePage() {
                       </div>
                       {userRole !== "AUTHOR" && userRole !== "ADMIN" && book.mrp != null && (
                         <button
-                          onClick={() => addToCart(book.id)}
+                          onClick={() => addToCart(String(book.id))}
                           style={{
                             display: "flex", alignItems: "center", gap: "0.35rem",
                             background: inCart ? meta.color : "#1a1a2e",

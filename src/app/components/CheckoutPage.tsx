@@ -6,7 +6,9 @@ import { CheckCircle, Circle, Package, MessageSquare, Truck, CheckSquare, BarCha
 export function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const cartIds: number[] = location.state?.cart || [1]; // Fallback to book 1 if directly navigated
+  const cartIds: number[] = Array.isArray(location.state?.cart) 
+    ? location.state.cart.map((id: string | number) => typeof id === 'string' ? parseInt(id) : id) 
+    : [1]; // Fallback to book 1 if directly navigated
 
   const [books, setBooks] = useState<any[]>([]);
   const [quantities, setQuantities] = useState<Record<number, number>>(
@@ -113,7 +115,14 @@ export function CheckoutPage() {
           <div style={{ maxWidth: 800, margin: "0 auto", background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 16, padding: "3rem 2rem", textAlign: "center" }}>
             <CheckCircle size={56} color="#16a34a" style={{ margin: "0 auto 1.5rem" }} />
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem" }}>Order Placed Successfully!</h2>
-            <p style={{ fontSize: 16, color: "#6b6b80", marginBottom: "2rem" }}>Your order has been sent to the respective authors. Please contact them below to arrange payment and shipping.</p>
+            <p style={{ fontSize: 16, color: "#6b6b80", marginBottom: "1rem" }}>Your order has been sent to the respective authors for payment verification.</p>
+            <div style={{ background: "#e8f5e9", border: "1px solid #4caf50", borderRadius: 8, padding: "1rem", marginBottom: "2rem", fontSize: 14, color: "#2e7d32", lineHeight: 1.6 }}>
+              <strong>📋 Next Steps:</strong><br/>
+              1. Admin will verify your payment within 24 hours<br/>
+              2. Author will accept your order<br/>
+              3. Author will dispatch with tracking number<br/>
+              4. Track your order status in <strong>My Profile → Your Orders</strong>
+            </div>
             
             <div style={{ marginBottom: "2.5rem", textAlign: "left" }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem", borderBottom: "1px solid rgba(0,0,0,0.1)", paddingBottom: "0.5rem" }}>Contact The Authors</h3>
@@ -153,7 +162,7 @@ export function CheckoutPage() {
             </div>
 
             <button onClick={() => navigate("/profile")} style={{ background: "#1a1a2e", color: "#fff", border: "none", padding: "0.85rem 2rem", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-              Go to My Profile
+              Track Your Order Status
             </button>
           </div>
         ) : (

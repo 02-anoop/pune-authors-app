@@ -224,7 +224,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
   const authorOrders = data.authorOrders;
 
   const titlesData = authorBooks.map((b: any, index: number) => {
-    const sold = authorOrders.filter((o: any) => o.bookTitle === b.title && (o.status === 'Completed' || o.status === 'Dispatched')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
+    const sold = authorOrders.filter((o: any) => o.bookTitle === b.title).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
     return {
       sno: index + 1,
       id: b.id,
@@ -903,9 +903,12 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                     <td className="p-3 border-r border-paa-navy/5 text-center font-bold text-paa-navy">{ord.quantity}</td>
                     <td className="p-3 border-r border-paa-navy/5 text-center bg-gray-50 font-bold text-paa-navy">₹{ord.amount}</td>
                     <td className="p-3 text-center border-r border-paa-navy/5">
-                       <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${ord.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : ord.status === 'Dispatched' ? 'bg-[#5bc0de] text-white border-[#46b8da]' : ord.status === 'Accepted' ? 'bg-[#337ab7] text-white border-[#2e6da4]' : 'bg-gray-200 text-paa-gray-text border-gray-300'}`}>
-                         {ord.status}
-                       </span>
+                       <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${
+                         ord.status === 'Dispatched' ? 'bg-[#5bc0de] text-white border-[#46b8da]' : 
+                         ord.status === 'Accepted' ? 'bg-[#337ab7] text-white border-[#2e6da4]' : 
+                         ord.paymentVerified ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : 
+                         'bg-gray-200 text-paa-gray-text border-gray-300'
+                       }`}>\n                         {ord.status === 'Completed' && ord.paymentVerified ? 'Payment Verified' : ord.status === 'Pending Verification' ? 'Pending Verification' : ord.status}\n                       </span>
                     </td>
                     <td className="p-3 text-center">
                       {ord.paymentScreenshot && (
@@ -926,23 +929,23 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                       {ord.paymentFailed && (
                         <span className="text-[10px] font-bold text-red-600 tracking-widest uppercase flex items-center justify-center gap-1 mt-1"><AlertCircle size={10}/> Payment Failed</span>
                       )}
-                      {ord.status === 'Pending' && ord.paymentVerified && (
+                      {(ord.status === 'Completed' || ord.status === 'Pending Verification') && ord.paymentVerified && (
                         <button 
                           onClick={() => handleAccept(ord.id)}
                           disabled={loadingAction === ord.id}
-                          className="bg-[#337ab7] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 mt-2"
+                          className="bg-[#337ab7] hover:bg-[#286090] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 mt-2 transition-colors"
                         >
                           ACCEPT
                         </button>
                       )}
-                      {ord.status === 'Pending' && !ord.paymentVerified && !ord.paymentFailed && (
+                      {ord.status === 'Pending Verification' && !ord.paymentVerified && !ord.paymentFailed && (
                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mt-2 text-center">Awaiting Payment Verification</span>
                       )}
                       {ord.status === 'Accepted' && (
                         <button 
                           onClick={() => handleDispatch(ord.id)}
                           disabled={loadingAction === ord.id}
-                          className="bg-[#5bc0de] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 mt-2"
+                          className="bg-[#5bc0de] hover:bg-[#46b8da] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 mt-2 transition-colors"
                         >
                           DISPATCH
                         </button>

@@ -677,7 +677,8 @@ app.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
         paymentVerified: item.order.status === 'Completed',
         paymentFailed: item.order.status === 'Payment Not Received',
         createdAt: item.createdAt,
-        date: item.createdAt.toISOString().split('T')[0]
+        date: item.createdAt.toISOString().split('T')[0],
+        orderStatus: item.order.status
       }));
     }
 

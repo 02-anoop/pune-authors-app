@@ -306,6 +306,9 @@ export function OperationsDashboardPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   
+  const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  
   const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
   const fetchOverview = async () => {
@@ -343,6 +346,35 @@ export function OperationsDashboardPage() {
       fetchEvents();
     } catch(err) {
       toast.error('Failed to broadcast event');
+    }
+  };
+
+  const handleDeleteEvent = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    try {
+      await axios.delete(`${API}/api/admin/events/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Event deleted successfully');
+      fetchEvents();
+    } catch(err) {
+      toast.error('Failed to delete event');
+    }
+  };
+
+  const handleEditEventClick = (event: any) => {
+    setEditingEvent({ id: event.id, name: event.name, date: event.date, duration: event.duration, location: event.location });
+    setIsEditEventModalOpen(true);
+  };
+
+  const handleEditEventSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEvent) return;
+    try {
+      await axios.put(`${API}/api/admin/events/${editingEvent.id}`, editingEvent, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Event updated successfully');
+      setIsEditEventModalOpen(false);
+      fetchEvents();
+    } catch(err) {
+      toast.error('Failed to update event');
     }
   };
 
@@ -897,8 +929,12 @@ export function OperationsDashboardPage() {
              <div key={evt.id} className="bg-white border border-paa-navy/10 shadow-sm hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
                 <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center`}>
                    <span>{evt.status}</span>
-                   {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded text-[10px]">Authors Notified</span>}
-                   {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded text-[10px]">Public</span>}
+                   <div className="flex gap-2 items-center">
+                     {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded text-[10px]">Authors Notified</span>}
+                     {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded text-[10px]">Public</span>}
+                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
+                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                   </div>
                 </div>
                 <div className="p-6">
                   <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
@@ -1375,6 +1411,23 @@ export function OperationsDashboardPage() {
             <button type="submit" className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">Create Event</button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={isEditEventModalOpen} onClose={() => setIsEditEventModalOpen(false)} title="Edit Event">
+        {editingEvent && (
+          <form className="space-y-4" onSubmit={handleEditEventSubmit}>
+            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Name</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.name} onChange={e => setEditingEvent({...editingEvent, name: e.target.value})} /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Date</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} /></div>
+              <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Duration</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.duration} onChange={e => setEditingEvent({...editingEvent, duration: e.target.value})} /></div>
+            </div>
+            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Location</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} /></div>
+            <div className="pt-4 mt-4 border-t border-paa-navy/10 flex justify-end gap-2">
+              <button type="button" onClick={() => setIsEditEventModalOpen(false)} className="bg-gray-100 text-paa-navy px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">Cancel</button>
+              <button type="submit" className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">Save Changes</button>
+            </div>
+          </form>
+        )}
       </Modal>
 
       {/* Order Details Modal */}

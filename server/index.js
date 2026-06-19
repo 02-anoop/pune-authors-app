@@ -1388,6 +1388,32 @@ app.get('/api/admin/events', verifyToken, async (req, res) => {
   }
 });
 
+app.put('/api/admin/events/:id', verifyToken, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const { name, location, date, duration } = req.body;
+    const event = await prisma.event.update({
+      where: { id: eventId },
+      data: { name, location, date, duration }
+    });
+    res.json(event);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update event' });
+  }
+});
+
+app.delete('/api/admin/events/:id', verifyToken, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    await prisma.event.delete({ where: { id: eventId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
 app.post('/api/admin/events/:id/broadcast', verifyToken, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);

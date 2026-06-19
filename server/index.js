@@ -1275,7 +1275,7 @@ app.get('/api/author/events', verifyToken, async (req, res) => {
       include: { event: true }
     });
     
-    const books = await prisma.book.findMany({ where: { authorId: author.id, status: 'Active' }});
+    const books = await prisma.book.findMany({ where: { authorId: author.id, status: 'Approved' }});
     const listedBooks = await prisma.eventBook.findMany({ where: { authorId: author.id } });
 
     res.json({ eventInvites, books, listedBooks });

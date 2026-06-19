@@ -20,14 +20,10 @@ export function AuthorDashboardPage() {
         navigate('/login');
         return;
       }
-      const [dashRes, actRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/dashboard-data`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/activities`)
-      ]);
+      const dashRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/dashboard-data`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setDashboardData(dashRes.data);
-      setActivities(actRes.data);
     } catch (err) {
       console.error(err);
       toast.error('Failed to load dashboard data');
@@ -184,7 +180,6 @@ export function AuthorDashboardPage() {
         <div className="max-w-7xl mx-auto px-6 py-3 flex gap-6 text-xs font-bold tracking-widest uppercase overflow-x-auto hide-scrollbar items-center">
           <Link to="/dashboard" className={`${location.pathname === '/dashboard' ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Overview</Link>
           <Link to="/dashboard/catalogue" className={`${location.pathname.includes('/catalogue') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Catalogue Books</Link>
-          <Link to="/dashboard/activities" className={`${location.pathname.includes('/activities') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Activities</Link>
           <Link to="/dashboard/orders" className={`${location.pathname.includes('/orders') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>My Orders</Link>
           <Link to="/dashboard/forms" className={`${location.pathname.includes('/forms') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Forms</Link>
           <Link to="/dashboard/inventory" className={`${location.pathname.includes('/inventory') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Inventory</Link>
@@ -199,7 +194,6 @@ export function AuthorDashboardPage() {
         <Routes>
           <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={fetchDashboardData} />} />
           <Route path="/catalogue" element={<AuthorCatalogueTab />} />
-          <Route path="/activities" element={<ActivityRegistration activities={activities} books={dashboardData.authorProfile.books} onRefresh={fetchDashboardData} registrations={dashboardData.authorProfile.eventRegistrations} />} />
           <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={fetchDashboardData} />} />
           <Route path="/forms/*" element={<FormsWrapper />} />
           <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={fetchDashboardData} />} />

@@ -7,6 +7,20 @@ export function EventsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('past');
 
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchUpcomingEvents = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/public/events`);
+        setUpcomingEvents(res.data);
+      } catch (error) {
+        console.error("Failed to fetch upcoming events:", error);
+      }
+    };
+    fetchUpcomingEvents();
+  }, []);
+
   const filteredPastEvents = pastEvents.filter(e => 
     e.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     e.address.toLowerCase().includes(searchTerm.toLowerCase())
@@ -38,7 +52,7 @@ export function EventsPage() {
               onClick={() => setActiveTab('upcoming')}
               className={`px-6 py-3 rounded-lg text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'upcoming' ? 'bg-[#1a1a2e] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
             >
-              Upcoming Events
+              Upcoming Events ({upcomingEvents.length})
             </button>
             <button 
               onClick={() => setActiveTab('past')}
@@ -63,16 +77,60 @@ export function EventsPage() {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 mt-12">
         {activeTab === 'upcoming' ? (
-          <div className="text-center py-24 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-500">
-              <Calendar className="w-10 h-10" />
+          upcomingEvents.length === 0 ? (
+            <div className="text-center py-24 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-500">
+                <Calendar className="w-10 h-10" />
+              </div>
+              <h2 className="text-2xl font-serif text-[#1a1a2e] font-bold mb-3">No Upcoming Events</h2>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Our event coordinators are busy planning the next big literary gathering. 
+                Check back soon or join our mailing list to stay updated!
+              </p>
             </div>
-            <h2 className="text-2xl font-serif text-[#1a1a2e] font-bold mb-3">No Upcoming Events</h2>
-            <p className="text-gray-500 max-w-md mx-auto">
-              Our event coordinators are busy planning the next big literary gathering. 
-              Check back soon or join our mailing list to stay updated!
-            </p>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {upcomingEvents.map((event) => (
+                <div key={event.id} className="bg-white border border-blue-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col h-full relative">
+                  <div className="absolute top-4 right-4 bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm z-10">
+                    Upcoming
+                  </div>
+                  <div className="p-6 flex-grow pt-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold tracking-widest uppercase">
+                        <Clock className="w-3 h-3" /> {event.duration}
+                      </span>
+                      <span className="text-blue-900 font-bold text-sm bg-blue-100/50 px-3 py-1 rounded-full border border-blue-200">
+                        {event.date}
+                      </span>
+                    </div>
+                    
+                    <h3 className="text-xl font-bold text-[#1a1a2e] mb-3 line-clamp-2">
+                      {event.name}
+                    </h3>
+                    
+                    <p className="text-sm text-gray-500 flex items-start gap-2 mb-6 h-10 line-clamp-2">
+                      <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-[#b44d28]" /> {event.location}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3 mt-auto">
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                        <div className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-1">Authors Participating</div>
+                        <div className="text-xl font-black text-[#1a1a2e]">{event._count?.eventAuthors || 0}</div>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3 border border-blue-100 text-center">
+                        <div className="text-[10px] font-bold tracking-widest uppercase text-blue-600/70 mb-1">Books Showcased</div>
+                        <div className="text-xl font-black text-blue-600">{event._count?.eventBooks || 0}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <a href={`/events/${event.id}/catalogue`} className="block w-full text-center py-4 bg-[#1a1a2e] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#b44d28] transition-colors">
+                    View Live Catalogue
+                  </a>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPastEvents.map((event, index) => (

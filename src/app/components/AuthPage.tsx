@@ -17,6 +17,7 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
   const [signupError, setSignupError] = useState("");
   const navigate = useNavigate();
 
+
   // Sync role when type changes (e.g., clicking the bottom link)
   useEffect(() => {
     const role = searchParams.get("role") as "CUSTOMER" | "AUTHOR";
@@ -60,6 +61,7 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
 
   return (
     <div style={{ minHeight: "calc(100vh - 64px)", display: "flex", alignItems: "center", justifyContent: "center", background: "#f7f7f9", padding: "2rem 1.5rem" }}>
+
       <div style={{ width: "100%", maxWidth: 400, background: "#fff", padding: "2.5rem 2rem", borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.06)" }}>
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700, color: "#1a1a2e" }}>
@@ -126,6 +128,8 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.4rem" }}>Password</label>
                 <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: "100%", padding: "0.7rem", borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)", boxSizing: "border-box" }} />
               </div>
+
+
 
               {signupError && (
                 <div style={{ background: "#fef2f2", color: "#b91c1c", padding: "1rem", borderRadius: 8, fontSize: 13, display: "flex", flexDirection: "column", gap: "0.5rem" }}>

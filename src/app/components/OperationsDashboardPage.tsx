@@ -4,11 +4,28 @@ import axios from 'axios';
 // Automatically attach token to all admin requests
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token && !config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    if (config.headers && typeof config.headers.set === 'function') {
+      config.headers.set('Authorization', `Bearer ${token}`);
+    } else if (config.headers) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
   }
   return config;
 });
+
+// Automatically handle 401 errors
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 import { 
   RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search, 
   Eye, Edit, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle, 
@@ -23,7 +40,7 @@ import { toast } from 'sonner';
 import pastEventsData from './data/past_events.json';
 
 const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => void }) => {
-  const [activeProfileTab, setActiveProfileTab] = useState<'inventory' | 'orders' | 'events' | 'distribution' | 'forms'>('inventory');
+  const [activeProfileTab, setActiveProfileTab] = useState<'profile' | 'inventory' | 'orders' | 'events' | 'distribution' | 'forms'>('profile');
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -76,14 +93,78 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
 
       <div className="flex flex-col md:flex-row flex-1">
         <div className="w-full md:w-56 bg-white border-b md:border-b-0 md:border-r border-paa-navy/10 p-4 flex flex-col gap-2 shrink-0 md:sticky md:top-0 h-fit text-xs font-bold uppercase tracking-widest">
+           <button onClick={() => setActiveProfileTab('profile')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'profile' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Registration Profile</button>
            <button onClick={() => setActiveProfileTab('inventory')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'inventory' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Inventory</button>
            <button onClick={() => setActiveProfileTab('orders')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'orders' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Web Orders</button>
            <button onClick={() => setActiveProfileTab('events')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'events' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Events</button>
            <button onClick={() => setActiveProfileTab('distribution')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'distribution' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Distribution</button>
-           <button onClick={() => setActiveProfileTab('forms')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'forms' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Forms</button>
         </div>
         
         <div className="flex-1 p-6 bg-gray-50/50 min-h-[500px]">
+        {activeProfileTab === 'profile' && (
+        <div id="profile" className="space-y-6">
+          <div className="bg-white border border-paa-navy/10 p-6 shadow-sm">
+            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Author Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Full Name</span><span className="text-sm text-paa-navy font-medium">{authorProfile.name}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Pen Name</span><span className="text-sm text-paa-navy font-medium">{authorProfile.penName || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Email</span><span className="text-sm text-paa-navy font-medium">{authorProfile.email}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Phone / WhatsApp</span><span className="text-sm text-paa-navy font-medium">{authorProfile.phone} {authorProfile.whatsapp ? `/ ${authorProfile.whatsapp}` : ''}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Location</span><span className="text-sm text-paa-navy font-medium">{authorProfile.city ? `${authorProfile.city}, ${authorProfile.state}` : '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Social Profiles</span>
+                <span className="text-sm text-paa-navy font-medium block">{authorProfile.instagram && <a href={authorProfile.instagram} target="_blank" className="text-blue-600 hover:underline">Instagram</a>} {authorProfile.facebook && <a href={authorProfile.facebook} target="_blank" className="text-blue-600 hover:underline ml-2">Facebook/LinkedIn</a>} {!authorProfile.instagram && !authorProfile.facebook && '-'}</span>
+              </div>
+              <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Bio</span><span className="text-sm text-paa-navy font-medium block whitespace-pre-wrap">{authorProfile.bio || '-'}</span></div>
+            </div>
+          </div>
+          
+          <div className="bg-white border border-paa-navy/10 p-6 shadow-sm">
+            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>
+            <div className="space-y-4">
+              {authorProfile.books.length === 0 ? <p className="text-sm text-paa-gray-text">No books found.</p> : authorProfile.books.map((b: any, idx: number) => (
+                <div key={b.id} className="border border-paa-navy/10 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
+                  {b.coverUrl && <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + b.coverUrl : "http://localhost:3001" + b.coverUrl} alt="Cover" className="w-20 h-28 object-cover border border-paa-navy/20" />}
+                  <div className="flex-1">
+                    <h4 className="text-lg font-bold text-paa-navy">{b.title}</h4>
+                    {b.subtitle && <p className="text-sm text-paa-gray-text font-medium mb-1">{b.subtitle}</p>}
+                    <p className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2 bg-[#e4ebf5] inline-block px-2 py-0.5">{b.genre} {b.subGenre && `> ${b.subGenre}`}</p>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">MRP</span><span className="text-sm font-bold text-green-700">₹{b.mrp}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Language</span><span className="text-sm font-bold text-paa-navy">{b.language || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Format</span><span className="text-sm font-bold text-paa-navy">{b.format || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Pages</span><span className="text-sm font-bold text-paa-navy">{b.pages || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Publisher</span><span className="text-sm font-bold text-paa-navy">{b.publisher || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Pub Date</span><span className="text-sm font-bold text-paa-navy">{b.publicationDate || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">ISBN</span><span className="text-sm font-bold text-paa-navy">{b.isbn || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Initial Stock</span><span className="text-sm font-bold text-paa-navy">{b.stock}</span></div>
+                    </div>
+                    
+                    <div className="mt-4"><span className="text-[10px] uppercase text-paa-gray-text block mb-1">Synopsis</span><p className="text-sm text-paa-navy font-medium whitespace-pre-wrap leading-relaxed">{b.synopsis}</p></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="bg-white border border-paa-navy/10 p-6 shadow-sm">
+            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Payment Details</h3>
+            <div className="flex gap-8 items-start">
+               <div>
+                  <span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Transaction ID</span>
+                  <span className="text-sm text-paa-navy font-bold bg-gray-100 px-2 py-1">{authorProfile.transactionId || '-'}</span>
+               </div>
+               {authorProfile.paymentScreenshot && (
+                 <div>
+                    <span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Receipt</span>
+                    <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + authorProfile.paymentScreenshot : "http://localhost:3001" + authorProfile.paymentScreenshot} target="_blank" className="text-sm text-blue-600 underline font-bold">View Screenshot</a>
+                 </div>
+               )}
+            </div>
+          </div>
+        </div>
+        )}
+
         {activeProfileTab === 'inventory' && (
         <div id="inventory">
           <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Books & Inventory</h3>
@@ -214,67 +295,6 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
         </div>
         )}
 
-        {activeProfileTab === 'forms' && (
-        <div id="forms">
-          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Author Registration Data</h3>
-          <div className="bg-white border border-paa-navy/10 shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Full Name</p>
-                <p className="text-sm font-medium text-paa-navy border-b pb-2">{authorProfile.name}</p>
-             </div>
-             <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Email Address</p>
-                <p className="text-sm font-medium text-paa-navy border-b pb-2">{authorProfile.email}</p>
-             </div>
-             <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Phone Number</p>
-                <p className="text-sm font-medium text-paa-navy border-b pb-2">{authorProfile.phone}</p>
-             </div>
-             <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">WhatsApp Number</p>
-                <p className="text-sm font-medium text-paa-navy border-b pb-2">{authorProfile.whatsapp || 'Not Provided'}</p>
-             </div>
-             <div className="md:col-span-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Author Bio</p>
-                <p className="text-sm font-medium text-paa-navy bg-gray-50 p-4 border rounded leading-relaxed">{authorProfile.bio || 'No biography provided.'}</p>
-             </div>
-             
-             {authorProfile.extraData && Object.keys(authorProfile.extraData).length > 0 && (
-                <div className="md:col-span-2 mt-4">
-                   <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-2 border-b pb-1">Additional Required Details</p>
-                   <div className="grid grid-cols-2 gap-4">
-                     {Object.entries(authorProfile.extraData).map(([key, val]) => (
-                        <div key={key}>
-                           <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">{key}</p>
-                           <p className="text-sm font-medium text-paa-navy">{String(val)}</p>
-                        </div>
-                     ))}
-                   </div>
-                </div>
-             )}
-
-             <div className="md:col-span-2 mt-4">
-                <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-2 border-b pb-1">Registration Payment Details</p>
-                <div className="grid grid-cols-2 gap-4">
-                   <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Transaction ID</p>
-                      <p className="text-sm font-medium text-paa-navy">{authorProfile.transactionId || 'No Transaction ID Provided'}</p>
-                   </div>
-                   <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-paa-gray-text mb-1">Payment Screenshot</p>
-                      {authorProfile.paymentScreenshot ? (
-                         <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + authorProfile.paymentScreenshot : "http://localhost:3001" + authorProfile.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 underline hover:text-blue-800">
-                            View Uploaded Receipt
-                         </a>
-                      ) : (
-                         <p className="text-sm font-medium text-red-500">No Receipt Uploaded</p>
-                      )}
-                   </div>
-                </div>
-             </div>
-          </div>
-        </div>
-        )}
         </div>
       </div>
     </div>
@@ -338,6 +358,7 @@ export function OperationsDashboardPage() {
   const [isEditGalleryModalOpen, setIsEditGalleryModalOpen] = useState(false);
   const [editingGalleryEvent, setEditingGalleryEvent] = useState<any>(null);
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
   
   const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -587,11 +608,14 @@ export function OperationsDashboardPage() {
 
   const handleApproveAuthor = async (id: number) => {
     try {
+      setLoadingAction('approveAuthor_' + id);
       await axios.post(`${API}/api/admin/authors/${id}/approve`);
       toast.success('Author Approved!');
       fetchAuthors();
     } catch(err) {
       toast.error('Failed to approve author');
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -618,6 +642,7 @@ export function OperationsDashboardPage() {
     if (otherReason.trim()) reasons.push(otherReason.trim());
     if (reasons.length === 0) { alert('Please select or enter at least one reason.'); return; }
     const reason = reasons.join('; ');
+    setLoadingAction('rejectAuthor');
     try {
       await axios.post(`${API}/api/admin/authors/${rejectAuthorTarget.id}/reject`, { reason });
       toast.success('Author Rejected');
@@ -625,6 +650,8 @@ export function OperationsDashboardPage() {
       fetchAuthors();
     } catch (err) {
       toast.error('Failed to reject author');
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -636,6 +663,7 @@ export function OperationsDashboardPage() {
   const handleUpdateAuthor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAuthor) return;
+    setLoadingAction('updateAuthor');
     try {
       await axios.put(`${API}/api/admin/authors/${editingAuthor.id}`, {
         name: editingAuthor.name,
@@ -649,6 +677,8 @@ export function OperationsDashboardPage() {
       alert('Author profile updated!');
     } catch (err) {
       alert('Failed to update author');
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -661,23 +691,25 @@ export function OperationsDashboardPage() {
   };
 
   const handleApproveBook = async (id: number) => {
+    setLoadingAction('approveBook_' + id);
     try {
       await axios.post(`${API}/api/admin/books/${id}/approve`);
       fetchBooks();
     } catch (err) {
       alert("Failed to approve book");
-    }
+    } finally { setLoadingAction(null); }
   };
 
   const handleRejectBook = async (id: number) => {
     const reason = window.prompt("Please provide a reason for rejecting this book:");
     if (reason === null) return; // User cancelled
+    setLoadingAction('rejectBook_' + id);
     try {
       await axios.post(`${API}/api/admin/books/${id}/reject`, { reason });
       fetchBooks();
     } catch (err) {
       alert("Failed to reject book");
-    }
+    } finally { setLoadingAction(null); }
   };
 
   const handleEditBookClick = (book: any) => {
@@ -696,6 +728,7 @@ export function OperationsDashboardPage() {
   const handleUpdateBook = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBook) return;
+    setLoadingAction('updateBook');
     try {
       await axios.put(`${API}/api/admin/books/${editingBook.id}`, {
         title: editingBook.title,
@@ -711,22 +744,28 @@ export function OperationsDashboardPage() {
       alert("Book updated successfully!");
     } catch (err) {
       alert("Failed to update book details");
-    }
+    } finally { setLoadingAction(null); }
   };
 
   const handleVerifyOrder = async (id: number) => {
     if (window.confirm('Are you sure you want to verify this payment?')) {
-      await axios.post(`${API}/api/admin/orders/${id}/verify`);
+      setLoadingAction('verifyOrder_' + id);
+      try {
+        await axios.post(`${API}/api/admin/orders/${id}/verify`);
       fetchOrders();
-      setSelectedOrder(null);
+        setSelectedOrder(null);
+      } finally { setLoadingAction(null); }
     }
   };
 
   const handleRejectOrder = async (id: number) => {
     if (window.confirm('Are you sure you want to mark this payment as not received?')) {
-      await axios.post(`${API}/api/admin/orders/${id}/reject-payment`);
+      setLoadingAction('rejectOrder_' + id);
+      try {
+        await axios.post(`${API}/api/admin/orders/${id}/reject-payment`);
       fetchOrders();
-      setSelectedOrder(null);
+        setSelectedOrder(null);
+      } finally { setLoadingAction(null); }
     }
   };
 
@@ -946,7 +985,7 @@ export function OperationsDashboardPage() {
     </div>
   );
 
-  const AuthorsTab = ({ refreshTrigger }: any) => {
+  const renderAuthorsTab = ({ refreshTrigger }: any) => {
     if (selectedAuthor) {
       return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;
     }
@@ -1050,7 +1089,7 @@ export function OperationsDashboardPage() {
                        {author.status === 'Pending' && (
                          <>
                            <button onClick={() => handleApproveAuthor(author.id)} className="p-1.5 text-white bg-[#5cb85c] hover:bg-[#4cae4c] border border-[transparent] shadow" title="Approve">
-                             <Check className="w-4 h-4" />
+                             {loadingAction === 'approveAuthor_' + author.id ? <span className="text-[10px] px-1 font-bold">Approving...</span> : <Check className="w-4 h-4" />}
                            </button>
                            <button onClick={() => openRejectAuthorModal(author)} className="p-1.5 text-white bg-orange-500 hover:bg-orange-600 border border-[transparent] shadow" title="Reject">
                              <X className="w-4 h-4" />
@@ -1940,7 +1979,7 @@ export function OperationsDashboardPage() {
         {/* Scrollable Body */}
         <div className="flex-1 overflow-auto p-4 sm:p-8 pt-0">
            {activeTab === 'overview' && <OverviewTab />}
-           {activeTab === 'authors' && <AuthorsTab refreshTrigger={lastRefreshTime} />}
+           {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
            {activeTab === 'books' && <BooksTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'events' && <EventsTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'orders' && <OrdersTab refreshTrigger={lastRefreshTime} />}
@@ -2198,11 +2237,11 @@ export function OperationsDashboardPage() {
                     </div>
                   ) : (
                     <div className="flex gap-2">
-                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">
-                        Verify
+                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} disabled={loadingAction === 'verifyOrder_' + selectedOrder.dbId} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors disabled:opacity-50">
+                        {loadingAction === 'verifyOrder_' + selectedOrder.dbId ? 'Verifying...' : 'Verify'}
                       </button>
-                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">
-                        Reject
+                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors disabled:opacity-50">
+                        {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Rejecting...' : 'Reject'}
                       </button>
                     </div>
                   )}
@@ -2214,8 +2253,8 @@ export function OperationsDashboardPage() {
                     <span className="text-sm font-bold">No payment screenshot uploaded</span>
                   </div>
                   {selectedOrder.status !== 'Payment Not Received' && (
-                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors">
-                      Mark Failed
+                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors disabled:opacity-50">
+                      {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Updating...' : 'Mark Failed'}
                     </button>
                   )}
                 </div>
@@ -2229,6 +2268,7 @@ export function OperationsDashboardPage() {
         <form className="space-y-4" onSubmit={async (e) => {
           e.preventDefault();
           const target = e.target as any;
+          setLoadingAction('createForm');
           const title = target.formTitle.value;
           const type = target.formType.value;
           const description = target.formDescription.value;
@@ -2246,7 +2286,7 @@ export function OperationsDashboardPage() {
             setIsFormModalOpen(false);
           } catch (err) {
             alert("Error creating form");
-          }
+          } finally { setLoadingAction(null); }
         }}>
           <div>
             <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Form Title</label>
@@ -2270,8 +2310,8 @@ export function OperationsDashboardPage() {
             <textarea name="formFields" required className="w-full p-2 border border-paa-navy/20 font-mono text-xs" rows={4} defaultValue={`[\n  {"name": "Name", "type": "text"},\n  {"name": "Feedback", "type": "textarea"}\n]`}></textarea>
             <p className="text-xs text-gray-500 mt-1">Supported types: text, textarea, select (needs "options": ["A","B"])</p>
           </div>
-          <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition">
-            Create Form
+          <button type="submit" disabled={loadingAction === 'createForm'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50">
+            {loadingAction === 'createForm' ? 'Creating...' : 'Create Form'}
           </button>
         </form>
       </Modal>
@@ -2286,6 +2326,7 @@ export function OperationsDashboardPage() {
             return;
           }
           const fd = new FormData();
+          setLoadingAction('addGalleryEvent');
           fd.append('photo', file);
           fd.append('location', target.loc.value);
           fd.append('place', target.place.value);
@@ -2303,7 +2344,7 @@ export function OperationsDashboardPage() {
             setIsGalleryModalOpen(false);
           } catch(err) {
             alert("Error adding gallery event");
-          }
+          } finally { setLoadingAction(null); }
         }}>
           <div>
             <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Event Title / Location</label>
@@ -2356,8 +2397,8 @@ export function OperationsDashboardPage() {
             <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Photo</label>
             <input type="file" accept="image/*" name="photo" required className="w-full p-2 border border-paa-navy/20 bg-white" />
           </div>
-          <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition">
-            Add Gallery Event
+          <button type="submit" disabled={loadingAction === 'addGalleryEvent'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50">
+            {loadingAction === 'addGalleryEvent' ? 'Adding...' : 'Add Gallery Event'}
           </button>
         </form>
       </Modal>
@@ -2367,6 +2408,7 @@ export function OperationsDashboardPage() {
           <form className="space-y-4" onSubmit={async (e) => {
             e.preventDefault();
             const target = e.target as any;
+            setLoadingAction('editGalleryEvent');
             const fd = new FormData();
             if (target.photo.files[0]) {
               fd.append('photo', target.photo.files[0]);
@@ -2388,7 +2430,7 @@ export function OperationsDashboardPage() {
               setIsEditGalleryModalOpen(false);
             } catch(err) {
               toast.error("Error updating gallery event");
-            }
+            } finally { setLoadingAction(null); }
           }}>
             <div>
               <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Event Title / Location</label>
@@ -2441,8 +2483,8 @@ export function OperationsDashboardPage() {
               <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Change Main Photo (Optional)</label>
               <input type="file" name="photo" accept="image/*" className="w-full p-2 border border-paa-navy/20 text-xs bg-white" />
             </div>
-            <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition">
-              Save Changes
+            <button type="submit" disabled={loadingAction === 'editGalleryEvent'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50">
+              {loadingAction === 'editGalleryEvent' ? 'Updating...' : 'Save Changes'}
             </button>
           </form>
         )}
@@ -2483,8 +2525,8 @@ export function OperationsDashboardPage() {
               <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Synopsis</label>
               <textarea value={editingBook.synopsis} onChange={(e) => setEditingBook({ ...editingBook, synopsis: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" rows={4}></textarea>
             </div>
-            <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow">
-              Save Changes
+            <button type="submit" disabled={loadingAction === 'updateBook'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow disabled:opacity-50">
+              {loadingAction === 'updateBook' ? 'Updating...' : 'Save Changes'}
             </button>
           </form>
         )}
@@ -2532,8 +2574,8 @@ export function OperationsDashboardPage() {
                 <button onClick={() => setRejectAuthorTarget(null)} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy font-bold uppercase tracking-widest">
                   Cancel
                 </button>
-                <button onClick={handleRejectAuthorSubmit} className="px-6 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow transition-colors">
-                  Confirm Rejection
+                <button onClick={handleRejectAuthorSubmit} disabled={loadingAction === 'rejectAuthor'} className="px-6 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow transition-colors disabled:opacity-50">
+                  {loadingAction === 'rejectAuthor' ? 'Rejecting...' : 'Confirm Rejection'}
                 </button>
               </div>
             </div>
@@ -2563,8 +2605,8 @@ export function OperationsDashboardPage() {
               <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Author Bio</label>
               <textarea required value={editingAuthor.bio} onChange={(e) => setEditingAuthor({ ...editingAuthor, bio: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" rows={5} />
             </div>
-            <button type="submit" className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow">
-              Save Author Profile
+            <button type="submit" disabled={loadingAction === 'updateAuthor'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow disabled:opacity-50">
+              {loadingAction === 'updateAuthor' ? 'Updating...' : 'Save Author Profile'}
             </button>
           </form>
         )}

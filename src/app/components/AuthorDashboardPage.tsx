@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
 import { Home, Check, AlertCircle, Upload, Loader2, LogOut } from 'lucide-react';
+import { X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { bookCategories } from '../data/categories';
 
 export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -11,6 +13,10 @@ export function AuthorDashboardPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [hasNewQueries, setHasNewQueries] = useState(false);
+  const [showReapply, setShowReapply] = useState(false);
+  const [reapplyForm, setReapplyForm] = useState({ name: '', phone: '', bio: '', whatsapp: '', transactionId: '' });
+  const [isSubmittingReapply, setIsSubmittingReapply] = useState(false);
+  const [buttonStates, setButtonStates] = useState<{[key: string]: boolean}>({});
   const prevQueryAnsCountRef = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,8 +61,17 @@ export function AuthorDashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (dashboardData?.authorProfile?.extraData) {
-      setExtraDataState(dashboardData.authorProfile.extraData);
+    if (dashboardData?.authorProfile) {
+      if (dashboardData.authorProfile.extraData) {
+        setExtraDataState(dashboardData.authorProfile.extraData);
+      }
+      setReapplyForm({
+        name: dashboardData.authorProfile.name || '',
+        phone: dashboardData.authorProfile.phone || '',
+        bio: dashboardData.authorProfile.bio || '',
+        whatsapp: dashboardData.authorProfile.whatsapp || '',
+        transactionId: dashboardData.authorProfile.transactionId || ''
+      });
     }
   }, [dashboardData]);
 
@@ -87,6 +102,7 @@ export function AuthorDashboardPage() {
   const missingFields = dynamicFields.filter((f: any) => !extraDataState[f.name]);
 
   const handleSaveExtraData = async () => {
+    setButtonStates(prev => ({...prev, saveExtra: true}));
     try {
       await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/extra`, { extraData: extraDataState }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -118,7 +134,7 @@ export function AuthorDashboardPage() {
               </div>
             ))}
           </div>
-          <button onClick={handleSaveExtraData} className="w-full py-3 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">Save & Continue</button>
+          <button onClick={handleSaveExtraData} disabled={buttonStates.saveExtra} className="w-full py-3 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50">{buttonStates.saveExtra ? 'Saving...' : 'Save & Continue'}</button>
         </div>
       </div>
     );
@@ -144,31 +160,88 @@ export function AuthorDashboardPage() {
               <div>
                 <p className="text-sm mb-2">Unfortunately, your author application has been rejected.</p>
                 {rejectionReason && <p className="text-sm font-bold bg-white p-3 rounded border border-red-100">Reason: {rejectionReason}</p>}
+                {!showReapply && (
+                  <button onClick={() => setShowReapply(true)} className="mt-4 bg-paa-navy text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">
+                    Reapply with Correct Details
+                  </button>
+                )}
               </div>
             )}
           </div>
 
-          <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Submitted Details</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm mb-6">
-            <div><span className="text-gray-500 block text-xs uppercase font-bold">Name</span> {name}</div>
-            <div><span className="text-gray-500 block text-xs uppercase font-bold">Email</span> {email}</div>
-            <div><span className="text-gray-500 block text-xs uppercase font-bold">Phone</span> {phone}</div>
-            <div><span className="text-gray-500 block text-xs uppercase font-bold">Transaction ID</span> {transactionId || 'N/A'}</div>
-          </div>
-          
-          <div className="mb-4">
-            <span className="text-gray-500 block text-xs uppercase font-bold mb-1">Bio</span>
-            <p className="text-sm bg-gray-50 p-3 rounded">{bio}</p>
-          </div>
-          {extraData && Object.keys(extraData).length > 0 && (
-            <div className="mt-4">
-               <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy border-b pb-1 mb-3">Additional Details</h4>
-               <div className="grid grid-cols-2 gap-4 text-sm">
-                 {Object.entries(extraData).map(([key, val]) => (
-                    <div key={key}><span className="text-gray-500 block text-xs uppercase font-bold">{key}</span> {String(val)}</div>
-                 ))}
-               </div>
+          {showReapply ? (
+            <div className="mb-8 p-4 border border-paa-navy/20 rounded bg-gray-50">
+              <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Update Your Details</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Name</label>
+                  <input className="w-full border p-2 rounded" value={reapplyForm.name} onChange={e => setReapplyForm({...reapplyForm, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
+                  <input className="w-full border p-2 rounded" value={reapplyForm.phone} onChange={e => setReapplyForm({...reapplyForm, phone: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
+                  <input className="w-full border p-2 rounded" value={reapplyForm.whatsapp} onChange={e => setReapplyForm({...reapplyForm, whatsapp: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Transaction ID</label>
+                  <input className="w-full border p-2 rounded" value={reapplyForm.transactionId} onChange={e => setReapplyForm({...reapplyForm, transactionId: e.target.value})} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Bio</label>
+                  <textarea rows={3} className="w-full border p-2 rounded" value={reapplyForm.bio} onChange={e => setReapplyForm({...reapplyForm, bio: e.target.value})} />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setShowReapply(false)} className="px-4 py-2 text-gray-500 text-sm">Cancel</button>
+                <button 
+                  disabled={isSubmittingReapply}
+                  onClick={async () => {
+                    setIsSubmittingReapply(true);
+                    try {
+                      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/reapply`, reapplyForm, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+                      toast.success('Application updated and resubmitted!');
+                      setShowReapply(false);
+                      fetchDashboardData(true);
+                    } catch(err) {
+                      toast.error('Failed to reapply');
+                    } finally {
+                      setIsSubmittingReapply(false);
+                    }
+                  }} 
+                  className="bg-paa-navy text-white px-4 py-2 rounded text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50"
+                >
+                  {isSubmittingReapply ? 'Submitting...' : 'Submit Reapplication'}
+                </button>
+              </div>
             </div>
+          ) : (
+            <>
+              <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Submitted Details</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+                <div><span className="text-gray-500 block text-xs uppercase font-bold">Name</span> {name}</div>
+                <div><span className="text-gray-500 block text-xs uppercase font-bold">Email</span> {email}</div>
+                <div><span className="text-gray-500 block text-xs uppercase font-bold">Phone</span> {phone}</div>
+                <div><span className="text-gray-500 block text-xs uppercase font-bold">Transaction ID</span> {transactionId || 'N/A'}</div>
+              </div>
+              
+              <div className="mb-4">
+                <span className="text-gray-500 block text-xs uppercase font-bold mb-1">Bio</span>
+                <p className="text-sm bg-gray-50 p-3 rounded">{bio}</p>
+              </div>
+              {extraData && Object.keys(extraData).length > 0 && (
+                <div className="mt-4">
+                   <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy border-b pb-1 mb-3">Additional Details</h4>
+                   <div className="grid grid-cols-2 gap-4 text-sm">
+                     {Object.entries(extraData).map(([key, val]) => (
+                        <div key={key}><span className="text-gray-500 block text-xs uppercase font-bold">{key}</span> {String(val)}</div>
+                     ))}
+                   </div>
+                </div>
+              )}
+            </>
           )}
 
           <div className="grid grid-cols-2 gap-4 mt-6">
@@ -238,7 +311,7 @@ export function AuthorDashboardPage() {
 function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) {
   const [filter, setFilter] = useState('all');
   const [showAddBook, setShowAddBook] = useState(false);
-  const [newBook, setNewBook] = useState({ title: '', genre: '', synopsis: '', mrp: '', stock: '' });
+  const [newBook, setNewBook] = useState({ title: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', mrp: '', stock: '' });
   const [cover, setCover] = useState<File | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editBio, setEditBio] = useState('');
@@ -284,12 +357,15 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
   const grossSales = completedOrders.reduce((acc: number, curr: any) => acc + curr.amount, 0);
   const netEarnings = grossSales * 0.7;
 
-  const handleAddBook = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddBook = async (e: React.FormEvent | null, addAnother: boolean = false) => {
+    if (e) e.preventDefault();
     try {
       const formData = new FormData();
       formData.append('title', newBook.title);
       formData.append('genre', newBook.genre);
+      let subGenre = newBook.subcategory;
+      if (newBook.subSubcategory) subGenre += ' > ' + newBook.subSubcategory;
+      if (subGenre) formData.append('subGenre', subGenre);
       formData.append('synopsis', newBook.synopsis);
       formData.append('mrp', newBook.mrp);
       formData.append('stock', newBook.stock);
@@ -300,10 +376,18 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Book added successfully! Pending admin approval.');
-      setShowAddBook(false);
-      window.location.reload();
+      onRefresh();
+      
+      if (addAnother) {
+        setNewBook({ title: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', mrp: '', stock: '' });
+        setCover(null);
+      } else {
+        setShowAddBook(false);
+      }
     } catch (err) {
       toast.error('Failed to add book');
+    } finally {
+      setButtonStates(prev => ({...prev, addBook: false}));
     }
   };
 
@@ -332,6 +416,8 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       onRefresh();
     } catch (err) {
       toast.error('Failed to update profile');
+    } finally {
+      setButtonStates(prev => ({...prev, editProfile: false}));
     }
   };
 
@@ -350,6 +436,8 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       onRefresh();
     } catch (err) {
       toast.error('Failed to update cover');
+    } finally {
+      setButtonStates(prev => ({...prev, updateCover: false}));
     }
   };
 
@@ -395,7 +483,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
               </div>
               <div className="flex justify-end gap-2 mt-2">
                 <button type="button" onClick={() => setShowEditProfile(false)} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
-                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold">Save Changes</button>
+                <button type="submit" disabled={buttonStates.editProfile} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save Changes'}</button>
               </div>
             </form>
           </div>
@@ -410,7 +498,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
               <input type="file" accept="image/*" className="border p-2 text-xs" onChange={e => setNewCoverFile(e.target.files?.[0] || null)} />
               <div className="flex justify-end gap-2">
                 <button onClick={() => { setEditCoverBookId(null); setNewCoverFile(null); }} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
-                <button onClick={() => handleUpdateCover(editCoverBookId)} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold">Upload Cover</button>
+                <button onClick={() => handleUpdateCover(editCoverBookId)} disabled={buttonStates.updateCover} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold disabled:opacity-50">{buttonStates.updateCover ? 'Uploading...' : 'Upload Cover'}</button>
               </div>
             </div>
           </div>
@@ -423,20 +511,43 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
             <h2 className="text-xl font-serif text-paa-navy mb-4">Add New Title</h2>
             <form onSubmit={handleAddBook} className="flex flex-col gap-4">
               <input required placeholder="Book Title" className="border p-2" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} />
-              <select required className="border p-2" value={newBook.genre} onChange={e => setNewBook({...newBook, genre: e.target.value})}>
-                <option value="">Select Genre</option>
-                <option value="Fiction">Fiction</option>
-                <option value="Non-Fiction">Non-Fiction</option>
-                <option value="Children">Children</option>
-                <option value="Poetry">Poetry</option>
-              </select>
+              
+              <div className="flex gap-2">
+                <select required className="border p-2 flex-1" value={newBook.genre} onChange={e => setNewBook({...newBook, genre: e.target.value, subcategory: '', subSubcategory: ''})}>
+                  <option value="">Select Category</option>
+                  {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                
+                {newBook.genre && Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).length > 0 && (
+                  <select className="border p-2 flex-1" value={newBook.subcategory} onChange={e => setNewBook({...newBook, subcategory: e.target.value, subSubcategory: ''})}>
+                    <option value="">Select Subcategory</option>
+                    {Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                  </select>
+                )}
+              </div>
+              
+              {newBook.genre && newBook.subcategory && ((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).length > 0 && (
+                <select className="border p-2" value={newBook.subSubcategory} onChange={e => setNewBook({...newBook, subSubcategory: e.target.value})}>
+                  <option value="">Select Specific Genre</option>
+                  {((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
+                </select>
+              )}
+
               <textarea required placeholder="Synopsis" className="border p-2" value={newBook.synopsis} onChange={e => setNewBook({...newBook, synopsis: e.target.value})} />
               <input required type="number" placeholder="MRP (â‚¹)" className="border p-2" value={newBook.mrp} onChange={e => setNewBook({...newBook, mrp: e.target.value})} />
               <input required type="number" placeholder="Initial Stock" className="border p-2" value={newBook.stock} onChange={e => setNewBook({...newBook, stock: e.target.value})} />
               <input type="file" accept="image/*" onChange={e => setCover(e.target.files?.[0] || null)} className="border p-2 text-xs" />
               <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={() => setShowAddBook(false)} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
-                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold">Add Book</button>
+                <button type="button" onClick={() => setShowAddBook(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">Cancel</button>
+                <button type="button" onClick={(e) => {
+                  const form = e.currentTarget.closest('form');
+                  if (form && form.checkValidity()) {
+                    handleAddBook(null, true);
+                  } else if (form) {
+                    form.reportValidity();
+                  }
+                }} className="bg-gray-200 text-paa-navy border border-paa-navy/20 px-4 py-2 text-sm font-bold uppercase tracking-widest hover:bg-gray-300 transition-colors">Save & Add Another</button>
+                <button type="submit" disabled={buttonStates.addBook} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
               </div>
             </form>
           </div>
@@ -1581,6 +1692,7 @@ function EventsDashboard() {
   }, [invites, listedBooks]);
 
   const submitOptIn = async (eventId: number) => {
+    setButtonStates(prev => ({...prev, ['optIn_' + eventId]: true}));
     try {
       await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/opt-in`, {
         booksToLink: selectedBooksToLink
@@ -1655,7 +1767,7 @@ function EventsDashboard() {
                   {invites.some((inv: any) => inv.eventId === settleEventId && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === settleEventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) ? null : (
                      <button type="button" onClick={() => setSettleEventId(null)} className="px-6 py-2 bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest hover:bg-gray-200">Cancel</button>
                   )}
-                  <button type="submit" disabled={settlementData.every(s => s.isSettled) || settlementData.some(s => s.listedStock !== s.soldStock + s.returnedStock)} className="px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy disabled:opacity-50">Submit Settlement</button>
+                  <button type="submit" disabled={buttonStates.submitSettlement || settlementData.every(s => s.isSettled) || settlementData.some(s => s.listedStock !== s.soldStock + s.returnedStock)} className="px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy disabled:opacity-50">{buttonStates.submitSettlement ? 'Submitting...' : 'Submit Settlement'}</button>
                </div>
             </form>
           </div>
@@ -1687,8 +1799,8 @@ function EventsDashboard() {
                     </div>
                     <div className="p-6">
                        <h4 className="text-xl font-serif font-medium text-paa-navy mb-3">{evt.name}</h4>
-                       <p className="text-sm font-medium text-gray-600 mb-1">ðŸ“… {evt.date} &bull; {evt.duration}</p>
-                       <p className="text-sm font-medium text-gray-600 mb-6">ðŸ“ {evt.location}</p>
+                       <p className="text-sm font-medium text-gray-600 mb-1">{evt.date} &bull; {evt.duration}</p>
+                       <p className="text-sm font-medium text-gray-600 mb-6">{evt.location}</p>
                        
                        {isOptedIn ? (
                           <div className="bg-green-50 p-4 border border-green-200">
@@ -1732,7 +1844,7 @@ function EventsDashboard() {
                                   })}
                                   <div className="flex gap-2 pt-2">
                                      <button onClick={() => setOptInEventId(null)} className="flex-1 py-2 bg-gray-200 text-gray-700 text-xs font-bold uppercase transition-colors">Cancel</button>
-                                     <button onClick={() => submitOptIn(evt.id)} className="flex-1 py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase transition-colors">Confirm</button>
+                                     <button onClick={() => submitOptIn(evt.id)} disabled={buttonStates['optIn_' + evt.id]} className="flex-1 py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase transition-colors disabled:opacity-50">{buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}</button>
                                   </div>
                                </div>
                              ) : (

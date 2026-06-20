@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import qrCode from "./data/qr_code.jpeg";
+import { bookCategories } from "../data/categories";
 import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft } from "lucide-react";
 
 const steps = [
   { title: "Author Profile", icon: <User size={18} />, desc: "Personal information and bio" },
   { title: "Book Details", icon: <BookOpen size={18} />, desc: "Title, synopsis, and cover" },
-  { title: "Guidelines & Agreement", icon: <Shield size={18} />, desc: "Group norms and sign-off" },
   { title: "Submit & Payment", icon: <CreditCard size={18} />, desc: "Application fee" },
 ];
 
@@ -31,6 +31,7 @@ export function AuthorRegistrationPage() {
   const [qrCodeBlob, setQrCodeBlob] = useState<File | null>(null);
   const [dynamicFields, setDynamicFields] = useState<any[]>([]);
   const [extraDataState, setExtraDataState] = useState<any>({});
+  const [books, setBooks] = useState<any[]>([]);
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author-fields`)
@@ -49,18 +50,61 @@ export function AuthorRegistrationPage() {
     phone: "",
     whatsapp: "",
     bio: "",
+    penName: "",
+    city: "",
+    state: "",
+    instagram: "",
+    facebook: "",
     title: "",
+    subtitle: "",
     genre: "",
+    subcategory: "",
+    subSubcategory: "",
     synopsis: "",
     pages: "",
     mrp: "",
     stock: "0",
-    guidelinesChecked: false,
-    conflictChecked: false,
+    language: "",
+    isbn: "",
+    publisher: "",
+    publicationDate: "",
+    edition: "",
+    format: "",
     transactionId: "",
   });
 
-  const update = (key: string, val: string | boolean) => setForm((prev) => ({ ...prev, [key]: val }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateField = (key: string, value: string | boolean) => {
+    let error = "";
+    if (key === "name" && !value) error = "Name is required.";
+    if (key === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value as string)) error = "Invalid email address.";
+    if (key === "password" && (value as string).length < 6) error = "Password must be at least 6 characters.";
+    if (key === "phone" && !/^\d{10}$/.test((value as string).replace(/\D/g, ''))) error = "Must be a 10-digit number.";
+    if (key === "bio" && !value) error = "Bio is required.";
+    if (key === "city" && !value) error = "City is required.";
+    if (key === "state" && !value) error = "State is required.";
+    
+    // For book details
+    if (key === "title" && !value) error = "Title is required.";
+    if (key === "genre" && !value) error = "Category is required.";
+    if (key === "synopsis" && !value) error = "Synopsis is required.";
+    if (key === "mrp" && (!value || Number(value) <= 0)) error = "Valid MRP is required.";
+    if (key === "language" && !value) error = "Language is required.";
+    if (key === "publisher" && !value) error = "Publisher is required.";
+    if (key === "publicationDate" && !value) error = "Publication Date is required.";
+    if (key === "format" && !value) error = "Book Format is required.";
+    
+    // Payment
+    if (key === "transactionId" && !value) error = "Transaction ID is required.";
+
+    setErrors((prev) => ({ ...prev, [key]: error }));
+  };
+
+  const update = (key: string, val: string | boolean) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+    validateField(key, val);
+  };
 
   const inputStyle = {
     width: "100%",
@@ -136,21 +180,51 @@ export function AuthorRegistrationPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
                     <div>
                       <label style={labelStyle}>Full Name *</label>
-                      <input type="text" value={form.name} onChange={(e) => update("name", e.target.value)} style={inputStyle} />
+                      <input type="text" value={form.name} onChange={(e) => update("name", e.target.value)} style={{...inputStyle, borderColor: errors.name ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.name && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.name}</div>}
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Pen Name</label>
+                      <input type="text" value={form.penName} onChange={(e) => update("penName", e.target.value)} style={inputStyle} />
                     </div>
                     <div>
                       <label style={labelStyle}>Email Address *</label>
-                      <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} style={inputStyle} />
+                      <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} style={{...inputStyle, borderColor: errors.email ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.email && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.email}</div>}
                     </div>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                     <div>
                       <label style={labelStyle}>Phone Number *</label>
-                      <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} style={inputStyle} />
+                      <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} style={{...inputStyle, borderColor: errors.phone ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.phone && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.phone}</div>}
                     </div>
                     <div>
                       <label style={labelStyle}>Password (For Login) *</label>
-                      <input type="password" value={form.password} onChange={(e) => update("password", e.target.value)} style={inputStyle} />
+                      <input type="password" value={form.password} onChange={(e) => update("password", e.target.value)} style={{...inputStyle, borderColor: errors.password ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.password && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.password}</div>}
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={labelStyle}>City *</label>
+                      <input type="text" value={form.city} onChange={(e) => update("city", e.target.value)} style={{...inputStyle, borderColor: errors.city ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.city && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.city}</div>}
+                    </div>
+                    <div>
+                      <label style={labelStyle}>State *</label>
+                      <input type="text" value={form.state} onChange={(e) => update("state", e.target.value)} style={{...inputStyle, borderColor: errors.state ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.state && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.state}</div>}
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={labelStyle}>Instagram Profile</label>
+                      <input type="text" value={form.instagram} onChange={(e) => update("instagram", e.target.value)} style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Facebook / LinkedIn Profile</label>
+                      <input type="text" value={form.facebook} onChange={(e) => update("facebook", e.target.value)} style={inputStyle} />
                     </div>
                   </div>
                   <div>
@@ -160,10 +234,13 @@ export function AuthorRegistrationPage() {
                       value={form.bio}
                       onChange={(e) => update("bio", e.target.value)}
                       rows={5}
-                      style={{ ...inputStyle, resize: "vertical" }}
+                      style={{ ...inputStyle, resize: "vertical", borderColor: errors.bio ? "#ef4444" : "rgba(0,0,0,0.12)" }}
                     />
-                    <div style={{ fontSize: 11, color: "#6b6b80", marginTop: "0.3rem", textAlign: "right" }}>
-                      {form.bio.split(/\s+/).filter(Boolean).length} / 100 words
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "0.3rem" }}>
+                      {errors.bio ? <div style={{ color: "#ef4444", fontSize: 11 }}>{errors.bio}</div> : <div></div>}
+                      <div style={{ fontSize: 11, color: "#6b6b80", textAlign: "right" }}>
+                        {form.bio.split(/\s+/).filter(Boolean).length} / 100 words
+                      </div>
                     </div>
                   </div>
 
@@ -265,38 +342,64 @@ export function AuthorRegistrationPage() {
             {step === 1 && (
               <div>
                 <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.3rem" }}>Book Details</h2>
-                <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>Information about the book you wish to publish or register with PAA.</p>
+                <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>Information about the book(s) you wish to publish or register with PAA.</p>
 
-                <div style={{ display: "grid", gap: "1rem" }}>
-                  <div>
-                    <label style={labelStyle}>Book Title *</label>
-                    <input type="text" placeholder="e.g. The Forgotten Horizon" value={form.title} onChange={(e) => update("title", e.target.value)} style={inputStyle} />
+                {books.length > 0 && (
+                  <div style={{ marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>Added Books ({books.length})</h3>
+                    {books.map((b, idx) => (
+                      <div key={idx} style={{ background: "#f8f9fa", padding: "0.75rem 1rem", borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e" }}>{b.title}</div>
+                          <div style={{ fontSize: 12, color: "#6b6b80" }}>{b.genre} {b.subcategory && `> ${b.subcategory}`}</div>
+                        </div>
+                        {b.coverFileUrl && <img src={b.coverFileUrl} alt="cover" style={{ height: 40, width: 30, objectFit: "cover", borderRadius: 4 }} />}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gap: "1rem", padding: books.length > 0 ? "1.5rem" : "0", background: books.length > 0 ? "#fff" : "transparent", borderRadius: 12, border: books.length > 0 ? "1px solid #e5e7eb" : "none" }}>
+                  {books.length > 0 && <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e", marginBottom: "-0.5rem" }}>Add Another Book</h3>}
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={labelStyle}>Book Title *</label>
+                      <input type="text" placeholder="e.g. The Forgotten Horizon" value={form.title} onChange={(e) => update("title", e.target.value)} style={{...inputStyle, borderColor: errors.title ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.title && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.title}</div>}
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Subtitle</label>
+                      <input type="text" placeholder="e.g. A Journey Through Time" value={form.subtitle} onChange={(e) => update("subtitle", e.target.value)} style={inputStyle} />
+                    </div>
                   </div>
 
-                  <div>
-                    <label style={labelStyle}>Genre *</label>
-                    <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-                      {genreOptions.map((g) => (
-                        <button
-                          key={g.code}
-                          type="button"
-                          onClick={() => update("genre", g.code)}
-                          style={{
-                            padding: "0.45rem 1rem",
-                            borderRadius: 8,
-                            border: "1.5px solid " + (form.genre === g.code ? g.color : "rgba(0,0,0,0.12)"),
-                            background: form.genre === g.code ? g.color + "18" : "#fff",
-                            color: form.genre === g.code ? g.color : "#6b6b80",
-                            fontFamily: "var(--font-body)",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                        >
-                          {g.code} — {g.label}
-                        </button>
-                      ))}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={labelStyle}>Category *</label>
+                      <select value={form.genre} onChange={(e) => { update("genre", e.target.value); update("subcategory", ""); update("subSubcategory", ""); }} style={{...inputStyle, borderColor: errors.genre ? "#ef4444" : "rgba(0,0,0,0.12)"}}>
+                        <option value="">Select Category</option>
+                        {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      {errors.genre && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.genre}</div>}
                     </div>
+                    {form.genre && Object.keys(bookCategories[form.genre as keyof typeof bookCategories] || {}).length > 0 && (
+                      <div>
+                        <label style={labelStyle}>Subcategory</label>
+                        <select value={form.subcategory} onChange={(e) => { update("subcategory", e.target.value); update("subSubcategory", ""); }} style={inputStyle}>
+                          <option value="">Select Subcategory</option>
+                          {Object.keys(bookCategories[form.genre as keyof typeof bookCategories] || {}).map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {form.genre && form.subcategory && ((bookCategories[form.genre as keyof typeof bookCategories] as any)[form.subcategory] || []).length > 0 && (
+                      <div>
+                        <label style={labelStyle}>Specific Genre</label>
+                        <select value={form.subSubcategory} onChange={(e) => update("subSubcategory", e.target.value)} style={inputStyle}>
+                          <option value="">Select Specific Genre</option>
+                          {((bookCategories[form.genre as keyof typeof bookCategories] as any)[form.subcategory] || []).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
+                        </select>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -306,10 +409,52 @@ export function AuthorRegistrationPage() {
                       value={form.synopsis}
                       onChange={(e) => update("synopsis", e.target.value)}
                       rows={5}
-                      style={{ ...inputStyle, resize: "vertical" }}
+                      style={{ ...inputStyle, resize: "vertical", borderColor: errors.synopsis ? "#ef4444" : "rgba(0,0,0,0.12)" }}
                     />
-                    <div style={{ fontSize: 11, color: "#6b6b80", marginTop: "0.3rem", textAlign: "right" }}>
-                      {form.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "0.3rem" }}>
+                      {errors.synopsis ? <div style={{ color: "#ef4444", fontSize: 11 }}>{errors.synopsis}</div> : <div></div>}
+                      <div style={{ fontSize: 11, color: "#6b6b80", textAlign: "right" }}>
+                        {form.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={labelStyle}>Language *</label>
+                      <input type="text" placeholder="e.g. English, Marathi" value={form.language} onChange={(e) => update("language", e.target.value)} style={{...inputStyle, borderColor: errors.language ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.language && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.language}</div>}
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Publisher Name *</label>
+                      <input type="text" placeholder="e.g. Self-Published" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} style={{...inputStyle, borderColor: errors.publisher ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.publisher && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.publisher}</div>}
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Publication Date *</label>
+                      <input type="date" value={form.publicationDate} onChange={(e) => update("publicationDate", e.target.value)} style={{...inputStyle, borderColor: errors.publicationDate ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.publicationDate && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.publicationDate}</div>}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={labelStyle}>ISBN Number</label>
+                      <input type="text" placeholder="e.g. 978-3-16-148410-0" value={form.isbn} onChange={(e) => update("isbn", e.target.value)} style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Edition</label>
+                      <input type="text" placeholder="e.g. 1st Edition" value={form.edition} onChange={(e) => update("edition", e.target.value)} style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Book Format *</label>
+                      <select value={form.format} onChange={(e) => update("format", e.target.value)} style={{...inputStyle, borderColor: errors.format ? "#ef4444" : "rgba(0,0,0,0.12)"}}>
+                        <option value="">Select Format</option>
+                        <option value="Paperback">Paperback</option>
+                        <option value="Hardcover">Hardcover</option>
+                        <option value="Ebook">Ebook</option>
+                      </select>
+                      {errors.format && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.format}</div>}
                     </div>
                   </div>
 
@@ -320,7 +465,8 @@ export function AuthorRegistrationPage() {
                     </div>
                     <div>
                       <label style={labelStyle}>MRP (₹) *</label>
-                      <input type="number" placeholder="299" value={form.mrp} onChange={(e) => update("mrp", e.target.value)} style={inputStyle} />
+                      <input type="number" placeholder="299" value={form.mrp} onChange={(e) => update("mrp", e.target.value)} style={{...inputStyle, borderColor: errors.mrp ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                      {errors.mrp && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.mrp}</div>}
                     </div>
                     <div>
                       <label style={labelStyle}>Initial Stock (Optional)</label>
@@ -362,66 +508,34 @@ export function AuthorRegistrationPage() {
                       }}
                     />
                   </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!form.title || !form.genre || !form.synopsis || !form.mrp || !form.language || !form.publisher || !form.publicationDate || !form.format || !coverBlob) {
+                          alert("Please fill all compulsory fields and upload a cover to add this book.");
+                          return;
+                        }
+                        setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
+                        setForm({...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: ""});
+                        setCoverBlob(null);
+                        setCoverFileUrl(null);
+                      }}
+                      style={{
+                        background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0",
+                        padding: "0.5rem 1rem", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer"
+                      }}
+                    >
+                      + Save & Add Another Book
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Step 2: Guidelines */}
+            {/* Step 2: Payment */}
             {step === 2 && (
-              <div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.3rem" }}>Guidelines &amp; Agreement</h2>
-                <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>Please read and acknowledge the following before proceeding.</p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {/* Guidelines box */}
-                  <div style={{ background: "#f7f7f9", borderRadius: 12, padding: "1.25rem", maxHeight: 240, overflowY: "auto", border: "1px solid rgba(0,0,0,0.08)", fontSize: 13, color: "#444", lineHeight: 1.8 }}>
-                    <strong style={{ display: "block", marginBottom: "0.5rem", color: "#1a1a2e" }}>PAA Group Guidelines</strong>
-                    <p>1. All content submitted must be original and authored by the registrant. Plagiarism will result in immediate removal.</p>
-                    <p>2. Books registered with PAA must be exclusive to PAA channels for the first 6 months of listing.</p>
-                    <p>3. Authors agree to participate in a minimum of 2 PAA events per year to maintain active status.</p>
-                    <p>4. PAA retains the right to curate and decline books that do not meet editorial standards.</p>
-                    <p>5. Revenue split: 70% to author, 30% to PAA for all sales through PAA channels.</p>
-                    <p>6. Authors must provide accurate stock counts and maintain a minimum of 25 copies available at all times.</p>
-                    <p>7. The author is responsible for ensuring the content complies with Indian publishing laws and does not violate copyright, obscenity, or defamation laws.</p>
-                    <p>8. PAA may use book covers and author photos for promotional purposes without additional compensation.</p>
-                  </div>
-
-                  <label style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={form.guidelinesChecked}
-                      onChange={(e) => update("guidelinesChecked", e.target.checked)}
-                      style={{ width: 18, height: 18, marginTop: 2, cursor: "pointer", accentColor: "#1a1a2e" }}
-                    />
-                    <span style={{ fontSize: 13, color: "#1a1a2e", lineHeight: 1.6 }}>
-                      I have read and agree to the PAA Group Guidelines in full. I understand that violation of these guidelines may result in removal from the platform without refund.
-                    </span>
-                  </label>
-
-                  {/* Conflict of interest */}
-                  <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "1.25rem" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#d97706", marginBottom: "0.6rem" }}>Conflict of Interest Declaration</div>
-                    <p style={{ fontSize: 12, color: "#78350f", lineHeight: 1.7, marginBottom: "0.75rem" }}>
-                      I declare that I have no financial, personal, or professional conflict of interest that would compromise the integrity of the books I am registering with PAA. I confirm that the book content does not defame any individual, organisation, or institution. I sign off on this declaration of my own free will and understand that false declarations may result in legal action.
-                    </p>
-                    <label style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={form.conflictChecked}
-                        onChange={(e) => update("conflictChecked", e.target.checked)}
-                        style={{ width: 18, height: 18, marginTop: 2, cursor: "pointer", accentColor: "#d97706" }}
-                      />
-                      <span style={{ fontSize: 12, color: "#78350f", lineHeight: 1.6 }}>
-                        I acknowledge and sign off on the Conflict of Interest Declaration above.
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Payment */}
-            {step === 3 && (
               <div>
                 <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.3rem" }}>Application Fee Payment</h2>
                 <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>A one-time registration fee of ₹500 secures your PAA membership and editorial review.</p>
@@ -434,7 +548,8 @@ export function AuthorRegistrationPage() {
                 <div style={{ display: "grid", gap: "1rem" }}>
                   <div>
                     <label style={labelStyle}>Transaction ID *</label>
-                    <input type="text" required placeholder="e.g. T23456789012" value={form.transactionId} onChange={(e) => update("transactionId", e.target.value)} style={inputStyle} />
+                    <input type="text" required placeholder="e.g. T23456789012" value={form.transactionId} onChange={(e) => update("transactionId", e.target.value)} style={{...inputStyle, borderColor: errors.transactionId ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
+                    {errors.transactionId && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.transactionId}</div>}
                   </div>
                   <div>
                     <label style={labelStyle}>Payment Screenshot *</label>
@@ -517,8 +632,16 @@ export function AuthorRegistrationPage() {
                         alert("Please enter a valid 10-digit phone number."); return;
                       }
                     } else if (step === 1) {
-                      if (!form.title || !form.genre || !form.synopsis || !form.mrp || !coverBlob) {
-                        alert("Please fill all compulsory fields in this step and upload book cover."); return;
+                      if (!form.title || !form.genre || !form.synopsis || !form.mrp || !form.language || !form.publisher || !form.publicationDate || !form.format || !coverBlob) {
+                        if (books.length === 0) {
+                          alert("Please fill all compulsory fields in this step and upload book cover."); return;
+                        }
+                      } else {
+                        // Auto-save the current book before moving to next step
+                        setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
+                        setForm({...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: ""});
+                        setCoverBlob(null);
+                        setCoverFileUrl(null);
                       }
                     }
                     setStep((s) => Math.min(steps.length - 1, s + 1));
@@ -536,10 +659,7 @@ export function AuthorRegistrationPage() {
                 <button
                   disabled={isSubmitting}
                   onClick={async () => {
-                    if (!form.guidelinesChecked || !form.conflictChecked) {
-                      alert("Please accept all agreements before submitting.");
-                      return;
-                    }
+
                     if (!form.transactionId || !paymentBlob) {
                       alert("Please provide the transaction ID and upload the payment screenshot.");
                       return;
@@ -549,10 +669,42 @@ export function AuthorRegistrationPage() {
                     try {
                       const formData = new FormData();
                       Object.entries(form).forEach(([key, val]) => {
-                        formData.append(key, String(val));
+                        const bookKeys = ['subcategory', 'subSubcategory', 'title', 'genre', 'synopsis', 'pages', 'mrp', 'stock', 'subtitle', 'language', 'isbn', 'publisher', 'publicationDate', 'edition', 'format'];
+                        if (!bookKeys.includes(key)) {
+                           formData.append(key, String(val));
+                        }
                       });
+                      
+                      const finalBooks = [...books];
+                      if (form.title && form.genre && form.mrp) {
+                        finalBooks.push({ ...form, coverBlob });
+                      }
+                      
+                      formData.append("books", JSON.stringify(finalBooks.map(b => {
+                        let subGenre = b.subcategory;
+                        if (b.subSubcategory) subGenre += ' > ' + b.subSubcategory;
+                        return {
+                          title: b.title,
+                          subtitle: b.subtitle,
+                          genre: b.genre,
+                          subGenre: subGenre,
+                          synopsis: b.synopsis,
+                          pages: b.pages,
+                          mrp: b.mrp,
+                          stock: b.stock,
+                          language: b.language,
+                          isbn: b.isbn,
+                          publisher: b.publisher,
+                          publicationDate: b.publicationDate,
+                          edition: b.edition,
+                          format: b.format
+                        };
+                      })));
+
                       if (authorBlob) formData.append("photo", authorBlob);
-                      if (coverBlob) formData.append("cover", coverBlob);
+                      finalBooks.forEach((b, idx) => {
+                        if (b.coverBlob) formData.append(`cover_${idx}`, b.coverBlob);
+                      });
                       if (paymentBlob) formData.append("paymentScreenshot", paymentBlob);
                       if (qrCodeBlob) formData.append("qrCode", qrCodeBlob);
                       if (Object.keys(extraDataState).length > 0) {
@@ -591,7 +743,7 @@ export function AuthorRegistrationPage() {
             </div>
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800, color: "#1a1a2e", marginBottom: "0.5rem" }}>Application Submitted!</h2>
             <p style={{ fontSize: 14, color: "#6b6b80", lineHeight: 1.7, maxWidth: 440, margin: "0 auto 1.5rem" }}>
-              Thank you, <strong>{form.name || "Author"}</strong>! Your application for <em>"{form.title || "your book"}"</em> has been received. <br/><br/>
+              Thank you, <strong>{form.name || "Author"}</strong>! Your application for <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em> has been received. <br/><br/>
               <strong style={{ color: "#d97706" }}>Approval Pending:</strong> You must wait for the Admin to approve your account. Once approved, you will be able to log in to your Author Dashboard.
             </p>
             {/* Receipt */}
@@ -600,9 +752,9 @@ export function AuthorRegistrationPage() {
               {[
                 { label: "Application ID", value: "PAA-APP-2025-" + Math.floor(Math.random() * 9000 + 1000) },
                 { label: "Author Name", value: form.name || "—" },
-                { label: "Book Title", value: form.title || "—" },
-                { label: "Genre", value: form.genre || "—" },
-                { label: "Fee Paid", value: "₹2,360" },
+                { label: "Book Title(s)", value: [...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "—" },
+                { label: "Genre", value: Array.from(new Set([...books.map(b => b.genre), form.genre].filter(Boolean))).join(", ") || "—" },
+                { label: "Fee Paid", value: "₹500" },
                 { label: "Status", value: "Pending Review" },
               ].map((item) => (
                 <div key={item.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "0.35rem 0", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>

@@ -33,6 +33,11 @@ model Author {
   paymentScreenshot  String?
   createdAt          DateTime            @default(now())
   whatsapp           String?
+  penName            String?
+  city               String?
+  state              String?
+  instagram          String?
+  facebook           String?
   extraData          Json?
   qrCodeUrl          String?
   books              Book[]
@@ -75,6 +80,14 @@ model Book {
   stock           Int         @default(0)
   airportStock    Int         @default(0)
   fairStock       Int         @default(0)
+  
+  subtitle        String?
+  language        String?
+  isbn            String?
+  publisher       String?
+  publicationDate String?
+  edition         String?
+  format          String?
   author          Author      @relation(fields: [authorId], references: [id])
   orderItems      OrderItem[]
   reviews         BookReview[]

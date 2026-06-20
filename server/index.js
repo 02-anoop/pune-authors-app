@@ -28,18 +28,21 @@ function invalidateCache(pattern) {
   }
 }
 let mailTransporter;
-nodemailer.createTestAccount((err, account) => {
-  if (err) {
-    console.error('Failed to create a testing account. ' + err.message);
-    return;
-  }
+
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   mailTransporter = nodemailer.createTransport({
-    host: account.smtp.host,
-    port: account.smtp.port,
-    secure: account.smtp.secure,
-    auth: { user: account.user, pass: account.pass }
+    service: 'gmail', // You can change this to your email provider
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
   });
-});
+} else {
+  mailTransporter = nodemailer.createTransport({
+    streamTransport: true,
+    newline: 'windows'
+  });
+}
 
 const sendNotificationEmail = async (to, subject, htmlBody) => {
   if (!mailTransporter || !to) return;
@@ -51,7 +54,15 @@ const sendNotificationEmail = async (to, subject, htmlBody) => {
       html: htmlBody,
       text: htmlBody.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
     });
-    console.log(`[EMAIL SENT] to ${to}: ${subject} | Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+    console.log(`[EMAIL SENT] to ${to}: ${subject}`);
+    
+    // Extract OTP if it's an OTP email to print to console for easy testing
+    const otpMatch = htmlBody.match(/<h2[^>]*>(\d{6})<\/h2>/);
+    if (otpMatch) {
+      console.log(`\n========================================`);
+      console.log(`🔑 DEV MODE OTP: ${otpMatch[1]}`);
+      console.log(`========================================\n`);
+    }
   } catch (err) {
     console.error('Email failed:', err.message);
   }
@@ -185,6 +196,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(500).json({ error: 'Login failed' });
   }
 });
+
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {
   try {
@@ -338,7 +350,7 @@ app.post('/api/books/:id/reviews', async (req, res) => {
 // 2. Author Registration (creates author, user login, and their first book)
 app.post('/api/authors/register', upload.any(), async (req, res) => {
   try {
-    const { name, email, phone, password, bio, title, genre, synopsis, pages, mrp, whatsapp, transactionId, stock, extraData } = req.body;
+    const { name, email, phone, password, bio, whatsapp, penName, city, state, instagram, facebook, transactionId, extraData } = req.body;
     
     // Check if email already in use
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -346,20 +358,42 @@ app.post('/api/authors/register', upload.any(), async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // In local dev, store local URL. In prod, this would be an S3 URL.
-    let photoUrl = null, coverUrl = null, paymentScreenshotUrl = null, qrCodeUrl = null;
+    let booksArray = [];
+    if (req.body.books) {
+      try { booksArray = JSON.parse(req.body.books); } catch(e) {}
+    }
+    if (booksArray.length === 0 && req.body.title) {
+       booksArray.push({
+         title: req.body.title,
+         subtitle: req.body.subtitle,
+         genre: req.body.genre,
+         subGenre: req.body.subGenre,
+         synopsis: req.body.synopsis,
+         pages: req.body.pages,
+         mrp: req.body.mrp,
+         stock: req.body.stock,
+         language: req.body.language,
+         isbn: req.body.isbn,
+         publisher: req.body.publisher,
+         publicationDate: req.body.publicationDate,
+         edition: req.body.edition,
+         format: req.body.format
+       });
+    }
+
+    let photoUrl = null, paymentScreenshotUrl = null, qrCodeUrl = null;
+    let covers = {};
     if (Array.isArray(req.files)) {
        for (const file of req.files) {
           if (file.fieldname === 'photo') photoUrl = `/uploads/${file.filename}`;
-          if (file.fieldname === 'cover') coverUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'paymentScreenshot') paymentScreenshotUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'qrCode') qrCodeUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'cover') covers[0] = `/uploads/${file.filename}`;
+          if (file.fieldname.startsWith('cover_')) {
+             const idx = file.fieldname.split('_')[1];
+             covers[idx] = `/uploads/${file.filename}`;
+          }
        }
-    } else if (req.files) {
-       photoUrl = req.files['photo'] ? `/uploads/${req.files['photo'][0].filename}` : null;
-       coverUrl = req.files['cover'] ? `/uploads/${req.files['cover'][0].filename}` : null;
-       paymentScreenshotUrl = req.files['paymentScreenshot'] ? `/uploads/${req.files['paymentScreenshot'][0].filename}` : null;
-       qrCodeUrl = req.files['qrCode'] ? `/uploads/${req.files['qrCode'][0].filename}` : null;
     }
 
     // Create login user
@@ -377,22 +411,35 @@ app.post('/api/authors/register', upload.any(), async (req, res) => {
         phone,
         whatsapp,
         bio,
+        penName,
+        city,
+        state,
+        instagram,
+        facebook,
         photoUrl,
         qrCodeUrl,
         transactionId,
         paymentScreenshot: paymentScreenshotUrl,
         extraData: extraData ? JSON.parse(extraData) : null,
         books: {
-          create: {
-            title,
-            genre,
-            synopsis,
-            pages: parseInt(pages) || null,
-            mrp: parseFloat(mrp),
-            stock: parseInt(stock) || 0,
-            coverUrl,
+          create: booksArray.map((b, idx) => ({
+            title: b.title,
+            subtitle: b.subtitle,
+            genre: b.genre,
+            subGenre: b.subGenre,
+            synopsis: b.synopsis,
+            pages: parseInt(b.pages) || null,
+            mrp: parseFloat(b.mrp),
+            stock: parseInt(b.stock) || 0,
+            language: b.language,
+            isbn: b.isbn,
+            publisher: b.publisher,
+            publicationDate: b.publicationDate,
+            edition: b.edition,
+            format: b.format,
+            coverUrl: covers[idx] || covers[0] || null,
             status: 'Pending'
-          }
+          }))
         }
       },
       include: { books: true }
@@ -475,6 +522,19 @@ app.post('/api/admin/authors/:id/approve', verifyToken, isAdmin, async (req, res
     where: { authorId: id },
     data: { status: 'Approved' }
   });
+  
+  // Send approval email
+  const emailContent = `
+    <p>Dear ${author.name},</p>
+    <p>Congratulations! Your author profile has been officially approved by the Pune Authors' Association editorial team.</p>
+    <p>Your books are now live in the catalogue. You can log in to your dashboard to manage your inventory, track orders, and participate in upcoming events.</p>
+    <p>Welcome to the community!</p>
+  `;
+  // Assuming getEmailTemplate is available globally in index.js
+  if (typeof sendNotificationEmail === 'function' && typeof getEmailTemplate === 'function') {
+    sendNotificationEmail(author.email, "Welcome to PAA - Your Profile is Approved!", getEmailTemplate("Profile Approved", emailContent));
+  }
+  
   res.json(author);
 });
 
@@ -784,6 +844,29 @@ app.get('/api/admin/authors/:id/dashboard-data', verifyToken, isAdmin, async (re
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch author dashboard data' });
+  }
+});
+
+app.post('/api/author/reapply', verifyToken, async (req, res) => {
+  try {
+    const { name, phone, bio, whatsapp, transactionId, extraData } = req.body;
+    let updateData = { status: 'Pending', rejectionReason: null };
+    
+    if (name) updateData.name = name;
+    if (phone) updateData.phone = phone;
+    if (bio) updateData.bio = bio;
+    if (whatsapp) updateData.whatsapp = whatsapp;
+    if (transactionId) updateData.transactionId = transactionId;
+    if (extraData) updateData.extraData = extraData;
+
+    const author = await prisma.author.update({
+      where: { email: req.user.email },
+      data: updateData
+    });
+    res.json(author);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reapply' });
   }
 });
 

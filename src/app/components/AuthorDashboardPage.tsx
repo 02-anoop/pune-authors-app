@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
 import { Home, Check, AlertCircle, Upload, Loader2, LogOut } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -10,17 +10,33 @@ export function AuthorDashboardPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [extraDataState, setExtraDataState] = useState<any>({});
+  const [hasNewQueries, setHasNewQueries] = useState(false);
+  const prevQueryAnsCountRef = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fetchDashboardData = async () => {
+
+  const fetchQueriesAlert = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/queries`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+      const answeredCount = res.data.filter((q: any) => q.status === 'Answered').length;
+      if (prevQueryAnsCountRef.current > 0 && answeredCount > prevQueryAnsCountRef.current && !location.pathname.includes('/queries')) {
+         setHasNewQueries(true);
+      }
+      prevQueryAnsCountRef.current = answeredCount;
+    } catch(err) {}
+  };
+
+  const fetchDashboardData = async (forceRefresh = false) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         navigate('/login');
         return;
       }
-      const dashRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/dashboard-data`, {
+      // Append timestamp to bust server-side cache on explicit refresh
+      const cacheBust = forceRefresh ? `?t=${Date.now()}` : '';
+      const dashRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/dashboard-data${cacheBust}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDashboardData(dashRes.data);
@@ -175,16 +191,28 @@ export function AuthorDashboardPage() {
   }
 
   return (
+    <>
+
+      {/* Mandatory Settlement Overlay Blackout */}
+      {dashboardData?.eventInvites?.some((inv: any) => inv.optInStatus === 'Opted-In' && inv.event.status === 'Past' && dashboardData?.listedBooks?.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) && location.pathname !== '/dashboard/events' && (
+         <div className="fixed inset-0 bg-white z-[65] flex items-center justify-center pointer-events-auto">
+            <div className="text-center">
+               <Loader2 className="w-12 h-12 animate-spin text-paa-navy mx-auto mb-4" />
+               <h2 className="text-2xl font-serif text-paa-navy">Action Required</h2>
+               <p className="text-gray-500 mt-2 mb-6">Please settle your past event inventory to access your dashboard.</p>
+               <button onClick={() => navigate('/dashboard/events')} className="bg-paa-navy text-paa-cream px-6 py-3 font-bold uppercase tracking-widest text-xs hover:bg-paa-gold hover:text-paa-navy transition-colors">Go to Events Tab</button>
+            </div>
+         </div>
+      )}
+
     <div className="min-h-screen bg-paa-cream font-sans">
       <div className="bg-white border-b border-paa-navy/10 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-3 flex gap-6 text-xs font-bold tracking-widest uppercase overflow-x-auto hide-scrollbar items-center">
           <Link to="/dashboard" className={`${location.pathname === '/dashboard' ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Overview</Link>
           <Link to="/dashboard/catalogue" className={`${location.pathname.includes('/catalogue') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Catalogue Books</Link>
           <Link to="/dashboard/orders" className={`${location.pathname.includes('/orders') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>My Orders</Link>
-          <Link to="/dashboard/forms" className={`${location.pathname.includes('/forms') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Forms</Link>
           <Link to="/dashboard/inventory" className={`${location.pathname.includes('/inventory') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Inventory</Link>
           <Link to="/dashboard/distribution" className={`${location.pathname.includes('/distribution') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Distribution</Link>
-          <Link to="/dashboard/book-fair" className={`${location.pathname.includes('/book-fair') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Book Fair</Link>
           <Link to="/dashboard/events" className={`${location.pathname.includes('/events') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Events</Link>
           <button onClick={handleLogout} className="ml-auto flex items-center gap-1 text-red-600 hover:text-red-700 pb-1 transition-colors whitespace-nowrap"><LogOut size={14}/> Logout</button>
         </div>
@@ -203,6 +231,7 @@ export function AuthorDashboardPage() {
         </Routes>
       </div>
     </div>
+    </>
   );
 }
 
@@ -230,7 +259,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       id: b.id,
       title: b.title,
       date: new Date(b.createdAt).toLocaleDateString('en-GB'),
-      mrp: `₹${b.mrp}`,
+      mrp: `â‚¹${b.mrp}`,
       overpriced: b.overpriced ? 'Yes' : 'No',
       pub: 'Self-Published',
       genre: b.genre,
@@ -324,13 +353,16 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
     }
   };
 
+
+
+
   return (
     <div>
       <div className="flex justify-between items-center mb-8 flex-wrap gap-3">
         <h1 className="text-4xl font-serif text-paa-navy">Author Dashboard</h1>
         <div className="flex gap-2">
           <button onClick={handleEditProfileOpen} className="bg-white border border-paa-navy text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-white transition-colors">
-            ✎ Edit My Profile
+            âœŽ Edit My Profile
           </button>
           <button onClick={() => setShowAddBook(true)} className="bg-paa-gold text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-paa-gold transition-colors">
             + Add New Book
@@ -399,7 +431,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
                 <option value="Poetry">Poetry</option>
               </select>
               <textarea required placeholder="Synopsis" className="border p-2" value={newBook.synopsis} onChange={e => setNewBook({...newBook, synopsis: e.target.value})} />
-              <input required type="number" placeholder="MRP (₹)" className="border p-2" value={newBook.mrp} onChange={e => setNewBook({...newBook, mrp: e.target.value})} />
+              <input required type="number" placeholder="MRP (â‚¹)" className="border p-2" value={newBook.mrp} onChange={e => setNewBook({...newBook, mrp: e.target.value})} />
               <input required type="number" placeholder="Initial Stock" className="border p-2" value={newBook.stock} onChange={e => setNewBook({...newBook, stock: e.target.value})} />
               <input type="file" accept="image/*" onChange={e => setCover(e.target.files?.[0] || null)} className="border p-2 text-xs" />
               <div className="flex justify-end gap-2 mt-4">
@@ -426,11 +458,11 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
         <div className="flex gap-4">
           <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded flex flex-col justify-center w-48">
             <div className="text-xs font-bold tracking-widest text-[#16a34a] uppercase mb-1">Gross Sales</div>
-            <div className="text-2xl font-serif text-[#14532d]">₹{grossSales.toFixed(2)}</div>
+            <div className="text-2xl font-serif text-[#14532d]">â‚¹{grossSales.toFixed(2)}</div>
           </div>
           <div className="bg-[#eff6ff] border border-[#bfdbfe] p-4 rounded flex flex-col justify-center w-48">
             <div className="text-xs font-bold tracking-widest text-[#2563eb] uppercase mb-1">Net Earnings (70%)</div>
-            <div className="text-2xl font-serif text-[#1e3a8a]">₹{netEarnings.toFixed(2)}</div>
+            <div className="text-2xl font-serif text-[#1e3a8a]">â‚¹{netEarnings.toFixed(2)}</div>
           </div>
         </div>
       </div>
@@ -541,6 +573,9 @@ function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => vo
       toast.error('Failed to update stock');
     }
   };
+
+
+
 
   return (
     <div>
@@ -717,6 +752,9 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
     setSelectedBooks(prev => prev.map(b => b.id === id ? { ...b, qty } : b));
   };
 
+
+
+
   return (
     <div>
       <h1 className="text-4xl font-serif text-paa-navy mb-8">Activity Announcements</h1>
@@ -747,11 +785,11 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
                  </div>
 
                  <div className="mb-6">
-                   <p className="text-sm font-bold text-paa-navy mb-2">2. Payment (₹{selectedAct?.charges})</p>
+                   <p className="text-sm font-bold text-paa-navy mb-2">2. Payment (â‚¹{selectedAct?.charges})</p>
                    {selectedAct?.charges > 0 ? (
                      <div className="border border-paa-navy/20 p-4 bg-gray-50 text-center">
                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=puneauthors@upi&pn=PuneAuthors&am=10" alt="QR Code" className="mx-auto mb-2 w-32 h-32" />
-                       <p className="text-xs text-gray-500 mb-4">Scan QR to pay ₹{selectedAct.charges}</p>
+                       <p className="text-xs text-gray-500 mb-4">Scan QR to pay â‚¹{selectedAct.charges}</p>
                        <label className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-100">
                          <div className="flex flex-col items-center justify-center">
                            <Upload className="w-5 h-5 text-gray-400" />
@@ -805,7 +843,7 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
                     <span className="font-bold text-xs">{row.status}</span>
                   </td>
                   <td className="p-3 border-r border-paa-navy/5">{row.city}</td>
-                  <td className="p-3 border-r border-paa-navy/5 text-center">₹{row.charges}</td>
+                  <td className="p-3 border-r border-paa-navy/5 text-center">â‚¹{row.charges}</td>
                   <td className="p-3 border-r border-paa-navy/5 text-center">
                     {isParticipating ? (
                       <div className="flex flex-col items-center">
@@ -835,18 +873,267 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
 // Author Orders
 function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => void }) {
   const [loadingAction, setLoadingAction] = useState<number | null>(null);
+  const [rejectItemId, setRejectItemId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  const handleAccept = async (id: number) => {
+  // â”€â”€â”€ Invoice generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const generateAndPrintInvoice = async (orderItemId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data: inv } = await axios.get(`${API}/api/order-items/${orderItemId}/invoice`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Delivery Invoice ${inv.orderId}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #111; }
+    .page { max-width: 800px; margin: 0 auto; padding: 40px 36px; }
+
+    /* --- HEADER --- */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a1a2e; padding-bottom: 18px; margin-bottom: 24px; }
+    .brand h1 { font-size: 22px; font-weight: 800; color: #1a1a2e; letter-spacing: -.5px; }
+    .brand p { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .inv-meta { text-align: right; }
+    .inv-meta .inv-id { font-size: 20px; font-weight: 800; color: #1a1a2e; }
+    .inv-meta .inv-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; }
+    .badge { display: inline-block; background: #22c55e; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-top: 6px; }
+    .badge.dispatched { background: #3b82f6; }
+
+    /* --- SECTIONS --- */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .box { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
+    .box h3 { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid #f0f0f4; padding-bottom: 6px; }
+    .box p { font-size: 13px; line-height: 1.7; color: #334155; }
+    .box strong { color: #1a1a2e; }
+
+    /* --- BOOK TABLE --- */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    thead th { background: #1a1a2e; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 10px 14px; text-align: left; }
+    tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: top; }
+    tbody tr:last-child td { border-bottom: none; }
+    tfoot td { padding: 12px 14px; font-weight: 700; font-size: 14px; border-top: 2px solid #1a1a2e; }
+    .amount { text-align: right; font-weight: 700; color: #1a1a2e; }
+
+    /* --- DELIVERY SLIP DIVIDER --- */
+    .cut-line { border: none; border-top: 2px dashed #cbd5e1; margin: 32px 0; position: relative; }
+    .cut-line::after { content: 'âœ‚ FOLD & PASTE ON DELIVERY BOX'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 10px; font-size: 10px; color: #94a3b8; letter-spacing: .06em; white-space: nowrap; }
+
+    /* --- DELIVERY SLIP --- */
+    .slip { border: 2.5px solid #1a1a2e; border-radius: 12px; padding: 22px 24px; }
+    .slip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+    .slip-header .from { font-size: 11px; color: #64748b; }
+    .slip-header .from strong { display: block; font-size: 15px; color: #1a1a2e; }
+    .slip-to { }
+    .slip-to h4 { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 6px; }
+    .slip-to .name { font-size: 18px; font-weight: 800; color: #1a1a2e; line-height: 1.2; }
+    .slip-to .addr { font-size: 13px; color: #334155; margin-top: 4px; line-height: 1.6; }
+    .slip-to .phone { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-top: 8px; }
+    .slip-contents { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .slip-book { font-size: 13px; color: #334155; }
+    .slip-book strong { display: block; font-size: 15px; color: #1a1a2e; font-weight: 700; }
+    .slip-order { text-align: right; font-size: 11px; color: #94a3b8; }
+    .slip-order strong { display: block; font-size: 14px; color: #1a1a2e; }
+
+    /* --- FOOTER --- */
+    .footer { margin-top: 28px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f0f0f4; padding-top: 16px; }
+
+    @media print {
+      body { background: #fff; }
+      .page { padding: 20px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Print Button -->
+    <div class="no-print" style="text-align:right;margin-bottom:20px">
+      <button onclick="window.print()" style="background:#1a1a2e;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">ðŸ–¨ Print / Save as PDF</button>
+    </div>
+
+    <!-- INVOICE HEADER -->
+    <div class="header">
+      <div class="brand">
+        <h1>Pune Authors' Association</h1>
+        <p>puneauthors.com &nbsp;Â·&nbsp; Official Delivery Invoice</p>
+      </div>
+      <div class="inv-meta">
+        <div class="inv-label">Invoice / Order ID</div>
+        <div class="inv-id">${inv.orderId}</div>
+        <div><span class="badge ${inv.status === 'Dispatched' ? 'dispatched' : ''}">${inv.status === 'Dispatched' ? 'Dispatched' : 'Approved'}</span></div>
+      </div>
+    </div>
+
+    <!-- DATES -->
+    <div style="display:flex;gap:12px;margin-bottom:20px;font-size:12px;color:#64748b">
+      <span>ðŸ“… Order Date: <strong style="color:#1a1a2e">${new Date(inv.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</strong></span>
+      ${inv.trackingNumber ? `<span>ðŸšš Tracking: <strong style="color:#1a1a2e">${inv.trackingNumber}</strong></span>` : ''}
+    </div>
+
+    <!-- TWO COLUMN: FROM / TO -->
+    <div class="two-col">
+      <div class="box">
+        <h3>From (Author / Seller)</h3>
+        <p>
+          <strong>${inv.author.name}</strong><br>
+          ${inv.author.email}<br>
+          ${inv.author.phone ? inv.author.phone : ''}
+          ${inv.author.whatsapp ? '<br>WhatsApp: ' + inv.author.whatsapp : ''}
+        </p>
+      </div>
+      <div class="box">
+        <h3>Bill To (Customer)</h3>
+        <p>
+          <strong>${inv.customer.name}</strong><br>
+          ${inv.customer.email || ''}<br>
+          ${inv.customer.phone || ''}
+        </p>
+      </div>
+    </div>
+
+    <!-- BOOK TABLE -->
+    <table>
+      <thead>
+        <tr>
+          <th>Book Title</th>
+          <th>Genre</th>
+          <th style="text-align:center">Qty</th>
+          <th style="text-align:right">Unit Price</th>
+          <th style="text-align:right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>${inv.book.title}</strong></td>
+          <td>${inv.book.genre}</td>
+          <td style="text-align:center">${inv.quantity}</td>
+          <td style="text-align:right">â‚¹${parseFloat(inv.book.mrp).toFixed(2)}</td>
+          <td class="amount">â‚¹${parseFloat(inv.total).toFixed(2)}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="text-align:right;color:#64748b;font-size:12px">Subtotal</td>
+          <td class="amount">â‚¹${parseFloat(inv.total).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td colspan="4" style="text-align:right;color:#64748b;font-size:12px">Shipping</td>
+          <td class="amount" style="font-size:12px;color:#22c55e">Included</td>
+        </tr>
+        <tr style="background:#f8fafc">
+          <td colspan="4" style="text-align:right">Grand Total</td>
+          <td class="amount" style="font-size:18px;color:#1a1a2e">â‚¹${parseFloat(inv.total).toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    ${inv.transactionId ? `
+    <div class="box" style="margin-bottom:24px">
+      <h3>Payment Reference</h3>
+      <p>Transaction ID: <strong>${inv.transactionId}</strong></p>
+    </div>` : ''}
+
+    <!-- DELIVERY ADDRESS -->
+    <div class="box" style="margin-bottom:32px">
+      <h3>Delivery Address</h3>
+      <p>${inv.customer.address}</p>
+    </div>
+
+    <!-- â•â•â• CUT LINE â•â•â• -->
+    <hr class="cut-line">
+
+    <!-- DELIVERY SLIP -->
+    <div class="slip">
+      <div class="slip-header">
+        <div class="from">
+          <strong>${inv.author.name}</strong>
+          Pune Authors' Association<br>
+          ${inv.author.email} ${inv.author.phone ? 'Â· ' + inv.author.phone : ''}
+        </div>
+        <div style="text-align:right;font-size:11px;color:#94a3b8">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em">Order Reference</div>
+          <div style="font-size:16px;font-weight:800;color:#1a1a2e">${inv.orderId}</div>
+        </div>
+      </div>
+      <div class="slip-to">
+        <h4>ðŸ“¬ Deliver To</h4>
+        <div class="name">${inv.customer.name}</div>
+        <div class="addr">${inv.customer.address}</div>
+        <div class="phone">${inv.customer.phone || ''}</div>
+      </div>
+      <div class="slip-contents">
+        <div class="slip-book">
+          Contents:<br>
+          <strong>${inv.book.title} Ã— ${inv.quantity}</strong>
+        </div>
+        <div class="slip-order">
+          Amount Paid<br>
+          <strong>â‚¹${parseFloat(inv.total).toFixed(2)}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Pune Authors' Association &nbsp;Â·&nbsp; puneauthors.com &nbsp;Â·&nbsp;
+      This document is system-generated and serves as proof of order.
+    </div>
+  </div>
+</body>
+</html>`;
+
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.write(html);
+        win.document.close();
+        // Slight delay so styles render before auto-print
+        setTimeout(() => win.print(), 800);
+      } else {
+        toast.error('Popup blocked. Please allow popups for this site.');
+      }
+    } catch (err) {
+      toast.error('Could not load invoice data. Please try again.');
+    }
+  };
+
+  const handleApprove = async (id: number) => {
     setLoadingAction(id);
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/accept`, {}, {
+      const { data } = await axios.put(`${API}/api/order-items/${id}/author-approve`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Order Accepted');
+      toast.success('Order Approved â€” Stock reserved!');
+      onRefresh();
+      // Auto-open invoice after approval
+      setTimeout(() => generateAndPrintInvoice(id), 800);
+    } catch (e) {
+      toast.error('Failed to approve order');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleRejectSubmit = async () => {
+    if (!rejectItemId) return;
+    setLoadingAction(rejectItemId);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${rejectItemId}/author-reject`, { reason: rejectReason }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Order Rejected');
+      setRejectItemId(null);
+      setRejectReason('');
       onRefresh();
     } catch (e) {
-      toast.error('Failed to accept order');
+      toast.error('Failed to reject order');
     } finally {
       setLoadingAction(null);
     }
@@ -873,79 +1160,130 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
 
   return (
     <div>
-      <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">MY WEB ORDERS</h1>
+      {/* Reject Reason Modal */}
+      {rejectItemId !== null && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 max-w-md w-full rounded shadow-xl">
+            <h2 className="text-xl font-serif text-paa-navy mb-3">Reason for Rejection</h2>
+            <p className="text-sm text-gray-500 mb-4">Please provide a reason to inform the customer.</p>
+            <textarea
+              className="w-full border p-2 text-sm mb-4 resize-none"
+              rows={4}
+              placeholder="e.g. Out of stock, wrong edition requested..."
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => { setRejectItemId(null); setRejectReason(''); }} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
+              <button onClick={handleRejectSubmit} disabled={!rejectReason.trim() || loadingAction !== null} className="bg-red-600 text-white px-4 py-2 text-sm font-bold rounded disabled:opacity-50">Reject Order</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <h1 className="text-4xl font-serif text-paa-navy mb-4 text-center uppercase">MY WEB ORDERS</h1>
+      <p className="text-center text-sm text-gray-500 mb-8">New orders appear here immediately. You must <strong>Approve</strong> or <strong>Reject</strong> each order. Once approved, dispatch the book with a tracking number.</p>
       <div className="bg-white border border-paa-navy/10 overflow-hidden mb-12">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
              <thead className="bg-[#b3d4ff] text-paa-navy uppercase text-xs font-bold tracking-widest">
                 <tr>
                    <th className="p-3 border-r border-[#8faadc]">Order ID & Date</th>
-                   <th className="p-3 border-r border-[#8faadc]">Buyer Name</th>
+                   <th className="p-3 border-r border-[#8faadc]">Buyer Details</th>
                    <th className="p-3 border-r border-[#8faadc]">Book Title</th>
                    <th className="p-3 border-r border-[#8faadc] text-center">Qty</th>
                    <th className="p-3 border-r border-[#8faadc] text-center">Amount</th>
+                   <th className="p-3 border-r border-[#8faadc]">Receipt</th>
                    <th className="p-3 border-r border-[#8faadc] text-center">Status</th>
                    <th className="p-3 text-center">Action</th>
                 </tr>
              </thead>
              <tbody>
-               {orders.length === 0 ? <tr><td colSpan={7} className="p-4 text-center">No orders received yet.</td></tr> : orders.map((ord, idx) => (
+               {orders.length === 0 ? <tr><td colSpan={8} className="p-4 text-center">No orders received yet.</td></tr> : orders.map((ord, idx) => (
                  <tr key={idx} className="border-b border-paa-navy/5 even:bg-gray-50 bg-white hover:bg-gray-100 transition-colors">
                     <td className="p-3 border-r border-paa-navy/5">
                       <p className="font-bold text-paa-navy">ORD-{ord.orderId}</p>
                       <p className="text-xs text-paa-gray-text">{ord.date}</p>
                     </td>
-                    <td className="p-3 border-r border-paa-navy/5 font-medium">
-                      {ord.customerName}<br/>
-                      <span className="text-[10px] text-gray-500">{ord.address}</span>
+                    <td className="p-3 border-r border-paa-navy/5">
+                      <p className="font-medium">{ord.customerName}</p>
+                      <p className="text-[10px] text-gray-500">{ord.address}</p>
+                      {ord.customerPhone && <p className="text-[10px] text-blue-600">{ord.customerPhone}</p>}
                     </td>
                     <td className="p-3 border-r border-paa-navy/5">{ord.bookTitle}</td>
                     <td className="p-3 border-r border-paa-navy/5 text-center font-bold text-paa-navy">{ord.quantity}</td>
-                    <td className="p-3 border-r border-paa-navy/5 text-center bg-gray-50 font-bold text-paa-navy">₹{ord.amount}</td>
-                    <td className="p-3 text-center border-r border-paa-navy/5">
-                       <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${ord.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : ord.status === 'Dispatched' ? 'bg-[#5bc0de] text-white border-[#46b8da]' : ord.status === 'Accepted' ? 'bg-[#337ab7] text-white border-[#2e6da4]' : 'bg-gray-200 text-paa-gray-text border-gray-300'}`}>
-                         {ord.status}
-                       </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      {ord.paymentScreenshot && (
-                        <div className="mb-2">
-                          <a 
-                            href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${ord.paymentScreenshot}`} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="text-[10px] font-bold text-paa-navy underline block tracking-widest uppercase"
+                    <td className="p-3 border-r border-paa-navy/5 text-center bg-gray-50 font-bold text-paa-navy">â‚¹{ord.amount}</td>
+                    <td className="p-3 border-r border-paa-navy/5">
+                      {ord.paymentScreenshot ? (
+                        <div className="flex flex-col gap-1">
+                          <a
+                            href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${ord.paymentScreenshot}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] font-bold text-paa-navy underline tracking-widest uppercase"
                           >
-                            View Receipt
+                            View Screenshot
                           </a>
                           {ord.paymentVerified && (
-                            <span className="text-[10px] font-bold text-green-600 tracking-widest uppercase flex items-center justify-center gap-1 mt-1"><Check size={10}/> Verified</span>
+                            <span className="text-[10px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1"><Check size={10}/> Verified</span>
                           )}
                         </div>
-                      )}
-                      {ord.paymentFailed && (
-                        <span className="text-[10px] font-bold text-red-600 tracking-widest uppercase flex items-center justify-center gap-1 mt-1"><AlertCircle size={10}/> Payment Failed</span>
-                      )}
-                      {ord.status === 'Pending' && ord.paymentVerified && (
-                        <button 
-                          onClick={() => handleAccept(ord.id)}
-                          disabled={loadingAction === ord.id}
-                          className="bg-[#337ab7] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 mt-2"
-                        >
-                          ACCEPT
-                        </button>
-                      )}
-                      {ord.status === 'Pending' && !ord.paymentVerified && !ord.paymentFailed && (
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mt-2 text-center">Awaiting Payment Verification</span>
-                      )}
-                      {ord.status === 'Accepted' && (
-                        <button 
-                          onClick={() => handleDispatch(ord.id)}
-                          disabled={loadingAction === ord.id}
-                          className="bg-[#5bc0de] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 mt-2"
-                        >
-                          DISPATCH
-                        </button>
+                      ) : <span className="text-[10px] text-gray-400">No screenshot</span>}
+                    </td>
+                    <td className="p-3 text-center border-r border-paa-navy/5">
+                       <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${
+                         ord.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]'
+                         : ord.status === 'Dispatched' ? 'bg-[#5bc0de] text-white border-[#46b8da]'
+                         : ord.status === 'Accepted' ? 'bg-[#337ab7] text-white border-[#2e6da4]'
+                         : ord.status === 'Rejected' ? 'bg-red-100 text-red-800 border-red-200'
+                         : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                       }`}>
+                         {ord.status}
+                       </span>
+                       {ord.status === 'Rejected' && ord.rejectionReason && (
+                         <div className="mt-1 text-[10px] text-red-600">Reason: {ord.rejectionReason}</div>
+                       )}
+                    </td>
+                    <td className="p-3 text-center">
+                      {/* Author must Approve / Reject any Pending order regardless of payment verification */}
+                      {ord.status === 'Pending Verification' || ord.status === 'Pending' ? (
+                        <div className="flex flex-col gap-1 items-center">
+                          <button
+                            onClick={() => handleApprove(ord.id)}
+                            disabled={loadingAction === ord.id}
+                            className="bg-[#337ab7] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 w-20"
+                          >
+                            {loadingAction === ord.id ? '...' : 'APPROVE'}
+                          </button>
+                          <button
+                            onClick={() => { setRejectItemId(ord.id); setRejectReason(''); }}
+                            disabled={loadingAction === ord.id}
+                            className="bg-red-500 text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 w-20"
+                          >
+                            REJECT
+                          </button>
+                        </div>
+                      ) : null}
+                      {/* Invoice button for all approved/dispatched orders */}
+                      {(ord.status === 'Accepted' || ord.status === 'Dispatched' || ord.status === 'Completed') && (
+                        <div className="flex flex-col gap-1 items-center mt-1">
+                          <button
+                            onClick={() => generateAndPrintInvoice(ord.id)}
+                            className="bg-paa-navy text-white px-3 py-1 text-[10px] rounded font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors w-20"
+                            title="Download printable delivery invoice"
+                          >
+                            📄 Invoice
+                          </button>
+                          {ord.status === 'Accepted' && (
+                            <button
+                              onClick={() => handleDispatch(ord.id)}
+                              disabled={loadingAction === ord.id}
+                              className="bg-[#5bc0de] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 w-20"
+                            >
+                              DISPATCH
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                  </tr>
@@ -990,8 +1328,11 @@ function FormsWrapper() {
     }
   };
 
-  const tabs = ['Literary Events', 'Book Fairs', 'Flybraries', 'Book Café'];
+  const tabs = ['Literary Events', 'Book Fairs', 'Flybraries', 'Book CafÃ©'];
   const filteredForms = forms.filter(f => f.type === activeTab);
+
+
+
 
   return (
     <div>
@@ -1075,6 +1416,9 @@ function FormsWrapper() {
 
 // Mock pages for Distribution, Book Fair, Events that User provided to keep structure
 function DistributionRecord({ books, orders, authorName }: { books: any[], orders: any[], authorName: string }) {
+
+
+
   return (
     <div>
       <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">BOOKS DISTRIBUTION RECORD</h1>
@@ -1118,6 +1462,9 @@ function DistributionRecord({ books, orders, authorName }: { books: any[], order
 function BookFairDashboard({ registrations, books }: { registrations: any[], books: any[] }) {
   const fairRegs = registrations.filter(r => r.activity?.type.includes('Fair') && r.status === 'Approved');
 
+
+
+
   return (
     <div>
       <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">BOOK FAIR DASHBOARD</h1>
@@ -1151,7 +1498,7 @@ function BookFairDashboard({ registrations, books }: { registrations: any[], boo
                       <tr key={b.id} className="border-b last:border-0 border-gray-100">
                         <td className="py-3 font-bold text-paa-navy">{b.title}</td>
                         <td className="py-3 text-center">{b.genre}</td>
-                        <td className="py-3 text-center text-green-700">₹{b.mrp}</td>
+                        <td className="py-3 text-center text-green-700">â‚¹{b.mrp}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1169,9 +1516,12 @@ function EventsDashboard() {
   const [invites, setInvites] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
   const [listedBooks, setListedBooks] = useState<any[]>([]);
+  const [pastEvents, setPastEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [optInEventId, setOptInEventId] = useState<number | null>(null);
+  const [settleEventId, setSettleEventId] = useState<number | null>(null);
+  const [settlementData, setSettlementData] = useState<any[]>([]);
   const [selectedBooksToLink, setSelectedBooksToLink] = useState<{bookId: string, stock: string}[]>([]);
 
   useEffect(() => {
@@ -1186,12 +1536,49 @@ function EventsDashboard() {
        setInvites(res.data.eventInvites || []);
        setBooks(res.data.books || []);
        setListedBooks(res.data.listedBooks || []);
+       setPastEvents(res.data.pastEvents || []);
     } catch(err) {
        toast.error('Failed to load events');
     } finally {
        setLoading(false);
     }
   };
+
+
+  const handleOpenSettlement = (eventId: number) => {
+     const relevantBooks = listedBooks.filter((lb: any) => lb.eventId === eventId);
+     setSettlementData(relevantBooks.map((lb: any) => ({
+        eventBookId: lb.id,
+        bookId: lb.bookId,
+        listedStock: lb.listedStock,
+        soldStock: lb.soldStock || 0,
+        returnedStock: lb.returnedStock || 0,
+        isSettled: lb.listedStock === (lb.soldStock || 0) + (lb.returnedStock || 0)
+     })));
+     setSettleEventId(eventId);
+  };
+
+  const handleSubmitSettlement = async (e: React.FormEvent) => {
+     e.preventDefault();
+     try {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${settleEventId}/settle`, {
+           settlements: settlementData
+        }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+        toast.success("Inventory settled successfully! Remaining stock added back to your inventory.");
+        setSettleEventId(null);
+        fetchAuthorEvents(); // Reload to reflect settled status
+        setTimeout(() => window.location.reload(), 1500); // Reload the whole page to update the root dashboardData state!
+     } catch (err) {
+        toast.error("Failed to submit settlement");
+     }
+  };
+
+  useEffect(() => {
+     const pending = invites.find((inv: any) => inv.optInStatus === 'Opted-In' && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0)));
+     if (pending && !settleEventId) {
+        handleOpenSettlement(pending.eventId);
+     }
+  }, [invites, listedBooks]);
 
   const submitOptIn = async (eventId: number) => {
     try {
@@ -1210,8 +1597,71 @@ function EventsDashboard() {
 
   if (loading) return <div>Loading events...</div>;
 
+
+
+
   return (
     <div>
+
+      {/* Settlement Modal */}
+      {settleEventId && (
+        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-paa-navy/10 flex justify-between items-center bg-[#f8fafc]">
+               <div>
+                 <h2 className="text-xl font-serif text-paa-navy">Settle Event Inventory</h2>
+                 <p className="text-xs text-gray-500 mt-1">Please enter the exact number of books sold and returned. (Sold + Returned must equal Listed)</p>
+               </div>
+               {invites.some((inv: any) => inv.eventId === settleEventId && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === settleEventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) ? null : (
+                  <button onClick={() => setSettleEventId(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+               )}
+            </div>
+            <form onSubmit={handleSubmitSettlement} className="p-6 overflow-y-auto">
+               <div className="space-y-4">
+                  {settlementData.map((sd, idx) => {
+                     const bookName = books.find((b: any) => b.id === sd.bookId)?.title || "Unknown Book";
+                     return (
+                        <div key={sd.eventBookId} className="p-4 border border-paa-navy/10 rounded bg-gray-50 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                           <div className="flex-1">
+                              <h4 className="font-bold text-paa-navy text-sm">{bookName}</h4>
+                              <p className="text-xs text-gray-500 mt-1 font-bold tracking-widest uppercase">Listed: {sd.listedStock}</p>
+                           </div>
+                           {sd.isSettled ? (
+                              <div className="text-sm font-bold text-green-700 bg-green-50 px-4 py-2 border border-green-200">Already Settled</div>
+                           ) : (
+                              <div className="flex gap-4">
+                                 <div className="w-24">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Sold</label>
+                                    <input type="number" required min="0" max={sd.listedStock} value={sd.soldStock} onChange={e => {
+                                       const sold = parseInt(e.target.value) || 0;
+                                       if (sold > sd.listedStock) return;
+                                       const newSd = [...settlementData];
+                                       newSd[idx].soldStock = sold;
+                                       newSd[idx].returnedStock = newSd[idx].listedStock - sold;
+                                       setSettlementData(newSd);
+                                    }} className="w-full p-2 text-sm border border-paa-navy/20 focus:border-paa-navy outline-none" />
+                                 </div>
+                                 <div className="w-24">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Returned</label>
+                                    <input type="number" required min="0" max={sd.listedStock} value={sd.returnedStock} readOnly className="w-full p-2 text-sm border border-paa-navy/20 outline-none bg-gray-100 text-gray-500" />
+                                 </div>
+                              </div>
+                           )}
+                        </div>
+                     )
+                  })}
+               </div>
+               <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-paa-navy/10">
+                  {invites.some((inv: any) => inv.eventId === settleEventId && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === settleEventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) ? null : (
+                     <button type="button" onClick={() => setSettleEventId(null)} className="px-6 py-2 bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest hover:bg-gray-200">Cancel</button>
+                  )}
+                  <button type="submit" disabled={settlementData.every(s => s.isSettled) || settlementData.some(s => s.listedStock !== s.soldStock + s.returnedStock)} className="px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy disabled:opacity-50">Submit Settlement</button>
+               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">EVENTS ECOSYSTEM</h1>
       
       {invites.length === 0 ? (
@@ -1220,7 +1670,11 @@ function EventsDashboard() {
          </div>
       ) : (
          <div className="grid md:grid-cols-2 gap-6">
-            {invites.map((invite) => {
+            {[...invites].sort((a: any, b: any) => {
+               if (a.event.status === 'Past' && b.event.status !== 'Past') return -1;
+               if (a.event.status !== 'Past' && b.event.status === 'Past') return 1;
+               return new Date(b.event.date).getTime() - new Date(a.event.date).getTime();
+            }).map((invite) => {
                const evt = invite.event;
                const isOptedIn = invite.optInStatus === 'Opted-In';
                const myBooksForEvent = listedBooks.filter(lb => lb.eventId === evt.id);
@@ -1233,8 +1687,8 @@ function EventsDashboard() {
                     </div>
                     <div className="p-6">
                        <h4 className="text-xl font-serif font-medium text-paa-navy mb-3">{evt.name}</h4>
-                       <p className="text-sm font-medium text-gray-600 mb-1">📅 {evt.date} &bull; {evt.duration}</p>
-                       <p className="text-sm font-medium text-gray-600 mb-6">📍 {evt.location}</p>
+                       <p className="text-sm font-medium text-gray-600 mb-1">ðŸ“… {evt.date} &bull; {evt.duration}</p>
+                       <p className="text-sm font-medium text-gray-600 mb-6">ðŸ“ {evt.location}</p>
                        
                        {isOptedIn ? (
                           <div className="bg-green-50 p-4 border border-green-200">
@@ -1250,6 +1704,9 @@ function EventsDashboard() {
                                   )
                                })}
                              </ul>
+                             {evt.status === 'Past' && (
+                                <button onClick={() => handleOpenSettlement(evt.id)} className="w-full mt-4 py-2 bg-paa-navy text-paa-cream font-bold text-xs uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors shadow">Settle Inventory</button>
+                             )}
                           </div>
                        ) : (
                           <div className="pt-4 border-t border-gray-100">
@@ -1291,11 +1748,50 @@ function EventsDashboard() {
             })}
          </div>
       )}
+
+      {/* Past Events History */}
+      {pastEvents.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-2xl font-serif text-paa-navy mb-6 text-center uppercase">Past Events History</h2>
+          <div className="bg-white border border-paa-navy/10 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-[#1a1a2e] text-white text-xs uppercase tracking-widest">
+                  <tr>
+                    <th className="p-3 border-r border-white/10">S.No</th>
+                    <th className="p-3 border-r border-white/10">Event Name</th>
+                    <th className="p-3 border-r border-white/10">Date</th>
+                    <th className="p-3 border-r border-white/10">Location</th>
+                    <th className="p-3 border-r border-white/10 text-center">Authors Participated</th>
+                    <th className="p-3 border-r border-white/10 text-center">Books Listed</th>
+                    <th className="p-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pastEvents.map((evt: any, idx: number) => (
+                    <tr key={evt.id} className="border-b border-paa-navy/5 even:bg-gray-50">
+                      <td className="p-3 border-r border-paa-navy/5 text-center text-gray-500">{idx + 1}</td>
+                      <td className="p-3 border-r border-paa-navy/5 font-bold text-paa-navy">{evt.name}</td>
+                      <td className="p-3 border-r border-paa-navy/5">{evt.date}</td>
+                      <td className="p-3 border-r border-paa-navy/5">{evt.location}</td>
+                      <td className="p-3 border-r border-paa-navy/5 text-center font-bold">{evt._count?.eventAuthors ?? 0}</td>
+                      <td className="p-3 border-r border-paa-navy/5 text-center font-bold">{evt._count?.eventBooks ?? 0}</td>
+                      <td className="p-3 text-center">
+                        <span className="bg-gray-100 text-gray-700 px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded">Completed</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── PAA Catalogue Books List ────────────────────────────────────────────────
+// â”€â”€ PAA Catalogue Books List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import fictionData from './data/fiction_catalogue.json';
 import nonFictionData from './data/non_fiction_catalogue.json';
 import { Search } from 'lucide-react';
@@ -1316,6 +1812,9 @@ function AuthorCatalogueTab() {
     b.title.toLowerCase().includes(search.toLowerCase()) || 
     b.authorName.toLowerCase().includes(search.toLowerCase())
   );
+
+
+
 
   return (
     <div>
@@ -1358,7 +1857,7 @@ function AuthorCatalogueTab() {
                   <td className="p-4 font-bold text-paa-navy">{b.title}</td>
                   <td className="p-4">{b.authorName}</td>
                   <td className="p-4 text-xs">{b.genre}</td>
-                  <td className="p-4 text-center">₹{parseFloat((b.mrp || "0").replace(/[^\d.]/g, "")) || 0}</td>
+                  <td className="p-4 text-center">â‚¹{parseFloat((b.mrp || "0").replace(/[^\d.]/g, "")) || 0}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (
@@ -1373,3 +1872,5 @@ function AuthorCatalogueTab() {
     </div>
   );
 }
+
+

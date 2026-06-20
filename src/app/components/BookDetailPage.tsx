@@ -183,10 +183,17 @@ export function BookDetailPage() {
                   <span style={{ fontSize: 32, fontWeight: 800, color: "#fff", fontFamily: "var(--font-mono)" }}>₹{book.mrp}</span>
                   <span style={{ fontSize: 12, color: "#64748b", marginLeft: 6 }}>MRP</span>
                 </div>
+                
                 <div style={{ background: book.stock > 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", border: `1px solid ${book.stock > 0 ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 8, padding: "0.35rem 0.85rem", fontSize: 12, fontWeight: 700, color: book.stock > 0 ? "#4ade80" : "#f87171" }}>
                   <Package size={12} style={{ display: "inline", marginRight: 4 }} />
                   {book.stock > 0 ? `${book.stock} in stock` : "Out of stock"}
                 </div>
+                {book.stock > 0 && (
+                  <button onClick={() => navigate("/checkout", { state: { cart: [book.id] } })} style={{ background: "#2563eb", color: "#fff", border: "none", padding: "0.5rem 1.5rem", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 700, marginLeft: "auto" }}>
+                    Buy Now
+                  </button>
+                )}
+
               </div>
             </div>
           </div>
@@ -219,6 +226,19 @@ export function BookDetailPage() {
               <div style={{ flex: 1, minWidth: 200 }}>
                 <p style={{ fontWeight: 700, color: "#1a1a2e", margin: "0 0 0.5rem", fontSize: 16 }}>{book.author.name}</p>
                 <p style={{ color: "#6b7280", lineHeight: 1.75, fontSize: 14, margin: 0 }}>{book.author.bio || "No bio available."}</p>
+                {book.author.extraData && Object.keys(book.author.extraData).length > 0 && (
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f0f0f5' }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Additional Information</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                      {Object.entries(book.author.extraData).map(([k, v]) => (
+                        <div key={k}>
+                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>{k}</span>
+                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{String(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>

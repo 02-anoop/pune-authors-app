@@ -13,6 +13,7 @@ interface EventRecord {
   type: string;
   description: string;
   photoUrl: string;
+  images?: { id: number; url: string; caption?: string; dateTaken?: string }[];
 }
 
 const typeColors: Record<string, { color: string; bg: string; border: string }> = {
@@ -181,6 +182,19 @@ export function EventLogPage() {
                               </div>
                             ))}
                           </div>
+
+                          {event.images && event.images.length > 0 && (
+                            <div style={{ marginTop: "1.5rem" }}>
+                              <h4 style={{ fontSize: 11, fontWeight: 700, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.05em", color: "#6b6b80", marginBottom: "0.75rem" }}>Gallery</h4>
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: "0.5rem" }}>
+                                {event.images.map((img) => (
+                                  <div key={img.id} style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }} className="group">
+                                    <img src={img.url.startsWith('http') ? img.url : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${img.url}`} alt={img.caption || "Gallery"} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }} className="hover:scale-110" title={img.caption || "Event moment"} />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

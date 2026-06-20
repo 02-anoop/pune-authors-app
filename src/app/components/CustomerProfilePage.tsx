@@ -8,12 +8,20 @@ export function CustomerProfilePage() {
   const [userData, setUserData] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasOrderUpdates, setHasOrderUpdates] = useState(false);
+  const prevOrdersRef = React.useRef<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAddress, setEditAddress] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [acknowledging, setAcknowledging] = useState<number | null>(null);
+  const [queries, setQueries] = useState<any[]>([]);
+  const [isQueryModalOpen, setIsQueryModalOpen] = useState(false);
+  const [querySubject, setQuerySubject] = useState('');
+  const [queryMessage, setQueryMessage] = useState('');
+  const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
   const navigate = useNavigate();
 
   const fetchProfile = () => {
@@ -31,7 +39,16 @@ export function CustomerProfilePage() {
         setUserData(res.data.user);
         setEditName(res.data.user.name);
         setEditAddress(res.data.user.address || "");
-        setOrders(res.data.customerOrders || []);
+        
+        const newOrders = res.data.customerOrders || [];
+        
+        // Check for updates
+        if (prevOrdersRef.current && JSON.stringify(prevOrdersRef.current) !== JSON.stringify(newOrders)) {
+          setHasOrderUpdates(true);
+        }
+        prevOrdersRef.current = newOrders;
+        
+        setOrders(newOrders);
         
         // Update selectedOrder if it's currently open
         if (selectedOrder) {
@@ -40,6 +57,7 @@ export function CustomerProfilePage() {
         }
 
         setLoading(false);
+        fetchQueries();
       })
       .catch(err => {
         console.error(err);
@@ -49,7 +67,18 @@ export function CustomerProfilePage() {
   };
 
   useEffect(() => {
-    fetchProfile();
+    const fetchData = async () => {
+      setIsRefreshing(true);
+      try {
+        await fetchProfile();
+      } finally {
+        setTimeout(() => setIsRefreshing(false), 800);
+      }
+    };
+    
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, [navigate]);
 
   const handleLogout = () => {
@@ -75,6 +104,64 @@ export function CustomerProfilePage() {
     }
   };
 
+  
+  const handleCancelOrder = async (orderId: number) => {
+    if (!window.confirm("Are you sure you want to cancel this order? This cannot be undone.")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/orders/${orderId}/cancel`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert("Order cancelled successfully");
+      setSelectedOrder(null);
+      fetchProfile();
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Failed to cancel order");
+    }
+  };
+
+  
+  const fetchQueries = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/customer/queries`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setQueries(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateQuery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!querySubject || !queryMessage) return;
+    setIsSubmittingQuery(true);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/customer/queries`, {
+        subject: querySubject, message: queryMessage
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsQueryModalOpen(false);
+      setQuerySubject('');
+      setQueryMessage('');
+      fetchQueries();
+      alert("Query submitted successfully!");
+    } catch (err) {
+      alert("Failed to submit query");
+    } finally {
+      setIsSubmittingQuery(false);
+    }
+  };
+
+  const openQueryForOrder = (orderId: number) => {
+    setQuerySubject(`Issue with Order #${orderId}`);
+    setQueryMessage('');
+    setIsQueryModalOpen(true);
+  };
+
   const handleAcknowledge = async (itemId: number) => {
     setAcknowledging(itemId);
     try {
@@ -94,6 +181,36 @@ export function CustomerProfilePage() {
   if (loading) return <div style={{ padding: "4rem", textAlign: "center", fontFamily: "var(--font-body)" }}>Loading your profile...</div>;
 
   return (
+    <>
+
+      {/* Blinking Top Bar */}
+      <div className="fixed top-0 left-0 right-0 h-1 z-50 overflow-hidden pointer-events-none">
+        {isRefreshing && <div className="h-full bg-paa-navy animate-[pulse_0.5s_ease-in-out_infinite] w-full" />}
+      </div>
+
+      {/* Query Modal */}
+      {isQueryModalOpen && (
+        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white max-w-lg w-full p-6">
+            <h2 className="text-xl font-serif text-paa-navy mb-6">Raise a Query</h2>
+            <form onSubmit={handleCreateQuery} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Subject / Order ID *</label>
+                <input required type="text" value={querySubject} onChange={e => setQuerySubject(e.target.value)} className="w-full border p-2 text-sm outline-none" placeholder="e.g. Issue with Order #123" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Message *</label>
+                <textarea required rows={4} value={queryMessage} onChange={e => setQueryMessage(e.target.value)} className="w-full border p-2 text-sm outline-none resize-y" placeholder="Describe your issue..." />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button type="button" onClick={() => setIsQueryModalOpen(false)} className="flex-1 py-2 bg-gray-200 text-xs font-bold uppercase">Cancel</button>
+                <button type="submit" disabled={isSubmittingQuery} className="flex-1 py-2 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy">{isSubmittingQuery ? 'Submitting...' : 'Submit'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     <main style={{ fontFamily: "var(--font-body)", minHeight: "calc(100vh - 64px)", background: "#f7f7f9", padding: "3rem 1.5rem" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         
@@ -225,12 +342,15 @@ export function CustomerProfilePage() {
                                       {idx + 1}. {item.book?.title}
                                     </span>
                                     <span style={{ 
-                                      background: item.status.includes('Pending') ? '#fffbeb' : item.status === 'Completed' ? '#f0fdf4' : '#eff6ff', 
-                                      color: item.status.includes('Pending') ? '#d97706' : item.status === 'Completed' ? '#16a34a' : '#2563eb', 
+                                      background: item.status.includes('Pending') ? '#fffbeb' : item.status === 'Completed' ? '#f0fdf4' : item.status === 'Rejected' ? '#fef2f2' : '#eff6ff', 
+                                      color: item.status.includes('Pending') ? '#d97706' : item.status === 'Completed' ? '#16a34a' : item.status === 'Rejected' ? '#ef4444' : '#2563eb', 
                                       padding: "0.15rem 0.5rem", borderRadius: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", marginLeft: "1rem"
                                     }}>
                                       {item.status}
                                     </span>
+                                    {item.status === 'Rejected' && item.rejectionReason && (
+                                      <div style={{ marginLeft: "1rem", marginTop: "0.2rem", fontSize: 10, color: "#ef4444" }}>Reason: {item.rejectionReason}</div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -255,7 +375,16 @@ export function CustomerProfilePage() {
           <div style={{ background: "#f7f7f9", borderRadius: 16, width: "100%", maxWidth: 700, padding: "2rem", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", fontFamily: "var(--font-display)" }}>Order Details</h2>
-              <button onClick={() => setSelectedOrder(null)} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#6b6b80" }}>&times;</button>
+              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                {!selectedOrder.items?.some((i: any) => i.status === 'Dispatched' || i.status === 'Completed' || i.status === 'Cancelled') && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                     <span style={{ fontSize: 10, color: "#6b6b80", fontStyle: "italic", maxWidth: 120, lineHeight: 1.2, textAlign: "right" }}>Orders cannot be cancelled once dispatched.</span>
+                     <button onClick={() => handleCancelOrder(selectedOrder.id)} style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", padding: "0.4rem 0.8rem", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Cancel Order</button>
+                  </div>
+                )}
+                <button onClick={() => { setSelectedOrder(null); openQueryForOrder(selectedOrder.id); }} style={{ background: "rgba(30,58,138,0.1)", color: "#1e3a8a", border: "1px solid rgba(30,58,138,0.2)", padding: "0.4rem 0.8rem", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem" }}><MessageSquare size={14} /> Raise Query</button>
+                <button onClick={() => setSelectedOrder(null)} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#6b6b80" }}>&times;</button>
+              </div>
             </div>
             
             <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#fff", borderRadius: 8, border: "1px solid rgba(0,0,0,0.06)" }}>
@@ -330,5 +459,6 @@ export function CustomerProfilePage() {
         }
       `}</style>
     </main>
+    </>
   );
 }

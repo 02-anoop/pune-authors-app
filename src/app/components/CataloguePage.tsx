@@ -105,6 +105,13 @@ export function CataloguePage() {
   };
 
   useEffect(() => {
+    const w = window as any;
+    w.__apiCache = w.__apiCache || {};
+    
+    if (w.__apiCache.catalogueBooks) {
+      setAllBooks(w.__apiCache.catalogueBooks);
+    }
+
     fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/books`)
       .then(res => res.json())
       .then(data => {
@@ -120,6 +127,7 @@ export function CataloguePage() {
           genre: toGenreCode(b.genre),
           subGenre: b.subGenre || ""
         }));
+        w.__apiCache.catalogueBooks = mapped;
         setAllBooks(mapped);
       })
       .catch(console.error);

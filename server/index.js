@@ -8,6 +8,92 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+
+// --- IN-MEMORY CACHE ---
+const cache = new Map();
+const CACHE_TTL = 30 * 1000; // 30 seconds default
+function getCache(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > entry.ttl) { cache.delete(key); return null; }
+  return entry.data;
+}
+function setCache(key, data, ttl = CACHE_TTL) {
+  cache.set(key, { data, ts: Date.now(), ttl });
+}
+function invalidateCache(pattern) {
+  for (const key of cache.keys()) {
+    if (key.includes(pattern)) cache.delete(key);
+  }
+}
+let mailTransporter;
+nodemailer.createTestAccount((err, account) => {
+  if (err) {
+    console.error('Failed to create a testing account. ' + err.message);
+    return;
+  }
+  mailTransporter = nodemailer.createTransport({
+    host: account.smtp.host,
+    port: account.smtp.port,
+    secure: account.smtp.secure,
+    auth: { user: account.user, pass: account.pass }
+  });
+});
+
+const sendNotificationEmail = async (to, subject, htmlBody) => {
+  if (!mailTransporter || !to) return;
+  try {
+    let info = await mailTransporter.sendMail({
+      from: '"Pune Authors\' Association" <noreply@puneauthors.com>',
+      to,
+      subject,
+      html: htmlBody,
+      text: htmlBody.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+    });
+    console.log(`[EMAIL SENT] to ${to}: ${subject} | Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+  } catch (err) {
+    console.error('Email failed:', err.message);
+  }
+};
+
+// Helper: Build a standard email wrapper
+const emailWrap = (heading, content) => `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f8; margin: 0; padding: 0; color: #222; }
+  .wrap { max-width: 600px; margin: 32px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  .header { background: #1a1a2e; color: #fff; padding: 28px 32px; }
+  .header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  .header p { margin: 6px 0 0; font-size: 13px; color: #94a3b8; }
+  .body { padding: 32px; }
+  .body h2 { margin: 0 0 8px; font-size: 18px; color: #1a1a2e; }
+  .body p { margin: 0 0 16px; font-size: 15px; line-height: 1.65; color: #444; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+  th { background: #f0f4ff; color: #1a1a2e; text-align: left; padding: 10px 14px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f0f4; vertical-align: top; }
+  .badge { display: inline-block; background: #22c55e; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+  .footer { padding: 20px 32px; font-size: 12px; color: #94a3b8; border-top: 1px solid #f0f0f4; }
+</style></head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>Pune Authors\' Association</h1>
+      <p>puneauthors.com</p>
+    </div>
+    <div class="body">
+      <h2>${heading}</h2>
+      ${content}
+    </div>
+    <div class="footer">This is an automated message from the PAA platform. Please do not reply directly to this email.</div>
+  </div>
+</body></html>
+`;
+
+// Helper: Format INR amount
+const inr = (n) => `₹${parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
@@ -37,6 +123,15 @@ const upload = multer({ storage });
 // Routes
 
 // --- AUTHENTICATION ---
+
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'ADMIN') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+};
+
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
@@ -117,6 +212,8 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
           id: item.id,
           orderId: item.order.id,
           customerName: item.order.customerName,
+        customerPhone: item.order.customerPhone,
+        customerEmail: item.order.customerEmail,
           address: item.order.address,
           bookTitle: item.book.title,
           quantity: item.quantity,
@@ -167,6 +264,10 @@ app.put('/api/auth/profile', verifyToken, async (req, res) => {
 // 1. Get all approved books for catalogue
 app.get('/api/books', async (req, res) => {
   const { genre } = req.query;
+  const cacheKey = `books:${genre || 'all'}`;
+  const cached = getCache(cacheKey);
+  if (cached) return res.json(cached);
+
   const where = { status: 'Approved' };
   if (genre) where.genre = genre;
 
@@ -174,6 +275,7 @@ app.get('/api/books', async (req, res) => {
     where,
     include: { author: true }
   });
+  setCache(cacheKey, books, 60 * 1000); // 60s cache
   res.json(books);
 });
 
@@ -236,7 +338,7 @@ app.post('/api/books/:id/reviews', async (req, res) => {
 // 2. Author Registration (creates author, user login, and their first book)
 app.post('/api/authors/register', upload.any(), async (req, res) => {
   try {
-    const { name, email, phone, password, bio, title, genre, synopsis, pages, mrp, whatsapp, transactionId, stock } = req.body;
+    const { name, email, phone, password, bio, title, genre, synopsis, pages, mrp, whatsapp, transactionId, stock, extraData } = req.body;
     
     // Check if email already in use
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -245,17 +347,19 @@ app.post('/api/authors/register', upload.any(), async (req, res) => {
     }
 
     // In local dev, store local URL. In prod, this would be an S3 URL.
-    let photoUrl = null, coverUrl = null, paymentScreenshotUrl = null;
+    let photoUrl = null, coverUrl = null, paymentScreenshotUrl = null, qrCodeUrl = null;
     if (Array.isArray(req.files)) {
        for (const file of req.files) {
           if (file.fieldname === 'photo') photoUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'cover') coverUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'paymentScreenshot') paymentScreenshotUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'qrCode') qrCodeUrl = `/uploads/${file.filename}`;
        }
     } else if (req.files) {
        photoUrl = req.files['photo'] ? `/uploads/${req.files['photo'][0].filename}` : null;
        coverUrl = req.files['cover'] ? `/uploads/${req.files['cover'][0].filename}` : null;
        paymentScreenshotUrl = req.files['paymentScreenshot'] ? `/uploads/${req.files['paymentScreenshot'][0].filename}` : null;
+       qrCodeUrl = req.files['qrCode'] ? `/uploads/${req.files['qrCode'][0].filename}` : null;
     }
 
     // Create login user
@@ -274,8 +378,10 @@ app.post('/api/authors/register', upload.any(), async (req, res) => {
         whatsapp,
         bio,
         photoUrl,
+        qrCodeUrl,
         transactionId,
         paymentScreenshot: paymentScreenshotUrl,
+        extraData: extraData ? JSON.parse(extraData) : null,
         books: {
           create: {
             title,
@@ -297,6 +403,7 @@ app.post('/api/authors/register', upload.any(), async (req, res) => {
       throw dbError;
     }
 
+    invalidateCache('books');
     res.status(201).json(author);
   } catch (error) {
     console.error(error);
@@ -316,7 +423,7 @@ app.get('/api/authors/:email', async (req, res) => {
 });
 
 // 4. Operations Dashboard - Get all authors
-app.get('/api/admin/authors', async (req, res) => {
+app.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
   try {
     const authors = await prisma.author.findMany({
       include: { books: true, eventRegistrations: true }
@@ -334,7 +441,7 @@ app.get('/api/admin/authors', async (req, res) => {
 });
 
 // Delete Author
-app.delete('/api/admin/authors/:id', async (req, res) => {
+app.delete('/api/admin/authors/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const authorId = parseInt(req.params.id);
     // Delete related records to satisfy foreign key constraints
@@ -357,7 +464,7 @@ app.delete('/api/admin/authors/:id', async (req, res) => {
 });
 
 // 5. Operations Dashboard - Approve Author
-app.post('/api/admin/authors/:id/approve', async (req, res) => {
+app.post('/api/admin/authors/:id/approve', verifyToken, isAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
   const author = await prisma.author.update({
     where: { id },
@@ -372,7 +479,7 @@ app.post('/api/admin/authors/:id/approve', async (req, res) => {
 });
 
 // 5b. Operations Dashboard - Reject Author (with reason)
-app.post('/api/admin/authors/:id/reject', async (req, res) => {
+app.post('/api/admin/authors/:id/reject', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { reason } = req.body;
@@ -388,7 +495,7 @@ app.post('/api/admin/authors/:id/reject', async (req, res) => {
 });
 
 // Admin: Edit author profile (bio, name, phone, whatsapp)
-app.put('/api/admin/authors/:id', async (req, res) => {
+app.put('/api/admin/authors/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { name, bio, phone, whatsapp } = req.body;
@@ -409,7 +516,9 @@ app.put('/api/admin/authors/:id', async (req, res) => {
 });
 
 // Admin Dashboard Overview Stats
-app.get('/api/admin/dashboard-stats', async (req, res) => {
+app.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) => {
+  const cached = getCache('admin:dashboard-stats');
+  if (cached) return res.json(cached);
   try {
     const totalAuthors = await prisma.author.count();
     const totalBooks = await prisma.book.count();
@@ -417,7 +526,8 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
     
     const orders = await prisma.order.findMany({
       where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      include: { items: { include: { book: { include: { author: true } } } } }
     });
     const totalRevenue = orders.reduce((sum, o) => sum + o.amount, 0);
 
@@ -425,7 +535,6 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const revenueDataMap = {};
     
-    // Initialize last 6 months
     const today = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
@@ -443,38 +552,74 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
 
     const revenueData = Object.values(revenueDataMap);
 
+    // Advanced Analytics Computations
+    const salesByAuthorMap = {};
+    const salesByGenreMap = {};
+    const bookSalesMap = {};
+    const customerPurchasesMap = {};
+
+    orders.forEach(o => {
+      // Customer Purchase History aggregation
+      if (o.customerEmail) {
+        if (!customerPurchasesMap[o.customerEmail]) customerPurchasesMap[o.customerEmail] = { email: o.customerEmail, name: o.customerName, totalSpent: 0, ordersCount: 0 };
+        customerPurchasesMap[o.customerEmail].totalSpent += o.amount;
+        customerPurchasesMap[o.customerEmail].ordersCount += 1;
+      }
+
+      o.items.forEach(item => {
+        const authorName = item.book.author.name;
+        const genre = item.book.genre || 'Other';
+        const bookTitle = item.book.title;
+        const itemRev = item.quantity * item.book.mrp;
+
+        // Author Sales
+        if (!salesByAuthorMap[authorName]) salesByAuthorMap[authorName] = { name: authorName, revenue: 0, units: 0 };
+        salesByAuthorMap[authorName].revenue += itemRev;
+        salesByAuthorMap[authorName].units += item.quantity;
+
+        // Genre Sales
+        if (!salesByGenreMap[genre]) salesByGenreMap[genre] = { name: genre, revenue: 0, units: 0 };
+        salesByGenreMap[genre].revenue += itemRev;
+        salesByGenreMap[genre].units += item.quantity;
+
+        // Book Sales
+        if (!bookSalesMap[bookTitle]) bookSalesMap[bookTitle] = { title: bookTitle, author: authorName, revenue: 0, units: 0 };
+        bookSalesMap[bookTitle].revenue += itemRev;
+        bookSalesMap[bookTitle].units += item.quantity;
+      });
+    });
+
+    const salesByAuthor = Object.values(salesByAuthorMap).sort((a, b) => b.revenue - a.revenue);
+    const salesByGenre = Object.values(salesByGenreMap).sort((a, b) => b.revenue - a.revenue);
+    const topSellingBooks = Object.values(bookSalesMap).sort((a, b) => b.units - a.units).slice(0, 10);
+    const topCustomers = Object.values(customerPurchasesMap).sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 10);
+
+    // Low Stock Alerts
+    const lowStockAlerts = await prisma.book.findMany({
+      where: { stock: { lt: 10 } },
+      include: { author: true },
+      take: 20
+    });
+
     // Recent Activities
     const recentAuthors = await prisma.author.findMany({ orderBy: { createdAt: 'desc' }, take: 5 });
     const recentOrders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 5 });
     const recentEvents = await prisma.eventRegistration.findMany({ include: { author: true, activity: true }, orderBy: { createdAt: 'desc' }, take: 5 });
     
     const activities = [];
-    recentAuthors.forEach(a => activities.push({
-      id: `auth-${a.id}`,
-      action: 'New Author Registration',
-      subject: a.name,
-      createdAt: a.createdAt,
-      type: 'author'
-    }));
-    recentOrders.forEach(o => activities.push({
-      id: `ord-${o.id}`,
-      action: 'Order Received',
-      subject: `INR ${o.amount} from ${o.customerName}`,
-      createdAt: o.createdAt,
-      type: 'order'
-    }));
-    recentEvents.forEach(e => activities.push({
-      id: `evt-${e.id}`,
-      action: 'Event RSVP',
-      subject: `${e.author?.name || 'Author'} joined ${e.activity?.name || 'Event'}`,
-      createdAt: e.createdAt,
-      type: 'event'
-    }));
+    recentAuthors.forEach(a => activities.push({ id: `auth-${a.id}`, action: 'New Author Registration', subject: a.name, createdAt: a.createdAt, type: 'author' }));
+    recentOrders.forEach(o => activities.push({ id: `ord-${o.id}`, action: 'Order Received', subject: `INR ${o.amount} from ${o.customerName}`, createdAt: o.createdAt, type: 'order' }));
+    recentEvents.forEach(e => activities.push({ id: `evt-${e.id}`, action: 'Event RSVP', subject: `${e.author?.name || 'Author'} joined ${e.activity?.name || 'Event'}`, createdAt: e.createdAt, type: 'event' }));
 
     activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const recentActivities = activities.slice(0, 8);
 
-    res.json({ totalAuthors, totalBooks, eventParticipations, totalRevenue, revenueData, recentActivities });
+    const result = { 
+      totalAuthors, totalBooks, eventParticipations, totalRevenue, revenueData, recentActivities,
+      salesByAuthor, salesByGenre, topSellingBooks, topCustomers, lowStockAlerts
+    };
+    setCache('admin:dashboard-stats', result, 45 * 1000); // 45s cache
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed' });
@@ -482,7 +627,7 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
 });
 
 // Admin Books
-app.get('/api/admin/books', async (req, res) => {
+app.get('/api/admin/books', verifyToken, isAdmin, async (req, res) => {
   try {
     const books = await prisma.book.findMany({
       include: { author: true, orderItems: { include: { order: true } } }
@@ -502,7 +647,7 @@ app.get('/api/admin/books', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/books/:id', async (req, res) => {
+app.delete('/api/admin/books/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     await prisma.book.delete({ where: { id: parseInt(req.params.id) } });
     res.json({ success: true });
@@ -512,7 +657,7 @@ app.delete('/api/admin/books/:id', async (req, res) => {
 });
 
 // Admin: Edit book details (title, genre, subGenre, mrp, stock, synopsis)
-app.put('/api/admin/books/:id', async (req, res) => {
+app.put('/api/admin/books/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const { title, genre, subGenre, mrp, stock, synopsis } = req.body;
     const book = await prisma.book.update({
@@ -534,7 +679,7 @@ app.put('/api/admin/books/:id', async (req, res) => {
 });
 
 
-app.post('/api/admin/books/:id/approve', async (req, res) => {
+app.post('/api/admin/books/:id/approve', verifyToken, isAdmin, async (req, res) => {
   try {
     const book = await prisma.book.update({
       where: { id: parseInt(req.params.id) },
@@ -546,7 +691,7 @@ app.post('/api/admin/books/:id/approve', async (req, res) => {
   }
 });
 
-app.post('/api/admin/books/:id/reject', async (req, res) => {
+app.post('/api/admin/books/:id/reject', verifyToken, isAdmin, async (req, res) => {
   try {
     const { reason } = req.body;
     const book = await prisma.book.update({
@@ -560,7 +705,7 @@ app.post('/api/admin/books/:id/reject', async (req, res) => {
 });
 
 // Admin Activities
-app.get('/api/admin/activities', async (req, res) => {
+app.get('/api/admin/activities', verifyToken, isAdmin, async (req, res) => {
   try {
     const activities = await prisma.activity.findMany({
       include: { registrations: true },
@@ -577,7 +722,7 @@ app.get('/api/admin/activities', async (req, res) => {
   }
 });
 
-app.post('/api/admin/activities', async (req, res) => {
+app.post('/api/admin/activities', verifyToken, isAdmin, async (req, res) => {
   try {
     const { name, date, location, type } = req.body;
     const act = await prisma.activity.create({
@@ -592,7 +737,7 @@ app.post('/api/admin/activities', async (req, res) => {
 // --- NEW AUTHOR DASHBOARD ROUTES ---
 
 // Admin Get Specific Author Dashboard Data
-app.get('/api/admin/authors/:id/dashboard-data', async (req, res) => {
+app.get('/api/admin/authors/:id/dashboard-data', verifyToken, isAdmin, async (req, res) => {
   try {
     const authorProfile = await prisma.author.findUnique({
       where: { id: parseInt(req.params.id) },
@@ -619,6 +764,8 @@ app.get('/api/admin/authors/:id/dashboard-data', async (req, res) => {
         id: item.id,
         orderId: item.order.id,
         customerName: item.order.customerName,
+        customerPhone: item.order.customerPhone,
+        customerEmail: item.order.customerEmail,
         address: item.order.address,
         bookTitle: item.book.title,
         quantity: item.quantity,
@@ -642,6 +789,12 @@ app.get('/api/admin/authors/:id/dashboard-data', async (req, res) => {
 
 // Get Author Dashboard Data
 app.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
+  const cacheKey = `author:dashboard:${req.user.email}`;
+  // Skip cache if client requests a forced refresh (t= param present)
+  if (!req.query.t) {
+    const cached = getCache(cacheKey);
+    if (cached) return res.json(cached);
+  }
   try {
     const authorProfile = await prisma.author.findUnique({
       where: { email: req.user.email },
@@ -667,6 +820,8 @@ app.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
         id: item.id,
         orderId: item.order.id,
         customerName: item.order.customerName,
+        customerPhone: item.order.customerPhone,
+        customerEmail: item.order.customerEmail,
         address: item.order.address,
         bookTitle: item.book.title,
         quantity: item.quantity,
@@ -681,7 +836,25 @@ app.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
       }));
     }
 
-    res.json({ authorProfile, authorOrders });
+    let dynamicFields = [];
+    try {
+      const p = require('path').join(__dirname, 'settings.json');
+      if (require('fs').existsSync(p)) {
+        const settings = JSON.parse(require('fs').readFileSync(p));
+        dynamicFields = settings.authorDynamicFields || [];
+      }
+    } catch(e) {}
+
+    const eventInvites = await prisma.eventAuthor.findMany({
+      where: { authorId: authorProfile.id },
+      include: { event: true }
+    });
+    const listedBooks = await prisma.eventBook.findMany({
+      where: { authorId: authorProfile.id }
+    });
+    const result = { authorProfile, authorOrders, dynamicFields, eventInvites, listedBooks };
+    setCache(cacheKey, result, 20 * 1000); // 20s cache for dashboard
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
@@ -761,6 +934,35 @@ app.put('/api/author/books/:id/cover', verifyToken, upload.single('cover'), asyn
 });
 
 // Add New Book by Existing Author
+// --------------------------------------------------------
+// Admin: Get all pending books (awaiting approval)
+app.get('/api/admin/pending-books', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const pendingBooks = await prisma.book.findMany({
+      where: { status: 'Pending' },
+      include: { author: true }
+    });
+    res.json(pendingBooks);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch pending books' });
+  }
+});
+
+// Admin: Approve a pending book
+app.post('/api/admin/books/:id/approve', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const bookId = parseInt(req.params.id);
+    const updated = await prisma.book.update({
+      where: { id: bookId },
+      data: { status: 'Approved' }
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to approve book' });
+  }
+});
 app.post('/api/author/books', verifyToken, upload.single('cover'), async (req, res) => {
   try {
     const { title, genre, synopsis, pages, mrp, stock, overpriced } = req.body;
@@ -830,11 +1032,47 @@ app.post('/api/author/activities/register', verifyToken, upload.single('paymentS
 });
 
 // 6. Checkout - Create Order
+
+app.put('/api/orders/:id/cancel', verifyToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const order = await prisma.order.findUnique({ where: { id }, include: { items: { include: { book: { include: { author: true } } } } } });
+    if (!order) return res.status(404).json({ error: 'Not found' });
+    if (order.customerEmail !== req.user.email) return res.status(403).json({ error: 'Forbidden' });
+    
+    // Only allow cancel if not dispatched
+    const cannotCancel = order.items.some(i => i.status === 'Dispatched' || i.status === 'Completed');
+    if (cannotCancel) return res.status(400).json({ error: 'Cannot cancel dispatched orders' });
+
+    await prisma.order.update({ where: { id }, data: { status: 'Cancelled' } });
+    await prisma.orderItem.updateMany({ where: { orderId: id }, data: { status: 'Cancelled' } });
+    
+    for (const item of order.items) {
+      if (item.status === 'Accepted') {
+         await prisma.book.update({
+           where: { id: item.bookId },
+           data: { stock: { increment: item.quantity } }
+         });
+      }
+      if (item.book && item.book.author && item.book.author.email) {
+         await sendNotificationEmail(item.book.author.email, 'Order Cancelled by Customer', `The order #PAA-${id.toString().padStart(4, '0')} for your book "${item.book.title}" was cancelled by the customer.`);
+      }
+    }
+    
+    // Send email
+    await sendNotificationEmail(req.user.email, 'Order Cancelled', `Your order #PAA-${id.toString().padStart(4, '0')} has been cancelled successfully.`);
+    
+    res.json({ message: 'Order cancelled' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to cancel order' });
+  }
+});
+
 app.post('/api/orders', verifyToken, upload.single('paymentScreenshot'), async (req, res) => {
   try {
-    const { customerName, customerPhone, address, amount, items } = req.body;
+    const { customerName, customerPhone, address, amount, items, transactionId } = req.body;
     const parsedItems = Array.isArray(items) ? items : JSON.parse(items);
-    
     const paymentScreenshot = req.file ? `/uploads/${req.file.filename}` : null;
 
     const order = await prisma.order.create({
@@ -845,6 +1083,7 @@ app.post('/api/orders', verifyToken, upload.single('paymentScreenshot'), async (
         address,
         amount: parseFloat(amount),
         paymentScreenshot,
+        transactionId: transactionId || null,
         items: {
           create: parsedItems.map(item => ({
             bookId: parseInt(item.bookId),
@@ -852,10 +1091,81 @@ app.post('/api/orders', verifyToken, upload.single('paymentScreenshot'), async (
           }))
         }
       },
-      include: { items: true }
+      include: { items: { include: { book: { include: { author: true } } } } }
     });
 
-    console.log(`[EMAIL MOCK] Sent order confirmation to ${req.user.email}`);
+    const orderId = `PAA-${String(order.id).padStart(4, '0')}`;
+    const orderDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // --- Email to CUSTOMER ---
+    const itemRowsCustomer = order.items.map(item => `
+      <tr>
+        <td>${item.book.title}</td>
+        <td>${item.book.author?.name || 'Unknown'}</td>
+        <td style="text-align:center">${item.quantity}</td>
+        <td style="text-align:right">${inr(item.book.mrp * item.quantity)}</td>
+      </tr>`).join('');
+
+    await sendNotificationEmail(
+      req.user.email,
+      `Order Confirmed #${orderId} — Pune Authors' Association`,
+      emailWrap(`Order Placed Successfully! 🎉`, `
+        <p>Hi <strong>${customerName}</strong>, your order has been received and is now awaiting author approval.</p>
+        <table>
+          <thead><tr><th>Book</th><th>Author</th><th>Qty</th><th>Amount</th></tr></thead>
+          <tbody>${itemRowsCustomer}</tbody>
+          <tfoot><tr><td colspan="3" style="font-weight:700;text-align:right">Total</td><td style="font-weight:700;text-align:right">${inr(order.amount)}</td></tr></tfoot>
+        </table>
+        <table>
+          <tr><td><strong>Order ID</strong></td><td>${orderId}</td></tr>
+          <tr><td><strong>Date</strong></td><td>${orderDate}</td></tr>
+          <tr><td><strong>Delivery Address</strong></td><td>${address}</td></tr>
+          ${transactionId ? `<tr><td><strong>Transaction ID</strong></td><td>${transactionId}</td></tr>` : ''}
+        </table>
+        <p>The author will review your payment and approve the order. You will receive another email once approved.</p>
+      `)
+    );
+
+    // --- Email to each AUTHOR ---
+    const authorEmails = new Set();
+    for (const item of order.items) {
+      const authorEmail = item.book?.author?.email;
+      if (!authorEmail || authorEmails.has(authorEmail)) continue;
+      authorEmails.add(authorEmail);
+
+      const authorItems = order.items.filter(i => i.book?.author?.email === authorEmail);
+      const itemRowsAuthor = authorItems.map(i => `
+        <tr>
+          <td>${i.book.title}</td>
+          <td style="text-align:center">${i.quantity}</td>
+          <td style="text-align:right">${inr(i.book.mrp * i.quantity)}</td>
+        </tr>`).join('');
+      const authorTotal = authorItems.reduce((s, i) => s + i.book.mrp * i.quantity, 0);
+
+      await sendNotificationEmail(
+        authorEmail,
+        `New Order #${orderId} for Your Book — Action Required`,
+        emailWrap(`📦 New Order Received — Your Action Required`, `
+          <p>Hi <strong>${item.book.author.name}</strong>, a new order has been placed for your book(s). Please log in to your dashboard to <strong>Approve or Reject</strong> this order.</p>
+          <table>
+            <thead><tr><th>Book</th><th>Qty</th><th>Amount</th></tr></thead>
+            <tbody>${itemRowsAuthor}</tbody>
+            <tfoot><tr><td colspan="2" style="font-weight:700;text-align:right">Your Total</td><td style="font-weight:700;text-align:right">${inr(authorTotal)}</td></tr></tfoot>
+          </table>
+          <table>
+            <tr><td><strong>Order ID</strong></td><td>${orderId}</td></tr>
+            <tr><td><strong>Order Date</strong></td><td>${orderDate}</td></tr>
+            <tr><td><strong>Customer Name</strong></td><td>${customerName}</td></tr>
+            <tr><td><strong>Customer Phone</strong></td><td>${customerPhone || 'Not provided'}</td></tr>
+            <tr><td><strong>Delivery Address</strong></td><td>${address}</td></tr>
+            ${transactionId ? `<tr><td><strong>Transaction ID</strong></td><td>${transactionId}</td></tr>` : ''}
+          </table>
+          <p><span class="badge">⚡ Action Needed</span> &nbsp;Log in at <a href="http://localhost:5173/author/dashboard">your dashboard</a> to approve or reject this order.</p>
+        `)
+      );
+
+      invalidateCache(`author:dashboard:${authorEmail}`);
+    }
 
     res.status(201).json(order);
   } catch (err) {
@@ -864,8 +1174,214 @@ app.post('/api/orders', verifyToken, upload.single('paymentScreenshot'), async (
   }
 });
 
+// Author: Approve a pending order item
+app.put('/api/order-items/:id/author-approve', verifyToken, async (req, res) => {
+  try {
+    const orderItemId = parseInt(req.params.id);
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    const orderItem = await prisma.orderItem.findUnique({
+      where: { id: orderItemId },
+      include: { book: { include: { author: true } }, order: true }
+    });
+    if (!orderItem || orderItem.book.authorId !== author.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const updated = await prisma.orderItem.update({
+      where: { id: orderItemId },
+      data: { status: 'Accepted' },
+      include: { book: { include: { author: true } }, order: true }
+    });
+
+    // Deduct stock
+    await prisma.book.update({
+      where: { id: orderItem.bookId },
+      data: { stock: { decrement: orderItem.quantity } }
+    });
+
+    const orderId = `PAA-${String(updated.order.id).padStart(4, '0')}`;
+    const approvalDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    const totalAmount = parseFloat(updated.book.mrp) * updated.quantity;
+
+    // --- Email to CUSTOMER on approval ---
+    if (updated.order?.customerEmail) {
+      await sendNotificationEmail(
+        updated.order.customerEmail,
+        `Order Approved ✅ #${orderId} — ${updated.book.title}`,
+        emailWrap(`Your Order Has Been Approved! 🎉`, `
+          <p>Hi <strong>${updated.order.customerName}</strong>, great news! The author has approved your order.</p>
+          <table>
+            <tr><td><strong>Order ID</strong></td><td>${orderId}</td></tr>
+            <tr><td><strong>Book</strong></td><td>${updated.book.title}</td></tr>
+            <tr><td><strong>Author</strong></td><td>${updated.book.author?.name || author.name}</td></tr>
+            <tr><td><strong>Quantity</strong></td><td>${updated.quantity}</td></tr>
+            <tr><td><strong>Amount Paid</strong></td><td>${inr(totalAmount)}</td></tr>
+            <tr><td><strong>Delivery Address</strong></td><td>${updated.order.address}</td></tr>
+            <tr><td><strong>Approved On</strong></td><td>${approvalDate}</td></tr>
+            ${updated.order.transactionId ? `<tr><td><strong>Your Transaction ID</strong></td><td>${updated.order.transactionId}</td></tr>` : ''}
+          </table>
+          <p>Your book will be packed and dispatched soon. The author will share a tracking number once dispatched.</p>
+          <p>For queries, contact <strong>${author.name}</strong>${author.whatsapp ? ` on WhatsApp: ${author.whatsapp}` : ''} at ${author.email}.</p>
+        `)
+      );
+    }
+
+    // --- Email to AUTHOR with delivery instructions ---
+    await sendNotificationEmail(
+      author.email,
+      `Order #${orderId} Approved — Pack & Dispatch`,
+      emailWrap(`📦 Order Approved — Ready to Pack`, `
+        <p>You have approved order <strong>${orderId}</strong>. Please pack the following and dispatch at the earliest.</p>
+        <table>
+          <tr><td><strong>Order ID</strong></td><td><strong>${orderId}</strong></td></tr>
+          <tr><td><strong>Approved On</strong></td><td>${approvalDate}</td></tr>
+          <tr><td><strong>Book Title</strong></td><td>${updated.book.title}</td></tr>
+          <tr><td><strong>Quantity</strong></td><td>${updated.quantity}</td></tr>
+          <tr><td><strong>Amount</strong></td><td>${inr(totalAmount)}</td></tr>
+        </table>
+        <h3 style="margin:24px 0 8px;font-size:16px;color:#1a1a2e;">📬 Ship To</h3>
+        <table>
+          <tr><td><strong>Name</strong></td><td>${updated.order.customerName}</td></tr>
+          <tr><td><strong>Phone</strong></td><td>${updated.order.customerPhone || 'Not provided'}</td></tr>
+          <tr><td><strong>Address</strong></td><td>${updated.order.address}</td></tr>
+          ${updated.order.transactionId ? `<tr><td><strong>Transaction ID</strong></td><td>${updated.order.transactionId}</td></tr>` : ''}
+        </table>
+        <p style="margin-top:20px">Log in to your dashboard and click <strong>"Download Invoice"</strong> to get a printable slip for the delivery box.</p>
+      `)
+    );
+
+    invalidateCache(`author:dashboard:${req.user.email}`);
+    res.json({ ...updated, invoiceData: {
+      orderId,
+      approvalDate,
+      book: { title: updated.book.title, mrp: updated.book.mrp },
+      author: { name: author.name, email: author.email, phone: author.phone, whatsapp: author.whatsapp },
+      customer: { name: updated.order.customerName, phone: updated.order.customerPhone, email: updated.order.customerEmail, address: updated.order.address },
+      quantity: updated.quantity,
+      total: totalAmount,
+      transactionId: updated.order.transactionId
+    }});
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to approve order' });
+  }
+});
+
+// Author: Fetch full invoice data for a specific order item
+app.get('/api/order-items/:id/invoice', verifyToken, async (req, res) => {
+  try {
+    const orderItemId = parseInt(req.params.id);
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    const orderItem = await prisma.orderItem.findUnique({
+      where: { id: orderItemId },
+      include: { book: { include: { author: true } }, order: true }
+    });
+    if (!orderItem || orderItem.book.authorId !== author.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    res.json({
+      orderId: `PAA-${String(orderItem.order.id).padStart(4, '0')}`,
+      orderItemId: orderItem.id,
+      status: orderItem.status,
+      createdAt: orderItem.order.createdAt,
+      book: { title: orderItem.book.title, mrp: orderItem.book.mrp, genre: orderItem.book.genre, coverUrl: orderItem.book.coverUrl },
+      author: { name: author.name, email: author.email, phone: author.phone, whatsapp: author.whatsapp },
+      customer: {
+        name: orderItem.order.customerName,
+        phone: orderItem.order.customerPhone,
+        email: orderItem.order.customerEmail,
+        address: orderItem.order.address
+      },
+      quantity: orderItem.quantity,
+      total: parseFloat(orderItem.book.mrp) * orderItem.quantity,
+      transactionId: orderItem.order.transactionId,
+      trackingNumber: orderItem.trackingNumber
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch invoice' });
+  }
+});
+
+// Author: Reject a pending order item
+app.put('/api/order-items/:id/author-reject', verifyToken, async (req, res) => {
+  try {
+    const orderItemId = parseInt(req.params.id);
+    const { reason } = req.body;
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    const orderItem = await prisma.orderItem.findUnique({
+      where: { id: orderItemId },
+      include: { book: true, order: true }
+    });
+    if (!orderItem || orderItem.book.authorId !== author.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const updated = await prisma.orderItem.update({
+      where: { id: orderItemId },
+      data: { status: 'Rejected', rejectionReason: reason || 'Rejected by author' },
+      include: { book: true, order: true }
+    });
+
+    if (updated.order?.customerEmail) {
+      await sendNotificationEmail(updated.order.customerEmail, 'Order Rejected', `We\'re sorry. Your order for "${updated.book.title}" was rejected. Reason: ${reason || 'No specific reason provided.'}`);
+    }
+
+    invalidateCache(`author:dashboard:${req.user.email}`);
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reject order' });
+  }
+});
+
 // 7. Operations/Author Dashboard - Get all orders
-app.get('/api/admin/orders', async (req, res) => {
+app.get('/api/admin/orders/export', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      include: { items: { include: { book: { include: { author: true } } } } },
+      orderBy: { createdAt: 'desc' }
+    });
+    const flatData = [];
+    orders.forEach(o => {
+      o.items.forEach(i => {
+        flatData.push({
+          OrderId: `ORD-${o.id}`,
+          Date: o.createdAt.toISOString().split('T')[0],
+          Customer: o.customerName,
+          Email: o.customerEmail,
+          Phone: o.customerPhone,
+          Address: o.address,
+          BookTitle: i.book.title,
+          Author: i.book.author.name,
+          Quantity: i.quantity,
+          Amount: o.amount,
+          PaymentStatus: o.paymentScreenshot ? 'Paid' : 'Unpaid',
+          OrderStatus: i.status,
+          TrackingNumber: i.trackingNumber || ''
+        });
+      });
+    });
+    const { Parser } = require('json2csv');
+    const parser = new Parser();
+    const csv = parser.parse(flatData);
+    res.header('Content-Type', 'text/csv');
+    res.attachment('orders_export.csv');
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Export failed' });
+  }
+});
+
+app.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       include: { items: { include: { book: { include: { author: true } } } } },
@@ -889,7 +1405,7 @@ app.get('/api/admin/orders', async (req, res) => {
   }
 });
 
-app.put('/api/admin/orders/:id/status', async (req, res) => {
+app.put('/api/admin/orders/:id/status', verifyToken, isAdmin, async (req, res) => {
   try {
     const order = await prisma.order.update({
       where: { id: parseInt(req.params.id) },
@@ -915,12 +1431,41 @@ app.put('/api/order-items/:id/status', verifyToken, async (req, res) => {
   }
 });
 
+
+app.put('/api/order-items/:id/reject', verifyToken, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const orderItem = await prisma.orderItem.update({
+      where: { id: parseInt(req.params.id) },
+      data: { status: 'Rejected', rejectionReason: reason },
+      include: { order: true, book: true }
+    });
+    if (orderItem.order && orderItem.order.customerEmail) {
+       await sendNotificationEmail(orderItem.order.customerEmail, 'Order Item Rejected', `Your order for book "${orderItem.book.title}" was rejected by the author. Reason: ${reason}`);
+    }
+    res.json(orderItem);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reject order' });
+  }
+});
+
 app.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
   try {
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'Accepted' }
+      data: { status: 'Accepted' },
+      include: { book: { include: { author: true } } }
     });
+    // Deduct stock immediately
+    if (orderItem) {
+       await prisma.book.update({
+         where: { id: orderItem.bookId },
+         data: { stock: { decrement: orderItem.quantity } }
+       });
+    }
+    // Invalidate cache
+    if (orderItem.book?.author?.email) invalidateCache(`author:dashboard:${orderItem.book.author.email}`);
     res.json(orderItem);
   } catch (err) {
     console.error(err);
@@ -928,14 +1473,22 @@ app.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
   }
 });
 
+
 app.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
   try {
     const { trackingNumber } = req.body;
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'Dispatched', trackingNumber }
+      data: { status: 'Dispatched', trackingNumber },
+      include: { order: true, book: true }
     });
+    
+    if (orderItem.order && orderItem.order.customerEmail) {
+       await sendNotificationEmail(orderItem.order.customerEmail, 'Order Dispatched', `Your book "${orderItem.book.title}" has been dispatched. Tracking No: ${trackingNumber}`);
+    }
+    
     res.json(orderItem);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to dispatch order' });
@@ -949,6 +1502,7 @@ app.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => {
       data: { status: 'Completed' }
     });
     res.json(orderItem);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to acknowledge order' });
@@ -956,21 +1510,24 @@ app.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => {
 });
 
 // 8. Operations Dashboard - Verify Order
-app.post('/api/admin/orders/:id/verify', async (req, res) => {
+app.post('/api/admin/orders/:id/verify', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const order = await prisma.order.update({
       where: { id },
-      data: { status: 'Completed' }
+      data: { status: 'Completed' },
+      include: { items: true }
     });
+    
     res.json(order);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to verify order' });
   }
 });
 
-app.post('/api/admin/orders/:id/reject-payment', async (req, res) => {
+app.post('/api/admin/orders/:id/reject-payment', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const order = await prisma.order.update({
@@ -1004,7 +1561,8 @@ app.post('/api/contact', async (req, res) => {
 app.get('/api/gallery', async (req, res) => {
   try {
     const events = await prisma.galleryEvent.findMany({
-      orderBy: { date: 'desc' }
+      orderBy: { date: 'desc' },
+      include: { images: true }
     });
     res.json(events);
   } catch (err) {
@@ -1013,7 +1571,7 @@ app.get('/api/gallery', async (req, res) => {
   }
 });
 
-app.post('/api/admin/gallery', upload.single('photo'), async (req, res) => {
+app.post('/api/admin/gallery', verifyToken, isAdmin, upload.single('photo'), async (req, res) => {
   try {
     const { location, place, city, date, duration, authors, booksSold, type, description } = req.body;
     let photoUrl = '';
@@ -1041,7 +1599,7 @@ app.post('/api/admin/gallery', upload.single('photo'), async (req, res) => {
     res.status(500).json({ error: 'Failed to upload gallery event' });
   }
 });
-app.put('/api/admin/gallery/:id', upload.single('photo'), async (req, res) => {
+app.put('/api/admin/gallery/:id', verifyToken, isAdmin, upload.single('photo'), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { location, place, city, date, duration, authors, booksSold, type, description } = req.body;
@@ -1064,7 +1622,7 @@ app.put('/api/admin/gallery/:id', upload.single('photo'), async (req, res) => {
   }
 });
 
-app.delete('/api/admin/gallery/:id', async (req, res) => {
+app.delete('/api/admin/gallery/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await prisma.galleryEvent.delete({ where: { id } });
@@ -1075,10 +1633,42 @@ app.delete('/api/admin/gallery/:id', async (req, res) => {
   }
 });
 
+app.post('/api/admin/gallery/:id/images', verifyToken, isAdmin, upload.single('photo'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { caption, dateTaken } = req.body;
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+    
+    const image = await prisma.galleryImage.create({
+      data: {
+        galleryEventId: id,
+        url: `/uploads/${req.file.filename}`,
+        caption: caption || null,
+        dateTaken: dateTaken ? new Date(dateTaken) : null
+      }
+    });
+    res.status(201).json(image);
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add image' });
+  }
+});
+
+app.delete('/api/admin/gallery/images/:imageId', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const imageId = parseInt(req.params.imageId);
+    await prisma.galleryImage.delete({ where: { id: imageId } });
+    res.json({ success: true });
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete image' });
+  }
+});
+
 // --- FORMS MANAGEMENT ---
 
 // Admin: Get all form templates
-app.get('/api/admin/forms', verifyToken, async (req, res) => {
+app.get('/api/admin/forms', verifyToken, isAdmin, async (req, res) => {
   try {
     const forms = await prisma.formTemplate.findMany({
       orderBy: { createdAt: 'desc' }
@@ -1091,7 +1681,7 @@ app.get('/api/admin/forms', verifyToken, async (req, res) => {
 });
 
 // Admin: Create a new form template
-app.post('/api/admin/forms', verifyToken, async (req, res) => {
+app.post('/api/admin/forms', verifyToken, isAdmin, async (req, res) => {
   try {
     const { title, type, description, fields } = req.body;
     const form = await prisma.formTemplate.create({
@@ -1105,7 +1695,7 @@ app.post('/api/admin/forms', verifyToken, async (req, res) => {
 });
 
 // Admin: Delete a form template
-app.delete('/api/admin/forms/:id', verifyToken, async (req, res) => {
+app.delete('/api/admin/forms/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await prisma.formResponse.deleteMany({ where: { formTemplateId: id } });
@@ -1118,7 +1708,7 @@ app.delete('/api/admin/forms/:id', verifyToken, async (req, res) => {
 });
 
 // Admin: Get responses for a form
-app.get('/api/admin/forms/:id/responses', verifyToken, async (req, res) => {
+app.get('/api/admin/forms/:id/responses', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const responses = await prisma.formResponse.findMany({
@@ -1189,9 +1779,121 @@ app.post('/api/author/forms/:id/submit', verifyToken, async (req, res) => {
   }
 });
 
+
+// --- QUERIES (SUPPORT) ---
+
+// Author: Get their own queries
+app.get('/api/author/queries', verifyToken, async (req, res) => {
+  try {
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+    const queries = await prisma.query.findMany({
+      where: { authorId: author.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(queries);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch queries' });
+  }
+});
+
+// Author: Create a new query
+app.post('/api/author/queries', verifyToken, async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+    const query = await prisma.query.create({
+      data: {
+        authorId: author.id,
+        subject,
+        message
+      }
+    });
+    res.status(201).json(query);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create query' });
+  }
+});
+
+// Admin: Get all queries
+app.get('/api/admin/queries', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const queries = await prisma.query.findMany({
+      include: { 
+        author: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(queries);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch all queries' });
+  }
+});
+
+// Admin: Reply to a query
+app.put('/api/admin/queries/:id/reply', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { reply } = req.body;
+    const id = parseInt(req.params.id);
+    const query = await prisma.query.update({
+      where: { id },
+      data: {
+        reply,
+        status: 'Answered'
+      }
+    });
+    res.json(query);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reply to query' });
+  }
+});
+
+
+// Customer: Get their own queries
+app.get('/api/customer/queries', verifyToken, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { email: req.user.email } });
+    if (!user) return res.status(404).json({ error: 'Not found' });
+    const queries = await prisma.query.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(queries);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch queries' });
+  }
+});
+
+// Customer: Create a new query
+app.post('/api/customer/queries', verifyToken, async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+    const user = await prisma.user.findUnique({ where: { email: req.user.email } });
+    if (!user) return res.status(404).json({ error: 'Not found' });
+    const query = await prisma.query.create({
+      data: {
+        userId: user.id,
+        subject,
+        message
+      }
+    });
+    res.status(201).json(query);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create query' });
+  }
+});
+
 // Start server
 // --- DYNAMIC AUTHOR FIELDS ---
-app.get('/api/admin/author-fields', verifyToken, (req, res) => {
+app.get('/api/admin/author-fields', verifyToken, isAdmin, (req, res) => {
     try {
         const settings = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'settings.json')));
         res.json(settings.authorDynamicFields || []);
@@ -1200,7 +1902,16 @@ app.get('/api/admin/author-fields', verifyToken, (req, res) => {
     }
 });
 
-app.post('/api/admin/author-fields', verifyToken, (req, res) => {
+app.get('/api/author-fields', (req, res) => {
+    try {
+        const settings = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'settings.json')));
+        res.json(settings.authorDynamicFields || []);
+    } catch (e) {
+        res.json([]);
+    }
+});
+
+app.post('/api/admin/author-fields', verifyToken, isAdmin, (req, res) => {
     try {
         const fields = req.body.fields;
         const settingsPath = require('path').join(__dirname, 'settings.json');
@@ -1232,14 +1943,14 @@ app.put('/api/author/profile/extra', verifyToken, async (req, res) => {
 
 
 // --- DYNAMIC AUTHOR FIELDS ---
-app.get('/api/admin/author-fields', verifyToken, (req, res) => {
+app.get('/api/admin/author-fields', verifyToken, isAdmin, (req, res) => {
     try {
         const settings = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'settings.json')));
         res.json(settings.authorDynamicFields || []);
     } catch(e) { res.json([]); }
 });
 
-app.post('/api/admin/author-fields', verifyToken, (req, res) => {
+app.post('/api/admin/author-fields', verifyToken, isAdmin, (req, res) => {
     try {
         const p = require('path').join(__dirname, 'settings.json');
         const settings = require('fs').existsSync(p) ? JSON.parse(require('fs').readFileSync(p)) : {};
@@ -1266,6 +1977,9 @@ app.put('/api/author/profile/extra', verifyToken, async (req, res) => {
 
 // --- AUTHOR EVENTS MANAGEMENT ---
 app.get('/api/author/events', verifyToken, async (req, res) => {
+  const cacheKey = `author:events:${req.user.email}`;
+  const cached = getCache(cacheKey);
+  if (cached) return res.json(cached);
   try {
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
@@ -1278,7 +1992,18 @@ app.get('/api/author/events', verifyToken, async (req, res) => {
     const books = await prisma.book.findMany({ where: { authorId: author.id, status: 'Approved' }});
     const listedBooks = await prisma.eventBook.findMany({ where: { authorId: author.id } });
 
-    res.json({ eventInvites, books, listedBooks });
+    // All past events (for the gallery / history section in author dashboard)
+    const pastEvents = await prisma.event.findMany({ 
+      where: { status: 'Past' }, 
+      orderBy: { date: 'desc' },
+      include: {
+        _count: { select: { eventAuthors: { where: { optInStatus: 'Opted-In' } }, eventBooks: true } }
+      }
+    });
+
+    const result = { eventInvites, books, listedBooks, pastEvents };
+    setCache(cacheKey, result, 30 * 1000);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch events' });
   }
@@ -1326,7 +2051,12 @@ app.get('/api/public/events', async (req, res) => {
         ]
       },
       include: {
-         _count: { select: { eventBooks: true, eventAuthors: true } }
+         _count: { 
+             select: { 
+                eventBooks: true, 
+                eventAuthors: { where: { optInStatus: 'Opted-In' } } 
+             } 
+         }
       },
       orderBy: { id: 'desc' }
     });
@@ -1360,9 +2090,17 @@ app.get('/api/events/:eventId/catalogue', async (req, res) => {
 
 // --- EVENTS MANAGEMENT (PHASE 1) ---
 
-app.post('/api/admin/events', verifyToken, async (req, res) => {
+app.post('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
   try {
     const { name, location, date, duration } = req.body;
+    
+    const existingEvent = await prisma.event.findFirst({
+      where: { name, location, date }
+    });
+    if (existingEvent) {
+      return res.status(400).json({ error: 'An event with the same name, location, and date already exists.' });
+    }
+
     const event = await prisma.event.create({
       data: { name, location, date, duration, status: 'Upcoming' }
     });
@@ -1373,12 +2111,12 @@ app.post('/api/admin/events', verifyToken, async (req, res) => {
   }
 });
 
-app.get('/api/admin/events', verifyToken, async (req, res) => {
+app.get('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
   try {
     const events = await prisma.event.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-         _count: { select: { eventAuthors: true, eventBooks: true } },
+         _count: { select: { eventAuthors: { where: { optInStatus: 'Opted-In' } }, eventBooks: true } },
          eventBooks: { select: { listedStock: true } }
       }
     });
@@ -1388,13 +2126,13 @@ app.get('/api/admin/events', verifyToken, async (req, res) => {
   }
 });
 
-app.put('/api/admin/events/:id', verifyToken, async (req, res) => {
+app.put('/api/admin/events/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
-    const { name, location, date, duration } = req.body;
+    const { name, location, date, duration, status } = req.body;
     const event = await prisma.event.update({
       where: { id: eventId },
-      data: { name, location, date, duration }
+      data: { name, location, date, duration, status }
     });
     res.json(event);
   } catch (error) {
@@ -1403,7 +2141,78 @@ app.put('/api/admin/events/:id', verifyToken, async (req, res) => {
   }
 });
 
-app.delete('/api/admin/events/:id', verifyToken, async (req, res) => {
+app.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const eventBooks = await prisma.eventBook.findMany({
+      where: { eventId, listedStock: { gt: 0 } },
+      include: { author: true, book: true }
+    });
+    
+    const authorsInvolved = [...new Set(eventBooks.map(eb => eb.authorId))];
+    const missingAuthors = [];
+    
+    const settledEventBooks = [];
+    for (const authorId of authorsInvolved) {
+       const authorBooks = eventBooks.filter(eb => eb.authorId === authorId);
+       const hasSettled = authorBooks.every(eb => eb.listedStock === (eb.soldStock + eb.returnedStock));
+       if (!hasSettled) {
+          missingAuthors.push(authorBooks[0].author);
+       } else {
+          settledEventBooks.push(...authorBooks);
+       }
+    }
+    
+    if (missingAuthors.length > 0) {
+       return res.json({ status: 'pending', missingAuthors, data: settledEventBooks });
+    }
+    
+    res.json({ status: 'completed', data: eventBooks });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
+app.post('/api/admin/events/:id/notify-settlement', verifyToken, isAdmin, async (req, res) => {
+  res.json({ message: 'Notification emails sent to pending authors!' });
+});
+
+app.put('/api/author/events/:id/settle', verifyToken, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+    const authorId = author.id;
+    const { settlements } = req.body; // Array of { eventBookId, soldStock, returnedStock }
+    
+    for (const settlement of settlements) {
+       console.log('Processing settlement:', settlement);
+       const eb = await prisma.eventBook.findUnique({ where: { id: settlement.eventBookId }, include: { book: true } });
+       console.log('Found EventBook:', !!eb, 'author match:', eb?.authorId === authorId, 'event match:', eb?.eventId === eventId);
+       if (eb && eb.authorId === authorId && eb.eventId === eventId) {
+          // Verify they haven't already settled this book
+          console.log('Stock Check. listed:', eb.listedStock, 'sold:', eb.soldStock, 'returned:', eb.returnedStock);
+          if (eb.listedStock !== eb.soldStock + eb.returnedStock) {
+             await prisma.eventBook.update({
+                where: { id: eb.id },
+                data: { soldStock: settlement.soldStock, returnedStock: settlement.returnedStock }
+             });
+             // Add returned stock back to inventory
+             await prisma.book.update({
+                where: { id: eb.bookId },
+                data: { stock: eb.book.stock + settlement.returnedStock }
+             });
+          }
+       }
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to submit settlement' });
+  }
+});
+
+app.delete('/api/admin/events/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
     await prisma.event.delete({ where: { id: eventId } });
@@ -1414,7 +2223,7 @@ app.delete('/api/admin/events/:id', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/api/admin/events/:id/broadcast', verifyToken, async (req, res) => {
+app.post('/api/admin/events/:id/broadcast', verifyToken, isAdmin, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
     const { target } = req.body; // 'Authors' or 'Customers'

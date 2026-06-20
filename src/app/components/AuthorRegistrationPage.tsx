@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import qrCode from "./data/qr_code.jpeg";
 import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft } from "lucide-react";
@@ -27,6 +27,20 @@ export function AuthorRegistrationPage() {
   const [authorBlob, setAuthorBlob] = useState<File | null>(null);
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState<string | null>(null);
   const [paymentBlob, setPaymentBlob] = useState<File | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [qrCodeBlob, setQrCodeBlob] = useState<File | null>(null);
+  const [dynamicFields, setDynamicFields] = useState<any[]>([]);
+  const [extraDataState, setExtraDataState] = useState<any>({});
+
+  useEffect(() => {
+    axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author-fields`)
+      .then(res => {
+        const requiredFields = res.data.filter((f: any) => f.requiredForRegistration);
+        setDynamicFields(requiredFields);
+      })
+      .catch(console.error);
+  }, []);
+
 
   const [form, setForm] = useState({
     name: "",
@@ -153,6 +167,27 @@ export function AuthorRegistrationPage() {
                     </div>
                   </div>
 
+
+                  {dynamicFields.length > 0 && (
+                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: '1rem' }}>Additional Required Information</h3>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                        {dynamicFields.map(f => (
+                          <div key={f.name}>
+                            <label style={labelStyle}>{f.name} *</label>
+                            {f.type === 'number' ? (
+                              <input type="number" required style={inputStyle} value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                            ) : f.type === 'date' ? (
+                              <input type="date" required style={inputStyle} value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                            ) : (
+                              <input type="text" required style={inputStyle} value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Author photo upload */}
                   <div>
                     <label style={labelStyle}>Author Photo</label>
@@ -183,6 +218,41 @@ export function AuthorRegistrationPage() {
                         if (file) {
                           setAuthorBlob(file);
                           setAuthorPhotoUrl(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* QR Code upload */}
+                  <div>
+                    <label style={labelStyle}>Your Payment QR Code * <span style={{ fontSize: 11, color: "#6b6b80", fontWeight: 400 }}>(This QR will be shown to customers when they purchase your book)</span></label>
+                    <div
+                      style={{ border: "2px dashed rgba(0,0,0,0.12)", borderRadius: 12, padding: "1.5rem", textAlign: "center", background: "#f7f7f9", cursor: "pointer" }}
+                      onClick={() => document.getElementById("qr-code-upload")?.click()}
+                    >
+                      {qrCodeUrl ? (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
+                          <img src={qrCodeUrl} alt="QR preview" style={{ width: 80, height: 80, objectFit: "contain", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)" }} />
+                          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>QR Code uploaded ✓</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload size={24} color="#6b6b80" style={{ margin: "0 auto 0.5rem" }} />
+                          <div style={{ fontSize: 13, color: "#6b6b80" }}>Click to upload your UPI / Bank QR code</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: "0.25rem" }}>PNG, JPG up to 5MB</div>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="qr-code-upload"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setQrCodeBlob(file);
+                          setQrCodeUrl(URL.createObjectURL(file));
                         }
                       }}
                     />
@@ -428,7 +498,17 @@ export function AuthorRegistrationPage() {
                   onClick={() => {
                     if (step === 0) {
                       if (!form.name || !form.email || !form.phone || !form.password || !form.bio || !authorBlob) {
-                        alert("Please fill all compulsory fields in this step and upload photo."); return;
+                        alert("Please fill all compulsory fields in this step and upload author photo."); return;
+                      }
+                      if (!qrCodeBlob) {
+                        alert("Please upload your Payment QR Code — customers will use it to pay you directly."); return;
+                      }
+                                            if (dynamicFields.length > 0) {
+                        for (const f of dynamicFields) {
+                          if (!extraDataState[f.name]) {
+                            alert(`Please fill the required field: ${f.name}`); return;
+                          }
+                        }
                       }
                       if (!/^\S+@\S+\.\S+$/.test(form.email)) {
                         alert("Please enter a valid email address."); return;
@@ -474,6 +554,11 @@ export function AuthorRegistrationPage() {
                       if (authorBlob) formData.append("photo", authorBlob);
                       if (coverBlob) formData.append("cover", coverBlob);
                       if (paymentBlob) formData.append("paymentScreenshot", paymentBlob);
+                      if (qrCodeBlob) formData.append("qrCode", qrCodeBlob);
+                      if (Object.keys(extraDataState).length > 0) {
+                        formData.append("extraData", JSON.stringify(extraDataState));
+                      }
+
                       
                       const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/authors/register`, formData);
                       setSubmitted(true);

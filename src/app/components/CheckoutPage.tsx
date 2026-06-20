@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router";
 import axios from "axios";
 import { CheckCircle, Circle, Package, MessageSquare, Truck, CheckSquare, BarChart2, CreditCard, MapPin, Minus, Plus, User, Phone, Mail } from "lucide-react";
@@ -6,7 +6,7 @@ import { CheckCircle, Circle, Package, MessageSquare, Truck, CheckSquare, BarCha
 export function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const cartIds: number[] = location.state?.cart || [1]; // Fallback to book 1 if directly navigated
+  const cartIds: number[] = useMemo(() => (location.state?.cart || [1]).map(Number), [location.state?.cart]); // Fallback to book 1 if directly navigated
 
   const [books, setBooks] = useState<any[]>([]);
   const [quantities, setQuantities] = useState<Record<number, number>>(
@@ -16,6 +16,7 @@ export function CheckoutPage() {
   const [form, setForm] = useState({ name: "", phone: "", pincode: "", address: "", city: "", state: "Maharashtra" });
   const [paymentDone, setPaymentDone] = useState(false);
   const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [transactionId, setTransactionId] = useState("");
   const [uploading, setUploading] = useState(false);
   
   const totalAmount = books.reduce((acc, book) => acc + ((book.mrp || 428) * (quantities[book.id] || 1)), 0);
@@ -63,6 +64,10 @@ export function CheckoutPage() {
       alert("Please upload your payment screenshot to proceed.");
       return;
     }
+    if (!transactionId.trim()) {
+      alert("Please enter your UPI/Bank Transaction ID.");
+      return;
+    }
 
     setUploading(true);
     try {
@@ -80,6 +85,7 @@ export function CheckoutPage() {
       formData.append("address", `${form.address}, ${form.city}, ${form.state} - ${form.pincode}`);
       formData.append("items", JSON.stringify(itemsPayload));
       formData.append("paymentScreenshot", paymentFile);
+      formData.append("transactionId", transactionId.trim());
 
       await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/orders`, formData, {
         headers: { 
@@ -115,8 +121,8 @@ export function CheckoutPage() {
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem" }}>Order Placed Successfully!</h2>
             <p style={{ fontSize: 16, color: "#6b6b80", marginBottom: "2rem" }}>Your order has been sent to the respective authors. Please contact them below to arrange payment and shipping.</p>
             
-            <div style={{ marginBottom: "2.5rem", textAlign: "left" }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem", borderBottom: "1px solid rgba(0,0,0,0.1)", paddingBottom: "0.5rem" }}>Contact The Authors</h3>
+          <div style={{ marginBottom: "2.5rem", textAlign: "left" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem", borderBottom: "1px solid rgba(0,0,0,0.1)", paddingBottom: "0.5rem" }}>Contact & Pay The Authors</h3>
               <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
                 {authors.map((author: any) => (
                   <div key={author.id} style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 12, padding: "1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
@@ -130,6 +136,18 @@ export function CheckoutPage() {
                       </div>
                     </div>
                     
+                    {/* Author QR Code for payment */}
+                    {author.qrCodeUrl && (
+                      <div style={{ textAlign: "center", background: "#f8f8fc", borderRadius: 10, padding: "1rem", border: "1px solid rgba(0,0,0,0.06)" }}>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: "#6b6b80", marginBottom: "0.5rem" }}>Scan to Pay {author.name}</p>
+                        <img
+                          src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${author.qrCodeUrl}`}
+                          alt={`${author.name} Payment QR`}
+                          style={{ width: 130, height: 130, objectFit: "contain", margin: "0 auto", display: "block", borderRadius: 8 }}
+                        />
+                      </div>
+                    )}
+
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
                       {author.whatsapp && (
                         <a href={`https://wa.me/${author.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#16a34a", textDecoration: "none", fontSize: 14, fontWeight: 600, background: "#f0fdf4", padding: "0.5rem 1rem", borderRadius: 8 }}>
@@ -231,18 +249,38 @@ export function CheckoutPage() {
                 <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: "#1a1a2e", marginBottom: "1.25rem" }}>Payment Details</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                   <div style={{ background: "#f0f0f4", borderRadius: 12, padding: "1.5rem", textAlign: "center", border: "1px solid rgba(0,0,0,0.05)" }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.75rem" }}>Scan QR to Pay ₹{totalAmount}</p>
-                    <div style={{ width: 160, height: 160, background: "#fff", margin: "0 auto", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(0,0,0,0.1)", overflow: "hidden" }}>
-                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=puneauthors@upi&pn=PuneAuthors&am=${totalAmount}.00&cu=INR`} alt="UPI QR" style={{ width: "90%", height: "90%" }} />
-                    </div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.75rem" }}>Scan Author's QR to Pay ₹{totalAmount}</p>
+                    {books.length > 0 && books[0].author?.qrCodeUrl ? (
+                      <img
+                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${books[0].author.qrCodeUrl}`}
+                        alt="Author Payment QR"
+                        style={{ width: 160, height: 160, objectFit: "contain", margin: "0 auto", display: "block", borderRadius: 10, border: "2px solid rgba(0,0,0,0.08)" }}
+                      />
+                    ) : (
+                      <div style={{ width: 160, height: 160, background: "#fff", margin: "0 auto", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(0,0,0,0.1)", overflow: "hidden" }}>
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=puneauthors@upi&pn=PuneAuthors&am=${totalAmount}.00&cu=INR`} alt="UPI QR" style={{ width: "90%", height: "90%" }} />
+                      </div>
+                    )}
+                    <p style={{ fontSize: 11, color: "#9ca3af", marginTop: "0.5rem" }}>Pay directly to the author using their UPI QR</p>
                   </div>
                   
                   <div style={{ background: "#fff", borderRadius: 12, padding: "1.5rem", display: "flex", flexDirection: "column", justifyContent: "center", border: "1px dashed rgba(0,0,0,0.2)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
                       <CreditCard size={18} color="#2563eb" />
-                      <label style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e" }}>Upload Screenshot</label>
+                      <label style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e" }}>Transaction ID *</label>
                     </div>
-                    <p style={{ fontSize: 12, color: "#6b6b80", marginBottom: "1rem" }}>Please upload proof of your ₹{totalAmount} transaction to confirm your order.</p>
+                    <input
+                      type="text"
+                      placeholder="Enter your UPI/Bank Transaction ID"
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      style={{ width: "100%", padding: "0.6rem 0.85rem", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, fontFamily: "var(--font-body)", fontSize: 14, background: "#f7f7f9", outline: "none", boxSizing: "border-box", marginBottom: "1rem" }}
+                    />
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                      <CreditCard size={18} color="#2563eb" />
+                      <label style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e" }}>Upload Screenshot *</label>
+                    </div>
+                    <p style={{ fontSize: 12, color: "#6b6b80", marginBottom: "1rem" }}>Upload proof of your ₹{totalAmount} payment.</p>
                     <input 
                       type="file" 
                       accept="image/*"

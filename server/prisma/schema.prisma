@@ -17,6 +17,7 @@ model User {
   address   String?
   interests String?
   phone     String?
+  queries   Query[]
 }
 
 model Author {
@@ -33,11 +34,28 @@ model Author {
   createdAt          DateTime            @default(now())
   whatsapp           String?
   extraData          Json?
+  qrCodeUrl          String?
   books              Book[]
   eventRegistrations EventRegistration[]
   formResponses      FormResponse[]
   eventAuthors       EventAuthor[]
   eventBooks         EventBook[]
+  queries            Query[]
+}
+
+model Query {
+  id          Int      @id @default(autoincrement())
+  authorId    Int?
+  userId      Int?
+  subject     String
+  message     String
+  status      String   @default("Pending") // Pending, Answered
+  reply       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  author      Author?   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Book {
@@ -71,6 +89,7 @@ model Order {
   address           String?
   amount            Float
   paymentScreenshot String?
+  transactionId     String?
   createdAt         DateTime    @default(now())
   status            String      @default("Pending Verification")
   items             OrderItem[]
@@ -83,9 +102,10 @@ model OrderItem {
   quantity       Int      @default(1)
   status         String   @default("Pending Verification")
   createdAt      DateTime @default(now())
-  trackingNumber String?
-  book           Book     @relation(fields: [bookId], references: [id])
-  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  trackingNumber  String?
+  rejectionReason String?
+  book            Book     @relation(fields: [bookId], references: [id])
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model ContactInquiry {
@@ -109,6 +129,18 @@ model GalleryEvent {
   description String
   photoUrl    String
   createdAt   DateTime @default(now())
+  images      GalleryImage[]
+}
+
+model GalleryImage {
+  id              Int      @id @default(autoincrement())
+  galleryEventId  Int
+  url             String
+  caption         String?
+  dateTaken       DateTime?
+  createdAt       DateTime @default(now())
+  
+  galleryEvent    GalleryEvent @relation(fields: [galleryEventId], references: [id], onDelete: Cascade)
 }
 
 model Activity {
@@ -167,14 +199,18 @@ model BookReview {
 }
 
 model Event {
-  id              Int           @id @default(autoincrement())
-  name            String
-  location        String
-  date            String
-  duration        String
-  status          String        @default("Upcoming") // Upcoming, Ongoing, Past
-  createdAt       DateTime      @default(now())
-  broadcastStatus String        @default("None")     // None, AuthorsOnly, CustomersAlso
+  id                Int           @id @default(autoincrement())
+  name              String
+  location          String
+  date              String
+  duration          String
+  description       String?
+  brochureUrl       String?
+  status            String        @default("Upcoming") // Upcoming, Ongoing, Past
+  commissionPercent Float?
+  commissionFlat    Float?
+  createdAt         DateTime      @default(now())
+  broadcastStatus   String        @default("None")     // None, AuthorsOnly, CustomersAlso
   
   eventAuthors    EventAuthor[]
   eventBooks      EventBook[]

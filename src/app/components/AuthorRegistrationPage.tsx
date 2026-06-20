@@ -538,11 +538,11 @@ export function AuthorRegistrationPage() {
             {step === 2 && (
               <div>
                 <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.3rem" }}>Application Fee Payment</h2>
-                <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>A one-time registration fee of ₹500 secures your PAA membership and editorial review.</p>
+                <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>A one-time registration fee of ₹1000 secures your PAA membership and editorial review.</p>
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "1.5rem" }}>
                   <img src={qrCode} alt="Payment QR" style={{ width: 200, height: 200, borderRadius: 12, border: "2px solid #e5e7eb" }} />
-                  <p style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e", marginTop: "0.5rem" }}>Scan QR to Pay ₹500</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e", marginTop: "0.5rem" }}>Scan QR to Pay ₹1000</p>
                 </div>
 
                 <div style={{ display: "grid", gap: "1rem" }}>
@@ -586,7 +586,7 @@ export function AuthorRegistrationPage() {
                 </div>
 
                 <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "1rem", marginTop: "1rem", fontSize: 12, color: "#166534" }}>
-                  <strong>Application Fee:</strong> ₹500 (one-time minimum fee)<br />
+                  <strong>Application Fee:</strong> ₹1000 (one-time minimum fee)<br />
                   Your application will be reviewed within 5-7 business days. You will be notified via email once approved.
                 </div>
               </div>
@@ -754,7 +754,7 @@ export function AuthorRegistrationPage() {
                 { label: "Author Name", value: form.name || "—" },
                 { label: "Book Title(s)", value: [...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "—" },
                 { label: "Genre", value: Array.from(new Set([...books.map(b => b.genre), form.genre].filter(Boolean))).join(", ") || "—" },
-                { label: "Fee Paid", value: "₹500" },
+                { label: "Fee Paid", value: "₹1000" },
                 { label: "Status", value: "Pending Review" },
               ].map((item) => (
                 <div key={item.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "0.35rem 0", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>

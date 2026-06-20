@@ -40,6 +40,13 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
         navigate(`/login?role=${roleSelection}`);
       } else {
         const res = await axios.post(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/auth/login`, { email, password });
+        
+        if (res.data.role !== "ADMIN" && res.data.role !== roleSelection) {
+          alert(`Error: Invalid credentials for ${roleSelection} login. This account belongs to a ${res.data.role}.`);
+          setLoading(false);
+          return;
+        }
+
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("userRole", res.data.role);
         

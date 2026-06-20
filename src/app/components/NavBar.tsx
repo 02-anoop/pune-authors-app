@@ -176,7 +176,6 @@ export function NavBar() {
         </div>
       </div>
 
-      {/* Mobile Nav */}
       {menuOpen && (
         <div style={{ position: "absolute", top: 72, left: 0, right: 0, background: "#fff", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "1rem", boxShadow: "0 10px 25px rgba(0,0,0,0.05)" }}>
           {navLinks.map((link) => (
@@ -195,14 +194,32 @@ export function NavBar() {
             </Link>
           ))}
           <div style={{ height: 1, background: "rgba(0,0,0,0.06)", margin: "0.5rem 0" }} />
-          {!token && (
+          
+          {token ? (
             <Link
-              to="/register"
+              to={userRole === "ADMIN" ? "/operations" : userRole === "AUTHOR" ? "/dashboard" : "/profile"}
               onClick={() => setMenuOpen(false)}
-              style={{ padding: "0.8rem", borderRadius: 4, textAlign: "center", fontFamily: "var(--font-body)", fontSize: 14, fontWeight: 600, color: "#fff", background: "#b44d28", textDecoration: "none" }}
+              style={{ padding: "0.8rem", borderRadius: 4, textAlign: "center", fontFamily: "var(--font-body)", fontSize: 14, fontWeight: 600, color: "#1a1a2e", background: "#f0f0f4", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
             >
-              Join as Author
+              <User size={16} /> My Profile
             </Link>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <Link
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                style={{ padding: "0.8rem", borderRadius: 4, textAlign: "center", fontFamily: "var(--font-body)", fontSize: 14, fontWeight: 600, color: "#1a1a2e", background: "#f0f0f4", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+              >
+                <User size={16} /> Login
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMenuOpen(false)}
+                style={{ padding: "0.8rem", borderRadius: 4, textAlign: "center", fontFamily: "var(--font-body)", fontSize: 14, fontWeight: 600, color: "#fff", background: "#b44d28", textDecoration: "none" }}
+              >
+                Join as Author
+              </Link>
+            </div>
           )}
         </div>
       )}

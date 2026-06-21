@@ -22,36 +22,47 @@ import { BookDetailPage } from "./components/BookDetailPage";
 
 {/* MARKER-MAKE-KIT-INVOKED */}
 
+import { useLocation } from "react-router";
+
+function AppContent() {
+  const location = useLocation();
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/operations');
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "var(--font-body)" }}>
+      {!isDashboard && <NavBar />}
+      <div style={{ flex: 1 }}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/catalogue" element={<CataloguePage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/register" element={<AuthorRegistrationPage />} />
+          <Route path="/login" element={<AuthPage type="login" />} />
+          <Route path="/signup" element={<AuthPage type="signup" />} />
+          <Route path="/dashboard/*" element={<AuthorDashboardPage />} />
+          <Route path="/operations/*" element={<OperationsDashboardPage />} />
+          <Route path="/profile" element={<CustomerProfilePage />} />
+          <Route path="/book-cafe" element={<GoaCafePage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:eventId/catalogue" element={<EventCataloguePage />} />
+          <Route path="/gallery" element={<EventLogPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/book/:id" element={<BookDetailPage />} />
+        </Routes>
+      </div>
+      {!isDashboard && <Footer />}
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Toaster richColors position="top-right" />
       <ScrollToTop />
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "var(--font-body)" }}>
-        <NavBar />
-        <div style={{ flex: 1 }}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/catalogue" element={<CataloguePage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/register" element={<AuthorRegistrationPage />} />
-            <Route path="/login" element={<AuthPage type="login" />} />
-            <Route path="/signup" element={<AuthPage type="signup" />} />
-            <Route path="/dashboard/*" element={<AuthorDashboardPage />} />
-            <Route path="/operations" element={<OperationsDashboardPage />} />
-            <Route path="/profile" element={<CustomerProfilePage />} />
-            <Route path="/book-cafe" element={<GoaCafePage />} />
-            <Route path="/events" element={<EventsPage />} />
-            <Route path="/events/:eventId/catalogue" element={<EventCataloguePage />} />
-            <Route path="/gallery" element={<EventLogPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/book/:id" element={<BookDetailPage />} />
-          </Routes>
-        </div>
-        <Footer />
-      </div>
+      <AppContent />
     </BrowserRouter>
   );
 }

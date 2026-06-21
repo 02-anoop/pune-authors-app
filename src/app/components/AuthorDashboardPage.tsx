@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Loader2, LogOut } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Loader2, LogOut, User, Bell } from 'lucide-react';
 import { X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { bookCategories } from '../data/categories';
+import qrCode from './data/qr_code.jpeg';
+import { LivePosDashboard } from './LivePosDashboard';
 
 export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -17,9 +19,13 @@ export function AuthorDashboardPage() {
   const [reapplyForm, setReapplyForm] = useState({ name: '', phone: '', bio: '', whatsapp: '', transactionId: '' });
   const [isSubmittingReapply, setIsSubmittingReapply] = useState(false);
   const [buttonStates, setButtonStates] = useState<{[key: string]: boolean}>({});
+  const [showNotifications, setShowNotifications] = useState(false);
   const prevQueryAnsCountRef = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const unreadEventInvites = dashboardData?.eventInvites?.filter((inv: any) => inv.optInStatus === 'Pending') || [];
+  const hasUnreadInvites = unreadEventInvites.length > 0;
 
 
   const fetchQueriesAlert = async () => {
@@ -82,15 +88,15 @@ export function AuthorDashboardPage() {
 
   if (loading || !dashboardData) {
     return (
-      <div className="min-h-screen bg-paa-cream p-6">
+      <div className="min-h-screen bg-paa-cream animate-fade-in-up p-6">
         <div className="max-w-7xl mx-auto space-y-6">
-           <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
+           <div className="h-12 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <div className="h-32 bg-gray-200 animate-pulse rounded"></div>
-             <div className="h-32 bg-gray-200 animate-pulse rounded"></div>
-             <div className="h-32 bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+             <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+             <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
            </div>
-           <div className="h-64 bg-gray-200 animate-pulse rounded"></div>
+           <div className="h-64 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
         </div>
       </div>
     );
@@ -116,8 +122,8 @@ export function AuthorDashboardPage() {
 
   if (status === 'Approved' && missingFields.length > 0) {
     return (
-      <div className="min-h-screen bg-paa-cream font-sans flex items-center justify-center p-6">
-        <div className="bg-white max-w-lg w-full p-8 rounded border border-paa-navy/10 shadow-sm">
+      <div className="min-h-screen bg-paa-cream animate-fade-in-up font-sans flex items-center justify-center p-6">
+        <div className="bg-white max-w-lg w-full p-8 rounded-2xl-2xl border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
           <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Action Required</h2>
           <p className="text-sm text-gray-600 mb-6">The administration requires some additional information to complete your profile setup. Please fill out the following fields to proceed to your dashboard.</p>
           <div className="space-y-4 mb-6">
@@ -134,7 +140,7 @@ export function AuthorDashboardPage() {
               </div>
             ))}
           </div>
-          <button onClick={handleSaveExtraData} disabled={buttonStates.saveExtra} className="w-full py-3 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50">{buttonStates.saveExtra ? 'Saving...' : 'Save & Continue'}</button>
+          <button onClick={handleSaveExtraData} disabled={buttonStates.saveExtra} className="w-full py-3 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 active:scale-95 transition-all duration-300">{buttonStates.saveExtra ? 'Saving...' : 'Save & Continue'}</button>
         </div>
       </div>
     );
@@ -142,14 +148,14 @@ export function AuthorDashboardPage() {
 
   if (status === 'Pending' || status === 'Rejected') {
     return (
-      <div className="min-h-screen bg-paa-cream font-sans flex items-center justify-center p-6">
-        <div className="bg-white max-w-2xl w-full p-8 rounded-lg shadow border border-paa-navy/10">
+      <div className="min-h-screen bg-paa-cream animate-fade-in-up font-sans flex items-center justify-center p-6">
+        <div className="bg-white max-w-2xl w-full p-8 rounded-lg shadow border border-paa-navy/5">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-serif text-paa-navy">Author Application Status</h1>
-            <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold uppercase"><LogOut size={16}/> Logout</button>
+            <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold uppercase active:scale-95 transition-all duration-300"><LogOut size={16}/> Logout</button>
           </div>
           
-          <div className={`p-4 mb-8 rounded border ${status === 'Pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+          <div className={`p-4 mb-8 rounded-2xl-2xl border ${status === 'Pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
             <h2 className="text-xl font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
               {status === 'Pending' ? <AlertCircle size={20} /> : <AlertCircle size={20} />}
               Status: {status}
@@ -159,9 +165,9 @@ export function AuthorDashboardPage() {
             ) : (
               <div>
                 <p className="text-sm mb-2">Unfortunately, your author application has been rejected.</p>
-                {rejectionReason && <p className="text-sm font-bold bg-white p-3 rounded border border-red-100">Reason: {rejectionReason}</p>}
+                {rejectionReason && <p className="text-sm font-bold bg-white p-3 rounded-2xl-2xl border border-red-100">Reason: {rejectionReason}</p>}
                 {!showReapply && (
-                  <button onClick={() => setShowReapply(true)} className="mt-4 bg-paa-navy text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">
+                  <button onClick={() => setShowReapply(true)} className="mt-4 bg-paa-navy text-white px-4 py-2 rounded-2xl-2xl text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">
                     Reapply with Correct Details
                   </button>
                 )}
@@ -170,28 +176,28 @@ export function AuthorDashboardPage() {
           </div>
 
           {showReapply ? (
-            <div className="mb-8 p-4 border border-paa-navy/20 rounded bg-gray-50">
+            <div className="mb-8 p-4 border border-paa-navy/20 rounded-2xl-2xl bg-gray-50">
               <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Update Your Details</h3>
               <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Name</label>
-                  <input className="w-full border p-2 rounded" value={reapplyForm.name} onChange={e => setReapplyForm({...reapplyForm, name: e.target.value})} />
+                  <input className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.name} onChange={e => setReapplyForm({...reapplyForm, name: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
-                  <input className="w-full border p-2 rounded" value={reapplyForm.phone} onChange={e => setReapplyForm({...reapplyForm, phone: e.target.value})} />
+                  <input className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.phone} onChange={e => setReapplyForm({...reapplyForm, phone: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
-                  <input className="w-full border p-2 rounded" value={reapplyForm.whatsapp} onChange={e => setReapplyForm({...reapplyForm, whatsapp: e.target.value})} />
+                  <input className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.whatsapp} onChange={e => setReapplyForm({...reapplyForm, whatsapp: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Transaction ID</label>
-                  <input className="w-full border p-2 rounded" value={reapplyForm.transactionId} onChange={e => setReapplyForm({...reapplyForm, transactionId: e.target.value})} />
+                  <input className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.transactionId} onChange={e => setReapplyForm({...reapplyForm, transactionId: e.target.value})} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Bio</label>
-                  <textarea rows={3} className="w-full border p-2 rounded" value={reapplyForm.bio} onChange={e => setReapplyForm({...reapplyForm, bio: e.target.value})} />
+                  <textarea rows={3} className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.bio} onChange={e => setReapplyForm({...reapplyForm, bio: e.target.value})} />
                 </div>
               </div>
               <div className="flex gap-2 justify-end">
@@ -211,7 +217,7 @@ export function AuthorDashboardPage() {
                       setIsSubmittingReapply(false);
                     }
                   }} 
-                  className="bg-paa-navy text-white px-4 py-2 rounded text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50"
+                  className="bg-paa-navy text-white px-4 py-2 rounded-2xl-2xl text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50"
                 >
                   {isSubmittingReapply ? 'Submitting...' : 'Submit Reapplication'}
                 </button>
@@ -229,7 +235,7 @@ export function AuthorDashboardPage() {
               
               <div className="mb-4">
                 <span className="text-gray-500 block text-xs uppercase font-bold mb-1">Bio</span>
-                <p className="text-sm bg-gray-50 p-3 rounded">{bio}</p>
+                <p className="text-sm bg-gray-50 p-3 rounded-2xl-2xl">{bio}</p>
               </div>
               {extraData && Object.keys(extraData).length > 0 && (
                 <div className="mt-4">
@@ -248,13 +254,13 @@ export function AuthorDashboardPage() {
             {photoUrl && (
               <div>
                 <span className="text-gray-500 block text-xs uppercase font-bold mb-2">Profile Photo</span>
-                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${photoUrl}`} alt="Profile" className="w-24 h-24 object-cover rounded shadow" />
+                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${photoUrl}`} alt="Profile" className="w-24 h-24 object-cover rounded-2xl-2xl shadow" />
               </div>
             )}
             {paymentScreenshot && (
               <div>
                 <span className="text-gray-500 block text-xs uppercase font-bold mb-2">Payment Screenshot</span>
-                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${paymentScreenshot}`} alt="Payment" className="w-full max-w-xs object-contain border rounded shadow-sm" />
+                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${paymentScreenshot}`} alt="Payment" className="w-full max-w-xs object-contain border rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300" />
               </div>
             )}
           </div>
@@ -278,8 +284,8 @@ export function AuthorDashboardPage() {
          </div>
       )}
 
-    <div className="min-h-screen bg-paa-cream font-sans">
-      <div className="bg-white border-b border-paa-navy/10 shadow-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-paa-cream animate-fade-in-up font-sans">
+      <div className="bg-white border-b border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-3 flex gap-6 text-xs font-bold tracking-widest uppercase overflow-x-auto hide-scrollbar items-center">
           <Link to="/dashboard" className={`${location.pathname === '/dashboard' ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Overview</Link>
           <Link to="/dashboard/catalogue" className={`${location.pathname.includes('/catalogue') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Catalogue Books</Link>
@@ -287,7 +293,31 @@ export function AuthorDashboardPage() {
           <Link to="/dashboard/inventory" className={`${location.pathname.includes('/inventory') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Inventory</Link>
           <Link to="/dashboard/distribution" className={`${location.pathname.includes('/distribution') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Distribution</Link>
           <Link to="/dashboard/events" className={`${location.pathname.includes('/events') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Events</Link>
-          <button onClick={handleLogout} className="ml-auto flex items-center gap-1 text-red-600 hover:text-red-700 pb-1 transition-colors whitespace-nowrap"><LogOut size={14}/> Logout</button>
+          <div className="ml-auto flex items-center gap-4 relative">
+             <button onClick={() => setShowNotifications(!showNotifications)} className="relative text-gray-500 hover:text-paa-navy pb-1 transition-colors">
+                <Bell size={18} />
+                {hasUnreadInvites && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+             </button>
+             {showNotifications && (
+                <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-paa-navy/5 shadow-lg z-50 rounded-2xl-2xl text-sm normal-case tracking-normal">
+                   <div className="p-3 border-b bg-gray-50 font-bold uppercase tracking-widest text-xs text-paa-navy">Notifications</div>
+                   <div className="max-h-64 overflow-y-auto">
+                      {hasUnreadInvites ? unreadEventInvites.map((inv: any) => (
+                         <button key={inv.id} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} className="w-full text-left p-3 hover:bg-gray-50 border-b flex items-start gap-2 transition-colors">
+                            <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 shrink-0"></div>
+                            <div>
+                               <p className="font-bold text-paa-navy">New Event: {inv.event.name}</p>
+                               <p className="text-xs text-gray-500">You are invited to participate!</p>
+                            </div>
+                         </button>
+                      )) : (
+                         <div className="p-4 text-center text-gray-500 text-xs italic">No new notifications.</div>
+                      )}
+                   </div>
+                </div>
+             )}
+             <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 pb-1 transition-colors whitespace-nowrap active:scale-95 transition-all duration-300"><LogOut size={14}/> Logout</button>
+          </div>
         </div>
       </div>
 
@@ -301,6 +331,7 @@ export function AuthorDashboardPage() {
           <Route path="/distribution" element={<DistributionRecord books={dashboardData.authorProfile.books} orders={dashboardData.authorOrders} authorName={dashboardData.authorProfile.name} />} />
           <Route path="/book-fair" element={<BookFairDashboard registrations={dashboardData.authorProfile.eventRegistrations} books={dashboardData.authorProfile.books} />} />
           <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
+          <Route path="/pos/:eventId" element={<LivePosDashboard />} />
         </Routes>
       </div>
     </div>
@@ -449,7 +480,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       <div className="flex justify-between items-center mb-8 flex-wrap gap-3">
         <h1 className="text-4xl font-serif text-paa-navy">Author Dashboard</h1>
         <div className="flex gap-2">
-          <button onClick={handleEditProfileOpen} className="bg-white border border-paa-navy text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-white transition-colors">
+          <button onClick={handleEditProfileOpen} className="bg-white border border-paa-navy text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-white transition-colors active:scale-95 transition-all duration-300">
             âœŽ Edit My Profile
           </button>
           <button onClick={() => setShowAddBook(true)} className="bg-paa-gold text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-paa-gold transition-colors">
@@ -459,7 +490,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       </div>
 
       {showEditProfile && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-paa-navy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Edit My Profile</h2>
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
@@ -483,7 +514,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
               </div>
               <div className="flex justify-end gap-2 mt-2">
                 <button type="button" onClick={() => setShowEditProfile(false)} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
-                <button type="submit" disabled={buttonStates.editProfile} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save Changes'}</button>
+                <button type="submit" disabled={buttonStates.editProfile} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold disabled:opacity-50 active:scale-95 transition-all duration-300">{buttonStates.editProfile ? 'Saving...' : 'Save Changes'}</button>
               </div>
             </form>
           </div>
@@ -491,7 +522,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       )}
 
       {editCoverBookId !== null && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-paa-navy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white p-6 max-w-sm w-full">
             <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Update Book Cover</h2>
             <div className="flex flex-col gap-4">
@@ -506,7 +537,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       )}
       
       {showAddBook && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-paa-navy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white p-6 max-w-md w-full">
             <h2 className="text-xl font-serif text-paa-navy mb-4">Add New Title</h2>
             <form onSubmit={handleAddBook} className="flex flex-col gap-4">
@@ -547,7 +578,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
                     form.reportValidity();
                   }
                 }} className="bg-gray-200 text-paa-navy border border-paa-navy/20 px-4 py-2 text-sm font-bold uppercase tracking-widest hover:bg-gray-300 transition-colors">Save & Add Another</button>
-                <button type="submit" disabled={buttonStates.addBook} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
+                <button type="submit" disabled={buttonStates.addBook} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 active:scale-95 transition-all duration-300">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
               </div>
             </form>
           </div>
@@ -555,7 +586,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       )}
 
       <div className="mb-6 flex flex-col md:flex-row gap-6">
-        <div className="flex items-center gap-4 bg-white p-4 border border-paa-navy/10 rounded grow">
+        <div className="flex items-center gap-4 bg-white p-4 border border-paa-navy/5 rounded-2xl-2xl grow">
            <span className="text-sm font-bold tracking-widest uppercase text-paa-navy">Filter Titles:</span>
            <select className="border p-2 text-sm outline-none" value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">All Genres</option>
@@ -567,22 +598,22 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
         </div>
 
         <div className="flex gap-4">
-          <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded flex flex-col justify-center w-48">
+          <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded-2xl-2xl flex flex-col justify-center w-48">
             <div className="text-xs font-bold tracking-widest text-[#16a34a] uppercase mb-1">Gross Sales</div>
             <div className="text-2xl font-serif text-[#14532d]">â‚¹{grossSales.toFixed(2)}</div>
           </div>
-          <div className="bg-[#eff6ff] border border-[#bfdbfe] p-4 rounded flex flex-col justify-center w-48">
+          <div className="bg-[#eff6ff] border border-[#bfdbfe] p-4 rounded-2xl-2xl flex flex-col justify-center w-48">
             <div className="text-xs font-bold tracking-widest text-[#2563eb] uppercase mb-1">Net Earnings (70%)</div>
             <div className="text-2xl font-serif text-[#1e3a8a]">â‚¹{netEarnings.toFixed(2)}</div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white border border-paa-navy/10 overflow-hidden mb-12">
-        <h2 className="text-sm font-bold tracking-widest uppercase bg-[#5bc0de] text-white p-4">Your Titles Information</h2>
+      <div className="bg-white border border-paa-navy/5 overflow-hidden mb-12">
+        <h2 className="text-sm font-bold tracking-widest uppercase bg-[#4a90e2] text-white p-4">Your Titles Information</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#b3d4ff] text-paa-navy">
+            <thead className="bg-[#eef2f6] text-paa-navy">
               <tr>
                 <th className="p-3 border-r border-[#8faadc]">S.No</th>
                 <th className="p-3 border-r border-[#8faadc]">Cover</th>
@@ -602,13 +633,13 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
                   <td className="p-3 border-r border-paa-navy/5 text-center">{row.sno}</td>
                   <td className="p-3 border-r border-paa-navy/5">
                     {authorBooks.find((b: any) => b.id === row.id)?.coverUrl
-                      ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-10 h-14 object-cover rounded shadow" />
-                      : <div className="w-10 h-14 bg-gray-100 flex items-center justify-center text-gray-400 text-xs rounded border">No Cover</div>
+                      ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-10 h-14 object-cover rounded-2xl-2xl shadow" />
+                      : <div className="w-10 h-14 bg-gray-100 flex items-center justify-center text-gray-400 text-xs rounded-2xl-2xl border">No Cover</div>
                     }
                   </td>
                   <td className="p-3 border-r border-paa-navy/5 font-medium">{row.title}</td>
                   <td className="p-3 border-r border-paa-navy/5">
-                    <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded ${row.status === 'Approved' ? 'bg-green-100 text-green-800' : row.status === 'Rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{row.status}</span>
+                    <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-2xl-2xl ${row.status === 'Approved' ? 'bg-green-100 text-green-800' : row.status === 'Rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{row.status}</span>
                     {row.status === 'Rejected' && row.rejectionReason && (
                        <div className="mt-1 text-xs text-red-600 font-medium">Reason: {row.rejectionReason}</div>
                     )}
@@ -619,7 +650,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
                   <td className="p-3 border-r border-paa-navy/5 font-bold bg-yellow-50">{row.stock}</td>
                   <td className="p-3 border-r border-paa-navy/5 font-bold text-paa-navy">{row.sold}</td>
                   <td className="p-3 text-center">
-                    <button onClick={() => { setEditCoverBookId(row.id); setNewCoverFile(null); }} className="bg-[#5bc0de] text-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest hover:bg-paa-navy transition-colors rounded">
+                    <button onClick={() => { setEditCoverBookId(row.id); setNewCoverFile(null); }} className="bg-[#4a90e2] text-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest hover:bg-paa-navy transition-colors rounded-2xl-2xl">
                       Change Cover
                     </button>
                   </td>
@@ -631,7 +662,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8 mb-12">
-         <div className="bg-white p-6 border border-paa-navy/10 rounded">
+         <div className="bg-white p-6 border border-paa-navy/5 rounded-2xl-2xl">
             <h3 className="text-lg font-serif text-paa-navy mb-6">Books Sold per Title</h3>
             <div className="h-[300px]">
                <ResponsiveContainer width="100%" height="100%">
@@ -645,7 +676,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
                </ResponsiveContainer>
             </div>
          </div>
-         <div className="bg-white p-6 border border-paa-navy/10 rounded">
+         <div className="bg-white p-6 border border-paa-navy/5 rounded-2xl-2xl">
             <h3 className="text-lg font-serif text-paa-navy mb-6">Activity Participation Overview</h3>
             <div className="h-[300px]">
                <ResponsiveContainer width="100%" height="100%">
@@ -692,11 +723,11 @@ function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => vo
     <div>
       <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">INVENTORY DASHBOARD</h1>
       
-      <div className="bg-white border border-paa-navy/10 overflow-hidden mb-12">
-        <h2 className="text-sm font-bold tracking-widest uppercase bg-[#5bc0de] text-white p-4">Update Stock</h2>
+      <div className="bg-white border border-paa-navy/5 overflow-hidden mb-12">
+        <h2 className="text-sm font-bold tracking-widest uppercase bg-[#4a90e2] text-white p-4">Update Stock</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-             <thead className="bg-[#b3d4ff] text-paa-navy uppercase text-xs">
+             <thead className="bg-[#eef2f6] text-paa-navy uppercase text-xs">
                 <tr>
                    <th className="p-3 border-r border-[#8faadc]">S.No</th>
                    <th className="p-3 border-r border-[#8faadc]">Title</th>
@@ -714,11 +745,11 @@ function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => vo
                     <td className="p-3 border-r border-paa-navy/5 text-center font-bold text-lg">{item.stock}</td>
                     <td className="p-3 border-r border-paa-navy/5 text-center">
                        {item.stock < 10 ? (
-                         <span className="inline-flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">
+                         <span className="inline-flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-2xl-2xl text-xs font-bold">
                            <AlertCircle className="w-3 h-3" /> LOW STOCK
                          </span>
                        ) : (
-                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">OK</span>
+                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded-2xl-2xl text-xs font-bold">OK</span>
                        )}
                     </td>
                     <td className="p-3 border-r border-paa-navy/5">
@@ -748,7 +779,7 @@ function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => vo
       </div>
       
       <div className="grid md:grid-cols-2 gap-8">
-         <div className="bg-white p-6 border border-paa-navy/10">
+         <div className="bg-white p-6 border border-paa-navy/5">
             <h3 className="text-xl font-serif text-paa-navy mb-4">Stock Distribution</h3>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -772,9 +803,9 @@ function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => vo
               </ResponsiveContainer>
             </div>
          </div>
-         <div className="bg-white p-6 border border-paa-navy/10 flex flex-col justify-center">
+         <div className="bg-white p-6 border border-paa-navy/5 flex flex-col justify-center">
              <div className="flex items-center gap-4 mb-4">
-                 <div className="w-16 h-16 bg-red-100 text-red-800 rounded flex items-center justify-center font-bold text-2xl">
+                 <div className="w-16 h-16 bg-red-100 text-red-800 rounded-2xl-2xl flex items-center justify-center font-bold text-2xl">
                     {books.filter(i => i.stock < 10).length}
                  </div>
                  <div>
@@ -784,7 +815,7 @@ function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => vo
              </div>
              
              <div className="flex items-center gap-4">
-                 <div className="w-16 h-16 bg-[#b3d4ff] text-paa-navy rounded flex items-center justify-center font-bold text-2xl">
+                 <div className="w-16 h-16 bg-[#eef2f6] text-paa-navy rounded-2xl-2xl flex items-center justify-center font-bold text-2xl">
                     {books.reduce((acc, curr) => acc + curr.stock, 0)}
                  </div>
                  <div>
@@ -869,10 +900,10 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
   return (
     <div>
       <h1 className="text-4xl font-serif text-paa-navy mb-8">Activity Announcements</h1>
-      <div className="bg-white border border-paa-navy/10 overflow-hidden relative">
+      <div className="bg-white border border-paa-navy/5 overflow-hidden relative">
         {showDialog && (
            <div className="fixed inset-0 bg-paa-navy/80 z-50 flex items-center justify-center p-4">
-              <div className="bg-white max-w-md w-full p-6 rounded shadow-xl max-h-[90vh] overflow-y-auto">
+              <div className="bg-white max-w-md w-full p-6 rounded-2xl-2xl shadow-xl max-h-[90vh] overflow-y-auto">
                  <h3 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Register for {selectedAct?.name}</h3>
                  
                  <div className="mb-4">
@@ -916,7 +947,7 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
 
                  <div className="flex justify-end gap-4">
                     <button onClick={() => setShowDialog(false)} className="text-sm font-bold text-gray-500 hover:text-paa-navy">Cancel</button>
-                    <button onClick={confirmParticipation} disabled={isSubmitting} className="bg-paa-gold text-paa-navy px-6 py-2 rounded text-sm font-bold disabled:opacity-50">
+                    <button onClick={confirmParticipation} disabled={isSubmitting} className="bg-paa-gold text-paa-navy px-6 py-2 rounded-2xl-2xl text-sm font-bold disabled:opacity-50 active:scale-95 transition-all duration-300">
                       {isSubmitting ? 'Submitting...' : 'Register & Pay'}
                     </button>
                  </div>
@@ -942,11 +973,11 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
               {activities.length === 0 ? <tr><td colSpan={8} className="p-4 text-center">No activities available.</td></tr> : activities.map((row, index) => {
                 const reg = registrations.find(r => r.activityId === row.id);
                 const isParticipating = !!reg;
-                const statusColor = row.type.includes('Event') ? 'bg-[#5bc0de]' : row.type.includes('Fair') ? 'bg-[#d9534f]' : 'bg-[#5cb85c]';
+                const statusColor = row.type.includes('Event') ? 'bg-[#4a90e2]' : row.type.includes('Fair') ? 'bg-[#e74c3c]' : 'bg-[#43a047]';
 
                 return (
                 <tr key={row.id} className="border-b border-paa-navy/5 even:bg-gray-100">
-                  <td className="p-3 border-r border-paa-navy/5 text-center bg-[#e4ebf5]">{index + 1}</td>
+                  <td className="p-3 border-r border-paa-navy/5 text-center bg-[#f0f4f8]">{index + 1}</td>
                   <td className="p-3 border-r border-paa-navy/5 font-medium">{row.name}</td>
                   <td className="p-3 border-r border-paa-navy/5 text-xs">{row.type}</td>
                   <td className="p-3 border-r border-paa-navy/5">{row.date}</td>
@@ -1273,8 +1304,8 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
     <div>
       {/* Reject Reason Modal */}
       {rejectItemId !== null && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 max-w-md w-full rounded shadow-xl">
+        <div className="fixed inset-0 bg-paa-navy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 max-w-md w-full rounded-2xl-2xl shadow-xl">
             <h2 className="text-xl font-serif text-paa-navy mb-3">Reason for Rejection</h2>
             <p className="text-sm text-gray-500 mb-4">Please provide a reason to inform the customer.</p>
             <textarea
@@ -1286,7 +1317,7 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
             />
             <div className="flex justify-end gap-2">
               <button onClick={() => { setRejectItemId(null); setRejectReason(''); }} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
-              <button onClick={handleRejectSubmit} disabled={!rejectReason.trim() || loadingAction !== null} className="bg-red-600 text-white px-4 py-2 text-sm font-bold rounded disabled:opacity-50">Reject Order</button>
+              <button onClick={handleRejectSubmit} disabled={!rejectReason.trim() || loadingAction !== null} className="bg-red-600 text-white px-4 py-2 text-sm font-bold rounded-2xl-2xl disabled:opacity-50 active:scale-95 transition-all duration-300">Reject Order</button>
             </div>
           </div>
         </div>
@@ -1294,10 +1325,10 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
 
       <h1 className="text-4xl font-serif text-paa-navy mb-4 text-center uppercase">MY WEB ORDERS</h1>
       <p className="text-center text-sm text-gray-500 mb-8">New orders appear here immediately. You must <strong>Approve</strong> or <strong>Reject</strong> each order. Once approved, dispatch the book with a tracking number.</p>
-      <div className="bg-white border border-paa-navy/10 overflow-hidden mb-12">
+      <div className="bg-white border border-paa-navy/5 overflow-hidden mb-12">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-             <thead className="bg-[#b3d4ff] text-paa-navy uppercase text-xs font-bold tracking-widest">
+             <thead className="bg-[#eef2f6] text-paa-navy uppercase text-xs font-bold tracking-widest">
                 <tr>
                    <th className="p-3 border-r border-[#8faadc]">Order ID & Date</th>
                    <th className="p-3 border-r border-[#8faadc]">Buyer Details</th>
@@ -1343,8 +1374,8 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                     </td>
                     <td className="p-3 text-center border-r border-paa-navy/5">
                        <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${
-                         ord.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]'
-                         : ord.status === 'Dispatched' ? 'bg-[#5bc0de] text-white border-[#46b8da]'
+                         ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
+                         : ord.status === 'Dispatched' ? 'bg-[#4a90e2] text-white border-[#46b8da]'
                          : ord.status === 'Accepted' ? 'bg-[#337ab7] text-white border-[#2e6da4]'
                          : ord.status === 'Rejected' ? 'bg-red-100 text-red-800 border-red-200'
                          : 'bg-yellow-100 text-yellow-800 border-yellow-200'
@@ -1362,14 +1393,14 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                           <button
                             onClick={() => handleApprove(ord.id)}
                             disabled={loadingAction === ord.id}
-                            className="bg-[#337ab7] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 w-20"
+                            className="bg-[#337ab7] text-white px-3 py-1 text-xs rounded-2xl-2xl shadow font-bold disabled:opacity-50 w-20"
                           >
                             {loadingAction === ord.id ? '...' : 'APPROVE'}
                           </button>
                           <button
                             onClick={() => { setRejectItemId(ord.id); setRejectReason(''); }}
                             disabled={loadingAction === ord.id}
-                            className="bg-red-500 text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 w-20"
+                            className="bg-red-500 text-white px-3 py-1 text-xs rounded-2xl-2xl shadow font-bold disabled:opacity-50 w-20"
                           >
                             REJECT
                           </button>
@@ -1380,7 +1411,7 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                         <div className="flex flex-col gap-1 items-center mt-1">
                           <button
                             onClick={() => generateAndPrintInvoice(ord.id)}
-                            className="bg-paa-navy text-white px-3 py-1 text-[10px] rounded font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors w-20"
+                            className="bg-paa-navy text-white px-3 py-1 text-[10px] rounded-2xl-2xl font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors w-20"
                             title="Download printable delivery invoice"
                           >
                             📄 Invoice
@@ -1389,7 +1420,7 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                             <button
                               onClick={() => handleDispatch(ord.id)}
                               disabled={loadingAction === ord.id}
-                              className="bg-[#5bc0de] text-white px-3 py-1 text-xs rounded shadow font-bold disabled:opacity-50 w-20"
+                              className="bg-[#4a90e2] text-white px-3 py-1 text-xs rounded-2xl-2xl shadow font-bold disabled:opacity-50 w-20"
                             >
                               DISPATCH
                             </button>
@@ -1451,7 +1482,7 @@ function FormsWrapper() {
       <p className="text-sm mb-4 text-gray-500">Available forms published by administration for you to complete.</p>
 
       {!selectedForm && (
-        <div className="flex gap-4 mb-8 border-b border-paa-navy/10 pb-4 overflow-x-auto">
+        <div className="flex gap-4 mb-8 border-b border-paa-navy/5 pb-4 overflow-x-auto">
           {tabs.map(tab => (
             <button 
               key={tab} 
@@ -1467,7 +1498,7 @@ function FormsWrapper() {
       )}
 
       {selectedForm ? (
-        <div className="bg-white p-6 border border-paa-navy/10 max-w-2xl mx-auto">
+        <div className="bg-white p-6 border border-paa-navy/5 max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-6">
              <h2 className="text-2xl font-bold text-paa-navy">{selectedForm.title}</h2>
              <button onClick={() => setSelectedForm(null)} className="text-sm font-bold uppercase tracking-widest text-paa-gray-text hover:text-paa-navy">Cancel</button>
@@ -1478,18 +1509,18 @@ function FormsWrapper() {
               <div key={i}>
                 <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">{field.name}</label>
                 {field.type === 'textarea' ? (
-                  <textarea name={field.name} required className="w-full p-3 border border-gray-300 rounded focus:border-paa-navy focus:outline-none" rows={4}></textarea>
+                  <textarea name={field.name} required className="w-full p-3 border border-gray-300 rounded-2xl-2xl focus:border-paa-navy focus:outline-none" rows={4}></textarea>
                 ) : field.type === 'select' ? (
-                  <select name={field.name} required className="w-full p-3 border border-gray-300 rounded focus:border-paa-navy focus:outline-none bg-white">
+                  <select name={field.name} required className="w-full p-3 border border-gray-300 rounded-2xl-2xl focus:border-paa-navy focus:outline-none bg-white">
                     <option value="">Select...</option>
                     {field.options?.map((opt: string, j: number) => <option key={j} value={opt}>{opt}</option>)}
                   </select>
                 ) : (
-                  <input type="text" name={field.name} required className="w-full p-3 border border-gray-300 rounded focus:border-paa-navy focus:outline-none" />
+                  <input type="text" name={field.name} required className="w-full p-3 border border-gray-300 rounded-2xl-2xl focus:border-paa-navy focus:outline-none" />
                 )}
               </div>
             ))}
-            <button type="submit" className="w-full bg-paa-navy text-paa-cream font-bold uppercase tracking-widest py-4 hover:bg-paa-gold transition-colors mt-8">
+            <button type="submit" className="w-full bg-paa-navy text-paa-cream font-bold uppercase tracking-widest py-4 hover:bg-paa-gold transition-colors mt-8 active:scale-95 transition-all duration-300">
               Submit Form
             </button>
           </form>
@@ -1497,7 +1528,7 @@ function FormsWrapper() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredForms.map((f: any) => (
-            <div key={f.id} className="bg-white p-6 border border-paa-navy/10 flex flex-col items-start gap-4 hover:shadow-lg transition-shadow">
+            <div key={f.id} className="bg-white p-6 border border-paa-navy/5 flex flex-col items-start gap-4 hover:shadow-lg transition-shadow">
                <h3 className="text-xl font-bold text-paa-navy">{f.title}</h3>
                <p className="text-sm text-gray-500 flex-1">{f.description}</p>
                {f.submitted ? (
@@ -1534,10 +1565,10 @@ function DistributionRecord({ books, orders, authorName }: { books: any[], order
     <div>
       <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">BOOKS DISTRIBUTION RECORD</h1>
       <p className="text-center text-gray-500 mb-8">Data populated upon administrative dispatch</p>
-      <div className="bg-white border border-paa-navy/10 overflow-hidden mb-12">
+      <div className="bg-white border border-paa-navy/5 overflow-hidden mb-12">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-             <thead className="bg-[#5bc0de] text-white uppercase text-xs">
+             <thead className="bg-[#4a90e2] text-white uppercase text-xs">
                 <tr>
                    <th className="p-3 border-r border-white/20">S.No</th>
                    <th className="p-3 border-r border-white/20">TITLE</th>
@@ -1581,7 +1612,7 @@ function BookFairDashboard({ registrations, books }: { registrations: any[], boo
       <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">BOOK FAIR DASHBOARD</h1>
       
       {fairRegs.length === 0 ? (
-        <div className="bg-white border text-sm border-paa-navy/10 overflow-hidden mb-12">
+        <div className="bg-white border text-sm border-paa-navy/5 overflow-hidden mb-12">
           <div className="p-8 text-center text-gray-500">
             You have not participated in any approved Book Fairs yet.
           </div>
@@ -1591,7 +1622,7 @@ function BookFairDashboard({ registrations, books }: { registrations: any[], boo
           const bookIds = JSON.parse(reg.booksIds || '[]');
           const registeredBooks = books.filter(b => bookIds.includes(b.id));
           return (
-            <div key={reg.id} className="bg-white border text-sm border-paa-navy/10 overflow-hidden mb-8">
+            <div key={reg.id} className="bg-white border text-sm border-paa-navy/5 overflow-hidden mb-8">
               <div className="bg-green-100 p-3 font-bold text-center border-b text-green-900 uppercase tracking-widest text-xs">
                 BOOKS FOR {reg.activity.name} ({reg.activity.city})
               </div>
@@ -1629,11 +1660,15 @@ function EventsDashboard() {
   const [listedBooks, setListedBooks] = useState<any[]>([]);
   const [pastEvents, setPastEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   
   const [optInEventId, setOptInEventId] = useState<number | null>(null);
   const [settleEventId, setSettleEventId] = useState<number | null>(null);
   const [settlementData, setSettlementData] = useState<any[]>([]);
   const [selectedBooksToLink, setSelectedBooksToLink] = useState<{bookId: string, stock: string}[]>([]);
+  const [paymentScreenshotBlob, setPaymentScreenshotBlob] = useState<File | null>(null);
+  const [catalogueEventData, setCatalogueEventData] = useState<any>(null);
+  const [buttonStates, setButtonStates] = useState<{[key: string]: boolean}>({});
 
   useEffect(() => {
     fetchAuthorEvents();
@@ -1654,7 +1689,46 @@ function EventsDashboard() {
        setLoading(false);
     }
   };
-
+  const handleViewCatalogue = async (eventId: number) => {
+     try {
+         const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/events/${eventId}/catalogue`);
+         
+         const event = res.data.event;
+         const listedBooks = res.data.catalogue;
+         
+         const authorsMap: any = {};
+         let totalBooksListed = 0;
+         
+         listedBooks.forEach((eb: any) => {
+             const aid = eb.authorId;
+             if (!authorsMap[aid]) {
+                 authorsMap[aid] = {
+                     id: aid,
+                     name: eb.author.name,
+                     bio: eb.author.bio,
+                     photoUrl: eb.author.photoUrl,
+                     books: []
+                 };
+             }
+             authorsMap[aid].books.push({
+                 title: eb.book.title,
+                 category: eb.book.genre || eb.book.category || 'Uncategorized',
+                 mrp: eb.book.mrp,
+                 listedStock: eb.listedStock
+             });
+             totalBooksListed += eb.listedStock;
+         });
+         
+         setCatalogueEventData({
+             event,
+             totalAuthorsRegistered: Object.keys(authorsMap).length,
+             totalBooksListed,
+             authors: Object.values(authorsMap)
+         });
+     } catch (e) {
+         toast.error("Failed to load catalogue");
+     }
+  };
 
   const handleOpenSettlement = (eventId: number) => {
      const relevantBooks = listedBooks.filter((lb: any) => lb.eventId === eventId);
@@ -1691,19 +1765,36 @@ function EventsDashboard() {
      }
   }, [invites, listedBooks]);
 
-  const submitOptIn = async (eventId: number) => {
+  const submitOptIn = async (eventId: number, evt: any) => {
+    let calculatedFee = 0;
+    if (evt.feeType === 'Flat Fee') calculatedFee = evt.registrationFee;
+    else if (evt.feeType === 'Per Author') calculatedFee = evt.registrationFee;
+    else if (evt.feeType === 'Per Title') calculatedFee = evt.registrationFee * selectedBooksToLink.length;
+
+    if (calculatedFee > 0 && !paymentScreenshotBlob) {
+      toast.error('Please upload your payment screenshot.');
+      return;
+    }
+
     setButtonStates(prev => ({...prev, ['optIn_' + eventId]: true}));
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/opt-in`, {
-        booksToLink: selectedBooksToLink
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      const formData = new FormData();
+      formData.append('booksToLink', JSON.stringify(selectedBooksToLink));
+      if (paymentScreenshotBlob) {
+        formData.append('paymentScreenshot', paymentScreenshotBlob);
+      }
+
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/opt-in`, formData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'multipart/form-data' }
       });
       toast.success("Successfully opted in to Event!");
       setOptInEventId(null);
+      setPaymentScreenshotBlob(null);
       fetchAuthorEvents();
     } catch (err) {
       toast.error('Opt-in failed');
+    } finally {
+      setButtonStates(prev => ({...prev, ['optIn_' + eventId]: false}));
     }
   };
 
@@ -1719,7 +1810,7 @@ function EventsDashboard() {
       {settleEventId && (
         <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-paa-navy/10 flex justify-between items-center bg-[#f8fafc]">
+            <div className="p-6 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
                <div>
                  <h2 className="text-xl font-serif text-paa-navy">Settle Event Inventory</h2>
                  <p className="text-xs text-gray-500 mt-1">Please enter the exact number of books sold and returned. (Sold + Returned must equal Listed)</p>
@@ -1733,7 +1824,7 @@ function EventsDashboard() {
                   {settlementData.map((sd, idx) => {
                      const bookName = books.find((b: any) => b.id === sd.bookId)?.title || "Unknown Book";
                      return (
-                        <div key={sd.eventBookId} className="p-4 border border-paa-navy/10 rounded bg-gray-50 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div key={sd.eventBookId} className="p-4 border border-paa-navy/5 rounded-2xl-2xl bg-gray-50 flex flex-col sm:flex-row gap-4 items-center justify-between">
                            <div className="flex-1">
                               <h4 className="font-bold text-paa-navy text-sm">{bookName}</h4>
                               <p className="text-xs text-gray-500 mt-1 font-bold tracking-widest uppercase">Listed: {sd.listedStock}</p>
@@ -1763,7 +1854,7 @@ function EventsDashboard() {
                      )
                   })}
                </div>
-               <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-paa-navy/10">
+               <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-paa-navy/5">
                   {invites.some((inv: any) => inv.eventId === settleEventId && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === settleEventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) ? null : (
                      <button type="button" onClick={() => setSettleEventId(null)} className="px-6 py-2 bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest hover:bg-gray-200">Cancel</button>
                   )}
@@ -1777,7 +1868,7 @@ function EventsDashboard() {
       <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">EVENTS ECOSYSTEM</h1>
       
       {invites.length === 0 ? (
-         <div className="p-8 text-center text-gray-500 bg-white border border-gray-100 shadow-sm">
+         <div className="p-8 text-center text-gray-500 bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             You do not have any active event invitations right now.
          </div>
       ) : (
@@ -1789,18 +1880,26 @@ function EventsDashboard() {
             }).map((invite) => {
                const evt = invite.event;
                const isOptedIn = invite.optInStatus === 'Opted-In';
+               const isAwaitingApproval = invite.optInStatus === 'Awaiting Approval';
                const myBooksForEvent = listedBooks.filter(lb => lb.eventId === evt.id);
                
                return (
-                 <div key={invite.id} className={`bg-white border shadow-sm relative overflow-hidden ${isOptedIn ? 'border-green-300' : 'border-paa-navy/20'}`}>
-                    <div className={`px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center ${isOptedIn ? 'bg-green-600' : 'bg-blue-600'}`}>
+                 <div key={invite.id} className={`bg-white border shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 relative overflow-hidden ${isOptedIn ? 'border-green-300' : (isAwaitingApproval ? 'border-orange-300' : 'border-paa-navy/20')}`}>
+                    <div className={`px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center ${isOptedIn ? 'bg-green-600' : (isAwaitingApproval ? 'bg-orange-600' : 'bg-blue-600')}`}>
                        <span>{evt.status}</span>
-                       <span>{isOptedIn ? 'Opted In' : 'Action Required'}</span>
+                       <span>{isOptedIn ? 'Opted In' : (isAwaitingApproval ? 'Awaiting Approval' : 'Action Required')}</span>
                     </div>
                     <div className="p-6">
                        <h4 className="text-xl font-serif font-medium text-paa-navy mb-3">{evt.name}</h4>
                        <p className="text-sm font-medium text-gray-600 mb-1">{evt.date} &bull; {evt.duration}</p>
-                       <p className="text-sm font-medium text-gray-600 mb-6">{evt.location}</p>
+                       <p className="text-sm font-medium text-gray-600 mb-4">{evt.location}</p>
+                       <button onClick={() => handleViewCatalogue(evt.id)} className="block text-center w-full mb-4 py-2 bg-gray-100 text-paa-navy text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-300">
+                          View Participants Catalogue
+                       </button>
+                       
+                       {isOptedIn && evt.status !== 'Past' && (
+                          <button onClick={() => navigate(`/dashboard/pos/${evt.id}`)} className="w-full mb-4 py-3 bg-paa-gold text-paa-navy font-bold text-xs uppercase tracking-widest hover:bg-yellow-400 transition-colors shadow">Launch Live POS</button>
+                       )}
                        
                        {isOptedIn ? (
                           <div className="bg-green-50 p-4 border border-green-200">
@@ -1842,13 +1941,45 @@ function EventsDashboard() {
                                         </div>
                                      );
                                   })}
-                                  <div className="flex gap-2 pt-2">
-                                     <button onClick={() => setOptInEventId(null)} className="flex-1 py-2 bg-gray-200 text-gray-700 text-xs font-bold uppercase transition-colors">Cancel</button>
-                                     <button onClick={() => submitOptIn(evt.id)} disabled={buttonStates['optIn_' + evt.id]} className="flex-1 py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase transition-colors disabled:opacity-50">{buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}</button>
-                                  </div>
+                                  {(() => {
+                                      let calculatedFee = 0;
+                                      if (evt.feeType === 'Flat Fee') calculatedFee = evt.registrationFee;
+                                      else if (evt.feeType === 'Per Author') calculatedFee = evt.registrationFee;
+                                      else if (evt.feeType === 'Per Title') calculatedFee = evt.registrationFee * selectedBooksToLink.length;
+
+                                      if (calculatedFee > 0) {
+                                         return (
+                                            <div className="bg-orange-50 p-4 border border-orange-200 rounded-2xl-2xl mt-4">
+                                               <p className="text-sm font-bold text-orange-900 mb-2">Registration Fee: ₹{calculatedFee}</p>
+                                               <p className="text-xs text-orange-800 mb-4">Please pay the registration fee using the QR code below and upload a screenshot of the successful payment.</p>
+                                               
+                                               <div className="flex flex-col items-center mb-4">
+                                                  <img src={qrCode} alt="Payment QR" className="w-32 h-32 rounded-2xl-2xl border shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 mb-2" />
+                                                  <p className="text-xs font-bold text-gray-600">Scan to pay ₹{calculatedFee}</p>
+                                               </div>
+
+                                               <div>
+                                                  <label className="text-[10px] font-bold uppercase tracking-widest text-paa-navy mb-1 block">Upload Payment Screenshot *</label>
+                                                  <input type="file" accept="image/*" className="w-full border p-2 text-xs outline-none bg-white focus:border-paa-navy" onChange={(e) => {
+                                                     if (e.target.files && e.target.files[0]) {
+                                                        setPaymentScreenshotBlob(e.target.files[0]);
+                                                     } else {
+                                                        setPaymentScreenshotBlob(null);
+                                                     }
+                                                  }} />
+                                               </div>
+                                            </div>
+                                         );
+                                      }
+                                      return null;
+                                   })()}
+                                   <div className="flex gap-2 pt-2 mt-4">
+                                      <button onClick={() => { setOptInEventId(null); setPaymentScreenshotBlob(null); }} className="flex-1 py-2 bg-gray-200 text-gray-700 text-xs font-bold uppercase transition-colors">Cancel</button>
+                                      <button onClick={() => submitOptIn(evt.id, evt)} disabled={buttonStates['optIn_' + evt.id] || (selectedBooksToLink.length === 0)} className="flex-1 py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase transition-colors disabled:opacity-50">{buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}</button>
+                                   </div>
                                </div>
                              ) : (
-                               <button onClick={() => { setOptInEventId(evt.id); setSelectedBooksToLink([]); }} className="w-full py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase tracking-widest transition-colors">
+                               <button onClick={() => { setOptInEventId(evt.id); setSelectedBooksToLink([]); setPaymentScreenshotBlob(null); }} className="w-full py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase tracking-widest transition-colors">
                                   Opt-In & List Books
                                </button>
                              )}
@@ -1865,7 +1996,7 @@ function EventsDashboard() {
       {pastEvents.length > 0 && (
         <div className="mt-10">
           <h2 className="text-2xl font-serif text-paa-navy mb-6 text-center uppercase">Past Events History</h2>
-          <div className="bg-white border border-paa-navy/10 overflow-hidden">
+          <div className="bg-white border border-paa-navy/5 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-[#1a1a2e] text-white text-xs uppercase tracking-widest">
@@ -1889,7 +2020,7 @@ function EventsDashboard() {
                       <td className="p-3 border-r border-paa-navy/5 text-center font-bold">{evt._count?.eventAuthors ?? 0}</td>
                       <td className="p-3 border-r border-paa-navy/5 text-center font-bold">{evt._count?.eventBooks ?? 0}</td>
                       <td className="p-3 text-center">
-                        <span className="bg-gray-100 text-gray-700 px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded">Completed</span>
+                        <span className="bg-gray-100 text-gray-700 px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-2xl-2xl">Completed</span>
                       </td>
                     </tr>
                   ))}
@@ -1899,6 +2030,68 @@ function EventsDashboard() {
           </div>
         </div>
       )}
+
+      {catalogueEventData && (
+        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-2xl-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
+              <h2 className="text-2xl font-serif text-paa-navy">Event Participants Catalogue</h2>
+              <button onClick={() => setCatalogueEventData(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={24} className="text-gray-500" /></button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+               <div className="text-center mb-6">
+                  <h3 className="text-2xl font-serif text-paa-navy">{catalogueEventData.event.name}</h3>
+                  <p className="text-sm font-medium text-gray-500">{catalogueEventData.event.date} • {catalogueEventData.event.location}</p>
+               </div>
+               
+               <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-2xl-2xl text-center border border-blue-100">
+                     <p className="text-xs font-bold uppercase tracking-widest text-blue-800 mb-1">Authors Participating</p>
+                     <p className="text-3xl font-black text-paa-navy">{catalogueEventData.totalAuthorsRegistered}</p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-2xl-2xl text-center border border-green-100">
+                     <p className="text-xs font-bold uppercase tracking-widest text-green-800 mb-1">Total Books Listed</p>
+                     <p className="text-3xl font-black text-paa-navy">{catalogueEventData.totalBooksListed}</p>
+                  </div>
+               </div>
+
+               <div>
+                  <h4 className="text-lg font-serif text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Author Catalogue</h4>
+                  <div className="space-y-6">
+                     {catalogueEventData.authors.map((author: any) => (
+                        <div key={author.id} className="border border-gray-200 rounded-2xl-2xl p-4 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                           <div className="flex items-center gap-4 mb-4">
+                              <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                                 {author.photoUrl ? <img src={author.photoUrl} alt={author.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><User size={24} /></div>}
+                              </div>
+                              <div>
+                                 <h5 className="font-bold text-paa-navy text-lg">{author.name}</h5>
+                                 <p className="text-xs text-gray-500 line-clamp-1">{author.bio || 'No bio available.'}</p>
+                              </div>
+                           </div>
+                           <div className="bg-gray-50 rounded-2xl-2xl border border-gray-200 p-3">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Books Showcased</p>
+                              <div className="space-y-2">
+                                 {author.books.map((b: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between items-center text-sm">
+                                       <div>
+                                          <span className="font-medium text-paa-navy">{b.title}</span>
+                                          <span className="ml-2 text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded-2xl-2xl">{b.category}</span>
+                                       </div>
+                                       <span className="text-xs font-bold text-gray-400">{b.listedStock} Copies</span>
+                                    </div>
+                                 ))}
+                              </div>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -1939,8 +2132,8 @@ function AuthorCatalogueTab() {
         to update the main JSON catalogue. Your personal uploaded books are managed in the Overview tab.
       </p>
 
-      <div className="bg-white border text-sm border-paa-navy/10 overflow-hidden mb-12">
-        <div className="p-4 border-b border-paa-navy/10 flex items-center justify-between">
+      <div className="bg-white border text-sm border-paa-navy/5 overflow-hidden mb-12">
+        <div className="p-4 border-b border-paa-navy/5 flex items-center justify-between">
            <h2 className="font-bold tracking-widest text-paa-navy uppercase">Static Catalogue Entries</h2>
            <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1949,7 +2142,7 @@ function AuthorCatalogueTab() {
                 placeholder="Search Title or Author..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-2 border rounded text-xs w-64 outline-none focus:border-paa-gold" 
+                className="pl-9 pr-4 py-2 border rounded-2xl-2xl text-xs w-64 outline-none focus:border-paa-gold" 
               />
            </div>
         </div>

@@ -46,6 +46,7 @@ model Author {
   eventAuthors       EventAuthor[]
   eventBooks         EventBook[]
   queries            Query[]
+  posOrders          PosOrder[]
 }
 
 model Query {
@@ -92,6 +93,7 @@ model Book {
   orderItems      OrderItem[]
   reviews         BookReview[]
   eventBooks      EventBook[]
+  posOrderItems   PosOrderItem[]
 }
 
 model Order {
@@ -219,14 +221,20 @@ model Event {
   duration          String
   description       String?
   brochureUrl       String?
+  bannerUrl         String?
   status            String        @default("Upcoming") // Upcoming, Ongoing, Past
   commissionPercent Float?
   commissionFlat    Float?
   createdAt         DateTime      @default(now())
   broadcastStatus   String        @default("None")     // None, AuthorsOnly, CustomersAlso
   
+  eventType         String        @default("Book Fair") // Book Fair, Literature Festival, Book Launch, Workshop, Online Event, Other
+  registrationFee   Float         @default(0)
+  feeType           String        @default("Per Author") // Per Author, Per Title
+  
   eventAuthors    EventAuthor[]
   eventBooks      EventBook[]
+  posOrders       PosOrder[]
 }
 
 model EventAuthor {
@@ -234,6 +242,7 @@ model EventAuthor {
   eventId         Int
   authorId        Int
   optInStatus     String    @default("Pending") // Pending, Opted-In, Opted-Out
+  paymentScreenshot String?
   createdAt       DateTime  @default(now())
   
   event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -253,4 +262,31 @@ model EventBook {
   event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   book            Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
   author          Author    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model PosOrder {
+  id               Int            @id @default(autoincrement())
+  authorId         Int
+  eventId          Int
+  totalAmount      Float
+  paymentMethod    String         @default("UPI") // UPI, Cash
+  paymentStatus    String         @default("CONFIRMED")
+  paymentReference String?
+  saleSource       String         @default("BOOK_FAIR")
+  createdAt        DateTime       @default(now())
+  
+  author           Author         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event            Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items            PosOrderItem[]
+}
+
+model PosOrderItem {
+  id          Int       @id @default(autoincrement())
+  posOrderId  Int
+  bookId      Int
+  quantity    Int
+  price       Float
+  
+  posOrder    PosOrder  @relation(fields: [posOrderId], references: [id], onDelete: Cascade)
+  book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
 }

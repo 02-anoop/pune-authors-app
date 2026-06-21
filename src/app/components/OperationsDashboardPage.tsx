@@ -30,10 +30,10 @@ import {
   RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search, 
   Eye, Edit, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle, 
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
-  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown
+  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2
 } from 'lucide-react';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell
 } from 'recharts';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -61,12 +61,12 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
   }, [author.id]);
 
   if (loading) return (
-    <div className="p-8 bg-white border border-paa-navy/10 shadow-sm space-y-6">
+    <div className="p-8 bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 space-y-6">
        <div className="flex gap-4 items-center">
-          <div className="w-14 h-14 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div>
+          <div className="w-14 h-14 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+          <div className="h-8 w-48 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
        </div>
-       <div className="h-64 bg-gray-200 animate-pulse rounded w-full"></div>
+       <div className="h-64 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
     </div>
   );
   if (!profileData) return <div className="p-8 text-center text-red-500 font-bold bg-white border border-red-200">Error loading author details.</div>;
@@ -74,25 +74,25 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
   const { authorProfile, authorOrders } = profileData;
 
   return (
-    <div className="bg-white border border-paa-navy/10 shadow-sm flex flex-col">
-      <div className="p-6 border-b border-paa-navy/10 bg-[#e4ebf5] flex items-start justify-between">
+    <div className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+      <div className="p-6 border-b border-paa-navy/5 bg-[#f0f4f8] flex items-start justify-between">
          <div className="flex gap-4 items-center">
-            <button onClick={onBack} className="p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded shadow-sm transition-colors">
+            <button onClick={onBack} className="p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors active:scale-95 transition-all duration-300">
                <ArrowLeft className="w-5 h-5 text-paa-navy" />
             </button>
-            <div className="w-14 h-14 bg-white border border-paa-navy/10 text-paa-navy flex items-center justify-center font-bold font-serif text-3xl shadow-sm">
+            <div className="w-14 h-14 bg-white border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
               {authorProfile.name.charAt(0)}
             </div>
             <div>
                <h2 className="text-2xl font-bold text-paa-navy uppercase tracking-widest">{authorProfile.name}</h2>
                <p className="text-sm font-medium text-paa-gray-text">{authorProfile.email} | {authorProfile.phone}</p>
-               <p className="text-xs text-paa-navy mt-1 uppercase tracking-widest font-bold bg-[#b3d4ff] inline-block px-2 py-0.5">Joined: {new Date(authorProfile.createdAt).toLocaleDateString()}</p>
+               <p className="text-xs text-paa-navy mt-1 uppercase tracking-widest font-bold bg-[#eef2f6] inline-block px-2 py-0.5">Joined: {new Date(authorProfile.createdAt).toLocaleDateString()}</p>
             </div>
          </div>
       </div>
 
       <div className="flex flex-col md:flex-row flex-1">
-        <div className="w-full md:w-56 bg-white border-b md:border-b-0 md:border-r border-paa-navy/10 p-4 flex flex-col gap-2 shrink-0 md:sticky md:top-0 h-fit text-xs font-bold uppercase tracking-widest">
+        <div className="w-full md:w-56 bg-white border-b md:border-b-0 md:border-r border-paa-navy/5 p-4 flex flex-col gap-2 shrink-0 md:sticky md:top-0 h-fit text-xs font-bold uppercase tracking-widest">
            <button onClick={() => setActiveProfileTab('profile')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'profile' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Registration Profile</button>
            <button onClick={() => setActiveProfileTab('inventory')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'inventory' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Inventory</button>
            <button onClick={() => setActiveProfileTab('orders')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'orders' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Web Orders</button>
@@ -103,7 +103,7 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
         <div className="flex-1 p-6 bg-gray-50/50 min-h-[500px]">
         {activeProfileTab === 'profile' && (
         <div id="profile" className="space-y-6">
-          <div className="bg-white border border-paa-navy/10 p-6 shadow-sm">
+          <div className="bg-white border border-paa-navy/5 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Author Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Full Name</span><span className="text-sm text-paa-navy font-medium">{authorProfile.name}</span></div>
@@ -118,16 +118,16 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
             </div>
           </div>
           
-          <div className="bg-white border border-paa-navy/10 p-6 shadow-sm">
+          <div className="bg-white border border-paa-navy/5 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>
             <div className="space-y-4">
               {authorProfile.books.length === 0 ? <p className="text-sm text-paa-gray-text">No books found.</p> : authorProfile.books.map((b: any, idx: number) => (
-                <div key={b.id} className="border border-paa-navy/10 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
+                <div key={b.id} className="border border-paa-navy/5 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
                   {b.coverUrl && <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + b.coverUrl : "http://localhost:3001" + b.coverUrl} alt="Cover" className="w-20 h-28 object-cover border border-paa-navy/20" />}
                   <div className="flex-1">
                     <h4 className="text-lg font-bold text-paa-navy">{b.title}</h4>
                     {b.subtitle && <p className="text-sm text-paa-gray-text font-medium mb-1">{b.subtitle}</p>}
-                    <p className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2 bg-[#e4ebf5] inline-block px-2 py-0.5">{b.genre} {b.subGenre && `> ${b.subGenre}`}</p>
+                    <p className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2 bg-[#f0f4f8] inline-block px-2 py-0.5">{b.genre} {b.subGenre && `> ${b.subGenre}`}</p>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">MRP</span><span className="text-sm font-bold text-green-700">₹{b.mrp}</span></div>
@@ -147,7 +147,7 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
             </div>
           </div>
           
-          <div className="bg-white border border-paa-navy/10 p-6 shadow-sm">
+          <div className="bg-white border border-paa-navy/5 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Payment Details</h3>
             <div className="flex gap-8 items-start">
                <div>
@@ -168,9 +168,9 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
         {activeProfileTab === 'inventory' && (
         <div id="inventory">
           <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Books & Inventory</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             <table className="w-full text-left text-sm whitespace-nowrap">
-               <thead className="bg-[#b3d4ff] text-paa-navy text-xs uppercase tracking-widest font-bold">
+               <thead className="bg-[#eef2f6] text-paa-navy text-xs uppercase tracking-widest font-bold">
                  <tr>
                    <th className="px-4 py-3">Title</th>
                    <th className="px-4 py-3 text-center">MRP</th>
@@ -200,9 +200,9 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
         {activeProfileTab === 'orders' && (
         <div id="orders">
           <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Web Orders</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             <table className="w-full text-left text-sm whitespace-nowrap">
-               <thead className="bg-[#ccffcc] text-paa-navy text-xs uppercase tracking-widest font-bold">
+               <thead className="bg-[#e6f2eb] text-paa-navy text-xs uppercase tracking-widest font-bold">
                  <tr>
                    <th className="px-4 py-3">Order ID</th>
                    <th className="px-4 py-3">Customer</th>
@@ -238,9 +238,9 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
         {activeProfileTab === 'events' && (
         <div id="events">
           <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Event Participations</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             <table className="w-full text-left text-sm whitespace-nowrap">
-               <thead className="bg-[#e4ebf5] text-paa-navy text-xs uppercase tracking-widest font-bold">
+               <thead className="bg-[#f0f4f8] text-paa-navy text-xs uppercase tracking-widest font-bold">
                  <tr>
                    <th className="px-4 py-3">Event Name</th>
                    <th className="px-4 py-3">City</th>
@@ -266,7 +266,7 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
         {activeProfileTab === 'distribution' && (
         <div id="distribution">
           <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Books Distribution Record</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             <table className="w-full text-left text-sm whitespace-nowrap">
                <thead className="bg-[#5bc0de] text-white text-xs uppercase tracking-widest font-bold">
                  <tr>
@@ -305,7 +305,9 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'authors' | 'books' | 'events' | 'orders' | 'settings' | 'forms' | 'gallery' | 'author_data' | 'helpdesk'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'authors' | 'books' | 'events' | 'orders' | 'settings' | 'forms' | 'gallery' | 'author_data' | 'helpdesk'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
   const [pendingAlerts, setPendingAlerts] = useState({ orders: false, queries: false, authors: false, books: false });
   const prevCountsRef = React.useRef({ orders: 0, queries: 0, authors: 0, books: 0 });
@@ -358,6 +360,52 @@ export function OperationsDashboardPage() {
   const [isEditGalleryModalOpen, setIsEditGalleryModalOpen] = useState(false);
   const [editingGalleryEvent, setEditingGalleryEvent] = useState<any>(null);
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
+  const [viewingRegistrationsEventId, setViewingRegistrationsEventId] = useState<number | null>(null);
+  const [eventRegistrations, setEventRegistrations] = useState<any[]>([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
+  const [registrationsFilter, setRegistrationsFilter] = useState('All');
+  const [registrationsPage, setRegistrationsPage] = useState(1);
+
+  const fetchEventRegistrations = async (eventId: number) => {
+    setLoadingRegistrations(true);
+    setViewingRegistrationsEventId(eventId);
+    try {
+      const res = await axios.get(`${API}/api/admin/events/${eventId}/registrations`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setEventRegistrations(res.data);
+    } catch (err) {
+      toast.error('Failed to load registrations');
+    } finally {
+      setLoadingRegistrations(false);
+    }
+  };
+
+  const handleApproveRegistration = async (eventId: number, authorId: number) => {
+    try {
+      await axios.post(`${API}/api/admin/events/${eventId}/author/${authorId}/approve`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Registration approved');
+      fetchEventRegistrations(eventId);
+      fetchEvents();
+    } catch (err) {
+      toast.error('Failed to approve registration');
+    }
+  };
+
+  const handleRejectRegistration = async (eventId: number, authorId: number) => {
+    try {
+      await axios.post(`${API}/api/admin/events/${eventId}/author/${authorId}/reject`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Registration rejected');
+      fetchEventRegistrations(eventId);
+    } catch (err) {
+      toast.error('Failed to reject registration');
+    }
+  };
+
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   
   const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -428,7 +476,10 @@ export function OperationsDashboardPage() {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${eventId}/report`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      if (res.data.status === 'pending') {
+      if (res.data.status === 'live') {
+         setEventReportData(res.data);
+         setPendingReportStatus(null);
+      } else if (res.data.status === 'pending') {
          setPendingReportStatus(res.data);
          setEventReportData(res.data.data || []);
       } else {
@@ -463,7 +514,17 @@ export function OperationsDashboardPage() {
   };
 
   const handleEditEventClick = (event: any) => {
-    setEditingEvent({ id: event.id, name: event.name, date: event.date, duration: event.duration, location: event.location, status: event.status });
+    setEditingEvent({ 
+      id: event.id, 
+      name: event.name, 
+      date: event.date, 
+      duration: event.duration, 
+      location: event.location, 
+      status: event.status,
+      eventType: event.eventType || 'Book Fair',
+      registrationFee: event.registrationFee || 0,
+      feeType: event.feeType || 'Per Author'
+    });
     setIsEditEventModalOpen(true);
   };
 
@@ -471,7 +532,31 @@ export function OperationsDashboardPage() {
     e.preventDefault();
     if (!editingEvent) return;
     try {
-      await axios.put(`${API}/api/admin/events/${editingEvent.id}`, editingEvent, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      const form = e.target as HTMLFormElement;
+      
+      const eType = (form.elements.namedItem('eventType') as HTMLSelectElement).value === 'Other' 
+          ? (form.elements.namedItem('customEventType') as HTMLInputElement).value 
+          : editingEvent.eventType;
+          
+      const fd = new FormData();
+      fd.append('name', editingEvent.name);
+      fd.append('date', editingEvent.date);
+      fd.append('location', editingEvent.location);
+      fd.append('duration', editingEvent.duration);
+      fd.append('eventType', eType);
+      fd.append('registrationFee', editingEvent.registrationFee.toString());
+      fd.append('feeType', editingEvent.feeType);
+      fd.append('status', editingEvent.status);
+      
+      const descVal = (form.elements.namedItem('description') as HTMLTextAreaElement)?.value;
+      if (descVal) fd.append('description', descVal);
+      
+      const bannerInput = form.elements.namedItem('banner') as HTMLInputElement;
+      if (bannerInput && bannerInput.files && bannerInput.files[0]) {
+          fd.append('banner', bannerInput.files[0]);
+      }
+
+      await axios.put(`${API}/api/admin/events/${editingEvent.id}`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       toast.success('Event updated successfully');
       setIsEditEventModalOpen(false);
       fetchEvents();
@@ -797,19 +882,15 @@ export function OperationsDashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Authors', value: stats.totalAuthors, trend: '+12%', trendUp: true, icon: Users, color: 'bg-[#5bc0de]' },
-          { label: 'Books Published', value: stats.totalBooks, trend: '+8 new', trendUp: true, icon: BookOpen, color: 'bg-[#5cb85c]' },
-          { label: 'Event Participations', value: stats.eventParticipations, trend: '+45 this month', trendUp: true, icon: CalendarIcon, color: 'bg-[#f0ad4e]' },
-          { label: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, trend: '+15.3%', trendUp: true, icon: TrendingUp, color: 'bg-[#d9534f]' },
+          { label: 'Total Authors', value: stats.totalAuthors, icon: Users, color: 'bg-[#5bc0de]' },
+          { label: 'Books Published', value: stats.totalBooks, icon: BookOpen, color: 'bg-[#5cb85c]' },
+          { label: 'Event Participations', value: stats.eventParticipations, icon: CalendarIcon, color: 'bg-[#f0ad4e]' },
+          { label: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'bg-[#d9534f]' },
         ].map((kpi, i) => (
-          <div key={i} className="bg-white p-6 border border-paa-navy/10 flex items-start justify-between shadow-sm">
+          <div key={i} className="bg-white p-6 border border-paa-navy/5 flex items-start justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 h-full">
             <div>
               <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
-              <h3 className="text-3xl font-serif font-medium text-paa-navy mb-2">{kpi.value}</h3>
-              <p className={`text-xs font-bold flex items-center gap-1 ${kpi.trendUp ? 'text-green-600' : 'text-red-600'}`}>
-                {kpi.trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 transform rotate-180" />}
-                {kpi.trend}
-              </p>
+              <h3 className="text-3xl font-serif font-medium text-paa-navy mt-2">{kpi.value}</h3>
             </div>
             <div className={`w-10 h-10 flex items-center justify-center text-white font-bold ${kpi.color}`}>
               <kpi.icon className="w-5 h-5" />
@@ -820,8 +901,8 @@ export function OperationsDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Chart */}
-        <div className="lg:col-span-2 bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
-           <div className="bg-[#e4ebf5] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+        <div className="lg:col-span-2 bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+           <div className="bg-[#f0f4f8] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
               <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Revenue & Registrations</h3>
               <select className="text-xs border border-paa-navy/20 bg-white text-paa-navy px-3 py-1.5 outline-none font-bold uppercase tracking-widest">
                 <option>Last 6 Months</option>
@@ -851,21 +932,21 @@ export function OperationsDashboardPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
-           <div className="bg-[#ffff99] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+           <div className="bg-[#fcf7e6] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
               <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Recent Activity</h3>
-              <button className="text-xs font-bold text-paa-navy hover:underline uppercase tracking-widest">View All</button>
+              <button className="text-xs font-bold text-paa-navy hover:underline uppercase tracking-widest active:scale-95 transition-all duration-300">View All</button>
            </div>
            <div className="p-6 space-y-6 overflow-auto">
              {stats.recentActivities && stats.recentActivities.map((activity: any) => {
-               const style = activity.type === 'author' ? { icon: Users, color: 'text-blue-600', bg: 'bg-[#b3d4ff]' } :
-                             activity.type === 'order' ? { icon: CreditCard, color: 'text-green-600', bg: 'bg-[#ccffcc]' } :
+               const style = activity.type === 'author' ? { icon: Users, color: 'text-blue-600', bg: 'bg-[#eef2f6]' } :
+                             activity.type === 'order' ? { icon: CreditCard, color: 'text-green-600', bg: 'bg-[#e6f2eb]' } :
                              activity.type === 'event' ? { icon: CalendarIcon, color: 'text-purple-600', bg: 'bg-purple-200' } :
                              { icon: Bell, color: 'text-gray-600', bg: 'bg-gray-200' };
                const Icon = style.icon;
                return (
                <div key={activity.id} className="flex gap-4">
-                 <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${style.bg} ${style.color} border border-paa-navy/10`}>
+                 <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${style.bg} ${style.color} border border-paa-navy/5`}>
                    <Icon className="w-4 h-4" />
                  </div>
                  <div>
@@ -879,10 +960,35 @@ export function OperationsDashboardPage() {
         </div>
       </div>
 
+      {/* Event Sales Chart */}
+      <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+         <div className="bg-[#eef2f6] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
+            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Event Sales 2026</h3>
+         </div>
+         <div className="h-[350px] p-6">
+           <ResponsiveContainer width="100%" height="100%">
+             <BarChart data={stats.eventSalesData} margin={{ top: 20, right: 30, left: -20, bottom: 60 }}>
+               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(11, 26, 46, 0.1)" />
+               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280' }} angle={-45} textAnchor="end" />
+               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+               <RechartsTooltip 
+                 contentStyle={{ borderRadius: '0px', border: '1px solid rgba(11,26,46,0.1)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                 cursor={{ fill: 'rgba(11,26,46,0.05)' }}
+               />
+               <Bar dataKey="booksSold" fill="#0b1a2e" radius={[4, 4, 0, 0]} barSize={40} name="Books Sold">
+                 {stats.eventSalesData?.map((entry: any, index: number) => (
+                   <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#0b1a2e' : '#5bc0de'} />
+                 ))}
+               </Bar>
+             </BarChart>
+           </ResponsiveContainer>
+         </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Sales by Author */}
-        <div className="bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
-           <div className="bg-[#ccffcc] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+           <div className="bg-[#e6f2eb] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
               <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Top Authors by Sales</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
@@ -899,8 +1005,8 @@ export function OperationsDashboardPage() {
         </div>
 
         {/* Top Selling Books */}
-        <div className="bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
-           <div className="bg-[#b3d4ff] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+           <div className="bg-[#eef2f6] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
               <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Top Selling Books</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
@@ -920,8 +1026,8 @@ export function OperationsDashboardPage() {
         </div>
 
         {/* Low Stock Alerts */}
-        <div className="bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
-           <div className="bg-[#ffcccc] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+           <div className="bg-[#fcedec] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
               <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Low Stock Alerts</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
@@ -931,7 +1037,7 @@ export function OperationsDashboardPage() {
                    <p className="text-sm font-bold text-paa-navy truncate max-w-[150px]">{book.title}</p>
                    <p className="text-xs text-paa-gray-text truncate max-w-[150px]">{book.author?.name}</p>
                  </div>
-                 <span className={`px-2 py-1 text-xs font-bold rounded ${book.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                 <span className={`px-2 py-1 text-xs font-bold rounded-2xl-2xl ${book.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                    {book.stock} left
                  </span>
                </div>
@@ -944,8 +1050,8 @@ export function OperationsDashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Sales by Genre */}
-        <div className="bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
-           <div className="bg-[#e4ebf5] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+           <div className="bg-[#f0f4f8] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
               <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Sales by Genre</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
@@ -962,8 +1068,8 @@ export function OperationsDashboardPage() {
         </div>
 
         {/* Top Customers */}
-        <div className="bg-white p-0 border border-paa-navy/10 shadow-sm flex flex-col">
-           <div className="bg-[#ffff99] px-6 py-4 border-b border-paa-navy/10 flex items-center justify-between">
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+           <div className="bg-[#fcf7e6] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
               <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Top Customers</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
@@ -991,20 +1097,20 @@ export function OperationsDashboardPage() {
     }
     
     return (
-    <div className="bg-white border border-paa-navy/10 shadow-sm flex flex-col">
-       <div className="p-4 border-b border-paa-navy/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e4ebf5]">
+    <div className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+       <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
           <div className="flex items-center gap-3">
             <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Authors Directory</h3>
-            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-sm">{authors.length} Total</span>
+            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">{authors.length} Total</span>
           </div>
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2">
-                <div className="flex bg-gray-100 rounded p-1">
+                <div className="flex bg-gray-100 rounded-2xl-2xl p-1">
                   {['All', 'Pending', 'Active', 'Rejected'].map(status => (
                     <button 
                       key={status}
                       onClick={() => setAuthorStatusFilter(status)}
-                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-paa-navy'}`}
+                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-2xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300' : 'text-gray-500 hover:text-paa-navy'}`}
                     >
                       {status}
                     </button>
@@ -1029,7 +1135,7 @@ export function OperationsDashboardPage() {
        
        <div className="overflow-x-auto">
          <table className="w-full text-left text-sm whitespace-nowrap">
-           <thead className="bg-[#b3d4ff] text-paa-navy text-xs uppercase tracking-widest font-bold">
+           <thead className="bg-[#eef2f6] text-paa-navy text-xs uppercase tracking-widest font-bold">
              <tr>
                <th className="px-6 py-4">Author Details</th>
                <th className="px-6 py-4">Contact</th>
@@ -1045,7 +1151,7 @@ export function OperationsDashboardPage() {
                <tr key={author.id} className="hover:bg-gray-50 bg-white transition-colors">
                  <td className="px-6 py-4">
                    <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 bg-[#e4ebf5] border border-paa-navy/10 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
+                     <div className="w-10 h-10 bg-[#f0f4f8] border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
                        {author.name.charAt(0)}
                      </div>
                      <div>
@@ -1099,7 +1205,7 @@ export function OperationsDashboardPage() {
                        <button onClick={() => handleEditAuthorClick(author)} className="p-1.5 text-white bg-blue-500 hover:bg-blue-600 border border-[transparent] shadow" title="Edit Profile">
                          <Edit className="w-4 h-4" />
                        </button>
-                       <button onClick={() => setSelectedAuthor(author)} className="p-1.5 text-paa-navy bg-gray-100 hover:bg-gray-200 border border-paa-navy/10 transition-colors shadow" title="Details">
+                       <button onClick={() => setSelectedAuthor(author)} className="p-1.5 text-paa-navy bg-gray-100 hover:bg-gray-200 border border-paa-navy/5 transition-colors shadow" title="Details">
                          <Eye className="w-4 h-4" />
                        </button>
                        <button onClick={() => handleDeleteAuthor(author.id)} className="p-1.5 text-white bg-[#d9534f] hover:bg-[#c9302c] transition-colors shadow" title="Delete">
@@ -1127,19 +1233,19 @@ export function OperationsDashboardPage() {
   };
 
   const BooksTab = () => (
-    <div className="bg-white border border-paa-navy/10 shadow-sm flex flex-col">
-       <div className="p-4 border-b border-paa-navy/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#ccffcc]">
+    <div className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+       <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e6f2eb]">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Inventory Management</h3>
           </div>
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2">
-                <div className="flex bg-gray-100 rounded p-1">
+                <div className="flex bg-gray-100 rounded-2xl-2xl p-1">
                   {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
                     <button 
                       key={status}
                       onClick={() => setBookStatusFilter(status)}
-                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded ${bookStatusFilter === status ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-paa-navy'}`}
+                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-2xl-2xl ${bookStatusFilter === status ? 'bg-white text-paa-navy shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300' : 'text-gray-500 hover:text-paa-navy'}`}
                     >
                       {status}
                     </button>
@@ -1158,13 +1264,13 @@ export function OperationsDashboardPage() {
        
        <div className="overflow-x-auto">
          <table className="w-full text-left text-sm whitespace-nowrap">
-           <thead className="bg-[#b3d4ff] text-paa-navy text-xs uppercase tracking-widest font-bold">
+           <thead className="bg-[#eef2f6] text-paa-navy text-xs uppercase tracking-widest font-bold">
              <tr>
                <th className="px-6 py-4">Book Info</th>
                <th className="px-6 py-4">Author</th>
                <th className="px-6 py-4 text-center">Status</th>
                <th className="px-6 py-4 text-center">Price</th>
-               <th className="px-6 py-4 text-center bg-yellow-100 border-x border-paa-navy/10">Stock</th>
+               <th className="px-6 py-4 text-center bg-yellow-100 border-x border-paa-navy/5">Stock</th>
                <th className="px-6 py-4 text-center bg-green-100">Sales</th>
                <th className="px-6 py-4 text-center">Actions</th>
              </tr>
@@ -1189,7 +1295,7 @@ export function OperationsDashboardPage() {
                  <td className="px-6 py-4 text-center font-bold text-paa-navy">
                     ₹{book.mrp}
                  </td>
-                 <td className="px-6 py-4 text-center bg-yellow-50 border-x border-paa-navy/10">
+                 <td className="px-6 py-4 text-center bg-yellow-50 border-x border-paa-navy/5">
                     {book.stock > 10 ? (
                       <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-[10px] font-bold uppercase border border-green-200">{book.stock} left</span>
                     ) : book.stock > 0 ? (
@@ -1239,7 +1345,7 @@ export function OperationsDashboardPage() {
 
   const EventsTab = () => (
     <div className="space-y-6">
-       <div className="flex items-center justify-between border-b border-paa-navy/10 pb-4">
+       <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
           <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Ecosystem</h3>
           <button onClick={() => setIsEventModalOpen(true)} className="flex items-center gap-2 px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy transition-colors">
             <Plus className="w-4 h-4" /> Create Event
@@ -1250,14 +1356,14 @@ export function OperationsDashboardPage() {
           <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2">Active / Upcoming Events</h4>
        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {events.filter(e => e.status === 'Upcoming').map((evt) => (
-             <div key={evt.id} className="bg-white border border-paa-navy/10 shadow-sm hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
+             <div key={evt.id} className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
                 <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center`}>
                    <span>{evt.status}</span>
                    <div className="flex gap-2 items-center">
-                     {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded text-[10px]">Authors Notified</span>}
-                     {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded text-[10px]">Public</span>}
-                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
-                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                     {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded-2xl-2xl text-[10px]">Authors Notified</span>}
+                     {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded-2xl-2xl text-[10px]">Public</span>}
+                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-2xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
+                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-2xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
                    </div>
                 </div>
                 <div className="p-6">
@@ -1268,37 +1374,29 @@ export function OperationsDashboardPage() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-gray-50 p-2 text-center rounded border border-gray-100">
+                     <div className="bg-gray-50 p-2 text-center rounded-2xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Authors</p>
                         <p className="text-lg font-black text-paa-navy">{evt._count?.eventAuthors || 0}</p>
                      </div>
-                     <div className="bg-gray-50 p-2 text-center rounded border border-gray-100">
+                     <div className="bg-gray-50 p-2 text-center rounded-2xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Linked</p>
                         <p className="text-lg font-black text-paa-navy">{evt._count?.eventBooks || 0}</p>
                      </div>
                   </div>
 
-                  <div className="pt-4 border-t border-paa-navy/10 flex flex-col gap-2">
-                     <button onClick={() => handleBroadcastEvent(evt.id, 'Authors')} className="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-widest transition-colors border border-blue-200">
-                        1. Broadcast to Authors
+                  <div className="pt-4 border-t border-paa-navy/5 flex flex-col gap-2">
+                     <button onClick={() => fetchEventRegistrations(evt.id)} className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-widest transition-colors border border-orange-200">
+                        View Author Registrations
                      </button>
-                     <button onClick={() => handleBroadcastEvent(evt.id, 'Customers')} className="w-full py-2 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold uppercase tracking-widest transition-colors border border-green-200">
-                        2. Generate Catalogue & Publish
+                     <button onClick={() => fetchEventReport(evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 mt-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                        View Live Event Report
                      </button>
-                     <a href={`/events/${evt.id}/catalogue`} target="_blank" rel="noopener noreferrer" className="block text-center w-full py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase tracking-widest transition-colors">
-                        View Live Catalogue
-                     </a>
-                     {evt.status === 'Past' && (
-                       <button onClick={() => fetchEventReport(evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 mt-2">
-                          View Sales & Settlement Report
-                       </button>
-                     )}
                   </div>
                 </div>
              </div>
           ))}
           {events.filter(e => e.status === 'Upcoming').length === 0 && (
-             <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded border border-dashed border-gray-200">
+             <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-2xl-2xl border border-dashed border-gray-200">
                 No upcoming events.
              </div>
           )}
@@ -1307,7 +1405,7 @@ export function OperationsDashboardPage() {
        <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2 mt-12">Past Events Archive</h4>
        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {pastEventsData.map((evt: any) => (
-             <div key={'legacy_'+evt.id} className="bg-gray-50 border border-gray-200 shadow-sm flex flex-col relative overflow-hidden opacity-90">
+             <div key={'legacy_'+evt.id} className="bg-gray-50 border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col relative overflow-hidden opacity-90">
                 <div className="bg-gray-800 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center">
                    <span>Legacy Archive</span>
                 </div>
@@ -1318,17 +1416,17 @@ export function OperationsDashboardPage() {
                      <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400"/> {evt.address || evt.location}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-white p-2 text-center rounded border border-gray-100">
+                     <div className="bg-white p-2 text-center rounded-2xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
                         <p className="text-lg font-black text-gray-700">{evt.authorsParticipated || 0}</p>
                      </div>
-                     <div className="bg-white p-2 text-center rounded border border-gray-100">
+                     <div className="bg-white p-2 text-center rounded-2xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Sold</p>
                         <p className="text-lg font-black text-gray-700">{evt.booksSold || 0}</p>
                      </div>
                   </div>
                   <div className="pt-4 border-t border-gray-200 flex flex-col gap-2">
-                     <button onClick={() => fetchEventReport('legacy_' + evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 shadow-sm">
+                     <button onClick={() => fetchEventReport('legacy_' + evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
                         View Legacy Settlement Report
                      </button>
                   </div>
@@ -1336,12 +1434,12 @@ export function OperationsDashboardPage() {
              </div>
           ))}
           {events.filter(e => e.status === 'Past').map((evt) => (
-             <div key={evt.id} className="bg-gray-50 border border-gray-200 shadow-sm flex flex-col relative overflow-hidden opacity-90">
+             <div key={evt.id} className="bg-gray-50 border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col relative overflow-hidden opacity-90">
                 <div className="bg-gray-500 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center">
                    <span>{evt.status}</span>
                    <div className="flex gap-2 items-center">
-                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
-                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-2xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
+                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-2xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
                    </div>
                 </div>
                 <div className="p-6 flex-1">
@@ -1352,21 +1450,18 @@ export function OperationsDashboardPage() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-white p-2 text-center rounded border border-gray-100">
+                     <div className="bg-white p-2 text-center rounded-2xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
                         <p className="text-lg font-black text-gray-700">{evt._count?.eventAuthors || 0}</p>
                      </div>
-                     <div className="bg-white p-2 text-center rounded border border-gray-100">
+                     <div className="bg-white p-2 text-center rounded-2xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Linked</p>
                         <p className="text-lg font-black text-gray-700">{evt._count?.eventBooks || 0}</p>
                      </div>
                   </div>
 
                   <div className="pt-4 border-t border-gray-200 flex flex-col gap-2">
-                     <a href={`/events/${evt.id}/catalogue`} target="_blank" rel="noopener noreferrer" className="block text-center w-full py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold uppercase tracking-widest transition-colors">
-                        View Past Catalogue
-                     </a>
-                     <button onClick={() => fetchEventReport(evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 mt-2 shadow-sm">
+                     <button onClick={() => fetchEventReport(evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 mt-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
                         View Sales & Settlement Report
                      </button>
                   </div>
@@ -1374,7 +1469,7 @@ export function OperationsDashboardPage() {
              </div>
           ))}
           {events.filter(e => e.status === 'Past').length === 0 && (
-             <div className="col-span-full py-8 text-center text-gray-400 bg-gray-50 rounded border border-dashed border-gray-200">
+             <div className="col-span-full py-8 text-center text-gray-400 bg-gray-50 rounded-2xl-2xl border border-dashed border-gray-200">
                 No past events archived yet.
              </div>
           )}
@@ -1384,8 +1479,8 @@ export function OperationsDashboardPage() {
   );
 
   const OrdersTab = () => (
-    <div className="bg-white border border-paa-navy/10 shadow-sm flex flex-col">
-       <div className="p-4 border-b border-paa-navy/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e4ebf5]">
+    <div className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+       <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Web Orders</h3>
           </div>
@@ -1394,7 +1489,7 @@ export function OperationsDashboardPage() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
                 <input type="text" placeholder="SEARCH ORDERS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
              </div>
-             <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-sm">
+             <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 active:scale-95 transition-all duration-300">
                <ClipboardList className="w-4 h-4" /> Export CSV
              </button>
           </div>
@@ -1402,7 +1497,7 @@ export function OperationsDashboardPage() {
        
        <div className="overflow-x-auto">
          <table className="w-full text-left text-sm whitespace-nowrap">
-           <thead className="bg-[#b3d4ff] text-paa-navy text-xs uppercase tracking-widest font-bold">
+           <thead className="bg-[#eef2f6] text-paa-navy text-xs uppercase tracking-widest font-bold">
              <tr>
                <th className="px-6 py-4">Order ID & Date</th>
                <th className="px-6 py-4">Customer</th>
@@ -1456,8 +1551,8 @@ export function OperationsDashboardPage() {
 
     return (
     <div className="space-y-8 max-w-2xl">
-      <div className="bg-white p-8 border border-paa-navy/10 shadow-sm">
-         <div className="border-b border-paa-navy/10 pb-4 mb-8">
+      <div className="bg-white p-8 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+         <div className="border-b border-paa-navy/5 pb-4 mb-8">
             <h2 className="text-xl font-serif font-medium text-paa-navy mb-1">System Settings</h2>
             <p className="text-paa-gray-text text-sm">Configure global application parameters, notification rules, and access control here.</p>
          </div>
@@ -1465,16 +1560,16 @@ export function OperationsDashboardPage() {
          <div className="space-y-6">
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Platform Name</label>
-              <input type="text" defaultValue="Pune Authors' Association" className="w-full border border-paa-navy/20 bg-gray-50 rounded-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
+              <input type="text" defaultValue="Pune Authors' Association" className="w-full border border-paa-navy/20 bg-gray-50 rounded-2xl-2xl-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Support Email</label>
-              <input type="email" defaultValue="support@puneauthors.com" className="w-full border border-paa-navy/20 bg-gray-50 rounded-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
+              <input type="email" defaultValue="support@puneauthors.com" className="w-full border border-paa-navy/20 bg-gray-50 rounded-2xl-2xl-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
             </div>
             
-            <div className="pt-6 border-t border-paa-navy/10">
+            <div className="pt-6 border-t border-paa-navy/5">
               <h3 className="text-xs font-bold tracking-widest uppercase text-paa-navy mb-4">Default Email Notifications</h3>
-              <div className="space-y-4 bg-gray-50 p-4 border border-paa-navy/10">
+              <div className="space-y-4 bg-gray-50 p-4 border border-paa-navy/5">
                  <label className="flex items-center gap-3 text-sm font-medium text-paa-navy cursor-pointer">
                    <input type="checkbox" defaultChecked className="w-4 h-4 accent-paa-navy" /> New Author Registered Alert
                  </label>
@@ -1498,10 +1593,10 @@ export function OperationsDashboardPage() {
     if (!isOpen) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
-        <div className="bg-white border text-paa-navy border-paa-navy/10 shadow-xl w-full max-w-lg">
-          <div className="bg-[#b3d4ff] p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center border-b border-paa-navy/10">
+        <div className="bg-white border text-paa-navy border-paa-navy/5 shadow-xl w-full max-w-lg">
+          <div className="bg-[#eef2f6] p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center border-b border-paa-navy/5">
             {title}
-            <button type="button" onClick={onClose} className="text-paa-navy hover:text-black">
+            <button type="button" onClick={onClose} className="text-paa-navy hover:text-black active:scale-95 transition-all duration-300">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -1586,16 +1681,16 @@ export function OperationsDashboardPage() {
 
     return (
       <div className="space-y-8 max-w-6xl">
-        <div className="bg-white p-6 border border-paa-navy/10 shadow-sm rounded">
+        <div className="bg-white p-6 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 rounded-2xl-2xl">
           <h3 className="text-xl font-serif font-medium text-paa-navy mb-1">Author Dynamic Fields Management</h3>
-          <p className="text-paa-gray-text text-sm mb-6 border-b border-paa-navy/10 pb-4">Define extra information that all authors must provide. This will appear on their dashboard until filled.</p>
+          <p className="text-paa-gray-text text-sm mb-6 border-b border-paa-navy/5 pb-4">Define extra information that all authors must provide. This will appear on their dashboard until filled.</p>
           
           <div className="flex flex-wrap gap-3 mb-6">
             {fields.map((f, i) => (
-               <div key={i} className="flex items-center gap-2 bg-gray-50 border border-paa-navy/20 px-3 py-1.5 rounded shadow-sm text-sm">
+               <div key={i} className="flex items-center gap-2 bg-gray-50 border border-paa-navy/20 px-3 py-1.5 rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 text-sm">
                   <span className="font-bold text-paa-navy">{f.name}</span>
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">({f.type})</span>
-                  {f.requiredForRegistration && <span className="text-[9px] bg-paa-navy text-white px-1.5 py-0.5 rounded uppercase tracking-widest font-bold">Registration</span>}
+                  {f.requiredForRegistration && <span className="text-[9px] bg-paa-navy text-white px-1.5 py-0.5 rounded-2xl-2xl uppercase tracking-widest font-bold">Registration</span>}
                   <button onClick={() => setFields(fields.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700 ml-2" title="Remove Field">
                      <X className="w-3.5 h-3.5" />
                   </button>
@@ -1604,16 +1699,16 @@ export function OperationsDashboardPage() {
             {fields.length === 0 && <p className="text-sm text-gray-500 italic w-full">No dynamic fields created yet.</p>}
           </div>
 
-          <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded mb-6 flex flex-col md:flex-row gap-4 items-center">
+          <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded-2xl-2xl mb-6 flex flex-col md:flex-row gap-4 items-center">
             <input 
                type="text" 
                placeholder="New Field Name (e.g. Aadhar Number)" 
-               className="border border-paa-navy/20 p-2 text-sm flex-1 outline-none focus:border-paa-navy bg-white rounded w-full md:w-auto"
+               className="border border-paa-navy/20 p-2 text-sm flex-1 outline-none focus:border-paa-navy bg-white rounded-2xl-2xl w-full md:w-auto"
                value={newField.name}
                onChange={e => setNewField({...newField, name: e.target.value})}
             />
             <select 
-               className="border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy bg-white rounded"
+               className="border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy bg-white rounded-2xl-2xl"
                value={newField.type}
                onChange={e => setNewField({...newField, type: e.target.value})}
             >
@@ -1636,18 +1731,18 @@ export function OperationsDashboardPage() {
                  setFields([...fields, { ...newField, required: true }]);
                  setNewField({ name: '', type: 'text', requiredForRegistration: false });
                }} 
-               className="px-4 py-2 border border-paa-navy text-paa-navy bg-white text-xs font-bold uppercase tracking-widest hover:bg-paa-navy hover:text-white transition-colors rounded shadow-sm whitespace-nowrap"
+               className="px-4 py-2 border border-paa-navy text-paa-navy bg-white text-xs font-bold uppercase tracking-widest hover:bg-paa-navy hover:text-white transition-colors rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 whitespace-nowrap"
             >
                Add Field
             </button>
           </div>
           
           <div className="flex">
-            <button onClick={saveFields} className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded shadow-sm">Save Fields Settings</button>
+            <button onClick={saveFields} className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 active:scale-95 transition-all duration-300">Save Fields Settings</button>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded border border-paa-navy/10 shadow-sm">
+        <div className="bg-white p-6 rounded-2xl-2xl border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-xl font-bold text-paa-navy uppercase tracking-widest flex items-center gap-2">
@@ -1661,12 +1756,12 @@ export function OperationsDashboardPage() {
                  <div className="relative">
                    <button 
                      onClick={() => setShowColumnsMenu(!showColumnsMenu)}
-                     className="px-3 py-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded text-paa-navy transition-colors text-xs font-bold uppercase tracking-widest flex items-center gap-1"
+                     className="px-3 py-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-2xl-2xl text-paa-navy transition-colors text-xs font-bold uppercase tracking-widest flex items-center gap-1"
                    >
                      Columns <ChevronDown className="w-4 h-4" />
                    </button>
                    {showColumnsMenu && (
-                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-xl rounded z-20 py-2">
+                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-xl rounded-2xl-2xl z-20 py-2">
                         {dynamicKeys.map(key => (
                           <label key={key} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-xs font-bold uppercase tracking-widest text-paa-navy cursor-pointer whitespace-nowrap">
                             <input 
@@ -1682,19 +1777,19 @@ export function OperationsDashboardPage() {
                    )}
                  </div>
                )}
-               <button onClick={handleExportCSV} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-widest rounded transition-colors shadow">
+               <button onClick={handleExportCSV} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-widest rounded-2xl-2xl transition-colors shadow active:scale-95 transition-all duration-300">
                   Export CSV
                </button>
-               <button onClick={fetchAuthors} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded text-paa-navy transition-colors shadow-sm">
+               <button onClick={fetchAuthors} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-2xl-2xl text-paa-navy transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 active:scale-95 transition-all duration-300">
                   <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
                </button>
             </div>
           </div>
 
-          <div className="border border-paa-navy/10 rounded shadow-sm overflow-hidden">
+          <div className="border border-paa-navy/5 rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#e4ebf5] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/10">
+                <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
                   <tr>
                     <th className="px-6 py-4 font-bold">Author Name</th>
                     <th className="px-6 py-4 font-bold">Email</th>
@@ -1750,7 +1845,7 @@ export function OperationsDashboardPage() {
             </button>
             <h4 className="font-bold text-paa-navy">Responses for: {selectedFormResponses.formTitle}</h4>
           </div>
-          <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-paa-navy/5 text-xs uppercase font-bold text-paa-navy/60">
                 <tr>
@@ -1776,13 +1871,13 @@ export function OperationsDashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {forms.map((f: any) => (
-            <div key={f.id} className="p-4 bg-white border border-paa-navy/10 flex flex-col gap-2 hover:shadow-md transition">
+            <div key={f.id} className="p-4 bg-white border border-paa-navy/5 flex flex-col gap-2 hover:shadow-md transition">
               <div className="font-bold text-paa-navy text-lg">{f.title}</div>
               <div className="text-sm text-paa-gray-text">{f.description}</div>
               <div className="text-xs text-paa-gray-text">Fields: {f.fields.length}</div>
               <div className="flex gap-2 mt-4">
                 <button 
-                  className="px-3 py-1.5 bg-paa-navy/10 text-paa-navy text-xs font-bold uppercase hover:bg-paa-navy hover:text-white transition"
+                  className="px-3 py-1.5 bg-paa-navy/10 text-paa-navy text-xs font-bold uppercase hover:bg-paa-navy hover:text-white transition active:scale-95 transition-all duration-300"
                   onClick={() => {
                     axios.get(`${API}/api/admin/forms/${f.id}/responses`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }})
                       .then(res => setSelectedFormResponses({ formTitle: f.title, responses: res.data }));
@@ -1791,7 +1886,7 @@ export function OperationsDashboardPage() {
                   View Responses
                 </button>
                 <button 
-                  className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold uppercase hover:bg-red-600 hover:text-white transition"
+                  className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold uppercase hover:bg-red-600 hover:text-white transition active:scale-95 transition-all duration-300"
                   onClick={() => {
                     if (window.confirm("Delete this form and all its responses?")) {
                       axios.delete(`${API}/api/admin/forms/${f.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }})
@@ -1821,7 +1916,7 @@ export function OperationsDashboardPage() {
         </button>
       </div>
 
-      <div className="overflow-x-auto bg-white border border-paa-navy/10 shadow-sm">
+      <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-paa-navy/5 text-xs uppercase font-bold text-paa-navy/60">
             <tr>
@@ -1837,7 +1932,7 @@ export function OperationsDashboardPage() {
             {gallery.map((g: any) => (
               <tr key={g.id} className="hover:bg-paa-navy/5 transition-colors">
                 <td className="px-4 py-3">
-                  <img src={g.photoUrl ? (g.photoUrl.startsWith('http') ? g.photoUrl : `${API}${g.photoUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded" />
+                  <img src={g.photoUrl ? (g.photoUrl.startsWith('http') ? g.photoUrl : `${API}${g.photoUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded-2xl-2xl" />
                 </td>
                 <td className="px-4 py-3 font-medium text-paa-navy">{g.location}</td>
                 <td className="px-4 py-3 text-paa-gray-text">{g.city}</td>
@@ -1881,34 +1976,35 @@ export function OperationsDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-paa-cream flex flex-col md:flex-row p-6 font-sans">
+      <div className="min-h-screen bg-paa-cream animate-fade-in-up flex flex-col md:flex-row p-6 font-sans">
         <div className="w-64 shrink-0 h-screen hidden md:block space-y-4">
-          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-10 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+          <div className="h-10 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+          <div className="h-10 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+          <div className="h-10 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
         </div>
         <div className="flex-1 space-y-6 md:pl-6">
-          <div className="h-16 bg-gray-200 animate-pulse rounded w-full"></div>
+          <div className="h-16 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="h-32 bg-gray-200 animate-pulse rounded w-full"></div>
-            <div className="h-32 bg-gray-200 animate-pulse rounded w-full"></div>
-            <div className="h-32 bg-gray-200 animate-pulse rounded w-full"></div>
-            <div className="h-32 bg-gray-200 animate-pulse rounded w-full"></div>
+            <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
+            <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
+            <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
+            <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
           </div>
-          <div className="h-96 bg-gray-200 animate-pulse rounded w-full"></div>
+          <div className="h-96 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-paa-cream flex flex-col md:flex-row font-sans text-paa-navy selection:bg-paa-gold selection:text-white">
+    <div className="min-h-screen bg-paa-cream animate-fade-in-up flex flex-col md:flex-row font-sans text-paa-navy selection:bg-paa-gold selection:text-white">
       
       {/* SIDEBAR */}
-      <aside className="w-full md:w-64 flex flex-col hidden md:flex shrink-0 h-screen sticky top-0 bg-paa-cream">
-        <div className="p-6 h-20 flex items-center shrink-0">
-          {/* Logo Removed */}
+      <aside className={`w-64 flex flex-col shrink-0 h-screen fixed md:sticky top-0 bg-paa-cream z-50 transform transition-transform duration-300 border-r border-paa-navy/5 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-4 md:p-6 h-20 flex items-center justify-between shrink-0">
+          <span className="font-serif font-bold text-lg md:hidden">Menu</span>
+          <button onClick={() => setSidebarOpen(false)} className="md:hidden p-2 text-paa-navy"><X size={20} /></button>
         </div>
 
         <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
@@ -1925,11 +2021,15 @@ export function OperationsDashboardPage() {
            ].map((item) => (
               <button 
                 key={item.id}
-                onClick={() => setActiveTab(item.id as any)}
+                onClick={() => {
+                  setActiveTab(item.id as any);
+                  localStorage.setItem('adminActiveTab', item.id);
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-bold tracking-widest uppercase transition-colors border ${
                   activeTab === item.id 
                   ? 'bg-paa-navy text-paa-cream border-paa-navy' 
-                  : 'text-paa-navy border-[transparent] hover:bg-paa-navy/5 border border-paa-navy/0 hover:border-paa-navy/10'
+                  : 'text-paa-navy border-[transparent] hover:bg-paa-navy/5 border border-paa-navy/0 hover:border-paa-navy/5'
                 }`}
               >
                 <item.icon className="w-4 h-4" /> 
@@ -1942,7 +2042,7 @@ export function OperationsDashboardPage() {
         </nav>
 
         <div className="p-4 shrink-0 flex gap-2">
-           <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-paa-navy/10 bg-white text-xs font-bold uppercase hover:bg-red-50 text-red-600 transition-colors">
+           <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-paa-navy/5 bg-white text-xs font-bold uppercase hover:bg-red-50 text-red-600 transition-colors active:scale-95 transition-all duration-300">
               <LogOut size={14} /> Logout
            </button>
         </div>
@@ -1961,12 +2061,62 @@ export function OperationsDashboardPage() {
               <span className="text-paa-navy">{activeTab.replace('-', ' ')}</span>
            </div>
            
-           <div className="flex items-center gap-4">
-              <button className="relative p-2 text-paa-navy border border-paa-navy/10 bg-white hover:bg-paa-navy hover:text-paa-cream transition-colors">
+           <div className="flex items-center gap-4 relative">
+              <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 text-paa-navy border border-paa-navy/5 bg-white hover:bg-paa-navy hover:text-paa-cream transition-colors">
                  <Bell className="w-4 h-4" />
-                 <span className="absolute top-1 right-1 w-2 h-2 bg-[#d9534f] rounded-full border border-white"></span>
+                 {(pendingAlerts.orders || pendingAlerts.queries || pendingAlerts.authors || pendingAlerts.books) && (
+                   <span className="absolute top-1 right-1 w-2 h-2 bg-[#d9534f] rounded-full border border-white"></span>
+                 )}
               </button>
-              <button className="md:hidden p-2 text-paa-navy border border-paa-navy/10 bg-white hover:bg-paa-navy hover:text-paa-cream transition-colors">
+              
+              {showNotifications && (
+                 <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-paa-navy/5 shadow-lg z-50 rounded-2xl-2xl text-sm">
+                    <div className="p-3 border-b bg-gray-50 font-bold uppercase tracking-widest text-xs text-paa-navy">Notifications</div>
+                    <div className="max-h-64 overflow-y-auto">
+                       {pendingAlerts.authors && (
+                          <button onClick={() => { setActiveTab('authors'); localStorage.setItem('adminActiveTab', 'authors'); setShowNotifications(false); }} className="w-full text-left p-3 hover:bg-gray-50 border-b flex items-start gap-2 transition-colors">
+                             <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+                             <div>
+                                <p className="font-bold text-paa-navy">Authors Pending</p>
+                                <p className="text-xs text-gray-500">There are authors waiting for approval.</p>
+                             </div>
+                          </button>
+                       )}
+                       {pendingAlerts.books && (
+                          <button onClick={() => { setActiveTab('books'); localStorage.setItem('adminActiveTab', 'books'); setShowNotifications(false); }} className="w-full text-left p-3 hover:bg-gray-50 border-b flex items-start gap-2 transition-colors">
+                             <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 shrink-0"></div>
+                             <div>
+                                <p className="font-bold text-paa-navy">Books Pending</p>
+                                <p className="text-xs text-gray-500">New books have been listed for review.</p>
+                             </div>
+                          </button>
+                       )}
+                       {pendingAlerts.orders && (
+                          <button onClick={() => { setActiveTab('orders'); localStorage.setItem('adminActiveTab', 'orders'); setShowNotifications(false); }} className="w-full text-left p-3 hover:bg-gray-50 border-b flex items-start gap-2 transition-colors">
+                             <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
+                             <div>
+                                <p className="font-bold text-paa-navy">Orders Pending</p>
+                                <p className="text-xs text-gray-500">There are pending customer web orders.</p>
+                             </div>
+                          </button>
+                       )}
+                       {pendingAlerts.queries && (
+                          <button onClick={() => { setActiveTab('helpdesk'); localStorage.setItem('adminActiveTab', 'helpdesk'); setShowNotifications(false); }} className="w-full text-left p-3 hover:bg-gray-50 flex items-start gap-2 transition-colors">
+                             <div className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0"></div>
+                             <div>
+                                <p className="font-bold text-paa-navy">Unanswered Queries</p>
+                                <p className="text-xs text-gray-500">Helpdesk tickets need your response.</p>
+                             </div>
+                          </button>
+                       )}
+                       {!(pendingAlerts.orders || pendingAlerts.queries || pendingAlerts.authors || pendingAlerts.books) && (
+                          <div className="p-4 text-center text-gray-500 text-xs italic">No new notifications.</div>
+                       )}
+                    </div>
+                 </div>
+              )}
+
+              <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-paa-navy border border-paa-navy/5 bg-white hover:bg-paa-navy hover:text-paa-cream transition-colors">
                  <Menu className="w-4 h-4" />
               </button>
            </div>
@@ -1991,18 +2141,134 @@ export function OperationsDashboardPage() {
         </div>
       </main>
 
+      {/* Event Registrations Modal */}
+      <Modal isOpen={viewingRegistrationsEventId !== null} onClose={() => { setViewingRegistrationsEventId(null); setEventRegistrations([]); setRegistrationsFilter('All'); setRegistrationsPage(1); }} title="Author Event Registrations">
+        {loadingRegistrations ? (
+          <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-paa-navy" /></div>
+        ) : (
+          <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+            
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+              {['All', 'Awaiting Approval', 'Opted-In', 'Rejected'].map(status => {
+                const count = status === 'All' ? eventRegistrations.length : eventRegistrations.filter(r => r.optInStatus === status).length;
+                return (
+                <button key={status} onClick={() => { setRegistrationsFilter(status); setRegistrationsPage(1); }} className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap rounded-full border transition-colors ${registrationsFilter === status ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-500 border-gray-200 hover:border-paa-navy'}`}>
+                  {status} ({count})
+                </button>
+              )})}
+            </div>
+
+            {(() => {
+              const filteredRegistrations = eventRegistrations.filter(r => registrationsFilter === 'All' || r.optInStatus === registrationsFilter);
+              const PAGE_SIZE = 5;
+              const totalPages = Math.ceil(filteredRegistrations.length / PAGE_SIZE);
+              const paginatedRegistrations = filteredRegistrations.slice((registrationsPage - 1) * PAGE_SIZE, registrationsPage * PAGE_SIZE);
+
+              if (filteredRegistrations.length === 0) {
+                return <p className="text-gray-500 text-center py-8">No registrations found for this filter.</p>;
+              }
+
+              return (
+                <>
+                  <div className="space-y-4">
+                    {paginatedRegistrations.map((reg) => (
+                      <div key={reg.id} className={`border p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col gap-4 ${reg.optInStatus === 'Awaiting Approval' ? 'bg-orange-50 border-orange-200' : reg.optInStatus === 'Opted-In' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                  
+                  <div className="flex justify-between items-start border-b pb-3">
+                    <div>
+                      <h4 className="font-bold text-paa-navy text-lg">{reg.author.name}</h4>
+                      <p className="text-xs text-gray-500">{reg.author.email} | {reg.author.phone}</p>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest text-white ${reg.optInStatus === 'Awaiting Approval' ? 'bg-orange-500' : reg.optInStatus === 'Opted-In' ? 'bg-green-500' : 'bg-red-500'}`}>
+                      {reg.optInStatus}
+                    </span>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Books Registered</p>
+                      <ul className="space-y-1">
+                        {reg.books.map((b: any) => (
+                          <li key={b.id} className="text-sm flex justify-between bg-white px-2 py-1 border border-gray-100">
+                            <span className="truncate pr-2">{b.book.title}</span>
+                            <span className="font-bold whitespace-nowrap">{b.listedStock} units</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Category Breakdown</p>
+                       <div className="flex flex-wrap gap-2">
+                         {Object.entries(reg.categoryCounts || {}).map(([cat, count]: [string, any]) => (
+                           <span key={cat} className="text-[10px] font-bold bg-white border border-gray-200 px-2 py-1 rounded-2xl-2xl">
+                             {cat}: {count}
+                           </span>
+                         ))}
+                       </div>
+                    </div>
+                  </div>
+
+                  {reg.paymentScreenshot && (
+                    <div className="mt-2 border-t pt-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Payment Screenshot</p>
+                      <a href={`${API}${reg.paymentScreenshot}`} target="_blank" rel="noopener noreferrer">
+                        <img src={`${API}${reg.paymentScreenshot}`} alt="Payment Proof" className="w-32 h-auto border shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 hover:opacity-80 transition-opacity" />
+                      </a>
+                    </div>
+                  )}
+
+                  {reg.optInStatus === 'Awaiting Approval' && (
+                    <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-black/5">
+                      <button onClick={() => handleRejectRegistration(reg.eventId, reg.authorId)} className="px-4 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors">
+                        Reject
+                      </button>
+                      <button onClick={() => handleApproveRegistration(reg.eventId, reg.authorId)} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors">
+                        Approve Registration
+                      </button>
+                    </div>
+                  )}
+
+                </div>
+              ))}
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 font-medium">Page {registrationsPage} of {totalPages}</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setRegistrationsPage(p => Math.max(1, p - 1))} disabled={registrationsPage === 1} className="px-3 py-1 bg-white border border-gray-300 text-xs font-bold uppercase disabled:opacity-50 hover:bg-gray-50 transition-colors">Prev</button>
+                    <button onClick={() => setRegistrationsPage(p => Math.min(totalPages, p + 1))} disabled={registrationsPage === totalPages} className="px-3 py-1 bg-white border border-gray-300 text-xs font-bold uppercase disabled:opacity-50 hover:bg-gray-50 transition-colors">Next</button>
+                  </div>
+                </div>
+              )}
+            </>
+            );
+          })()}
+          </div>
+        )}
+      </Modal>
+
       <Modal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} title="Create Event">
         <form className="space-y-4" onSubmit={async (e) => {
           e.preventDefault();
           const target = e.target as any;
           setIsSubmittingEvent(true);
           try {
-            await axios.post(`${API}/api/admin/events`, {
-              name: target.name.value,
-              date: target.date.value,
-              location: target.location.value,
-              duration: target.duration.value
-            }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+            const eType = target.eventType.value === 'Other' ? target.customEventType.value : target.eventType.value;
+            
+            const fd = new FormData();
+            fd.append('name', target.name.value);
+            fd.append('date', target.date.value);
+            fd.append('location', target.location.value);
+            fd.append('duration', target.duration.value);
+            fd.append('eventType', eType);
+            fd.append('registrationFee', target.registrationFee.value);
+            fd.append('feeType', target.feeType.value);
+            if (target.description.value) fd.append('description', target.description.value);
+            if (target.banner.files[0]) fd.append('banner', target.banner.files[0]);
+
+            await axios.post(`${API}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
             fetchEvents();
             setIsEventModalOpen(false);
           } catch (err: any) {
@@ -2012,13 +2278,53 @@ export function OperationsDashboardPage() {
           }
         }}>
           <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Name</label><input required name="name" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+          <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Description</label><textarea name="description" rows={2} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" placeholder="Short details about the event..."></textarea></div>
+          <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Type</label>
+              <select name="eventType" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" onChange={(e) => {
+                const customInput = document.getElementById('customEventTypeContainer');
+                if (customInput) customInput.style.display = e.target.value === 'Other' ? 'block' : 'none';
+              }}>
+                <option value="Book Fair">Book Fair</option>
+                <option value="Literature Festival">Literature Festival</option>
+                <option value="Book Launch">Book Launch</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Online Event">Online Event</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div id="customEventTypeContainer" style={{display: 'none'}}>
+               <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Specify Type</label>
+               <input name="customEventType" type="text" placeholder="Enter custom type" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Date (e.g. 15 Aug 2026)</label><input required name="date" type="date" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
             <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Duration (e.g. 3 days)</label><input required name="duration" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
           </div>
           <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Location</label><input required name="location" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
-          <div className="pt-4 mt-4 border-t border-paa-navy/10 flex justify-end">
-            <button type="submit" disabled={isSubmittingEvent} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50">
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Registration Fee (₹)</label>
+              <input required name="registrationFee" type="number" min="0" step="0.01" defaultValue="0" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Fee Type</label>
+              <select name="feeType" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy">
+                <option value="Per Author">Per Author</option>
+                <option value="Per Title">Per Title</option>
+                <option value="Flat Fee">Flat Fee</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="pt-4 mt-4 border-t border-paa-navy/5 flex justify-end">
+            <button type="submit" disabled={isSubmittingEvent} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 active:scale-95 transition-all duration-300">
               {isSubmittingEvent ? "Creating Event..." : "Create Event"}
             </button>
           </div>
@@ -2029,11 +2335,50 @@ export function OperationsDashboardPage() {
         {editingEvent && (
           <form className="space-y-4" onSubmit={handleEditEventSubmit}>
             <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Name</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.name} onChange={e => setEditingEvent({...editingEvent, name: e.target.value})} /></div>
+            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Description</label><textarea name="description" rows={2} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" defaultValue={editingEvent.description || ''}></textarea></div>
+            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Banner (Leave empty to keep existing)</label><input name="banner" type="file" accept="image/*" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Type</label>
+                <select name="eventType" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.eventType} onChange={e => setEditingEvent({...editingEvent, eventType: e.target.value})}>
+                  <option value="Book Fair">Book Fair</option>
+                  <option value="Literature Festival">Literature Festival</option>
+                  <option value="Book Launch">Book Launch</option>
+                  <option value="Workshop">Workshop</option>
+                  <option value="Online Event">Online Event</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              {editingEvent.eventType === 'Other' && (
+                <div>
+                   <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Specify Type</label>
+                   <input required name="customEventType" type="text" placeholder="Enter custom type" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Date</label><input required type="date" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} /></div>
               <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Duration</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.duration} onChange={e => setEditingEvent({...editingEvent, duration: e.target.value})} /></div>
             </div>
             <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Location</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} /></div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Registration Fee (₹)</label>
+                <input required type="number" min="0" step="0.01" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.registrationFee} onChange={e => setEditingEvent({...editingEvent, registrationFee: parseFloat(e.target.value)})} />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Fee Type</label>
+                <select className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.feeType} onChange={e => setEditingEvent({...editingEvent, feeType: e.target.value})}>
+                  <option value="Per Author">Per Author</option>
+                  <option value="Per Title">Per Title</option>
+                  <option value="Flat Fee">Flat Fee</option>
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Status</label>
               <select className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.status} onChange={e => setEditingEvent({...editingEvent, status: e.target.value})}>
@@ -2042,9 +2387,10 @@ export function OperationsDashboardPage() {
                 <option value="Past">Past</option>
               </select>
             </div>
-            <div className="pt-4 mt-4 border-t border-paa-navy/10 flex justify-end gap-2">
+
+            <div className="pt-4 mt-4 border-t border-paa-navy/5 flex justify-end gap-2">
               <button type="button" onClick={() => setIsEditEventModalOpen(false)} className="bg-gray-100 text-paa-navy px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">Cancel</button>
-              <button type="submit" className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">Save Changes</button>
+              <button type="submit" className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors active:scale-95 transition-all duration-300">Save Changes</button>
             </div>
           </form>
         )}
@@ -2054,32 +2400,32 @@ export function OperationsDashboardPage() {
       <Modal isOpen={!!selectedGalleryEvent} onClose={() => setSelectedGalleryEvent(null)} title={`Manage Images: ${selectedGalleryEvent?.location}`}>
         {selectedGalleryEvent && (
           <div className="space-y-6">
-            <form onSubmit={handleUploadGalleryImage} className="space-y-4 bg-gray-50 p-4 border border-paa-navy/10 rounded">
+            <form onSubmit={handleUploadGalleryImage} className="space-y-4 bg-gray-50 p-4 border border-paa-navy/5 rounded-2xl-2xl">
               <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Upload New Image</h4>
               <div>
-                <input required type="file" name="photo" accept="image/*" className="w-full text-sm text-paa-gray-text file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-bold file:bg-paa-navy/10 file:text-paa-navy hover:file:bg-paa-navy/20 transition-colors" />
+                <input required type="file" name="photo" accept="image/*" className="w-full text-sm text-paa-gray-text file:mr-4 file:py-2 file:px-4 file:rounded-2xl-2xl file:border-0 file:text-xs file:font-bold file:bg-paa-navy/10 file:text-paa-navy hover:file:bg-paa-navy/20 transition-colors" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1 block">Caption (Optional)</label><input type="text" name="caption" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-white focus:border-paa-navy" placeholder="E.g. Audience cheering" /></div>
                 <div><label className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1 block">Date Taken (Optional)</label><input type="date" name="dateTaken" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-white focus:border-paa-navy" /></div>
               </div>
               <div className="flex justify-end pt-2">
-                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold transition-colors">Upload</button>
+                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold transition-colors active:scale-95 transition-all duration-300">Upload</button>
               </div>
             </form>
 
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/10 pb-2">Uploaded Images ({selectedGalleryEvent.images?.length || 0})</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Uploaded Images ({selectedGalleryEvent.images?.length || 0})</h4>
               {(!selectedGalleryEvent.images || selectedGalleryEvent.images.length === 0) ? (
                 <div className="text-center py-8 text-paa-gray-text text-sm">No additional images uploaded for this event.</div>
               ) : (
                 <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
                   {selectedGalleryEvent.images.map((img: any) => (
-                    <div key={img.id} className="relative group rounded overflow-hidden border border-paa-navy/10 shadow-sm bg-white">
+                    <div key={img.id} className="relative group rounded-2xl-2xl overflow-hidden border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 bg-white">
                       <img src={img.url.startsWith('http') ? img.url : `${API}${img.url}`} alt={img.caption || 'Event Image'} className="w-full h-32 object-cover" />
                       <button 
                         onClick={() => handleDeleteGalleryImage(img.id)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow"
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-2xl-2xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow"
                         title="Delete Image"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -2103,17 +2449,40 @@ export function OperationsDashboardPage() {
       {/* Event Report Modal */}
       {reportEventId && (
         <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-paa-navy/10 flex justify-between items-center bg-[#f8fafc]">
+          <div className="bg-white rounded-2xl-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-y-auto">
+            <div className="p-6 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
               <div>
                  <h2 className="text-2xl font-serif text-paa-navy">Event Settlement Report</h2>
                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-1">Full breakdown of all author sales and revenue.</p>
               </div>
-              <button onClick={() => setReportEventId(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={24} className="text-gray-500" /></button>
+              <div className="flex gap-4 items-center">
+                 <button onClick={() => {
+                    if (!eventReportData || !eventReportData.authors) return;
+                    let csv = "Author Name,Email,Phone,Book Title,Category,MRP,Listed Stock,Sold Stock,Available Stock,Returned Stock,Revenue\n";
+                    eventReportData.authors.forEach((author: any) => {
+                        if (author.books && author.books.length > 0) {
+                            author.books.forEach((b: any) => {
+                                csv += `"${author.name}","${author.email}","${author.phone}","${b.title}","${b.category}",${b.mrp},${b.listedStock},${b.soldStock},${b.availableStock},${b.returnedStock},${b.revenue}\n`;
+                            });
+                        } else {
+                            csv += `"${author.name}","${author.email}","${author.phone}","No Books Listed",,,,,,,,\n`;
+                        }
+                    });
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `event_sales_report_${reportEventId}.csv`;
+                    a.click();
+                 }} className="bg-paa-navy text-paa-cream px-4 py-2 font-bold text-xs uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                    Download CSV Report
+                 </button>
+                 <button onClick={() => setReportEventId(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={24} className="text-gray-500" /></button>
+              </div>
             </div>
-            <div className="p-6 overflow-y-auto flex-1">
+            <div className="p-6 flex-1">
                {pendingReportStatus && (
-                  <div className="text-center p-8 bg-gray-50 border border-paa-navy/10 rounded mb-6">
+                  <div className="text-center p-8 bg-gray-50 border border-paa-navy/5 rounded-2xl-2xl mb-6">
                      <h3 className="text-2xl font-serif text-paa-navy mb-2">Awaiting Author Settlements</h3>
                      <p className="text-sm text-gray-500 mb-6">The detailed report is partially complete. The following authors have not yet submitted their post-event inventory counts:</p>
                      <div className="flex flex-wrap gap-2 justify-center mb-8">
@@ -2121,37 +2490,131 @@ export function OperationsDashboardPage() {
                            <span key={a.id} className="px-3 py-1 bg-red-50 text-red-700 text-xs font-bold rounded-full border border-red-200">{a.name}</span>
                         ))}
                      </div>
-                     <button onClick={handleNotifySettlement} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">Notify Pending Authors</button>
+                     <button onClick={handleNotifySettlement} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors no-print active:scale-95 transition-all duration-300">Notify Pending Authors</button>
                   </div>
                )}
-               {eventReportData[0]?.isLegacySummary ? (
-                  <div className="text-center p-8 bg-gray-50 border border-paa-navy/10 rounded">
+               {eventReportData && Array.isArray(eventReportData) && eventReportData[0]?.isLegacySummary ? (
+                  <div className="text-center p-8 bg-gray-50 border border-paa-navy/5 rounded-2xl-2xl">
                      <h3 className="text-2xl font-serif text-paa-navy mb-2">Legacy Event Overview</h3>
                      <p className="text-sm text-gray-500 mb-8">Granular transaction records are not available for this archived event.</p>
                      <div className="flex justify-center gap-12">
-                        <div className="bg-white p-6 shadow-sm border border-gray-100 rounded min-w-[150px]">
+                        <div className="bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl min-w-[150px]">
                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Total Authors</p>
                            <p className="text-4xl font-black text-paa-navy">{eventReportData[0].authorsParticipated}</p>
                         </div>
-                        <div className="bg-white p-6 shadow-sm border border-gray-100 rounded min-w-[150px]">
+                        <div className="bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl min-w-[150px]">
                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Books Sold</p>
                            <p className="text-4xl font-black text-paa-navy">{eventReportData[0].booksSold}</p>
                         </div>
                      </div>
                   </div>
-               ) : eventReportData.length === 0 && !pendingReportStatus ? (
+               ) : eventReportData && eventReportData.status === 'live' ? (
+                  <div className="space-y-8">
+                     {/* OVERALL STATS */}
+                     <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl">
+                           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Revenue</p>
+                           <p className="text-2xl font-black text-green-700">₹{eventReportData.overallStats.totalRevenue.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl">
+                           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Sold</p>
+                           <p className="text-2xl font-black text-paa-navy">{eventReportData.overallStats.totalBooksSold}</p>
+                        </div>
+                        <div className="bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl">
+                           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Listed</p>
+                           <p className="text-2xl font-black text-paa-navy">{eventReportData.overallStats.totalBooksListed}</p>
+                        </div>
+                        <div className="bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl">
+                           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors Registered</p>
+                           <p className="text-2xl font-black text-paa-navy">{eventReportData.overallStats.totalAuthorsRegistered}</p>
+                        </div>
+                     </div>
+
+                     {/* CATEGORY SALES */}
+                     <div>
+                        <h3 className="text-lg font-serif text-paa-navy mb-3">Sales by Category</h3>
+                        <div className="grid grid-cols-3 gap-4">
+                           {Object.entries(eventReportData.categorySales).map(([cat, stats]: any) => (
+                              <div key={cat} className="bg-[#f8fafc] p-3 border border-gray-200 rounded-2xl-2xl flex justify-between items-center">
+                                 <span className="font-bold text-xs text-paa-navy">{cat}</span>
+                                 <div className="text-right">
+                                    <p className="text-sm font-bold text-green-700">₹{stats.revenue.toFixed(2)}</p>
+                                    <p className="text-[10px] text-gray-500">{stats.sold} sold</p>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* AUTHORS DETAIL */}
+                     <div>
+                        <h3 className="text-lg font-serif text-paa-navy mb-3">Author Sales Breakdown</h3>
+                        <div className="space-y-6">
+                           {eventReportData.authors.map((author: any) => (
+                              <div key={author.id} className="border border-paa-navy/5 rounded-2xl-2xl overflow-hidden">
+                                 <div className="bg-[#f0f4f8] p-3 flex justify-between items-center border-b border-paa-navy/5">
+                                    <div>
+                                       <p className="font-bold text-paa-navy flex items-center gap-2">
+                                          {author.name}
+                                          {author.optInStatus === 'Awaiting Approval' && <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-[10px] rounded-full">Pending</span>}
+                                       </p>
+                                       <p className="text-[10px] text-gray-500">{author.email} • {author.phone}</p>
+                                    </div>
+                                    <div className="text-right flex gap-6">
+                                       <div>
+                                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Sold</p>
+                                          <p className="font-bold text-paa-navy">{author.totalSold} / {author.totalListed}</p>
+                                       </div>
+                                       <div>
+                                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Revenue</p>
+                                          <p className="font-bold text-green-700">₹{author.totalRevenue.toFixed(2)}</p>
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <table className="w-full text-left text-xs whitespace-nowrap bg-white">
+                                    <thead className="bg-gray-50 text-gray-500 uppercase tracking-widest">
+                                       <tr>
+                                          <th className="px-3 py-2">Book Title</th>
+                                          <th className="px-3 py-2 text-center">Listed</th>
+                                          <th className="px-3 py-2 text-center">Sold</th>
+                                          <th className="px-3 py-2 text-center">Available</th>
+                                          <th className="px-3 py-2 text-right">Revenue</th>
+                                       </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                       {author.books.map((b: any) => (
+                                          <tr key={b.id} className="hover:bg-gray-50">
+                                             <td className="px-3 py-2 font-medium">{b.title} <span className="text-[9px] text-gray-400 block">{b.category}</span></td>
+                                             <td className="px-3 py-2 text-center">{b.listedStock}</td>
+                                             <td className="px-3 py-2 text-center font-bold">{b.soldStock}</td>
+                                             <td className="px-3 py-2 text-center">{b.availableStock}</td>
+                                             <td className="px-3 py-2 text-right text-green-700 font-bold">₹{b.revenue.toFixed(2)}</td>
+                                          </tr>
+                                       ))}
+                                       {author.books.length === 0 && (
+                                          <tr>
+                                             <td colSpan={5} className="px-3 py-4 text-center text-gray-400 italic">No books listed</td>
+                                          </tr>
+                                       )}
+                                    </tbody>
+                                 </table>
+                              </div>
+                           ))}
+                        </div>
+                     </div>
+                  </div>
+               ) : Array.isArray(eventReportData) && eventReportData.length === 0 && !pendingReportStatus ? (
                   <p className="text-center text-gray-500 italic">No books were listed for this event.</p>
-               ) : eventReportData.length > 0 ? (
+               ) : Array.isArray(eventReportData) && eventReportData.length > 0 ? (
                   <table className="w-full text-left text-sm whitespace-nowrap">
-                     <thead className="bg-[#e4ebf5] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/10">
+                     <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
                         <tr>
                            <th className="px-4 py-3 font-bold">Author</th>
                            <th className="px-4 py-3 font-bold">Book Title</th>
                            <th className="px-4 py-3 font-bold text-center">Listed</th>
                            <th className="px-4 py-3 font-bold text-center">Sold</th>
                            <th className="px-4 py-3 font-bold text-center">Returned</th>
-                           <th className="px-4 py-3 font-bold text-right">Admin Cut (30%)</th>
-                           <th className="px-4 py-3 font-bold text-right">Author Payout (70%)</th>
+                           <th className="px-4 py-3 font-bold text-right">Revenue</th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-100">
@@ -2159,8 +2622,6 @@ export function OperationsDashboardPage() {
                            const price = row?.book?.mrp || 0;
                            const sold = row?.soldStock || 0;
                            const revenue = price * sold;
-                           const adminCut = revenue * 0.30;
-                           const authorPayout = revenue * 0.70;
                            return (
                               <tr key={row.id} className="hover:bg-gray-50">
                                  <td className="px-4 py-3">{row?.author?.name || 'N/A'}</td>
@@ -2168,8 +2629,7 @@ export function OperationsDashboardPage() {
                                  <td className="px-4 py-3 text-center">{row?.listedStock || 0}</td>
                                  <td className="px-4 py-3 text-center font-bold">{sold}</td>
                                  <td className="px-4 py-3 text-center text-gray-500">{row?.returnedStock || 0}</td>
-                                 <td className="px-4 py-3 text-right text-gray-500">₹{adminCut.toFixed(2)}</td>
-                                 <td className="px-4 py-3 text-right font-bold text-green-700">₹{authorPayout.toFixed(2)}</td>
+                                 <td className="px-4 py-3 text-right font-bold text-green-700">₹{revenue.toFixed(2)}</td>
                               </tr>
                            )
                         })}
@@ -2177,13 +2637,24 @@ export function OperationsDashboardPage() {
                   </table>
                ) : null}
             </div>
-            {eventReportData.length > 0 && !eventReportData[0]?.isLegacySummary && (
-              <div className="p-4 border-t border-paa-navy/10 bg-gray-50 flex justify-between items-center">
+            {Array.isArray(eventReportData) && eventReportData.length > 0 && !eventReportData[0]?.isLegacySummary && (
+              <div className="p-4 border-t border-paa-navy/5 bg-gray-50 flex justify-between items-center">
                  <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
                     Total Event Revenue: <span className="text-paa-navy text-sm">₹{eventReportData.reduce((sum, r) => sum + ((r?.book?.mrp || 0) * (r?.soldStock || 0)), 0).toFixed(2)}</span>
                  </div>
                  <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                    Total Author Payouts: <span className="text-green-700 text-sm">₹{eventReportData.reduce((sum, r) => sum + (((r?.book?.mrp || 0) * (r?.soldStock || 0)) * 0.70), 0).toFixed(2)}</span>
+                    Total Author Payouts: <span className="text-green-700 text-sm">₹{eventReportData.reduce((sum, r) => sum + ((r?.book?.mrp || 0) * (r?.soldStock || 0)), 0).toFixed(2)}</span>
+                 </div>
+              </div>
+            )}
+            {eventReportData && eventReportData.status === 'live' && (
+              <div className="p-4 border-t border-paa-navy/5 bg-gray-50 flex justify-between items-center">
+                 <div className="text-xs font-bold uppercase tracking-widest text-green-600 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    Live POS Connection Active
+                 </div>
+                 <div className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                    Total Author Payouts: <span className="text-green-700 text-sm">₹{(eventReportData.overallStats.totalRevenue).toFixed(2)}</span>
                  </div>
               </div>
             )}
@@ -2195,7 +2666,7 @@ export function OperationsDashboardPage() {
       <Modal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} title={`Order Details: ${selectedOrder?.id}`}>
         {selectedOrder && (
           <div className="space-y-6">
-            <div className="bg-gray-50 p-4 border border-paa-navy/10 flex justify-between items-start">
+            <div className="bg-gray-50 p-4 border border-paa-navy/5 flex justify-between items-start">
               <div>
                 <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">Customer Details</p>
                 <p className="font-bold text-paa-navy">{selectedOrder.customer}</p>
@@ -2222,7 +2693,7 @@ export function OperationsDashboardPage() {
             <div>
               <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-3">Payment Information</h3>
               {selectedOrder.payment === 'Paid' ? (
-                <div className="bg-[#e4ebf5] p-4 border border-paa-navy/10 flex items-center justify-between">
+                <div className="bg-[#f0f4f8] p-4 border border-paa-navy/5 flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold text-paa-navy mb-1 uppercase tracking-widest">Payment Uploaded</p>
                     <a href={`${API}${selectedOrder.paymentScreenshot}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">View Screenshot</a>
@@ -2237,10 +2708,10 @@ export function OperationsDashboardPage() {
                     </div>
                   ) : (
                     <div className="flex gap-2">
-                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} disabled={loadingAction === 'verifyOrder_' + selectedOrder.dbId} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors disabled:opacity-50">
+                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} disabled={loadingAction === 'verifyOrder_' + selectedOrder.dbId} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors disabled:opacity-50">
                         {loadingAction === 'verifyOrder_' + selectedOrder.dbId ? 'Verifying...' : 'Verify'}
                       </button>
-                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors disabled:opacity-50">
+                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors disabled:opacity-50">
                         {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Rejecting...' : 'Reject'}
                       </button>
                     </div>
@@ -2253,7 +2724,7 @@ export function OperationsDashboardPage() {
                     <span className="text-sm font-bold">No payment screenshot uploaded</span>
                   </div>
                   {selectedOrder.status !== 'Payment Not Received' && (
-                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-sm transition-colors disabled:opacity-50">
+                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors disabled:opacity-50">
                       {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Updating...' : 'Mark Failed'}
                     </button>
                   )}
@@ -2310,7 +2781,7 @@ export function OperationsDashboardPage() {
             <textarea name="formFields" required className="w-full p-2 border border-paa-navy/20 font-mono text-xs" rows={4} defaultValue={`[\n  {"name": "Name", "type": "text"},\n  {"name": "Feedback", "type": "textarea"}\n]`}></textarea>
             <p className="text-xs text-gray-500 mt-1">Supported types: text, textarea, select (needs "options": ["A","B"])</p>
           </div>
-          <button type="submit" disabled={loadingAction === 'createForm'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50">
+          <button type="submit" disabled={loadingAction === 'createForm'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50 active:scale-95 transition-all duration-300">
             {loadingAction === 'createForm' ? 'Creating...' : 'Create Form'}
           </button>
         </form>
@@ -2397,7 +2868,7 @@ export function OperationsDashboardPage() {
             <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Photo</label>
             <input type="file" accept="image/*" name="photo" required className="w-full p-2 border border-paa-navy/20 bg-white" />
           </div>
-          <button type="submit" disabled={loadingAction === 'addGalleryEvent'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50">
+          <button type="submit" disabled={loadingAction === 'addGalleryEvent'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50 active:scale-95 transition-all duration-300">
             {loadingAction === 'addGalleryEvent' ? 'Adding...' : 'Add Gallery Event'}
           </button>
         </form>
@@ -2483,7 +2954,7 @@ export function OperationsDashboardPage() {
               <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Change Main Photo (Optional)</label>
               <input type="file" name="photo" accept="image/*" className="w-full p-2 border border-paa-navy/20 text-xs bg-white" />
             </div>
-            <button type="submit" disabled={loadingAction === 'editGalleryEvent'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50">
+            <button type="submit" disabled={loadingAction === 'editGalleryEvent'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50 active:scale-95 transition-all duration-300">
               {loadingAction === 'editGalleryEvent' ? 'Updating...' : 'Save Changes'}
             </button>
           </form>
@@ -2525,7 +2996,7 @@ export function OperationsDashboardPage() {
               <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Synopsis</label>
               <textarea value={editingBook.synopsis} onChange={(e) => setEditingBook({ ...editingBook, synopsis: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" rows={4}></textarea>
             </div>
-            <button type="submit" disabled={loadingAction === 'updateBook'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow disabled:opacity-50">
+            <button type="submit" disabled={loadingAction === 'updateBook'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow disabled:opacity-50 active:scale-95 transition-all duration-300">
               {loadingAction === 'updateBook' ? 'Updating...' : 'Save Changes'}
             </button>
           </form>
@@ -2535,8 +3006,8 @@ export function OperationsDashboardPage() {
       {/* Reject Author Modal */}
       {rejectAuthorTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
-          <div className="bg-white border border-paa-navy/10 shadow-xl w-full max-w-lg">
-            <div className="bg-[#d9534f] p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center border-b border-paa-navy/10 text-white">
+          <div className="bg-white border border-paa-navy/5 shadow-xl w-full max-w-lg">
+            <div className="bg-[#d9534f] p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center border-b border-paa-navy/5 text-white">
               Reject Author: {rejectAuthorTarget.name}
               <button type="button" onClick={() => setRejectAuthorTarget(null)} className="hover:opacity-70">
                 <X className="w-5 h-5" />
@@ -2544,7 +3015,7 @@ export function OperationsDashboardPage() {
             </div>
             <div className="p-6">
               <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4">Select rejection reason(s):</p>
-              <div className="space-y-3 mb-4 max-h-60 overflow-y-auto bg-gray-50 p-3 border border-paa-navy/10">
+              <div className="space-y-3 mb-4 max-h-60 overflow-y-auto bg-gray-50 p-3 border border-paa-navy/5">
                 {AUTHOR_REJECTION_REASONS.map((reason) => (
                   <label key={reason} className="flex items-start gap-3 cursor-pointer text-sm font-medium text-paa-navy hover:text-paa-gold">
                     <input
@@ -2574,7 +3045,7 @@ export function OperationsDashboardPage() {
                 <button onClick={() => setRejectAuthorTarget(null)} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy font-bold uppercase tracking-widest">
                   Cancel
                 </button>
-                <button onClick={handleRejectAuthorSubmit} disabled={loadingAction === 'rejectAuthor'} className="px-6 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow transition-colors disabled:opacity-50">
+                <button onClick={handleRejectAuthorSubmit} disabled={loadingAction === 'rejectAuthor'} className="px-6 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow transition-colors disabled:opacity-50 active:scale-95 transition-all duration-300">
                   {loadingAction === 'rejectAuthor' ? 'Rejecting...' : 'Confirm Rejection'}
                 </button>
               </div>
@@ -2605,7 +3076,7 @@ export function OperationsDashboardPage() {
               <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Author Bio</label>
               <textarea required value={editingAuthor.bio} onChange={(e) => setEditingAuthor({ ...editingAuthor, bio: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" rows={5} />
             </div>
-            <button type="submit" disabled={loadingAction === 'updateAuthor'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow disabled:opacity-50">
+            <button type="submit" disabled={loadingAction === 'updateAuthor'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow disabled:opacity-50 active:scale-95 transition-all duration-300">
               {loadingAction === 'updateAuthor' ? 'Updating...' : 'Save Author Profile'}
             </button>
           </form>
@@ -2655,15 +3126,15 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
 
   return (
     <div className="space-y-6 max-w-6xl">
-       <div className="bg-white p-6 border border-paa-navy/10 shadow-sm rounded">
-          <div className="flex justify-between items-center mb-6 border-b border-paa-navy/10 pb-4">
+       <div className="bg-white p-6 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 rounded-2xl-2xl">
+          <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
              <div>
                 <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
                    <Users className="w-5 h-5" /> Support Helpdesk
                 </h3>
                 <p className="text-paa-gray-text text-sm">Manage and respond to author queries.</p>
              </div>
-             <button onClick={fetchQueries} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded text-paa-navy transition-colors shadow-sm">
+             <button onClick={fetchQueries} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-2xl-2xl text-paa-navy transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 active:scale-95 transition-all duration-300">
                 <RefreshCw size={18} />
              </button>
           </div>
@@ -2672,17 +3143,17 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
              {queries.length === 0 ? (
                 <p className="text-sm text-gray-500 italic text-center py-8">No queries found.</p>
              ) : queries.map(q => (
-                <div key={q.id} className="border border-gray-200 rounded p-6 bg-gray-50 shadow-sm">
+                <div key={q.id} className="border border-gray-200 rounded-2xl-2xl p-6 bg-gray-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
                       <div>
                          <h4 className="font-bold text-paa-navy text-lg">{q.subject}</h4>
                          <p className="text-xs text-gray-500 mt-1">From: <span className="font-bold">{q.author?.name}</span> ({q.author?.email})</p>
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded ${q.status === 'Answered' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-2xl-2xl ${q.status === 'Answered' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}>
                         {q.status}
                       </span>
                    </div>
-                   <div className="bg-white p-4 rounded border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-inner">
+                   <div className="bg-white p-4 rounded-2xl-2xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-inner">
                       {q.message}
                    </div>
 
@@ -2692,20 +3163,20 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
                          <textarea 
                            rows={3} 
                            placeholder="Type your reply here..." 
-                           className="w-full border border-paa-navy/20 p-3 text-sm outline-none focus:border-paa-navy bg-white rounded resize-y mb-3 shadow-sm"
+                           className="w-full border border-paa-navy/20 p-3 text-sm outline-none focus:border-paa-navy bg-white rounded-2xl-2xl resize-y mb-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300"
                            value={replyText[q.id] || ''}
                            onChange={e => setReplyText({ ...replyText, [q.id]: e.target.value })}
                          />
                          <button 
                            onClick={() => handleReply(q.id)} 
                            disabled={isReplying[q.id]}
-                           className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded shadow-sm"
+                           className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300"
                          >
                            {isReplying[q.id] ? 'Sending...' : 'Send Reply'}
                          </button>
                       </div>
                    ) : (
-                      <div className="mt-4 pt-4 border-t border-gray-200 bg-green-50/50 p-4 rounded">
+                      <div className="mt-4 pt-4 border-t border-gray-200 bg-green-50/50 p-4 rounded-2xl-2xl">
                          <p className="text-xs font-bold uppercase tracking-widest text-paa-gold mb-2">Your Reply:</p>
                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{q.reply}</p>
                       </div>

@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Loader2, LogOut, User, Bell } from 'lucide-react';
-import { X } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { bookCategories } from '../data/categories';
 import qrCode from './data/qr_code.jpeg';
 import { LivePosDashboard } from './LivePosDashboard';
+import fictionData from './data/fiction_catalogue.json';
+import nonFictionData from './data/non_fiction_catalogue.json';
+
 
 export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -20,6 +22,7 @@ export function AuthorDashboardPage() {
   const [isSubmittingReapply, setIsSubmittingReapply] = useState(false);
   const [buttonStates, setButtonStates] = useState<{[key: string]: boolean}>({});
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const prevQueryAnsCountRef = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
@@ -88,15 +91,17 @@ export function AuthorDashboardPage() {
 
   if (loading || !dashboardData) {
     return (
-      <div className="min-h-screen bg-paa-cream animate-fade-in-up p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-           <div className="h-12 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
-             <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
-             <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
-           </div>
-           <div className="h-64 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+      <div className="min-h-screen font-sans" style={{background:'#f5f5f3'}}>
+        <div className="author-topnav">
+          <div className="max-w-7xl mx-auto px-6 h-[60px] flex items-center gap-6">
+            {[...Array(6)].map((_,i) => <div key={i} className="h-5 w-20 dash-skeleton rounded-lg"></div>)}
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto p-6 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[...Array(3)].map((_,i) => <div key={i} className="h-28 dash-skeleton rounded-2xl"></div>)}
+          </div>
+          <div className="h-72 dash-skeleton rounded-2xl"></div>
         </div>
       </div>
     );
@@ -123,7 +128,7 @@ export function AuthorDashboardPage() {
   if (status === 'Approved' && missingFields.length > 0) {
     return (
       <div className="min-h-screen bg-paa-cream animate-fade-in-up font-sans flex items-center justify-center p-6">
-        <div className="bg-white max-w-lg w-full p-8 rounded-2xl-2xl border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+        <div className="bg-white max-w-lg w-full p-8 rounded-3xl-2xl border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
           <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Action Required</h2>
           <p className="text-sm text-gray-600 mb-6">The administration requires some additional information to complete your profile setup. Please fill out the following fields to proceed to your dashboard.</p>
           <div className="space-y-4 mb-6">
@@ -140,7 +145,7 @@ export function AuthorDashboardPage() {
               </div>
             ))}
           </div>
-          <button onClick={handleSaveExtraData} disabled={buttonStates.saveExtra} className="w-full py-3 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 active:scale-95 transition-all duration-300">{buttonStates.saveExtra ? 'Saving...' : 'Save & Continue'}</button>
+          <button onClick={handleSaveExtraData} disabled={buttonStates.saveExtra} className="w-full py-3 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">{buttonStates.saveExtra ? 'Saving...' : 'Save & Continue'}</button>
         </div>
       </div>
     );
@@ -149,13 +154,13 @@ export function AuthorDashboardPage() {
   if (status === 'Pending' || status === 'Rejected') {
     return (
       <div className="min-h-screen bg-paa-cream animate-fade-in-up font-sans flex items-center justify-center p-6">
-        <div className="bg-white max-w-2xl w-full p-8 rounded-lg shadow border border-paa-navy/5">
+        <div className="bg-white max-w-2xl w-full p-8 rounded-xl shadow border border-paa-navy/5">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-serif text-paa-navy">Author Application Status</h1>
-            <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold uppercase active:scale-95 transition-all duration-300"><LogOut size={16}/> Logout</button>
+            <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold uppercase rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out"><LogOut size={16}/> Logout</button>
           </div>
           
-          <div className={`p-4 mb-8 rounded-2xl-2xl border ${status === 'Pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+          <div className={`p-4 mb-8 rounded-3xl-2xl border ${status === 'Pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
             <h2 className="text-xl font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
               {status === 'Pending' ? <AlertCircle size={20} /> : <AlertCircle size={20} />}
               Status: {status}
@@ -165,9 +170,9 @@ export function AuthorDashboardPage() {
             ) : (
               <div>
                 <p className="text-sm mb-2">Unfortunately, your author application has been rejected.</p>
-                {rejectionReason && <p className="text-sm font-bold bg-white p-3 rounded-2xl-2xl border border-red-100">Reason: {rejectionReason}</p>}
+                {rejectionReason && <p className="text-sm font-bold bg-white p-3 rounded-3xl-2xl border border-red-100">Reason: {rejectionReason}</p>}
                 {!showReapply && (
-                  <button onClick={() => setShowReapply(true)} className="mt-4 bg-paa-navy text-white px-4 py-2 rounded-2xl-2xl text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">
+                  <button onClick={() => setShowReapply(true)} className="mt-4 bg-paa-navy text-white px-4 py-2 rounded-3xl-2xl text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">
                     Reapply with Correct Details
                   </button>
                 )}
@@ -176,28 +181,28 @@ export function AuthorDashboardPage() {
           </div>
 
           {showReapply ? (
-            <div className="mb-8 p-4 border border-paa-navy/20 rounded-2xl-2xl bg-gray-50">
+            <div className="mb-8 p-4 border border-paa-navy/20 rounded-3xl-2xl bg-gray-50">
               <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Update Your Details</h3>
               <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Name</label>
-                  <input className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.name} onChange={e => setReapplyForm({...reapplyForm, name: e.target.value})} />
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.name} onChange={e => setReapplyForm({...reapplyForm, name: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
-                  <input className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.phone} onChange={e => setReapplyForm({...reapplyForm, phone: e.target.value})} />
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.phone} onChange={e => setReapplyForm({...reapplyForm, phone: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
-                  <input className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.whatsapp} onChange={e => setReapplyForm({...reapplyForm, whatsapp: e.target.value})} />
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.whatsapp} onChange={e => setReapplyForm({...reapplyForm, whatsapp: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Transaction ID</label>
-                  <input className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.transactionId} onChange={e => setReapplyForm({...reapplyForm, transactionId: e.target.value})} />
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.transactionId} onChange={e => setReapplyForm({...reapplyForm, transactionId: e.target.value})} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Bio</label>
-                  <textarea rows={3} className="w-full border p-2 rounded-2xl-2xl" value={reapplyForm.bio} onChange={e => setReapplyForm({...reapplyForm, bio: e.target.value})} />
+                  <textarea rows={3} className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.bio} onChange={e => setReapplyForm({...reapplyForm, bio: e.target.value})} />
                 </div>
               </div>
               <div className="flex gap-2 justify-end">
@@ -217,7 +222,7 @@ export function AuthorDashboardPage() {
                       setIsSubmittingReapply(false);
                     }
                   }} 
-                  className="bg-paa-navy text-white px-4 py-2 rounded-2xl-2xl text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50"
+                  className="bg-paa-navy text-white px-4 py-2 rounded-3xl-2xl text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50"
                 >
                   {isSubmittingReapply ? 'Submitting...' : 'Submit Reapplication'}
                 </button>
@@ -235,7 +240,7 @@ export function AuthorDashboardPage() {
               
               <div className="mb-4">
                 <span className="text-gray-500 block text-xs uppercase font-bold mb-1">Bio</span>
-                <p className="text-sm bg-gray-50 p-3 rounded-2xl-2xl">{bio}</p>
+                <p className="text-sm bg-gray-50 p-3 rounded-3xl-2xl">{bio}</p>
               </div>
               {extraData && Object.keys(extraData).length > 0 && (
                 <div className="mt-4">
@@ -254,13 +259,13 @@ export function AuthorDashboardPage() {
             {photoUrl && (
               <div>
                 <span className="text-gray-500 block text-xs uppercase font-bold mb-2">Profile Photo</span>
-                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${photoUrl}`} alt="Profile" className="w-24 h-24 object-cover rounded-2xl-2xl shadow" />
+                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${photoUrl}`} alt="Profile" className="w-24 h-24 object-cover rounded-3xl-2xl shadow" />
               </div>
             )}
             {paymentScreenshot && (
               <div>
                 <span className="text-gray-500 block text-xs uppercase font-bold mb-2">Payment Screenshot</span>
-                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${paymentScreenshot}`} alt="Payment" className="w-full max-w-xs object-contain border rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300" />
+                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${paymentScreenshot}`} alt="Payment" className="w-full max-w-xs object-contain border rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out" />
               </div>
             )}
           </div>
@@ -284,65 +289,105 @@ export function AuthorDashboardPage() {
          </div>
       )}
 
-    <div className="min-h-screen bg-paa-cream animate-fade-in-up font-sans">
-      <div className="bg-white border-b border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex gap-6 text-xs font-bold tracking-widest uppercase overflow-x-auto hide-scrollbar items-center">
-          <Link to="/dashboard" className={`${location.pathname === '/dashboard' ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Overview</Link>
-          <Link to="/dashboard/catalogue" className={`${location.pathname.includes('/catalogue') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Catalogue Books</Link>
-          <Link to="/dashboard/orders" className={`${location.pathname.includes('/orders') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>My Orders</Link>
-          <Link to="/dashboard/inventory" className={`${location.pathname.includes('/inventory') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Inventory</Link>
-          <Link to="/dashboard/distribution" className={`${location.pathname.includes('/distribution') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Distribution</Link>
-          <Link to="/dashboard/events" className={`${location.pathname.includes('/events') ? 'text-paa-navy border-b-2 border-paa-navy' : 'text-gray-500 hover:text-paa-navy'} pb-1 transition-colors whitespace-nowrap`}>Events</Link>
-          <div className="ml-auto flex items-center gap-4 relative">
-             <button onClick={() => setShowNotifications(!showNotifications)} className="relative text-gray-500 hover:text-paa-navy pb-1 transition-colors">
-                <Bell size={18} />
-                {hasUnreadInvites && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+    <div className="min-h-screen font-sans" style={{background:'#f5f5f3'}}>
+      {/* TOP NAV */}
+      <div className="author-topnav">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-6 flex items-center h-[60px] justify-between w-full">
+          {/* Brand */}
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden mr-2 p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
+               {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            <img 
+              src="/logo.png" 
+              alt="PAA Logo" 
+              className="h-8 w-auto object-contain" 
+              onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} 
+            />
+            <div className="hidden w-8 h-8 rounded-full bg-[#b44d28] flex items-center justify-center text-white text-sm font-bold">
+              P
+            </div>
+            <span className="font-serif font-bold text-lg tracking-tight hidden sm:block text-paa-navy ml-1">Author Portal</span>
+          </div>
+
+          {/* Right items */}
+          <div className="flex items-center gap-2 relative shrink-0">
+             <button onClick={() => setShowNotifications(!showNotifications)} className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 text-paa-gray-text hover:text-paa-navy transition-colors">
+                <Bell size={16} />
+                {hasUnreadInvites && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
              </button>
              {showNotifications && (
-                <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-paa-navy/5 shadow-lg z-50 rounded-2xl-2xl text-sm normal-case tracking-normal">
-                   <div className="p-3 border-b bg-gray-50 font-bold uppercase tracking-widest text-xs text-paa-navy">Notifications</div>
+                <div className="dash-notification-panel">
+                   <div className="px-4 py-3 border-b border-black/6 bg-gray-50 flex justify-between items-center">
+                     <p className="text-xs font-bold uppercase tracking-widest text-paa-navy">Notifications</p>
+                     <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-paa-navy"><X size={14}/></button>
+                   </div>
                    <div className="max-h-64 overflow-y-auto">
                       {hasUnreadInvites ? unreadEventInvites.map((inv: any) => (
-                         <button key={inv.id} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} className="w-full text-left p-3 hover:bg-gray-50 border-b flex items-start gap-2 transition-colors">
-                            <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 shrink-0"></div>
+                         <button key={inv.id} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} className="w-full text-left px-4 py-3 hover:bg-black/3 border-b flex items-start gap-3 transition-colors">
+                            <div className="w-2 h-2 rounded-full bg-violet-500 mt-1.5 shrink-0"></div>
                             <div>
-                               <p className="font-bold text-paa-navy">New Event: {inv.event.name}</p>
-                               <p className="text-xs text-gray-500">You are invited to participate!</p>
+                               <p className="text-sm font-semibold text-paa-navy">New Event: {inv.event.name}</p>
+                               <p className="text-xs text-paa-gray-text">You are invited to participate!</p>
                             </div>
                          </button>
                       )) : (
-                         <div className="p-4 text-center text-gray-500 text-xs italic">No new notifications.</div>
+                         <div className="px-4 py-6 text-center text-paa-gray-text text-xs">No new notifications.</div>
                       )}
                    </div>
                 </div>
              )}
-             <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 pb-1 transition-colors whitespace-nowrap active:scale-95 transition-all duration-300"><LogOut size={14}/> Logout</button>
+             <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap">
+               <LogOut size={13}/> Logout
+             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
-        <Routes>
-          <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={fetchDashboardData} />} />
-          <Route path="/catalogue" element={<AuthorCatalogueTab />} />
-          <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={fetchDashboardData} />} />
-          <Route path="/forms/*" element={<FormsWrapper />} />
-          <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={fetchDashboardData} />} />
-          <Route path="/distribution" element={<DistributionRecord books={dashboardData.authorProfile.books} orders={dashboardData.authorOrders} authorName={dashboardData.authorProfile.name} />} />
-          <Route path="/book-fair" element={<BookFairDashboard registrations={dashboardData.authorProfile.eventRegistrations} books={dashboardData.authorProfile.books} />} />
-          <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
-          <Route path="/pos/:eventId" element={<LivePosDashboard />} />
-        </Routes>
+      <div className="max-w-[1600px] mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-6 relative">
+        <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-20 md:z-0 ${isMobileMenuOpen ? 'flex absolute top-4 left-4 right-4 md:static shadow-2xl' : 'hidden md:flex'}`}>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname === '/dashboard' ? 'active' : ''}`}><BarChart3 className="w-4 h-4"/> Overview</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/orders" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/orders') ? 'active' : ''}`}><ShoppingCart className="w-4 h-4"/> Web Orders</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/inventory" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/inventory') ? 'active' : ''}`}><BookOpen className="w-4 h-4"/> Inventory & Distribution</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/events" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/events') ? 'active' : ''}`}><CalendarIcon className="w-4 h-4"/> Events Ecosystem</Link>
+        </div>
+
+        <div className="flex-1 bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out p-6 md:p-8">
+          <Routes>
+            <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={fetchDashboardData} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
+            <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={fetchDashboardData} />} />
+            <Route path="/forms/*" element={<FormsWrapper />} />
+            <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={fetchDashboardData} dashboardData={dashboardData} />} />
+            <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
+            <Route path="/pos/:eventId" element={<LivePosDashboard />} />
+          </Routes>
+        </div>
       </div>
     </div>
     </>
   );
 }
 
-function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) {
+function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data: any, onRefresh: () => void, buttonStates: any, setButtonStates: any }) {
   const [filter, setFilter] = useState('all');
   const [showAddBook, setShowAddBook] = useState(false);
-  const [newBook, setNewBook] = useState({ title: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', mrp: '', stock: '' });
+  const [newBook, setNewBook] = useState({
+    title: '',
+    subtitle: '',
+    genre: '',
+    subcategory: '',
+    subSubcategory: '',
+    synopsis: '',
+    pages: '',
+    mrp: '',
+    stock: '0',
+    language: '',
+    isbn: '',
+    publisher: '',
+    publicationDate: '',
+    edition: '',
+    format: ''
+  });
   const [cover, setCover] = useState<File | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editBio, setEditBio] = useState('');
@@ -351,6 +396,8 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [editCoverBookId, setEditCoverBookId] = useState<number | null>(null);
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
+  const [dismissedActions, setDismissedActions] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   const authorProfile = data.authorProfile;
   const authorBooks = authorProfile.books;
@@ -363,7 +410,7 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       id: b.id,
       title: b.title,
       date: new Date(b.createdAt).toLocaleDateString('en-GB'),
-      mrp: `â‚¹${b.mrp}`,
+      mrp: `₹${b.mrp}`,
       overpriced: b.overpriced ? 'Yes' : 'No',
       pub: 'Self-Published',
       genre: b.genre,
@@ -379,20 +426,42 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
   const chartData = titlesData.map((t: any) => ({ name: t.title.substring(0, 15) + '...', sold: t.sold }));
 
   const activityData = [
-    { name: 'Events Part.', count: authorProfile.eventRegistrations?.filter((r:any) => r.activity.type.includes('Event')).length || 0 },
-    { name: 'Book Fairs', count: authorProfile.eventRegistrations?.filter((r:any) => r.activity.type.includes('Fair')).length || 0 },
-    { name: 'Flybraries', count: authorProfile.eventRegistrations?.filter((r:any) => r.activity.type.includes('Flybrary')).length || 0 },
+    { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Opted-In').length || 0 },
+    { name: 'Total Web Orders', count: authorOrders.length || 0 },
+    { name: 'Completed Orders', count: authorOrders.filter((o: any) => o.status === 'Completed').length || 0 },
   ];
 
   const completedOrders = authorOrders.filter((o: any) => o.status === 'Completed');
   const grossSales = completedOrders.reduce((acc: number, curr: any) => acc + curr.amount, 0);
   const netEarnings = grossSales * 0.7;
 
+  const actionItems: any[] = [];
+  
+  const unapprovedOrders = authorOrders.filter((o: any) => o.status === 'Processing' || o.status === 'Pending Verification').length;
+  if (unapprovedOrders > 0 && !dismissedActions.includes('act-orders')) {
+    actionItems.push({ id: 'act-orders', text: `Approve and fulfill ${unapprovedOrders} new web order${unapprovedOrders > 1 ? 's' : ''}`, icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-[#eef2f6]', link: '/dashboard/orders' });
+  }
+
+  const unreadEventInvites = data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Pending') || [];
+  if (unreadEventInvites.length > 0 && !dismissedActions.includes('act-events')) {
+    actionItems.push({ id: 'act-events', text: `You have been invited to ${unreadEventInvites.length} new event${unreadEventInvites.length > 1 ? 's' : ''}. Register now!`, icon: CalendarIcon, color: 'text-purple-600', bg: 'bg-purple-100', link: '/dashboard/events' });
+  }
+
+  const unsettledEvents = data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Opted-In' && inv.event.status === 'Past' && data.listedBooks?.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) || [];
+  if (unsettledEvents.length > 0 && !dismissedActions.includes('act-settle')) {
+    actionItems.push({ id: 'act-settle', text: `Settle your inventory for ${unsettledEvents.length} past event${unsettledEvents.length > 1 ? 's' : ''}`, icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-100', link: '/dashboard/events' });
+  }
+
+  if (actionItems.length === 0) {
+    actionItems.push({ id: 'act-none', text: 'All caught up! No pending actions.', icon: Check, color: 'text-gray-600', bg: 'bg-gray-100', link: '' });
+  }
+
   const handleAddBook = async (e: React.FormEvent | null, addAnother: boolean = false) => {
     if (e) e.preventDefault();
     try {
       const formData = new FormData();
       formData.append('title', newBook.title);
+      formData.append('subtitle', newBook.subtitle);
       formData.append('genre', newBook.genre);
       let subGenre = newBook.subcategory;
       if (newBook.subSubcategory) subGenre += ' > ' + newBook.subSubcategory;
@@ -400,6 +469,13 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       formData.append('synopsis', newBook.synopsis);
       formData.append('mrp', newBook.mrp);
       formData.append('stock', newBook.stock);
+      formData.append('language', newBook.language);
+      formData.append('isbn', newBook.isbn);
+      formData.append('publisher', newBook.publisher);
+      formData.append('publicationDate', newBook.publicationDate);
+      formData.append('edition', newBook.edition);
+      formData.append('format', newBook.format);
+      formData.append('pages', newBook.pages);
       if (cover) formData.append('cover', cover);
 
       const token = localStorage.getItem('token');
@@ -410,7 +486,23 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       onRefresh();
       
       if (addAnother) {
-        setNewBook({ title: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', mrp: '', stock: '' });
+        setNewBook({
+          title: '',
+          subtitle: '',
+          genre: '',
+          subcategory: '',
+          subSubcategory: '',
+          synopsis: '',
+          pages: '',
+          mrp: '',
+          stock: '0',
+          language: '',
+          isbn: '',
+          publisher: '',
+          publicationDate: '',
+          edition: '',
+          format: ''
+        });
         setCover(null);
       } else {
         setShowAddBook(false);
@@ -477,22 +569,89 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8 flex-wrap gap-3">
-        <h1 className="text-4xl font-serif text-paa-navy">Author Dashboard</h1>
+      {/* ── Page Header ── */}
+      <div className="flex justify-between items-start mb-7 flex-wrap gap-3">
+        <div>
+          <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-paa-gray-text mb-1">Author Portal</p>
+          <h1 className="text-3xl font-serif font-bold text-paa-navy tracking-tight">My Dashboard</h1>
+        </div>
         <div className="flex gap-2">
-          <button onClick={handleEditProfileOpen} className="bg-white border border-paa-navy text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-white transition-colors active:scale-95 transition-all duration-300">
-            âœŽ Edit My Profile
+          <button onClick={handleEditProfileOpen} className="dash-btn dash-btn-ghost">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{display:'inline',marginRight:5}}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit Profile
           </button>
-          <button onClick={() => setShowAddBook(true)} className="bg-paa-gold text-paa-navy px-4 py-2 font-bold tracking-widest uppercase text-xs hover:bg-paa-navy hover:text-paa-gold transition-colors">
+          <button onClick={() => setShowAddBook(true)} className="dash-btn dash-btn-primary">
             + Add New Book
           </button>
         </div>
       </div>
 
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total Titles', value: authorBooks.length, colorClass: 'blue' },
+          { label: 'Total Stock', value: authorBooks.reduce((a: number, b: any) => a + b.stock, 0), colorClass: 'green' },
+          { label: 'Gross Sales', value: '\u20b9' + grossSales.toFixed(0), colorClass: 'amber' },
+          { label: 'Net Earnings 70%', value: '\u20b9' + netEarnings.toFixed(0), colorClass: 'red' },
+        ].map((kpi, i) => (
+          <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+            <h3 className="text-2xl font-bold text-paa-navy">{kpi.value}</h3>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Pending Actions ── */}
+      <div className="dash-panel flex flex-col mb-6">
+        <div className="dash-panel-header">
+           <h3 className="dash-panel-title">Pending Actions</h3>
+        </div>
+        <div className="p-5 space-y-5 overflow-auto max-h-[300px]">
+          {actionItems.map((action) => {
+            const Icon = action.icon;
+            return (
+            <div key={action.id} className="flex gap-4 items-center group">
+              <div className="flex-1 flex items-center gap-4 cursor-pointer" onClick={() => { if (action.link) navigate(action.link); }}>
+                <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${action.bg} ${action.color} border border-paa-navy/5 rounded-full transition-transform group-hover:scale-110`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-paa-navy group-hover:underline">{action.text}</p>
+                </div>
+                {action.id !== 'act-none' && (
+                  <ChevronDown className="w-4 h-4 text-paa-gray-text -rotate-90 group-hover:text-paa-navy transition-colors mr-2" />
+                )}
+              </div>
+              {action.id !== 'act-none' && (
+                <button onClick={(e) => { e.stopPropagation(); setDismissedActions([...dismissedActions, action.id]); }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Dismiss">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )})}
+        </div>
+      </div>
+
+      {/* ── Genre Filter Pills ── */}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <span className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mr-1">Filter:</span>
+        {['all', 'Fiction', 'Non-Fiction', 'Children', 'Poetry'].map(g => (
+          <button key={g} onClick={() => setFilter(g)} className={`dash-pill ${filter === g ? 'active' : ''}`}>
+            {g === 'all' ? 'All Genres' : g}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Edit Profile Modal ── */}
       {showEditProfile && (
-        <div className="fixed inset-0 bg-paa-navy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Edit My Profile</h2>
+        <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowEditProfile(false)}>
+          <div className="dash-modal">
+            <div className="dash-modal-header">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Edit My Profile</h3>
+              <button onClick={() => setShowEditProfile(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">&#x2715;</button>
+            </div>
+            <div className="dash-modal-body">
+            <h2 className="sr-only">Edit My Profile</h2>
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio</label>
@@ -513,23 +672,28 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
                 <input type="file" accept="image/*" className="border p-2 text-xs w-full" onChange={e => setEditPhoto(e.target.files?.[0] || null)} />
               </div>
               <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setShowEditProfile(false)} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
-                <button type="submit" disabled={buttonStates.editProfile} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold disabled:opacity-50 active:scale-95 transition-all duration-300">{buttonStates.editProfile ? 'Saving...' : 'Save Changes'}</button>
+                <button type="button" onClick={() => setShowEditProfile(false)} className="dash-btn dash-btn-ghost">Cancel</button>
+                <button type="submit" disabled={buttonStates.editProfile} className="dash-btn dash-btn-primary disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save Changes'}</button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {editCoverBookId !== null && (
-        <div className="fixed inset-0 bg-paa-navy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 max-w-sm w-full">
-            <h2 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Update Book Cover</h2>
-            <div className="flex flex-col gap-4">
-              <input type="file" accept="image/*" className="border p-2 text-xs" onChange={e => setNewCoverFile(e.target.files?.[0] || null)} />
+        <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setEditCoverBookId(null)}>
+          <div className="dash-modal" style={{maxWidth:400}}>
+            <div className="dash-modal-header">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Update Book Cover</h3>
+              <button onClick={() => { setEditCoverBookId(null); setNewCoverFile(null); }} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">&#x2715;</button>
+            </div>
+            <div className="dash-modal-body flex flex-col gap-4">
+              <label className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text">Select New Cover Image</label>
+              <input type="file" accept="image/*" className="dash-input text-xs" onChange={e => setNewCoverFile(e.target.files?.[0] || null)} />
               <div className="flex justify-end gap-2">
-                <button onClick={() => { setEditCoverBookId(null); setNewCoverFile(null); }} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
-                <button onClick={() => handleUpdateCover(editCoverBookId)} disabled={buttonStates.updateCover} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold disabled:opacity-50">{buttonStates.updateCover ? 'Uploading...' : 'Upload Cover'}</button>
+                <button onClick={() => { setEditCoverBookId(null); setNewCoverFile(null); }} className="dash-btn dash-btn-ghost">Cancel</button>
+                <button onClick={() => handleUpdateCover(editCoverBookId)} disabled={buttonStates.updateCover} className="dash-btn dash-btn-primary disabled:opacity-50">{buttonStates.updateCover ? 'Uploading...' : 'Upload Cover'}</button>
               </div>
             </div>
           </div>
@@ -537,123 +701,161 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
       )}
       
       {showAddBook && (
-        <div className="fixed inset-0 bg-paa-navy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 max-w-md w-full">
-            <h2 className="text-xl font-serif text-paa-navy mb-4">Add New Title</h2>
-            <form onSubmit={handleAddBook} className="flex flex-col gap-4">
-              <input required placeholder="Book Title" className="border p-2" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} />
-              
-              <div className="flex gap-2">
-                <select required className="border p-2 flex-1" value={newBook.genre} onChange={e => setNewBook({...newBook, genre: e.target.value, subcategory: '', subSubcategory: ''})}>
-                  <option value="">Select Category</option>
-                  {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+        <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowAddBook(false)}>
+          <div className="dash-modal max-w-lg">
+            <div className="dash-modal-header">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Add New Title</h3>
+              <button onClick={() => setShowAddBook(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">&#x2715;</button>
+            </div>
+            <div className="dash-modal-body max-h-[75vh] overflow-y-auto">
+              <form onSubmit={handleAddBook} className="flex flex-col gap-4">
                 
-                {newBook.genre && Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).length > 0 && (
-                  <select className="border p-2 flex-1" value={newBook.subcategory} onChange={e => setNewBook({...newBook, subcategory: e.target.value, subSubcategory: ''})}>
-                    <option value="">Select Subcategory</option>
-                    {Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).map(sc => <option key={sc} value={sc}>{sc}</option>)}
-                  </select>
-                )}
-              </div>
-              
-              {newBook.genre && newBook.subcategory && ((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).length > 0 && (
-                <select className="border p-2" value={newBook.subSubcategory} onChange={e => setNewBook({...newBook, subSubcategory: e.target.value})}>
-                  <option value="">Select Specific Genre</option>
-                  {((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
-                </select>
-              )}
+                {/* Book Title & Subtitle */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="dash-label">Book Title *</label>
+                    <input required className="dash-input" placeholder="Title" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Subtitle</label>
+                    <input className="dash-input" placeholder="Subtitle" value={newBook.subtitle} onChange={e => setNewBook({...newBook, subtitle: e.target.value})} />
+                  </div>
+                </div>
 
-              <textarea required placeholder="Synopsis" className="border p-2" value={newBook.synopsis} onChange={e => setNewBook({...newBook, synopsis: e.target.value})} />
-              <input required type="number" placeholder="MRP (â‚¹)" className="border p-2" value={newBook.mrp} onChange={e => setNewBook({...newBook, mrp: e.target.value})} />
-              <input required type="number" placeholder="Initial Stock" className="border p-2" value={newBook.stock} onChange={e => setNewBook({...newBook, stock: e.target.value})} />
-              <input type="file" accept="image/*" onChange={e => setCover(e.target.files?.[0] || null)} className="border p-2 text-xs" />
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={() => setShowAddBook(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">Cancel</button>
-                <button type="button" onClick={(e) => {
-                  const form = e.currentTarget.closest('form');
-                  if (form && form.checkValidity()) {
-                    handleAddBook(null, true);
-                  } else if (form) {
-                    form.reportValidity();
-                  }
-                }} className="bg-gray-200 text-paa-navy border border-paa-navy/20 px-4 py-2 text-sm font-bold uppercase tracking-widest hover:bg-gray-300 transition-colors">Save & Add Another</button>
-                <button type="submit" disabled={buttonStates.addBook} className="bg-paa-navy text-paa-cream px-4 py-2 text-sm font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 active:scale-95 transition-all duration-300">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
-              </div>
-            </form>
+                {/* Category, Subcategory, Specific Genre */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="dash-label">Category *</label>
+                    <select required className="dash-input" value={newBook.genre} onChange={e => setNewBook({...newBook, genre: e.target.value, subcategory: '', subSubcategory: ''})}>
+                      <option value="">Select Category</option>
+                      {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="dash-label">Subcategory</label>
+                    <select className="dash-input" disabled={!newBook.genre || Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).length === 0} value={newBook.subcategory} onChange={e => setNewBook({...newBook, subcategory: e.target.value, subSubcategory: ''})}>
+                      <option value="">Select Sub</option>
+                      {newBook.genre && Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="dash-label">Specific Genre</label>
+                    <select className="dash-input" disabled={!newBook.subcategory || !((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).length} value={newBook.subSubcategory} onChange={e => setNewBook({...newBook, subSubcategory: e.target.value})}>
+                      <option value="">Select Genre</option>
+                      {newBook.genre && newBook.subcategory && ((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Synopsis */}
+                <div>
+                  <label className="dash-label">Synopsis *</label>
+                  <textarea required className="dash-input" rows={3} placeholder="Brief description of the book" value={newBook.synopsis} onChange={e => setNewBook({...newBook, synopsis: e.target.value})} />
+                </div>
+
+                {/* Language, Publisher, Publication Date */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="dash-label">Language *</label>
+                    <input required className="dash-input" placeholder="e.g. English" value={newBook.language} onChange={e => setNewBook({...newBook, language: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Publisher *</label>
+                    <input required className="dash-input" placeholder="e.g. Self-Published" value={newBook.publisher} onChange={e => setNewBook({...newBook, publisher: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Pub Date *</label>
+                    <input required type="date" className="dash-input text-xs" value={newBook.publicationDate} onChange={e => setNewBook({...newBook, publicationDate: e.target.value})} />
+                  </div>
+                </div>
+
+                {/* ISBN, Edition, Format */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="dash-label">ISBN</label>
+                    <input className="dash-input" placeholder="e.g. 978..." value={newBook.isbn} onChange={e => setNewBook({...newBook, isbn: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Edition</label>
+                    <input className="dash-input" placeholder="e.g. 1st Edition" value={newBook.edition} onChange={e => setNewBook({...newBook, edition: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Format *</label>
+                    <select required className="dash-input" value={newBook.format} onChange={e => setNewBook({...newBook, format: e.target.value})}>
+                      <option value="">Select Format</option>
+                      <option value="Paperback">Paperback</option>
+                      <option value="Hardcover">Hardcover</option>
+                      <option value="Ebook">Ebook</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Pages, MRP, Initial Stock */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="dash-label">Pages</label>
+                    <input type="number" className="dash-input" placeholder="250" value={newBook.pages} onChange={e => setNewBook({...newBook, pages: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">MRP (₹) *</label>
+                    <input required type="number" className="dash-input" placeholder="Price" value={newBook.mrp} onChange={e => setNewBook({...newBook, mrp: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Initial Stock</label>
+                    <input type="number" className="dash-input" placeholder="Qty" value={newBook.stock} onChange={e => setNewBook({...newBook, stock: e.target.value})} />
+                  </div>
+                </div>
+
+                {/* Cover upload */}
+                <div>
+                  <label className="dash-label">Cover Image *</label>
+                  <input required type="file" accept="image/*" className="dash-input text-xs" onChange={e => setCover(e.target.files?.[0] || null)} />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t mt-2">
+                  <button type="button" onClick={() => setShowAddBook(false)} className="dash-btn dash-btn-ghost">Cancel</button>
+                  <button type="button" onClick={(e) => { const f = e.currentTarget.closest('form'); if (f && f.checkValidity()) { handleAddBook(null, true); } else if (f) { f.reportValidity(); } }} className="dash-btn dash-btn-ghost">Save &amp; Add Another</button>
+                  <button type="submit" disabled={buttonStates.addBook} className="dash-btn dash-btn-primary disabled:opacity-50">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="mb-6 flex flex-col md:flex-row gap-6">
-        <div className="flex items-center gap-4 bg-white p-4 border border-paa-navy/5 rounded-2xl-2xl grow">
-           <span className="text-sm font-bold tracking-widest uppercase text-paa-navy">Filter Titles:</span>
-           <select className="border p-2 text-sm outline-none" value={filter} onChange={(e) => setFilter(e.target.value)}>
-              <option value="all">All Genres</option>
-              <option value="Fiction">Fiction</option>
-              <option value="Non-Fiction">Non-Fiction</option>
-              <option value="Children">Children</option>
-              <option value="Poetry">Poetry</option>
-           </select>
-        </div>
 
-        <div className="flex gap-4">
-          <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded-2xl-2xl flex flex-col justify-center w-48">
-            <div className="text-xs font-bold tracking-widest text-[#16a34a] uppercase mb-1">Gross Sales</div>
-            <div className="text-2xl font-serif text-[#14532d]">â‚¹{grossSales.toFixed(2)}</div>
-          </div>
-          <div className="bg-[#eff6ff] border border-[#bfdbfe] p-4 rounded-2xl-2xl flex flex-col justify-center w-48">
-            <div className="text-xs font-bold tracking-widest text-[#2563eb] uppercase mb-1">Net Earnings (70%)</div>
-            <div className="text-2xl font-serif text-[#1e3a8a]">â‚¹{netEarnings.toFixed(2)}</div>
-          </div>
+      {/* ── Books Table ── */}
+      <div className="dash-panel overflow-hidden mb-7">
+        <div className="dash-panel-header">
+          <h2 className="dash-panel-title">Your Titles</h2>
+          <span className="dash-badge info">{filteredTitles.length} titles</span>
         </div>
-      </div>
-
-      <div className="bg-white border border-paa-navy/5 overflow-hidden mb-12">
-        <h2 className="text-sm font-bold tracking-widest uppercase bg-[#4a90e2] text-white p-4">Your Titles Information</h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#eef2f6] text-paa-navy">
-              <tr>
-                <th className="p-3 border-r border-[#8faadc]">S.No</th>
-                <th className="p-3 border-r border-[#8faadc]">Cover</th>
-                <th className="p-3 border-r border-[#8faadc]">Title</th>
-                <th className="p-3 border-r border-[#8faadc]">Status</th>
-                <th className="p-3 border-r border-[#8faadc]">Date Joined</th>
-                <th className="p-3 border-r border-[#8faadc]">MRP</th>
-                <th className="p-3 border-r border-[#8faadc]">Genre</th>
-                <th className="p-3 border-r border-[#8faadc]">Stock</th>
-                <th className="p-3 border-r border-[#8faadc]">Books Sold</th>
-                <th className="p-3">Change Cover</th>
-              </tr>
-            </thead>
+          <table className="dash-table">
+            <thead><tr>
+              <th>#</th><th>Cover</th><th>Title</th><th>Status</th>
+              <th>Genre</th><th>MRP</th><th>Stock</th><th>Sold</th><th>Date</th><th>Cover</th>
+            </tr></thead>
             <tbody>
-              {filteredTitles.map((row: any) => (
-                <tr key={row.id} className="border-b border-paa-navy/5 even:bg-gray-50">
-                  <td className="p-3 border-r border-paa-navy/5 text-center">{row.sno}</td>
-                  <td className="p-3 border-r border-paa-navy/5">
-                    {authorBooks.find((b: any) => b.id === row.id)?.coverUrl
-                      ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-10 h-14 object-cover rounded-2xl-2xl shadow" />
-                      : <div className="w-10 h-14 bg-gray-100 flex items-center justify-center text-gray-400 text-xs rounded-2xl-2xl border">No Cover</div>
-                    }
+              {filteredTitles.length === 0 ? (
+                <tr><td colSpan={10} className="text-center py-10 text-paa-gray-text italic text-sm">No titles for this filter.</td></tr>
+              ) : filteredTitles.map((row: any, idx: number) => (
+                <tr key={row.id}>
+                  <td className="text-paa-gray-text text-xs">{idx + 1}</td>
+                  <td>{authorBooks.find((b: any) => b.id === row.id)?.coverUrl
+                    ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-9 h-12 object-cover rounded-lg shadow-sm" />
+                    : <div className="w-9 h-12 bg-gray-100 rounded-lg border flex items-center justify-center text-[9px] text-gray-400">No cover</div>}
                   </td>
-                  <td className="p-3 border-r border-paa-navy/5 font-medium">{row.title}</td>
-                  <td className="p-3 border-r border-paa-navy/5">
-                    <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-2xl-2xl ${row.status === 'Approved' ? 'bg-green-100 text-green-800' : row.status === 'Rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{row.status}</span>
-                    {row.status === 'Rejected' && row.rejectionReason && (
-                       <div className="mt-1 text-xs text-red-600 font-medium">Reason: {row.rejectionReason}</div>
-                    )}
+                  <td className="font-semibold text-paa-navy">{row.title}</td>
+                  <td><span className={`dash-badge ${row.status === 'Approved' ? 'approved' : row.status === 'Rejected' ? 'rejected' : 'pending'}`}>{row.status}</span>
+                    {row.status === 'Rejected' && row.rejectionReason && <div className="mt-1 text-[10px] text-red-600">{row.rejectionReason}</div>}
                   </td>
-                  <td className="p-3 border-r border-paa-navy/5">{row.date}</td>
-                  <td className="p-3 border-r border-paa-navy/5">{row.mrp}</td>
-                  <td className="p-3 border-r border-paa-navy/5">{row.genre}</td>
-                  <td className="p-3 border-r border-paa-navy/5 font-bold bg-yellow-50">{row.stock}</td>
-                  <td className="p-3 border-r border-paa-navy/5 font-bold text-paa-navy">{row.sold}</td>
-                  <td className="p-3 text-center">
-                    <button onClick={() => { setEditCoverBookId(row.id); setNewCoverFile(null); }} className="bg-[#4a90e2] text-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest hover:bg-paa-navy transition-colors rounded-2xl-2xl">
-                      Change Cover
-                    </button>
-                  </td>
+                  <td className="text-paa-gray-text text-xs">{row.genre}</td>
+                  <td className="font-semibold">₹{row.mrp}</td>
+                  <td><span className={`font-bold ${row.stock < 10 ? 'text-red-500' : 'text-paa-navy'}`}>{row.stock}</span>{row.stock < 10 && <div className="text-[9px] text-red-400 font-bold">LOW</div>}</td>
+                  <td className="font-semibold text-emerald-700">{row.sold}</td>
+                  <td className="text-paa-gray-text text-xs whitespace-nowrap">{row.date}</td>
+                  <td><button onClick={() => { setEditCoverBookId(row.id); setNewCoverFile(null); }} className="dash-btn dash-btn-ghost text-[10px] px-2 py-1">Change</button></td>
                 </tr>
               ))}
             </tbody>
@@ -661,42 +863,45 @@ function OverviewTab({ data, onRefresh }: { data: any, onRefresh: () => void }) 
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8 mb-12">
-         <div className="bg-white p-6 border border-paa-navy/5 rounded-2xl-2xl">
-            <h3 className="text-lg font-serif text-paa-navy mb-6">Books Sold per Title</h3>
-            <div className="h-[300px]">
-               <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" fontSize={10} />
-                    <YAxis />
-                    <Tooltip cursor={{fill: '#f3f4f6'}} />
-                    <Bar dataKey="sold" fill="#5bc0de" />
-                  </BarChart>
-               </ResponsiveContainer>
-            </div>
-         </div>
-         <div className="bg-white p-6 border border-paa-navy/5 rounded-2xl-2xl">
-            <h3 className="text-lg font-serif text-paa-navy mb-6">Activity Participation Overview</h3>
-            <div className="h-[300px]">
-               <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={activityData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={100} fontSize={12} />
-                    <Tooltip cursor={{fill: '#f3f4f6'}} />
-                    <Bar dataKey="count" fill="#8faadc" />
-                  </BarChart>
-               </ResponsiveContainer>
-            </div>
-         </div>
+      {/* ── Charts ── */}
+      <div className="grid lg:grid-cols-2 gap-5 mb-6">
+        <div className="dash-panel">
+          <div className="dash-panel-header"><h3 className="dash-panel-title">Books Sold per Title</h3></div>
+          <div className="h-[250px] p-5">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="name" fontSize={10} tick={{fill:'#71717A'}} />
+                <YAxis fontSize={10} tick={{fill:'#71717A'}} />
+                <Tooltip cursor={{fill:'rgba(24,24,27,0.03)'}} contentStyle={{borderRadius:10,border:'1px solid rgba(24,24,27,0.08)',fontSize:12}} />
+                <Bar dataKey="sold" fill="#18181B" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="dash-panel">
+          <div className="dash-panel-header"><h3 className="dash-panel-title">Activity Participation</h3></div>
+          <div className="h-[250px] p-5">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={activityData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" fontSize={10} tick={{fill:'#71717A'}} />
+                <YAxis dataKey="name" type="category" width={90} fontSize={10} tick={{fill:'#71717A'}} />
+                <Tooltip cursor={{fill:'rgba(24,24,27,0.03)'}} contentStyle={{borderRadius:10,border:'1px solid rgba(24,24,27,0.08)',fontSize:12}} />
+                <Bar dataKey="count" fill="#C0A062" radius={[0,4,4,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => void }) {
+function InventoryPage({ books, onRefresh, dashboardData }: { books: any[], onRefresh: () => void, dashboardData: any }) {
   const [newStocks, setNewStocks] = useState<{[key: number]: string}>({});
+  const orders = dashboardData?.authorOrders || [];
+  const listedBooks = dashboardData?.listedBooks || [];
 
   const handleUpdateStock = async (id: number) => {
     try {
@@ -716,111 +921,179 @@ function InventoryPage({ books, onRefresh }: { books: any[], onRefresh: () => vo
     }
   };
 
-
-
-
   return (
-    <div>
-      <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">INVENTORY DASHBOARD</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+        <div>
+          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Inventory & Distribution</h2>
+          <p className="text-sm text-paa-gray-text mt-1">Track your web orders, event distributions, and available stock levels.</p>
+        </div>
+      </div>
+
+      {(() => {
+        const totalWebSold = orders.filter((o: any) => o.status === 'Completed' || o.status === 'Dispatched' || o.status === 'Accepted').reduce((acc: number, curr: any) => acc + curr.quantity, 0);
+        const totalEventSold = listedBooks.reduce((acc: number, curr: any) => acc + curr.soldStock, 0);
+        const lowStockCount = books.filter(b => b.stock < 10).length;
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+               <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><TrendingUp size={24}/></div>
+               <div>
+                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Total Copies Sold</p>
+                  <p className="text-2xl font-black text-paa-navy leading-none">{totalWebSold + totalEventSold}</p>
+               </div>
+            </div>
+            <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+               <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600"><ShoppingCart size={24}/></div>
+               <div>
+                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Web Channel Sales</p>
+                  <p className="text-2xl font-black text-paa-navy leading-none">{totalWebSold}</p>
+               </div>
+            </div>
+            <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+               <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600"><CalendarIcon size={24}/></div>
+               <div>
+                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Event Channel Sales</p>
+                  <p className="text-2xl font-black text-paa-navy leading-none">{totalEventSold}</p>
+               </div>
+            </div>
+            <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+               <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-600"><AlertCircle size={24}/></div>
+               <div>
+                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Low Stock Alerts</p>
+                  <p className="text-2xl font-black text-paa-navy leading-none">{lowStockCount}</p>
+               </div>
+            </div>
+          </div>
+        );
+      })()}
       
-      <div className="bg-white border border-paa-navy/5 overflow-hidden mb-12">
-        <h2 className="text-sm font-bold tracking-widest uppercase bg-[#4a90e2] text-white p-4">Update Stock</h2>
+      <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-             <thead className="bg-[#eef2f6] text-paa-navy uppercase text-xs">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+             <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
                 <tr>
-                   <th className="p-3 border-r border-[#8faadc]">S.No</th>
-                   <th className="p-3 border-r border-[#8faadc]">Title</th>
-                   <th className="p-3 border-r border-[#8faadc] text-center">Current Stock</th>
-                   <th className="p-3 border-r border-[#8faadc] text-center">Status</th>
-                   <th className="p-3 border-r border-[#8faadc]">Add Stock</th>
-                   <th className="p-3">Action</th>
+                   <th className="px-4 py-3 font-bold">Title</th>
+                   <th className="px-4 py-3 font-bold text-center">Web Sold</th>
+                   <th className="px-4 py-3 font-bold text-center">Events Listed</th>
+                   <th className="px-4 py-3 font-bold text-center">Events Sold</th>
+                   <th className="px-4 py-3 font-bold text-center">Current Stock</th>
+                   <th className="px-4 py-3 font-bold">Manage Stock</th>
                 </tr>
              </thead>
-             <tbody>
-               {books.map((item, index) => (
-                 <tr key={item.id} className="border-b border-paa-navy/5 even:bg-gray-50">
-                    <td className="p-3 border-r border-paa-navy/5 text-center">{index + 1}</td>
-                    <td className="p-3 border-r border-paa-navy/5 font-medium">{item.title}</td>
-                    <td className="p-3 border-r border-paa-navy/5 text-center font-bold text-lg">{item.stock}</td>
-                    <td className="p-3 border-r border-paa-navy/5 text-center">
-                       {item.stock < 10 ? (
-                         <span className="inline-flex items-center gap-1 bg-red-100 text-red-800 px-2 py-1 rounded-2xl-2xl text-xs font-bold">
-                           <AlertCircle className="w-3 h-3" /> LOW STOCK
-                         </span>
-                       ) : (
-                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded-2xl-2xl text-xs font-bold">OK</span>
+             <tbody className="divide-y divide-gray-100">
+               {books.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500 italic">No books listed in your inventory yet.</td></tr> : books.map((item, index) => {
+                 const webSold = orders.filter((o: any) => o.bookTitle === item.title && (o.status === 'Completed' || o.status === 'Dispatched' || o.status === 'Accepted')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
+                 const bookEvents = listedBooks.filter((lb: any) => lb.bookId === item.id);
+                 const eventListed = bookEvents.reduce((acc: number, curr: any) => acc + curr.listedStock, 0);
+                 const eventSold = bookEvents.reduce((acc: number, curr: any) => acc + curr.soldStock, 0);
+                 const eventInvites = dashboardData?.eventInvites || [];
+                 const resolveEventName = (eventId: number) => {
+                    const inv = eventInvites.find((i: any) => i.eventId === eventId);
+                    return inv?.event?.name || `Event #${eventId}`;
+                 };
+                 
+                 return (
+                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-paa-navy">{item.title}</p>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest">MRP: ₹{item.mrp}</p>
+                    </td>
+                    <td className="px-4 py-3 text-center font-bold text-green-700">{webSold}</td>
+                    <td className="px-4 py-3 text-center text-gray-600 font-medium">{eventListed}</td>
+                    <td className="px-4 py-3 text-center">
+                       <span className="font-bold text-blue-700 block">{eventSold}</span>
+                       {bookEvents.length > 0 && (
+                         <div className="text-[10px] text-left mt-2 border-t border-gray-100 pt-1 space-y-1">
+                           {bookEvents.map((be: any) => (
+                             <div key={be.id} className="flex justify-between text-gray-500 gap-4">
+                                <span className="truncate w-24 font-medium" title={resolveEventName(be.eventId)}>{resolveEventName(be.eventId)}</span>
+                                <span title="Sold / Listed">{be.soldStock}/{be.listedStock}</span>
+                             </div>
+                           ))}
+                         </div>
                        )}
                     </td>
-                    <td className="p-3 border-r border-paa-navy/5">
-                       <input 
-                         type="number" 
-                         min="1"
-                         className="border p-2 w-24 text-xs" 
-                         placeholder="Qty"
-                         value={newStocks[item.id] || ''}
-                         onChange={(e) => setNewStocks({...newStocks, [item.id]: e.target.value})}
-                       />
+                    <td className="px-4 py-3 text-center">
+                       <div className="flex flex-col items-center">
+                         <span className="font-bold text-lg text-paa-navy">{item.stock}</span>
+                         {item.stock < 10 && (
+                           <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 mt-1 border border-red-200">LOW STOCK</span>
+                         )}
+                       </div>
                     </td>
-                    <td className="p-3 text-center">
-                       <button 
-                         onClick={() => handleUpdateStock(item.id)}
-                         disabled={!newStocks[item.id]}
-                         className="bg-paa-navy text-paa-cream px-4 py-2 text-xs uppercase font-bold tracking-widest hover:bg-paa-gold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                       >
-                         Update
-                       </button>
+                    <td className="px-4 py-3">
+                       <div className="flex items-center gap-2">
+                         <input 
+                           type="number" 
+                           min="1"
+                           className="dash-input w-20 text-center" 
+                           placeholder="Qty"
+                           value={newStocks[item.id] || ''}
+                           onChange={(e) => setNewStocks({...newStocks, [item.id]: e.target.value})}
+                         />
+                         <button 
+                           onClick={() => handleUpdateStock(item.id)}
+                           disabled={!newStocks[item.id]}
+                           className="dash-btn-primary px-4 py-2 disabled:opacity-50"
+                         >
+                           Add
+                         </button>
+                       </div>
                     </td>
                  </tr>
-               ))}
+               )})}
              </tbody>
           </table>
         </div>
       </div>
       
-      <div className="grid md:grid-cols-2 gap-8">
-         <div className="bg-white p-6 border border-paa-navy/5">
-            <h3 className="text-xl font-serif text-paa-navy mb-4">Stock Distribution</h3>
-            <div className="h-[300px]">
+      <div className="grid md:grid-cols-2 gap-6 mt-6">
+         <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Stock Distribution</h3>
+            <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={books}
                     cx="50%"
                     cy="50%"
+                    innerRadius={60}
                     outerRadius={100}
-                    fill="#8faadc"
+                    paddingAngle={5}
                     dataKey="stock"
                     nameKey="title"
-                    label={({ name, percent }) => `${name.substring(0,10)} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name.substring(0,10)}... (${(percent * 100).toFixed(0)}%)`}
                   >
                     {books.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={['#5bc0de', '#8faadc', '#ffff99'][index % 3]} />
+                      <Cell key={`cell-${index}`} fill={['#C0A062', '#1a1a2e', '#e2e8f0', '#94a3b8'][index % 4]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip wrapperClassName="shadow-premium border-none rounded-lg" />
                 </PieChart>
               </ResponsiveContainer>
             </div>
          </div>
-         <div className="bg-white p-6 border border-paa-navy/5 flex flex-col justify-center">
-             <div className="flex items-center gap-4 mb-4">
-                 <div className="w-16 h-16 bg-red-100 text-red-800 rounded-2xl-2xl flex items-center justify-center font-bold text-2xl">
+         
+         <div className="flex flex-col gap-4">
+             <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm flex items-center gap-5">
+                 <div className="w-14 h-14 bg-red-50 text-red-600 border border-red-100 flex items-center justify-center font-bold text-2xl">
                     {books.filter(i => i.stock < 10).length}
                  </div>
                  <div>
-                    <div className="font-bold text-paa-navy">Titles Need Restocking</div>
-                    <div className="text-sm text-gray-500">Less than 10 copies available</div>
+                    <div className="font-bold text-paa-navy text-sm uppercase tracking-widest">Needs Restocking</div>
+                    <div className="text-xs text-gray-500 mt-1">Titles with less than 10 copies available</div>
                  </div>
              </div>
              
-             <div className="flex items-center gap-4">
-                 <div className="w-16 h-16 bg-[#eef2f6] text-paa-navy rounded-2xl-2xl flex items-center justify-center font-bold text-2xl">
+             <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm flex items-center gap-5">
+                 <div className="w-14 h-14 bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold text-2xl">
                     {books.reduce((acc, curr) => acc + curr.stock, 0)}
                  </div>
                  <div>
-                    <div className="font-bold text-paa-navy">Total Copies in Inventory</div>
-                    <div className="text-sm text-gray-500">Across all titles</div>
+                    <div className="font-bold text-paa-navy text-sm uppercase tracking-widest">Total Copies</div>
+                    <div className="text-xs text-gray-500 mt-1">Available across all titles in inventory</div>
                  </div>
              </div>
          </div>
@@ -903,7 +1176,7 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
       <div className="bg-white border border-paa-navy/5 overflow-hidden relative">
         {showDialog && (
            <div className="fixed inset-0 bg-paa-navy/80 z-50 flex items-center justify-center p-4">
-              <div className="bg-white max-w-md w-full p-6 rounded-2xl-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+              <div className="bg-white max-w-md w-full p-6 rounded-3xl-2xl shadow-xl max-h-[90vh] overflow-y-auto">
                  <h3 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Register for {selectedAct?.name}</h3>
                  
                  <div className="mb-4">
@@ -927,11 +1200,11 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
                  </div>
 
                  <div className="mb-6">
-                   <p className="text-sm font-bold text-paa-navy mb-2">2. Payment (â‚¹{selectedAct?.charges})</p>
+                   <p className="text-sm font-bold text-paa-navy mb-2">2. Payment (₹{selectedAct?.charges})</p>
                    {selectedAct?.charges > 0 ? (
                      <div className="border border-paa-navy/20 p-4 bg-gray-50 text-center">
                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=puneauthors@upi&pn=PuneAuthors&am=10" alt="QR Code" className="mx-auto mb-2 w-32 h-32" />
-                       <p className="text-xs text-gray-500 mb-4">Scan QR to pay â‚¹{selectedAct.charges}</p>
+                       <p className="text-xs text-gray-500 mb-4">Scan QR to pay ₹{selectedAct.charges}</p>
                        <label className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-100">
                          <div className="flex flex-col items-center justify-center">
                            <Upload className="w-5 h-5 text-gray-400" />
@@ -947,7 +1220,7 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
 
                  <div className="flex justify-end gap-4">
                     <button onClick={() => setShowDialog(false)} className="text-sm font-bold text-gray-500 hover:text-paa-navy">Cancel</button>
-                    <button onClick={confirmParticipation} disabled={isSubmitting} className="bg-paa-gold text-paa-navy px-6 py-2 rounded-2xl-2xl text-sm font-bold disabled:opacity-50 active:scale-95 transition-all duration-300">
+                    <button onClick={confirmParticipation} disabled={isSubmitting} className="bg-paa-gold text-paa-navy px-6 py-2 rounded-3xl-2xl text-sm font-bold disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                       {isSubmitting ? 'Submitting...' : 'Register & Pay'}
                     </button>
                  </div>
@@ -1304,103 +1577,107 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
     <div>
       {/* Reject Reason Modal */}
       {rejectItemId !== null && (
-        <div className="fixed inset-0 bg-paa-navy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 max-w-md w-full rounded-2xl-2xl shadow-xl">
+        <div className="fixed inset-0 bg-paa-navy/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 max-w-md w-full rounded-2xl shadow-xl">
             <h2 className="text-xl font-serif text-paa-navy mb-3">Reason for Rejection</h2>
             <p className="text-sm text-gray-500 mb-4">Please provide a reason to inform the customer.</p>
             <textarea
-              className="w-full border p-2 text-sm mb-4 resize-none"
-              rows={4}
+              className="dash-input w-full resize-none h-32 mb-4"
               placeholder="e.g. Out of stock, wrong edition requested..."
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
             />
-            <div className="flex justify-end gap-2">
-              <button onClick={() => { setRejectItemId(null); setRejectReason(''); }} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
-              <button onClick={handleRejectSubmit} disabled={!rejectReason.trim() || loadingAction !== null} className="bg-red-600 text-white px-4 py-2 text-sm font-bold rounded-2xl-2xl disabled:opacity-50 active:scale-95 transition-all duration-300">Reject Order</button>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => { setRejectItemId(null); setRejectReason(''); }} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy transition-colors font-bold uppercase tracking-widest">Cancel</button>
+              <button onClick={handleRejectSubmit} disabled={!rejectReason.trim() || loadingAction !== null} className="dash-btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50">Reject Order</button>
             </div>
           </div>
         </div>
       )}
 
-      <h1 className="text-4xl font-serif text-paa-navy mb-4 text-center uppercase">MY WEB ORDERS</h1>
-      <p className="text-center text-sm text-gray-500 mb-8">New orders appear here immediately. You must <strong>Approve</strong> or <strong>Reject</strong> each order. Once approved, dispatch the book with a tracking number.</p>
-      <div className="bg-white border border-paa-navy/5 overflow-hidden mb-12">
+      <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+        <div>
+          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">My Web Orders</h2>
+          <p className="text-sm text-paa-gray-text mt-1">Manage pending orders and track dispatched shipments.</p>
+        </div>
+      </div>
+
+      <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden mb-12">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-             <thead className="bg-[#eef2f6] text-paa-navy uppercase text-xs font-bold tracking-widest">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+             <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
                 <tr>
-                   <th className="p-3 border-r border-[#8faadc]">Order ID & Date</th>
-                   <th className="p-3 border-r border-[#8faadc]">Buyer Details</th>
-                   <th className="p-3 border-r border-[#8faadc]">Book Title</th>
-                   <th className="p-3 border-r border-[#8faadc] text-center">Qty</th>
-                   <th className="p-3 border-r border-[#8faadc] text-center">Amount</th>
-                   <th className="p-3 border-r border-[#8faadc]">Receipt</th>
-                   <th className="p-3 border-r border-[#8faadc] text-center">Status</th>
-                   <th className="p-3 text-center">Action</th>
+                   <th className="px-4 py-3 font-bold">Order Details</th>
+                   <th className="px-4 py-3 font-bold">Buyer Information</th>
+                   <th className="px-4 py-3 font-bold">Book Title</th>
+                   <th className="px-4 py-3 font-bold text-center">Qty</th>
+                   <th className="px-4 py-3 font-bold text-center">Amount</th>
+                   <th className="px-4 py-3 font-bold text-center">Payment</th>
+                   <th className="px-4 py-3 font-bold text-center">Status</th>
+                   <th className="px-4 py-3 font-bold text-center">Action</th>
                 </tr>
              </thead>
-             <tbody>
-               {orders.length === 0 ? <tr><td colSpan={8} className="p-4 text-center">No orders received yet.</td></tr> : orders.map((ord, idx) => (
-                 <tr key={idx} className="border-b border-paa-navy/5 even:bg-gray-50 bg-white hover:bg-gray-100 transition-colors">
-                    <td className="p-3 border-r border-paa-navy/5">
-                      <p className="font-bold text-paa-navy">ORD-{ord.orderId}</p>
-                      <p className="text-xs text-paa-gray-text">{ord.date}</p>
+             <tbody className="divide-y divide-gray-100">
+               {orders.length === 0 ? <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500 italic">No orders received yet.</td></tr> : orders.map((ord, idx) => (
+                 <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-paa-navy tracking-wide">ORD-{ord.orderId}</p>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">{ord.date}</p>
                     </td>
-                    <td className="p-3 border-r border-paa-navy/5">
-                      <p className="font-medium">{ord.customerName}</p>
-                      <p className="text-[10px] text-gray-500">{ord.address}</p>
-                      {ord.customerPhone && <p className="text-[10px] text-blue-600">{ord.customerPhone}</p>}
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-paa-navy">{ord.customerName}</p>
+                      <p className="text-xs text-gray-500 truncate max-w-[200px]" title={ord.address}>{ord.address}</p>
+                      {ord.customerPhone && <p className="text-[10px] text-[#4a90e2] mt-0.5">{ord.customerPhone}</p>}
                     </td>
-                    <td className="p-3 border-r border-paa-navy/5">{ord.bookTitle}</td>
-                    <td className="p-3 border-r border-paa-navy/5 text-center font-bold text-paa-navy">{ord.quantity}</td>
-                    <td className="p-3 border-r border-paa-navy/5 text-center bg-gray-50 font-bold text-paa-navy">â‚¹{ord.amount}</td>
-                    <td className="p-3 border-r border-paa-navy/5">
+                    <td className="px-4 py-3 font-medium text-paa-navy max-w-[200px] truncate" title={ord.bookTitle}>{ord.bookTitle}</td>
+                    <td className="px-4 py-3 text-center font-bold text-paa-navy">{ord.quantity}</td>
+                    <td className="px-4 py-3 text-center font-bold text-paa-navy">₹{ord.amount}</td>
+                    <td className="px-4 py-3 text-center">
                       {ord.paymentScreenshot ? (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col items-center gap-1">
                           <a
                             href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${ord.paymentScreenshot}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[10px] font-bold text-paa-navy underline tracking-widest uppercase"
+                            className="text-[10px] font-bold text-[#4a90e2] hover:text-paa-navy underline tracking-widest uppercase transition-colors"
                           >
-                            View Screenshot
+                            View Receipt
                           </a>
                           {ord.paymentVerified && (
-                            <span className="text-[10px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1"><Check size={10}/> Verified</span>
+                            <span className="text-[10px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded-full border border-green-100"><Check size={10}/> Verified</span>
                           )}
                         </div>
-                      ) : <span className="text-[10px] text-gray-400">No screenshot</span>}
+                      ) : <span className="text-[10px] text-gray-400 italic">No receipt</span>}
                     </td>
-                    <td className="p-3 text-center border-r border-paa-navy/5">
-                       <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${
+                    <td className="px-4 py-3 text-center">
+                       <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border ${
                          ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
-                         : ord.status === 'Dispatched' ? 'bg-[#4a90e2] text-white border-[#46b8da]'
-                         : ord.status === 'Accepted' ? 'bg-[#337ab7] text-white border-[#2e6da4]'
-                         : ord.status === 'Rejected' ? 'bg-red-100 text-red-800 border-red-200'
-                         : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                         : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
+                         : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
+                         : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
+                         : 'bg-yellow-50 text-yellow-800 border-yellow-200'
                        }`}>
                          {ord.status}
                        </span>
                        {ord.status === 'Rejected' && ord.rejectionReason && (
-                         <div className="mt-1 text-[10px] text-red-600">Reason: {ord.rejectionReason}</div>
+                         <div className="mt-1 text-[10px] text-red-600 truncate max-w-[120px]" title={ord.rejectionReason}>Reason: {ord.rejectionReason}</div>
                        )}
                     </td>
-                    <td className="p-3 text-center">
+                    <td className="px-4 py-3 text-center">
                       {/* Author must Approve / Reject any Pending order regardless of payment verification */}
                       {ord.status === 'Pending Verification' || ord.status === 'Pending' ? (
-                        <div className="flex flex-col gap-1 items-center">
+                        <div className="flex flex-col gap-2 items-center">
                           <button
                             onClick={() => handleApprove(ord.id)}
                             disabled={loadingAction === ord.id}
-                            className="bg-[#337ab7] text-white px-3 py-1 text-xs rounded-2xl-2xl shadow font-bold disabled:opacity-50 w-20"
+                            className="dash-btn-primary py-1 px-3 w-20 disabled:opacity-50"
                           >
                             {loadingAction === ord.id ? '...' : 'APPROVE'}
                           </button>
                           <button
                             onClick={() => { setRejectItemId(ord.id); setRejectReason(''); }}
                             disabled={loadingAction === ord.id}
-                            className="bg-red-500 text-white px-3 py-1 text-xs rounded-2xl-2xl shadow font-bold disabled:opacity-50 w-20"
+                            className="text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors w-20"
                           >
                             REJECT
                           </button>
@@ -1408,23 +1685,23 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                       ) : null}
                       {/* Invoice button for all approved/dispatched orders */}
                       {(ord.status === 'Accepted' || ord.status === 'Dispatched' || ord.status === 'Completed') && (
-                        <div className="flex flex-col gap-1 items-center mt-1">
-                          <button
-                            onClick={() => generateAndPrintInvoice(ord.id)}
-                            className="bg-paa-navy text-white px-3 py-1 text-[10px] rounded-2xl-2xl font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors w-20"
-                            title="Download printable delivery invoice"
-                          >
-                            📄 Invoice
-                          </button>
+                        <div className="flex flex-col gap-2 items-center">
                           {ord.status === 'Accepted' && (
                             <button
                               onClick={() => handleDispatch(ord.id)}
                               disabled={loadingAction === ord.id}
-                              className="bg-[#4a90e2] text-white px-3 py-1 text-xs rounded-2xl-2xl shadow font-bold disabled:opacity-50 w-20"
+                              className="dash-btn-primary bg-[#4a90e2] hover:bg-[#357abd] py-1 px-3 w-20 disabled:opacity-50"
                             >
                               DISPATCH
                             </button>
                           )}
+                          <button
+                            onClick={() => generateAndPrintInvoice(ord.id)}
+                            className="text-[10px] font-bold text-paa-navy hover:text-paa-gold uppercase tracking-widest transition-colors w-20"
+                            title="Download printable delivery invoice"
+                          >
+                            📄 INVOICE
+                          </button>
                         </div>
                       )}
                     </td>
@@ -1498,7 +1775,7 @@ function FormsWrapper() {
       )}
 
       {selectedForm ? (
-        <div className="bg-white p-6 border border-paa-navy/5 max-w-2xl mx-auto">
+        <div className="bg-white p-8 border border-paa-navy/5 max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-6">
              <h2 className="text-2xl font-bold text-paa-navy">{selectedForm.title}</h2>
              <button onClick={() => setSelectedForm(null)} className="text-sm font-bold uppercase tracking-widest text-paa-gray-text hover:text-paa-navy">Cancel</button>
@@ -1509,18 +1786,18 @@ function FormsWrapper() {
               <div key={i}>
                 <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">{field.name}</label>
                 {field.type === 'textarea' ? (
-                  <textarea name={field.name} required className="w-full p-3 border border-gray-300 rounded-2xl-2xl focus:border-paa-navy focus:outline-none" rows={4}></textarea>
+                  <textarea name={field.name} required className="w-full p-3 border border-gray-300 rounded-3xl-2xl focus:border-paa-navy focus:outline-none" rows={4}></textarea>
                 ) : field.type === 'select' ? (
-                  <select name={field.name} required className="w-full p-3 border border-gray-300 rounded-2xl-2xl focus:border-paa-navy focus:outline-none bg-white">
+                  <select name={field.name} required className="w-full p-3 border border-gray-300 rounded-3xl-2xl focus:border-paa-navy focus:outline-none bg-white">
                     <option value="">Select...</option>
                     {field.options?.map((opt: string, j: number) => <option key={j} value={opt}>{opt}</option>)}
                   </select>
                 ) : (
-                  <input type="text" name={field.name} required className="w-full p-3 border border-gray-300 rounded-2xl-2xl focus:border-paa-navy focus:outline-none" />
+                  <input type="text" name={field.name} required className="w-full p-3 border border-gray-300 rounded-3xl-2xl focus:border-paa-navy focus:outline-none" />
                 )}
               </div>
             ))}
-            <button type="submit" className="w-full bg-paa-navy text-paa-cream font-bold uppercase tracking-widest py-4 hover:bg-paa-gold transition-colors mt-8 active:scale-95 transition-all duration-300">
+            <button type="submit" className="w-full bg-paa-navy text-paa-cream font-bold uppercase tracking-widest py-4 hover:bg-paa-gold transition-colors mt-8 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
               Submit Form
             </button>
           </form>
@@ -1528,7 +1805,7 @@ function FormsWrapper() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredForms.map((f: any) => (
-            <div key={f.id} className="bg-white p-6 border border-paa-navy/5 flex flex-col items-start gap-4 hover:shadow-lg transition-shadow">
+            <div key={f.id} className="bg-white p-8 border border-paa-navy/5 flex flex-col items-start gap-4 hover:shadow-lg transition-shadow">
                <h3 className="text-xl font-bold text-paa-navy">{f.title}</h3>
                <p className="text-sm text-gray-500 flex-1">{f.description}</p>
                {f.submitted ? (
@@ -1551,104 +1828,6 @@ function FormsWrapper() {
             </div>
           )}
         </div>
-      )}
-    </div>
-  );
-}
-
-// Mock pages for Distribution, Book Fair, Events that User provided to keep structure
-function DistributionRecord({ books, orders, authorName }: { books: any[], orders: any[], authorName: string }) {
-
-
-
-  return (
-    <div>
-      <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">BOOKS DISTRIBUTION RECORD</h1>
-      <p className="text-center text-gray-500 mb-8">Data populated upon administrative dispatch</p>
-      <div className="bg-white border border-paa-navy/5 overflow-hidden mb-12">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-             <thead className="bg-[#4a90e2] text-white uppercase text-xs">
-                <tr>
-                   <th className="p-3 border-r border-white/20">S.No</th>
-                   <th className="p-3 border-r border-white/20">TITLE</th>
-                   <th className="p-3 border-r border-white/20">AUTHOR</th>
-                   <th className="p-3 border-r border-white/20 text-center">QTY SOLD</th>
-                   <th className="p-3 border-r border-white/20 text-center">QTY SENT TO AIRPORT</th>
-                   <th className="p-3 border-r border-white/20 text-center">QTY SENT FOR BOOK FAIR</th>
-                   <th className="p-3 border-r border-white/20 text-center">IN STOCK</th>
-                </tr>
-             </thead>
-             <tbody>
-               {books.length === 0 ? <tr><td colSpan={7} className="p-4 text-center">No distribution records found.</td></tr> : books.map((book, index) => {
-                 const qtySold = orders.filter((o: any) => o.bookTitle === book.title && (o.status === 'Completed' || o.status === 'Dispatched')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
-                 return (
-                 <tr key={book.id} className="border-b border-paa-navy/5 even:bg-gray-50">
-                   <td className="p-3 border-r border-paa-navy/5 text-center">{index + 1}</td>
-                   <td className="p-3 border-r border-paa-navy/5 font-bold text-paa-navy">{book.title}</td>
-                   <td className="p-3 border-r border-paa-navy/5">{authorName}</td>
-                   <td className="p-3 border-r border-paa-navy/5 text-center font-bold text-green-700">{qtySold}</td>
-                   <td className="p-3 border-r border-paa-navy/5 text-center">{book.airportStock || 0}</td>
-                   <td className="p-3 border-r border-paa-navy/5 text-center">{book.fairStock || 0}</td>
-                   <td className="p-3 border-r border-paa-navy/5 text-center font-bold">{book.stock}</td>
-                 </tr>
-               )})}
-             </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BookFairDashboard({ registrations, books }: { registrations: any[], books: any[] }) {
-  const fairRegs = registrations.filter(r => r.activity?.type.includes('Fair') && r.status === 'Approved');
-
-
-
-
-  return (
-    <div>
-      <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">BOOK FAIR DASHBOARD</h1>
-      
-      {fairRegs.length === 0 ? (
-        <div className="bg-white border text-sm border-paa-navy/5 overflow-hidden mb-12">
-          <div className="p-8 text-center text-gray-500">
-            You have not participated in any approved Book Fairs yet.
-          </div>
-        </div>
-      ) : (
-        fairRegs.map(reg => {
-          const bookIds = JSON.parse(reg.booksIds || '[]');
-          const registeredBooks = books.filter(b => bookIds.includes(b.id));
-          return (
-            <div key={reg.id} className="bg-white border text-sm border-paa-navy/5 overflow-hidden mb-8">
-              <div className="bg-green-100 p-3 font-bold text-center border-b text-green-900 uppercase tracking-widest text-xs">
-                BOOKS FOR {reg.activity.name} ({reg.activity.city})
-              </div>
-              <div className="p-6">
-                <table className="w-full text-left">
-                  <thead className="border-b">
-                    <tr>
-                      <th className="pb-2 text-gray-500">Title</th>
-                      <th className="pb-2 text-gray-500 text-center">Genre</th>
-                      <th className="pb-2 text-gray-500 text-center">MRP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registeredBooks.map(b => (
-                      <tr key={b.id} className="border-b last:border-0 border-gray-100">
-                        <td className="py-3 font-bold text-paa-navy">{b.title}</td>
-                        <td className="py-3 text-center">{b.genre}</td>
-                        <td className="py-3 text-center text-green-700">â‚¹{b.mrp}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        })
       )}
     </div>
   );
@@ -1798,7 +1977,18 @@ function EventsDashboard() {
     }
   };
 
-  if (loading) return <div>Loading events...</div>;
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="w-1/3 h-8 dash-skeleton rounded-lg mb-6"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-64 dash-skeleton rounded-2xl border border-gray-100 shadow-sm"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
 
 
@@ -1810,7 +2000,7 @@ function EventsDashboard() {
       {settleEventId && (
         <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
+            <div className="p-8 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
                <div>
                  <h2 className="text-xl font-serif text-paa-navy">Settle Event Inventory</h2>
                  <p className="text-xs text-gray-500 mt-1">Please enter the exact number of books sold and returned. (Sold + Returned must equal Listed)</p>
@@ -1824,7 +2014,7 @@ function EventsDashboard() {
                   {settlementData.map((sd, idx) => {
                      const bookName = books.find((b: any) => b.id === sd.bookId)?.title || "Unknown Book";
                      return (
-                        <div key={sd.eventBookId} className="p-4 border border-paa-navy/5 rounded-2xl-2xl bg-gray-50 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div key={sd.eventBookId} className="p-4 border border-paa-navy/5 rounded-3xl-2xl bg-gray-50 flex flex-col sm:flex-row gap-4 items-center justify-between">
                            <div className="flex-1">
                               <h4 className="font-bold text-paa-navy text-sm">{bookName}</h4>
                               <p className="text-xs text-gray-500 mt-1 font-bold tracking-widest uppercase">Listed: {sd.listedStock}</p>
@@ -1868,11 +2058,11 @@ function EventsDashboard() {
       <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">EVENTS ECOSYSTEM</h1>
       
       {invites.length === 0 ? (
-         <div className="p-8 text-center text-gray-500 bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+         <div className="p-8 text-center text-gray-500 bg-white border border-gray-100 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             You do not have any active event invitations right now.
          </div>
       ) : (
-         <div className="grid md:grid-cols-2 gap-6">
+         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...invites].sort((a: any, b: any) => {
                if (a.event.status === 'Past' && b.event.status !== 'Past') return -1;
                if (a.event.status !== 'Past' && b.event.status === 'Past') return 1;
@@ -1884,25 +2074,46 @@ function EventsDashboard() {
                const myBooksForEvent = listedBooks.filter(lb => lb.eventId === evt.id);
                
                return (
-                 <div key={invite.id} className={`bg-white border shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 relative overflow-hidden ${isOptedIn ? 'border-green-300' : (isAwaitingApproval ? 'border-orange-300' : 'border-paa-navy/20')}`}>
-                    <div className={`px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center ${isOptedIn ? 'bg-green-600' : (isAwaitingApproval ? 'bg-orange-600' : 'bg-blue-600')}`}>
+                 <div key={invite.id} className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden h-full">
+                    <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative`}>
                        <span>{evt.status}</span>
-                       <span>{isOptedIn ? 'Opted In' : (isAwaitingApproval ? 'Awaiting Approval' : 'Action Required')}</span>
+                       <div className="flex gap-2 items-center">
+                         <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">
+                            {isOptedIn ? 'Opted In' : (isAwaitingApproval ? 'Awaiting Approval' : 'Action Required')}
+                         </span>
+                       </div>
                     </div>
-                    <div className="p-6">
-                       <h4 className="text-xl font-serif font-medium text-paa-navy mb-3">{evt.name}</h4>
-                       <p className="text-sm font-medium text-gray-600 mb-1">{evt.date} &bull; {evt.duration}</p>
-                       <p className="text-sm font-medium text-gray-600 mb-4">{evt.location}</p>
-                       <button onClick={() => handleViewCatalogue(evt.id)} className="block text-center w-full mb-4 py-2 bg-gray-100 text-paa-navy text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-300">
-                          View Participants Catalogue
-                       </button>
-                       
-                       {isOptedIn && evt.status !== 'Past' && (
-                          <button onClick={() => navigate(`/dashboard/pos/${evt.id}`)} className="w-full mb-4 py-3 bg-paa-gold text-paa-navy font-bold text-xs uppercase tracking-widest hover:bg-yellow-400 transition-colors shadow">Launch Live POS</button>
+
+                    <div className="p-6 flex-1 flex flex-col">
+                       {evt.bannerUrl ? (
+                         <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 bg-gray-100">
+                           <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
+                         </div>
+                       ) : (
+                         <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 flex items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100">
+                            <CalendarIcon className="w-8 h-8 text-gray-300" />
+                         </div>
                        )}
+                       <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
+                       <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-paa-gray-text">
+                          <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50"/> {evt.date} &bull; {evt.duration}</p>
+                          <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-paa-navy/50"/> {evt.location}</p>
+                       </div>
+
+                       <div className="pt-4 border-t border-paa-navy/5 flex flex-col gap-2 mt-auto">
+                          <button onClick={() => handleViewCatalogue(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                             View Participants Catalogue
+                          </button>
+                          
+                          {isOptedIn && evt.status !== 'Past' && (
+                             <button onClick={() => navigate(`/dashboard/pos/${evt.id}`)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800">
+                                Launch Live POS
+                             </button>
+                          )}
+                       </div>
                        
                        {isOptedIn ? (
-                          <div className="bg-green-50 p-4 border border-green-200">
+                          <div className="bg-green-50 p-4 border border-green-200 rounded-xl mt-4">
                              <p className="text-xs font-bold uppercase tracking-widest text-green-800 mb-2 border-b border-green-200 pb-1">Your Listed Inventory</p>
                              <ul className="space-y-1">
                                {myBooksForEvent.map(mb => {
@@ -1916,7 +2127,7 @@ function EventsDashboard() {
                                })}
                              </ul>
                              {evt.status === 'Past' && (
-                                <button onClick={() => handleOpenSettlement(evt.id)} className="w-full mt-4 py-2 bg-paa-navy text-paa-cream font-bold text-xs uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors shadow">Settle Inventory</button>
+                                <button onClick={() => handleOpenSettlement(evt.id)} className="dash-btn dash-btn-primary w-full justify-center mt-4">Settle Inventory</button>
                              )}
                           </div>
                        ) : (
@@ -1927,14 +2138,14 @@ function EventsDashboard() {
                                   {books.map(b => {
                                      const isSelected = selectedBooksToLink.find(sb => sb.bookId === String(b.id));
                                      return (
-                                        <div key={b.id} className="flex items-center gap-3 bg-gray-50 p-2 border border-gray-200">
+                                        <div key={b.id} className="flex items-center gap-3 bg-gray-50 p-2 border border-gray-200 rounded-lg">
                                            <input type="checkbox" checked={!!isSelected} onChange={(e) => {
                                               if (e.target.checked) setSelectedBooksToLink([...selectedBooksToLink, {bookId: String(b.id), stock: '5'}])
                                               else setSelectedBooksToLink(selectedBooksToLink.filter(sb => sb.bookId !== String(b.id)))
                                            }} />
                                            <span className="text-sm flex-1">{b.title}</span>
                                            {isSelected && (
-                                              <input type="number" min="1" className="w-20 p-1 text-sm border outline-none" value={isSelected.stock} onChange={(e) => {
+                                              <input type="number" min="1" className="w-20 p-1 text-sm border outline-none rounded" value={isSelected.stock} onChange={(e) => {
                                                  setSelectedBooksToLink(selectedBooksToLink.map(sb => sb.bookId === String(b.id) ? {...sb, stock: e.target.value} : sb))
                                               }} placeholder="Qty" />
                                            )}
@@ -1949,18 +2160,18 @@ function EventsDashboard() {
 
                                       if (calculatedFee > 0) {
                                          return (
-                                            <div className="bg-orange-50 p-4 border border-orange-200 rounded-2xl-2xl mt-4">
+                                            <div className="bg-orange-50 p-4 border border-orange-200 rounded-3xl-2xl mt-4">
                                                <p className="text-sm font-bold text-orange-900 mb-2">Registration Fee: ₹{calculatedFee}</p>
                                                <p className="text-xs text-orange-800 mb-4">Please pay the registration fee using the QR code below and upload a screenshot of the successful payment.</p>
                                                
                                                <div className="flex flex-col items-center mb-4">
-                                                  <img src={qrCode} alt="Payment QR" className="w-32 h-32 rounded-2xl-2xl border shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 mb-2" />
+                                                  <img src={qrCode} alt="Payment QR" className="w-32 h-32 rounded-3xl-2xl border shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out mb-2" />
                                                   <p className="text-xs font-bold text-gray-600">Scan to pay ₹{calculatedFee}</p>
                                                </div>
 
                                                <div>
                                                   <label className="text-[10px] font-bold uppercase tracking-widest text-paa-navy mb-1 block">Upload Payment Screenshot *</label>
-                                                  <input type="file" accept="image/*" className="w-full border p-2 text-xs outline-none bg-white focus:border-paa-navy" onChange={(e) => {
+                                                  <input type="file" accept="image/*" className="w-full border border-gray-300 rounded-lg p-2 text-xs outline-none bg-white focus:border-paa-navy" onChange={(e) => {
                                                      if (e.target.files && e.target.files[0]) {
                                                         setPaymentScreenshotBlob(e.target.files[0]);
                                                      } else {
@@ -1974,12 +2185,12 @@ function EventsDashboard() {
                                       return null;
                                    })()}
                                    <div className="flex gap-2 pt-2 mt-4">
-                                      <button onClick={() => { setOptInEventId(null); setPaymentScreenshotBlob(null); }} className="flex-1 py-2 bg-gray-200 text-gray-700 text-xs font-bold uppercase transition-colors">Cancel</button>
-                                      <button onClick={() => submitOptIn(evt.id, evt)} disabled={buttonStates['optIn_' + evt.id] || (selectedBooksToLink.length === 0)} className="flex-1 py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase transition-colors disabled:opacity-50">{buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}</button>
+                                      <button onClick={() => { setOptInEventId(null); setPaymentScreenshotBlob(null); }} className="dash-btn dash-btn-ghost flex-1 justify-center border-gray-300 text-gray-600">Cancel</button>
+                                      <button onClick={() => submitOptIn(evt.id, evt)} disabled={buttonStates['optIn_' + evt.id] || (selectedBooksToLink.length === 0)} className="dash-btn dash-btn-primary flex-1 justify-center disabled:opacity-50">{buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}</button>
                                    </div>
                                </div>
                              ) : (
-                               <button onClick={() => { setOptInEventId(evt.id); setSelectedBooksToLink([]); setPaymentScreenshotBlob(null); }} className="w-full py-2 bg-paa-navy hover:bg-paa-navy/90 text-white text-xs font-bold uppercase tracking-widest transition-colors">
+                               <button onClick={() => { setOptInEventId(evt.id); setSelectedBooksToLink([]); setPaymentScreenshotBlob(null); }} className="dash-btn dash-btn-primary w-full justify-center">
                                   Opt-In & List Books
                                </button>
                              )}
@@ -1995,32 +2206,34 @@ function EventsDashboard() {
       {/* Past Events History */}
       {pastEvents.length > 0 && (
         <div className="mt-10">
-          <h2 className="text-2xl font-serif text-paa-navy mb-6 text-center uppercase">Past Events History</h2>
-          <div className="bg-white border border-paa-navy/5 overflow-hidden">
+          <h2 className="text-2xl font-serif text-paa-navy mb-6 tracking-tight">Past Events History</h2>
+          <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden mb-12">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[#1a1a2e] text-white text-xs uppercase tracking-widest">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
                   <tr>
-                    <th className="p-3 border-r border-white/10">S.No</th>
-                    <th className="p-3 border-r border-white/10">Event Name</th>
-                    <th className="p-3 border-r border-white/10">Date</th>
-                    <th className="p-3 border-r border-white/10">Location</th>
-                    <th className="p-3 border-r border-white/10 text-center">Authors Participated</th>
-                    <th className="p-3 border-r border-white/10 text-center">Books Listed</th>
-                    <th className="p-3 text-center">Status</th>
+                    <th className="px-4 py-3 font-bold">Event Name</th>
+                    <th className="px-4 py-3 font-bold">Date & Location</th>
+                    <th className="px-4 py-3 font-bold text-center">Authors Participated</th>
+                    <th className="px-4 py-3 font-bold text-center">Books Listed</th>
+                    <th className="px-4 py-3 font-bold text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {pastEvents.map((evt: any, idx: number) => (
-                    <tr key={evt.id} className="border-b border-paa-navy/5 even:bg-gray-50">
-                      <td className="p-3 border-r border-paa-navy/5 text-center text-gray-500">{idx + 1}</td>
-                      <td className="p-3 border-r border-paa-navy/5 font-bold text-paa-navy">{evt.name}</td>
-                      <td className="p-3 border-r border-paa-navy/5">{evt.date}</td>
-                      <td className="p-3 border-r border-paa-navy/5">{evt.location}</td>
-                      <td className="p-3 border-r border-paa-navy/5 text-center font-bold">{evt._count?.eventAuthors ?? 0}</td>
-                      <td className="p-3 border-r border-paa-navy/5 text-center font-bold">{evt._count?.eventBooks ?? 0}</td>
-                      <td className="p-3 text-center">
-                        <span className="bg-gray-100 text-gray-700 px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-2xl-2xl">Completed</span>
+                    <tr key={evt.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-paa-navy">{evt.name}</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">EVT-{evt.id}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-paa-navy">{evt.date}</p>
+                        <p className="text-xs text-gray-500 truncate max-w-[200px]" title={evt.location}>{evt.location}</p>
+                      </td>
+                      <td className="px-4 py-3 text-center font-bold text-paa-navy">{evt._count?.eventAuthors ?? 0}</td>
+                      <td className="px-4 py-3 text-center font-bold text-paa-navy">{evt._count?.eventBooks ?? 0}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center justify-center bg-gray-100 text-gray-700 px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border border-gray-200">Completed</span>
                       </td>
                     </tr>
                   ))}
@@ -2033,8 +2246,8 @@ function EventsDashboard() {
 
       {catalogueEventData && (
         <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-2xl-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
+          <div className="bg-white rounded-3xl-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="p-8 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
               <h2 className="text-2xl font-serif text-paa-navy">Event Participants Catalogue</h2>
               <button onClick={() => setCatalogueEventData(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={24} className="text-gray-500" /></button>
             </div>
@@ -2045,11 +2258,11 @@ function EventsDashboard() {
                </div>
                
                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-blue-50 p-4 rounded-2xl-2xl text-center border border-blue-100">
+                  <div className="bg-blue-50 p-4 rounded-3xl-2xl text-center border border-blue-100">
                      <p className="text-xs font-bold uppercase tracking-widest text-blue-800 mb-1">Authors Participating</p>
                      <p className="text-3xl font-black text-paa-navy">{catalogueEventData.totalAuthorsRegistered}</p>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-2xl-2xl text-center border border-green-100">
+                  <div className="bg-green-50 p-4 rounded-3xl-2xl text-center border border-green-100">
                      <p className="text-xs font-bold uppercase tracking-widest text-green-800 mb-1">Total Books Listed</p>
                      <p className="text-3xl font-black text-paa-navy">{catalogueEventData.totalBooksListed}</p>
                   </div>
@@ -2059,7 +2272,7 @@ function EventsDashboard() {
                   <h4 className="text-lg font-serif text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Author Catalogue</h4>
                   <div className="space-y-6">
                      {catalogueEventData.authors.map((author: any) => (
-                        <div key={author.id} className="border border-gray-200 rounded-2xl-2xl p-4 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                        <div key={author.id} className="border border-gray-200 rounded-3xl-2xl p-4 bg-white shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
                            <div className="flex items-center gap-4 mb-4">
                               <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                                  {author.photoUrl ? <img src={author.photoUrl} alt={author.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><User size={24} /></div>}
@@ -2069,14 +2282,14 @@ function EventsDashboard() {
                                  <p className="text-xs text-gray-500 line-clamp-1">{author.bio || 'No bio available.'}</p>
                               </div>
                            </div>
-                           <div className="bg-gray-50 rounded-2xl-2xl border border-gray-200 p-3">
+                           <div className="bg-gray-50 rounded-3xl-2xl border border-gray-200 p-3">
                               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Books Showcased</p>
                               <div className="space-y-2">
                                  {author.books.map((b: any, idx: number) => (
                                     <div key={idx} className="flex justify-between items-center text-sm">
                                        <div>
                                           <span className="font-medium text-paa-navy">{b.title}</span>
-                                          <span className="ml-2 text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded-2xl-2xl">{b.category}</span>
+                                          <span className="ml-2 text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded-3xl-2xl">{b.category}</span>
                                        </div>
                                        <span className="text-xs font-bold text-gray-400">{b.listedStock} Copies</span>
                                     </div>
@@ -2096,86 +2309,6 @@ function EventsDashboard() {
   );
 }
 
-// â”€â”€ PAA Catalogue Books List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-import fictionData from './data/fiction_catalogue.json';
-import nonFictionData from './data/non_fiction_catalogue.json';
-import { Search } from 'lucide-react';
 
-function AuthorCatalogueTab() {
-  const [search, setSearch] = useState('');
-
-  const allCatalogueBooks = [
-    ...(nonFictionData as any).non_fiction_catalogue.flatMap((entry: any) =>
-      entry.books.map((b: any) => ({ ...b, authorName: entry.author, genre: "Non-Fiction", bio: entry.bio }))
-    ),
-    ...(fictionData as any).fiction_catalogue.flatMap((entry: any) =>
-      entry.books.map((b: any) => ({ ...b, authorName: entry.author, genre: "Fiction/Children", bio: entry.bio }))
-    ),
-  ];
-
-  const filtered = allCatalogueBooks.filter(b => 
-    b.title.toLowerCase().includes(search.toLowerCase()) || 
-    b.authorName.toLowerCase().includes(search.toLowerCase())
-  );
-
-
-
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-serif text-paa-navy">PAA Public Catalogue</h1>
-      </div>
-      <p className="text-sm text-gray-600 mb-6 max-w-3xl">
-        This tab displays the static PAA book catalogue shown on the public website. 
-        If your books are missing or incorrect here, you can verify it and contact the Operations team 
-        to update the main JSON catalogue. Your personal uploaded books are managed in the Overview tab.
-      </p>
-
-      <div className="bg-white border text-sm border-paa-navy/5 overflow-hidden mb-12">
-        <div className="p-4 border-b border-paa-navy/5 flex items-center justify-between">
-           <h2 className="font-bold tracking-widest text-paa-navy uppercase">Static Catalogue Entries</h2>
-           <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search Title or Author..." 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-2 border rounded-2xl-2xl text-xs w-64 outline-none focus:border-paa-gold" 
-              />
-           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b text-paa-navy text-xs uppercase tracking-wider">
-              <tr>
-                <th className="p-4">Title</th>
-                <th className="p-4">Author</th>
-                <th className="p-4">Genre</th>
-                <th className="p-4 text-center">MRP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((b, i) => (
-                <tr key={i} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="p-4 font-bold text-paa-navy">{b.title}</td>
-                  <td className="p-4">{b.authorName}</td>
-                  <td className="p-4 text-xs">{b.genre}</td>
-                  <td className="p-4 text-center">â‚¹{parseFloat((b.mrp || "0").replace(/[^\d.]/g, "")) || 0}</td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-500">No books found matching your search.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 

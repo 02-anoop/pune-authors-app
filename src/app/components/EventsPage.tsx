@@ -46,17 +46,17 @@ export function EventsPage() {
 
       {/* Tabs & Search */}
       <div className="max-w-7xl mx-auto px-6 -mt-8 relative z-20">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-2 flex items-center justify-between flex-wrap gap-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setActiveTab('upcoming')}
-              className={`px-6 py-3 rounded-lg text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'upcoming' ? 'bg-[#1a1a2e] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+              className={`px-6 py-3 rounded-xl text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'upcoming' ? 'bg-[#1a1a2e] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
             >
               Upcoming Events ({upcomingEvents.length})
             </button>
             <button 
               onClick={() => setActiveTab('past')}
-              className={`px-6 py-3 rounded-lg text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'past' ? 'bg-[#1a1a2e] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+              className={`px-6 py-3 rounded-xl text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'past' ? 'bg-[#1a1a2e] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
             >
               Past Events ({pastEvents.length})
             </button>
@@ -66,7 +66,7 @@ export function EventsPage() {
             <input 
               type="text" 
               placeholder="SEARCH EVENTS..." 
-              className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-lg text-xs font-bold tracking-widest uppercase outline-none focus:ring-2 focus:ring-[#1a1a2e]/20 transition-all"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-xl text-xs font-bold tracking-widest uppercase outline-none focus:ring-2 focus:ring-[#1a1a2e]/20 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -78,7 +78,7 @@ export function EventsPage() {
       <div className="max-w-7xl mx-auto px-6 mt-12">
         {activeTab === 'upcoming' ? (
           upcomingEvents.length === 0 ? (
-            <div className="text-center py-24 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div className="text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm">
               <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-500">
                 <Calendar className="w-10 h-10" />
               </div>
@@ -91,7 +91,7 @@ export function EventsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {upcomingEvents.map((event) => (
-                <div key={event.id} className="bg-white border border-blue-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col h-full relative">
+                <div key={event.id} className="bg-white border border-blue-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col h-full relative">
                   <div className="absolute top-4 right-4 bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm z-10">
                     Upcoming
                   </div>
@@ -114,11 +114,11 @@ export function EventsPage() {
                     </p>
 
                     <div className="grid grid-cols-2 gap-3 mt-auto">
-                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                      <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 text-center">
                         <div className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-1">Authors Participating</div>
                         <div className="text-xl font-black text-[#1a1a2e]">{event._count?.eventAuthors || 0}</div>
                       </div>
-                      <div className="bg-blue-50 rounded-xl p-3 border border-blue-100 text-center">
+                      <div className="bg-blue-50 rounded-2xl p-3 border border-blue-100 text-center">
                         <div className="text-[10px] font-bold tracking-widest uppercase text-blue-600/70 mb-1">Books Showcased</div>
                         <div className="text-xl font-black text-blue-600">{event._count?.eventBooks || 0}</div>
                       </div>
@@ -136,7 +136,7 @@ export function EventsPage() {
             {filteredPastEvents.map((event, index) => (
               <div 
                 key={event.id} 
-                className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-xl transition-all flex flex-col h-full"
+                className="bg-white border border-gray-100 rounded-3xl overflow-hidden hover:shadow-xl transition-all flex flex-col h-full"
               >
                 <div className="p-6 flex-grow">
                   <div className="flex items-center justify-between mb-4">
@@ -157,13 +157,13 @@ export function EventsPage() {
                   </p>
 
                   <div className="grid grid-cols-2 gap-3 mt-auto">
-                    <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                    <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 text-center">
                       <div className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-1 flex items-center justify-center gap-1.5">
                         <Users className="w-3 h-3" /> Authors
                       </div>
                       <div className="text-2xl font-black text-[#1a1a2e]">{event.authorsParticipated}</div>
                     </div>
-                    <div className="bg-blue-50/50 rounded-xl p-3 border border-blue-100/50 text-center">
+                    <div className="bg-blue-50/50 rounded-2xl p-3 border border-blue-100/50 text-center">
                       <div className="text-[10px] font-bold tracking-widest uppercase text-blue-600/70 mb-1 flex items-center justify-center gap-1.5">
                         <BookOpen className="w-3 h-3" /> Books Sold
                       </div>
@@ -186,7 +186,7 @@ export function EventsPage() {
             ))}
             
             {filteredPastEvents.length === 0 && (
-              <div className="col-span-full text-center py-24 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="col-span-full text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm">
                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400">
                   <Search className="w-10 h-10" />
                 </div>

@@ -30,7 +30,7 @@ import {
   RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search, 
   Eye, Edit, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle, 
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
-  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2
+  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2, FileText
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell
@@ -61,12 +61,12 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
   }, [author.id]);
 
   if (loading) return (
-    <div className="p-8 bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 space-y-6">
+    <div className="p-8 bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out space-y-6">
        <div className="flex gap-4 items-center">
-          <div className="w-14 h-14 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
-          <div className="h-8 w-48 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+          <div className="w-14 h-14 bg-gray-200 animate-pulse rounded-3xl-2xl"></div>
+          <div className="h-8 w-48 bg-gray-200 animate-pulse rounded-3xl-2xl"></div>
        </div>
-       <div className="h-64 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
+       <div className="h-64 bg-gray-200 animate-pulse rounded-3xl-2xl w-full"></div>
     </div>
   );
   if (!profileData) return <div className="p-8 text-center text-red-500 font-bold bg-white border border-red-200">Error loading author details.</div>;
@@ -74,13 +74,13 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
   const { authorProfile, authorOrders } = profileData;
 
   return (
-    <div className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-      <div className="p-6 border-b border-paa-navy/5 bg-[#f0f4f8] flex items-start justify-between">
+    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+      <div className="p-8 border-b border-paa-navy/5 bg-[#f0f4f8] flex items-start justify-between">
          <div className="flex gap-4 items-center">
-            <button onClick={onBack} className="p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors active:scale-95 transition-all duration-300">
+            <button onClick={onBack} className="p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                <ArrowLeft className="w-5 h-5 text-paa-navy" />
             </button>
-            <div className="w-14 h-14 bg-white border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+            <div className="w-14 h-14 bg-white border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-3xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
               {authorProfile.name.charAt(0)}
             </div>
             <div>
@@ -92,19 +92,19 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
       </div>
 
       <div className="flex flex-col md:flex-row flex-1">
-        <div className="w-full md:w-56 bg-white border-b md:border-b-0 md:border-r border-paa-navy/5 p-4 flex flex-col gap-2 shrink-0 md:sticky md:top-0 h-fit text-xs font-bold uppercase tracking-widest">
-           <button onClick={() => setActiveProfileTab('profile')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'profile' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Registration Profile</button>
-           <button onClick={() => setActiveProfileTab('inventory')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'inventory' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Inventory</button>
-           <button onClick={() => setActiveProfileTab('orders')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'orders' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Web Orders</button>
-           <button onClick={() => setActiveProfileTab('events')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'events' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Events</button>
-           <button onClick={() => setActiveProfileTab('distribution')} className={`text-left px-4 py-3 transition-colors ${activeProfileTab === 'distribution' ? 'bg-paa-navy text-white' : 'text-paa-gray-text hover:bg-gray-100 hover:text-paa-navy'}`}>Distribution</button>
+        <div className="author-profile-sidebar w-full md:w-[220px] p-4 flex flex-col gap-2 md:sticky md:top-0 h-fit">
+           <button onClick={() => setActiveProfileTab('profile')} className={`author-profile-nav-btn ${activeProfileTab === 'profile' ? 'active' : ''}`}>Registration Profile</button>
+           <button onClick={() => setActiveProfileTab('inventory')} className={`author-profile-nav-btn ${activeProfileTab === 'inventory' ? 'active' : ''}`}>Inventory</button>
+           <button onClick={() => setActiveProfileTab('orders')} className={`author-profile-nav-btn ${activeProfileTab === 'orders' ? 'active' : ''}`}>Web Orders</button>
+           <button onClick={() => setActiveProfileTab('events')} className={`author-profile-nav-btn ${activeProfileTab === 'events' ? 'active' : ''}`}>Events</button>
+           <button onClick={() => setActiveProfileTab('distribution')} className={`author-profile-nav-btn ${activeProfileTab === 'distribution' ? 'active' : ''}`}>Distribution</button>
         </div>
         
         <div className="flex-1 p-6 bg-gray-50/50 min-h-[500px]">
         {activeProfileTab === 'profile' && (
         <div id="profile" className="space-y-6">
-          <div className="bg-white border border-paa-navy/5 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Author Details</h3>
+          <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Author Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Full Name</span><span className="text-sm text-paa-navy font-medium">{authorProfile.name}</span></div>
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Pen Name</span><span className="text-sm text-paa-navy font-medium">{authorProfile.penName || '-'}</span></div>
@@ -118,8 +118,8 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
             </div>
           </div>
           
-          <div className="bg-white border border-paa-navy/5 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>
+          <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>
             <div className="space-y-4">
               {authorProfile.books.length === 0 ? <p className="text-sm text-paa-gray-text">No books found.</p> : authorProfile.books.map((b: any, idx: number) => (
                 <div key={b.id} className="border border-paa-navy/5 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
@@ -147,8 +147,8 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
             </div>
           </div>
           
-          <div className="bg-white border border-paa-navy/5 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Payment Details</h3>
+          <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Payment Details</h3>
             <div className="flex gap-8 items-start">
                <div>
                   <span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Transaction ID</span>
@@ -167,25 +167,25 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
 
         {activeProfileTab === 'inventory' && (
         <div id="inventory">
-          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Books & Inventory</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-               <thead className="bg-[#eef2f6] text-paa-navy text-xs uppercase tracking-widest font-bold">
+          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Books & Inventory</h3>
+          <div className="overflow-x-auto">
+            <table className="dash-table">
+               <thead>
                  <tr>
-                   <th className="px-4 py-3">Title</th>
-                   <th className="px-4 py-3 text-center">MRP</th>
-                   <th className="px-4 py-3 text-center">Stock</th>
-                   <th className="px-4 py-3 text-center">Status</th>
+                   <th>Title</th>
+                   <th style={{textAlign: 'center'}}>MRP</th>
+                   <th style={{textAlign: 'center'}}>Stock</th>
+                   <th style={{textAlign: 'center'}}>Status</th>
                  </tr>
                </thead>
-               <tbody className="divide-y divide-paa-navy/5">
+               <tbody>
                  {authorProfile.books.length === 0 ? <tr><td colSpan={4} className="text-center py-4 text-paa-gray-text">No books published.</td></tr> : authorProfile.books.map((b: any) => (
-                   <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                     <td className="px-4 py-3 font-bold text-paa-navy">{b.title} <span className="text-xs text-gray-500 font-medium block">{b.genre}</span></td>
-                     <td className="px-4 py-3 text-center font-bold text-paa-navy">₹{b.mrp}</td>
-                     <td className="px-4 py-3 text-center font-bold text-paa-navy">{b.stock}</td>
-                     <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${b.status === 'Approved' ? 'bg-[#5cb85c]/10 text-green-700 border-[#4cae4c]/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
+                   <tr key={b.id}>
+                     <td className="font-bold text-paa-navy">{b.title} <span className="text-xs text-gray-500 font-medium block">{b.genre}</span></td>
+                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">₹{b.mrp}</td>
+                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">{b.stock}</td>
+                     <td style={{textAlign: 'center'}}>
+                        <span className={`dash-badge ${b.status === 'Approved' ? 'approved' : 'pending'}`}>
                           {b.status}
                         </span>
                      </td>
@@ -199,33 +199,33 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
 
         {activeProfileTab === 'orders' && (
         <div id="orders">
-          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Web Orders</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-               <thead className="bg-[#e6f2eb] text-paa-navy text-xs uppercase tracking-widest font-bold">
+          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Web Orders</h3>
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+            <table className="dash-table">
+               <thead>
                  <tr>
-                   <th className="px-4 py-3">Order ID</th>
-                   <th className="px-4 py-3">Customer</th>
-                   <th className="px-4 py-3">Book</th>
-                   <th className="px-4 py-3 text-center">Qty / Amt</th>
-                   <th className="px-4 py-3 text-center">Status</th>
-                   <th className="px-4 py-3 text-center">Payment</th>
+                   <th>Order ID</th>
+                   <th>Customer</th>
+                   <th>Book</th>
+                   <th style={{textAlign: 'center'}}>Qty / Amt</th>
+                   <th style={{textAlign: 'center'}}>Status</th>
+                   <th style={{textAlign: 'center'}}>Payment</th>
                  </tr>
                </thead>
-               <tbody className="divide-y divide-paa-navy/5">
+               <tbody>
                  {authorOrders.length === 0 ? <tr><td colSpan={6} className="text-center py-4 text-paa-gray-text">No web orders yet.</td></tr> : authorOrders.map((o: any) => (
-                   <tr key={o.id} className="hover:bg-gray-50 transition-colors">
-                     <td className="px-4 py-3 font-bold text-paa-navy">ORD-{o.orderId}<span className="text-[10px] block text-gray-500">{o.date}</span></td>
-                     <td className="px-4 py-3 font-medium text-paa-navy">{o.customerName}</td>
-                     <td className="px-4 py-3 font-medium text-paa-navy">{o.bookTitle}</td>
-                     <td className="px-4 py-3 text-center font-bold text-paa-navy">{o.quantity} <span className="text-gray-400 font-medium px-1">/</span> ₹{o.amount}</td>
-                     <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${o.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                   <tr key={o.id}>
+                     <td className="font-bold text-paa-navy">ORD-{o.orderId}<span className="text-[10px] block text-gray-500">{o.date}</span></td>
+                     <td className="font-medium text-paa-navy">{o.customerName}</td>
+                     <td className="font-medium text-paa-navy">{o.bookTitle}</td>
+                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">{o.quantity} <span className="text-gray-400 font-medium px-1">/</span> ₹{o.amount}</td>
+                     <td style={{textAlign: 'center'}}>
+                        <span className={`dash-badge ${o.status === 'Completed' ? 'approved' : 'pending'}`}>
                           {o.status}
                         </span>
                      </td>
-                     <td className="px-4 py-3 text-center">
-                        {o.paymentVerified ? <span className="text-green-600 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1"><Check size={10}/> Verified</span> : o.paymentFailed ? <span className="text-red-600 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1"><XCircle size={10}/> Failed</span> : <span className="text-yellow-600 font-bold text-[10px] uppercase tracking-widest">Pending</span>}
+                     <td style={{textAlign: 'center'}}>
+                        {o.paymentVerified ? <span className="dash-badge approved"><Check size={10}/> Verified</span> : o.paymentFailed ? <span className="dash-badge rejected"><XCircle size={10}/> Failed</span> : <span className="dash-badge pending">Pending</span>}
                      </td>
                    </tr>
                  ))}
@@ -237,24 +237,24 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
 
         {activeProfileTab === 'events' && (
         <div id="events">
-          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Event Participations</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-               <thead className="bg-[#f0f4f8] text-paa-navy text-xs uppercase tracking-widest font-bold">
+          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Event Participations</h3>
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+            <table className="dash-table">
+               <thead>
                  <tr>
-                   <th className="px-4 py-3">Event Name</th>
-                   <th className="px-4 py-3">City</th>
-                   <th className="px-4 py-3 text-center">Amount Paid</th>
-                   <th className="px-4 py-3 text-center">Date</th>
+                   <th>Event Name</th>
+                   <th>City</th>
+                   <th style={{textAlign: 'center'}}>Amount Paid</th>
+                   <th style={{textAlign: 'center'}}>Date</th>
                  </tr>
                </thead>
-               <tbody className="divide-y divide-paa-navy/5">
+               <tbody>
                  {authorProfile.eventRegistrations.length === 0 ? <tr><td colSpan={4} className="text-center py-4 text-paa-gray-text">No events attended.</td></tr> : authorProfile.eventRegistrations.map((e: any) => (
-                   <tr key={e.id} className="hover:bg-gray-50 transition-colors">
-                     <td className="px-4 py-3 font-bold text-paa-navy">{e.activity?.name}</td>
-                     <td className="px-4 py-3 font-medium text-paa-navy">{e.activity?.city}</td>
-                     <td className="px-4 py-3 text-center font-bold text-green-700">₹{e.amount}</td>
-                     <td className="px-4 py-3 text-center font-medium text-paa-gray-text">{e.activity?.date}</td>
+                   <tr key={e.id}>
+                     <td className="font-bold text-paa-navy">{e.activity?.name}</td>
+                     <td className="font-medium text-paa-navy">{e.activity?.city}</td>
+                     <td style={{textAlign: 'center'}} className="font-bold text-green-700">₹{e.amount}</td>
+                     <td style={{textAlign: 'center'}} className="font-medium text-paa-gray-text">{e.activity?.date}</td>
                    </tr>
                  ))}
                </tbody>
@@ -265,28 +265,28 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
 
         {activeProfileTab === 'distribution' && (
         <div id="distribution">
-          <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Books Distribution Record</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-               <thead className="bg-[#5bc0de] text-white text-xs uppercase tracking-widest font-bold">
+          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Books Distribution Record</h3>
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+            <table className="dash-table">
+               <thead>
                  <tr>
-                   <th className="px-4 py-3">Title</th>
-                   <th className="px-4 py-3 text-center">Qty Sold</th>
-                   <th className="px-4 py-3 text-center">Airport Stock</th>
-                   <th className="px-4 py-3 text-center">Fair Stock</th>
-                   <th className="px-4 py-3 text-center">In Stock</th>
+                   <th>Title</th>
+                   <th style={{textAlign: 'center'}}>Qty Sold</th>
+                   <th style={{textAlign: 'center'}}>Airport Stock</th>
+                   <th style={{textAlign: 'center'}}>Fair Stock</th>
+                   <th style={{textAlign: 'center'}}>In Stock</th>
                  </tr>
                </thead>
-               <tbody className="divide-y divide-paa-navy/5">
+               <tbody>
                  {authorProfile.books.length === 0 ? <tr><td colSpan={5} className="text-center py-4 text-paa-gray-text">No distribution records.</td></tr> : authorProfile.books.map((b: any) => {
                    const qtySold = authorOrders.filter((o: any) => o.bookTitle === b.title && (o.status === 'Completed' || o.status === 'Dispatched')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
                    return (
-                   <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                     <td className="px-4 py-3 font-bold text-paa-navy">{b.title}</td>
-                     <td className="px-4 py-3 text-center font-bold text-green-700">{qtySold}</td>
-                     <td className="px-4 py-3 text-center">{b.airportStock || 0}</td>
-                     <td className="px-4 py-3 text-center">{b.fairStock || 0}</td>
-                     <td className="px-4 py-3 text-center font-bold">{b.stock}</td>
+                   <tr key={b.id}>
+                     <td className="font-bold text-paa-navy">{b.title}</td>
+                     <td style={{textAlign: 'center'}} className="font-bold text-green-700">{qtySold}</td>
+                     <td style={{textAlign: 'center'}}>{b.airportStock || 0}</td>
+                     <td style={{textAlign: 'center'}}>{b.fairStock || 0}</td>
+                     <td style={{textAlign: 'center'}} className="font-bold">{b.stock}</td>
                    </tr>
                  )})}
                </tbody>
@@ -305,7 +305,7 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'authors' | 'books' | 'events' | 'orders' | 'settings' | 'forms' | 'gallery' | 'author_data' | 'helpdesk'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'authors' | 'books' | 'events' | 'orders' | 'settings' | 'forms' | 'gallery' | 'author_data' | 'helpdesk' | 'reports'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
@@ -313,7 +313,7 @@ export function OperationsDashboardPage() {
   const prevCountsRef = React.useRef({ orders: 0, queries: 0, authors: 0, books: 0 });
   const prevQueryCountRef = useRef<number>(0);
   const prevOrderCountRef = useRef<number>(0);
-  
+  const [dismissedActions, setDismissedActions] = useState<string[]>([]);
   useEffect(() => {
     
   }, [activeTab]);
@@ -877,34 +877,64 @@ export function OperationsDashboardPage() {
     navigate('/login');
   };
 
-  const OverviewTab = () => (
+  const OverviewTab = () => {
+    const actionItems: any[] = [];
+    
+    const pendingAuthors = authors.filter((a: any) => a.status === 'Pending').length;
+    if (pendingAuthors > 0 && !dismissedActions.includes('act-authors')) {
+      actionItems.push({ id: 'act-authors', text: `Approve ${pendingAuthors} new author${pendingAuthors > 1 ? 's' : ''}`, icon: Users, color: 'text-blue-600', bg: 'bg-[#eef2f6]', action: () => setActiveTab('authors') });
+    }
+    
+    const pendingBooks = books.filter((b: any) => b.status === 'Pending').length;
+    if (pendingBooks > 0 && !dismissedActions.includes('act-books')) {
+      actionItems.push({ id: 'act-books', text: `Approve ${pendingBooks} new book${pendingBooks > 1 ? 's' : ''} (added by authors via dashboard)`, icon: BookOpen, color: 'text-green-600', bg: 'bg-[#e6f2eb]', action: () => setActiveTab('books') });
+    }
+    
+    const pendingOrders = orders.filter((o: any) => o.status === 'Pending Verification').length;
+    if (pendingOrders > 0 && !dismissedActions.includes('act-orders')) {
+      actionItems.push({ id: 'act-orders', text: `Verify ${pendingOrders} new web order${pendingOrders > 1 ? 's' : ''}`, icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-200', action: () => setActiveTab('orders') });
+    }
+    
+    const endedEvents = events.filter((e: any) => e.status === 'Past');
+    if (endedEvents.length > 0 && !dismissedActions.includes('act-events')) {
+      actionItems.push({ id: 'act-events', text: `${endedEvents.length} event${endedEvents.length > 1 ? 's' : ''} ended. View generated report${endedEvents.length > 1 ? 's' : ''}`, icon: FileText, color: 'text-orange-600', bg: 'bg-orange-100', action: () => setActiveTab('events') });
+    }
+    
+    const pendingEventRegs = stats?.pendingEventRegistrations || 0;
+    if (pendingEventRegs > 0 && !dismissedActions.includes('act-eventregs')) {
+      actionItems.push({ id: 'act-eventregs', text: `Approve ${pendingEventRegs} new author${pendingEventRegs > 1 ? 's' : ''} registered for events`, icon: CalendarIcon, color: 'text-pink-600', bg: 'bg-pink-100', action: () => setActiveTab('events') });
+    }
+    
+    if (actionItems.length === 0) {
+      actionItems.push({ id: 'act-none', text: 'All caught up! No pending actions.', icon: CheckCircle2, color: 'text-gray-600', bg: 'bg-gray-100', action: () => {} });
+    }
+
+    return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { label: 'Total Authors', value: stats.totalAuthors, icon: Users, color: 'bg-[#5bc0de]' },
-          { label: 'Books Published', value: stats.totalBooks, icon: BookOpen, color: 'bg-[#5cb85c]' },
-          { label: 'Event Participations', value: stats.eventParticipations, icon: CalendarIcon, color: 'bg-[#f0ad4e]' },
-          { label: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'bg-[#d9534f]' },
+          { label: 'Total Authors', value: stats.totalAuthors, icon: Users, colorClass: 'blue' },
+          { label: 'Books Published', value: stats.totalBooks, icon: BookOpen, colorClass: 'green' },
+          { label: 'Event Participations', value: stats.eventParticipations, icon: CalendarIcon, colorClass: 'amber' },
+          { label: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },
         ].map((kpi, i) => (
-          <div key={i} className="bg-white p-6 border border-paa-navy/5 flex items-start justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 h-full">
-            <div>
-              <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
-              <h3 className="text-3xl font-serif font-medium text-paa-navy mt-2">{kpi.value}</h3>
+          <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
+            <div className="flex items-start justify-between mb-4">
+              <div className={`dash-kpi-icon ${kpi.colorClass}`}><kpi.icon className="w-5 h-5" /></div>
             </div>
-            <div className={`w-10 h-10 flex items-center justify-center text-white font-bold ${kpi.color}`}>
-              <kpi.icon className="w-5 h-5" />
-            </div>
+            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{kpi.value}</h3>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Main Chart */}
-        <div className="lg:col-span-2 bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-           <div className="bg-[#f0f4f8] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Revenue & Registrations</h3>
-              <select className="text-xs border border-paa-navy/20 bg-white text-paa-navy px-3 py-1.5 outline-none font-bold uppercase tracking-widest">
+        <div className="lg:col-span-2 dash-panel flex flex-col">
+           <div className="dash-panel-header">
+              <h3 className="dash-panel-title">Revenue & Registrations</h3>
+              <select className="text-xs border border-black/10 bg-gray-50 text-paa-navy px-3 py-1.5 rounded-lg outline-none font-medium">
                 <option>Last 6 Months</option>
                 <option>This Year</option>
               </select>
@@ -931,29 +961,32 @@ export function OperationsDashboardPage() {
            </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-           <div className="bg-[#fcf7e6] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Recent Activity</h3>
-              <button className="text-xs font-bold text-paa-navy hover:underline uppercase tracking-widest active:scale-95 transition-all duration-300">View All</button>
+         {/* Pending Actions */}
+        <div className="dash-panel flex flex-col">
+           <div className="dash-panel-header">
+              <h3 className="dash-panel-title">Pending Actions</h3>
            </div>
-           <div className="p-6 space-y-6 overflow-auto">
-             {stats.recentActivities && stats.recentActivities.map((activity: any) => {
-               const style = activity.type === 'author' ? { icon: Users, color: 'text-blue-600', bg: 'bg-[#eef2f6]' } :
-                             activity.type === 'order' ? { icon: CreditCard, color: 'text-green-600', bg: 'bg-[#e6f2eb]' } :
-                             activity.type === 'event' ? { icon: CalendarIcon, color: 'text-purple-600', bg: 'bg-purple-200' } :
-                             { icon: Bell, color: 'text-gray-600', bg: 'bg-gray-200' };
-               const Icon = style.icon;
+           <div className="p-5 space-y-5 overflow-auto">
+             {actionItems.map((action) => {
+               const Icon = action.icon;
                return (
-               <div key={activity.id} className="flex gap-4">
-                 <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${style.bg} ${style.color} border border-paa-navy/5`}>
-                   <Icon className="w-4 h-4" />
+               <div key={action.id} className="flex gap-4 items-center group">
+                 <div className="flex-1 flex items-center gap-4 cursor-pointer" onClick={action.action}>
+                   <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${action.bg} ${action.color} border border-paa-navy/5 rounded-full transition-transform group-hover:scale-110`}>
+                     <Icon className="w-4 h-4" />
+                   </div>
+                   <div className="flex-1">
+                     <p className="text-sm font-bold text-paa-navy group-hover:underline">{action.text}</p>
+                   </div>
+                   {action.id !== 'act-none' && (
+                     <ChevronDown className="w-4 h-4 text-paa-gray-text -rotate-90 group-hover:text-paa-navy transition-colors mr-2" />
+                   )}
                  </div>
-                 <div>
-                   <p className="text-sm font-bold text-paa-navy">{activity.action}</p>
-                   <p className="text-xs text-paa-gray-text mt-0.5 font-medium">{activity.subject}</p>
-                   <p className="text-[10px] uppercase tracking-widest text-paa-gray-text mt-1">{new Date(activity.createdAt).toLocaleString()}</p>
-                 </div>
+                 {action.id !== 'act-none' && (
+                   <button onClick={(e) => { e.stopPropagation(); setDismissedActions([...dismissedActions, action.id]); }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Dismiss">
+                     <X className="w-4 h-4" />
+                   </button>
+                 )}
                </div>
              )})}
            </div>
@@ -961,9 +994,9 @@ export function OperationsDashboardPage() {
       </div>
 
       {/* Event Sales Chart */}
-      <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-         <div className="bg-[#eef2f6] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
-            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Event Sales 2026</h3>
+      <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+         <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Event Sales 2026</h3>
          </div>
          <div className="h-[350px] p-6">
            <ResponsiveContainer width="100%" height="100%">
@@ -987,9 +1020,9 @@ export function OperationsDashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Sales by Author */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-           <div className="bg-[#e6f2eb] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Top Authors by Sales</h3>
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
+              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Top Authors by Sales</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
              {stats.salesByAuthor && stats.salesByAuthor.map((author: any, i: number) => (
@@ -1005,9 +1038,9 @@ export function OperationsDashboardPage() {
         </div>
 
         {/* Top Selling Books */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-           <div className="bg-[#eef2f6] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Top Selling Books</h3>
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
+              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Top Selling Books</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
              {stats.topSellingBooks && stats.topSellingBooks.map((book: any, i: number) => (
@@ -1026,9 +1059,9 @@ export function OperationsDashboardPage() {
         </div>
 
         {/* Low Stock Alerts */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-           <div className="bg-[#fcedec] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Low Stock Alerts</h3>
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
+              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Low Stock Alerts</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
              {stats.lowStockAlerts && stats.lowStockAlerts.length > 0 ? stats.lowStockAlerts.map((book: any, i: number) => (
@@ -1037,7 +1070,7 @@ export function OperationsDashboardPage() {
                    <p className="text-sm font-bold text-paa-navy truncate max-w-[150px]">{book.title}</p>
                    <p className="text-xs text-paa-gray-text truncate max-w-[150px]">{book.author?.name}</p>
                  </div>
-                 <span className={`px-2 py-1 text-xs font-bold rounded-2xl-2xl ${book.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                 <span className={`px-2 py-1 text-xs font-bold rounded-3xl-2xl ${book.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                    {book.stock} left
                  </span>
                </div>
@@ -1050,9 +1083,9 @@ export function OperationsDashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Sales by Genre */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-           <div className="bg-[#f0f4f8] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Sales by Genre</h3>
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
+              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Sales by Genre</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
              {stats.salesByGenre && stats.salesByGenre.map((genre: any, i: number) => (
@@ -1068,9 +1101,9 @@ export function OperationsDashboardPage() {
         </div>
 
         {/* Top Customers */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
-           <div className="bg-[#fcf7e6] px-6 py-4 border-b border-paa-navy/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Top Customers</h3>
+        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
+              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Top Customers</h3>
            </div>
            <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
              {stats.topCustomers && stats.topCustomers.map((customer: any, i: number) => (
@@ -1090,27 +1123,28 @@ export function OperationsDashboardPage() {
       </div>
     </div>
   );
+};
 
   const renderAuthorsTab = ({ refreshTrigger }: any) => {
     if (selectedAuthor) {
       return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;
     }
-    
+
     return (
-    <div className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
        <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
           <div className="flex items-center gap-3">
-            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Authors Directory</h3>
-            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">{authors.length} Total</span>
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Authors Directory</h3>
+            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">{authors.length} Total</span>
           </div>
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2">
-                <div className="flex bg-gray-100 rounded-2xl-2xl p-1">
+                <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
                   {['All', 'Pending', 'Active', 'Rejected'].map(status => (
                     <button 
                       key={status}
                       onClick={() => setAuthorStatusFilter(status)}
-                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-2xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300' : 'text-gray-500 hover:text-paa-navy'}`}
+                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
                     >
                       {status}
                     </button>
@@ -1127,44 +1161,41 @@ export function OperationsDashboardPage() {
                   />
                 </div>
              </div>
-             {/* <button onClick={() => setIsAuthorModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
-               <Plus className="w-4 h-4" /> Add Author
-             </button> */}
           </div>
        </div>
        
        <div className="overflow-x-auto">
-         <table className="w-full text-left text-sm whitespace-nowrap">
-           <thead className="bg-[#eef2f6] text-paa-navy text-xs uppercase tracking-widest font-bold">
-             <tr>
-               <th className="px-6 py-4">Author Details</th>
-               <th className="px-6 py-4">Contact</th>
-               <th className="px-6 py-4">Payment Info</th>
-               <th className="px-6 py-4 text-center">Status</th>
-               <th className="px-6 py-4 text-center">Books</th>
-               <th className="px-6 py-4 text-center">Events</th>
-               <th className="px-6 py-4 text-center">Actions</th>
-             </tr>
+         <table className="dash-table">
+           <thead>
+              <tr>
+                <th>Author Details</th>
+                <th>Contact</th>
+                <th>Payment Info</th>
+                <th style={{textAlign: 'center'}}>Status</th>
+                <th style={{textAlign: 'center'}}>Books</th>
+                <th style={{textAlign: 'center'}}>Events</th>
+                <th style={{textAlign: 'center'}}>Actions</th>
+              </tr>
            </thead>
-           <tbody className="divide-y divide-paa-navy/5">
-             {authors.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) && (authorStatusFilter === 'All' || a.status === authorStatusFilter)).map((author) => (
-               <tr key={author.id} className="hover:bg-gray-50 bg-white transition-colors">
-                 <td className="px-6 py-4">
-                   <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 bg-[#f0f4f8] border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
-                       {author.name.charAt(0)}
-                     </div>
-                     <div>
-                       <p className="font-bold text-paa-navy">{author.name}</p>
-                       <p className="text-xs text-paa-gray-text flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3"/> Joined {author.joined}</p>
-                     </div>
-                   </div>
-                 </td>
-                 <td className="px-6 py-4">
+           <tbody>
+              {authors.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) && (authorStatusFilter === 'All' || a.status === authorStatusFilter)).map((author) => (
+                <tr key={author.id}>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#f0f4f8] border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
+                        {author.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-paa-navy">{author.name}</p>
+                        <p className="text-xs text-paa-gray-text flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3"/> Joined {author.joined}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
                     <p className="text-paa-navy font-medium">{author.email}</p>
                     <p className="text-paa-gray-text text-xs mt-0.5 font-medium">{author.phone}</p>
-                 </td>
-                 <td className="px-6 py-4">
+                  </td>
+                  <td>
                     {author.transactionId ? (
                       <div>
                         <p className="text-[10px] font-bold text-paa-navy uppercase bg-gray-100 inline-block px-1 mb-1">TXN: {author.transactionId}</p>
@@ -1178,47 +1209,47 @@ export function OperationsDashboardPage() {
                     ) : (
                       <span className="text-[10px] text-gray-400 font-bold uppercase">No Payment Info</span>
                     )}
-                 </td>
-                 <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${author.status === 'Active' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : author.status === 'Rejected' ? 'bg-[#d9534f] text-white border-[#c9302c]' : 'bg-[#f0ad4e] text-white border-[#eea236]'}`}>
+                  </td>
+                  <td style={{textAlign: 'center'}}>
+                    <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
                       {author.status}
                     </span>
-                 </td>
-                 <td className="px-6 py-4 text-center font-bold text-paa-navy bg-gray-50 border-x border-paa-navy/5">
+                  </td>
+                  <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
                     {author.totalBooks}
-                 </td>
-                 <td className="px-6 py-4 text-center font-bold text-paa-navy">
+                  </td>
+                  <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
                     {author.eventsPart}
-                 </td>
-                 <td className="px-6 py-4 text-center">
+                  </td>
+                  <td style={{textAlign: 'center'}}>
                     <div className="flex items-center justify-center gap-2 flex-wrap">
                        {author.status === 'Pending' && (
                          <>
-                           <button onClick={() => handleApproveAuthor(author.id)} className="p-1.5 text-white bg-[#5cb85c] hover:bg-[#4cae4c] border border-[transparent] shadow" title="Approve">
-                             {loadingAction === 'approveAuthor_' + author.id ? <span className="text-[10px] px-1 font-bold">Approving...</span> : <Check className="w-4 h-4" />}
+                           <button onClick={() => handleApproveAuthor(author.id)} className="dash-btn dash-btn-success" title="Approve">
+                             {loadingAction === 'approveAuthor_' + author.id ? '...' : <Check className="w-4 h-4" />} Approve
                            </button>
-                           <button onClick={() => openRejectAuthorModal(author)} className="p-1.5 text-white bg-orange-500 hover:bg-orange-600 border border-[transparent] shadow" title="Reject">
-                             <X className="w-4 h-4" />
+                           <button onClick={() => openRejectAuthorModal(author)} className="dash-btn dash-btn-danger" title="Reject">
+                             <X className="w-4 h-4" /> Reject
                            </button>
                          </>
                        )}
-                       <button onClick={() => handleEditAuthorClick(author)} className="p-1.5 text-white bg-blue-500 hover:bg-blue-600 border border-[transparent] shadow" title="Edit Profile">
+                       <button onClick={() => handleEditAuthorClick(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Profile">
                          <Edit className="w-4 h-4" />
                        </button>
-                       <button onClick={() => setSelectedAuthor(author)} className="p-1.5 text-paa-navy bg-gray-100 hover:bg-gray-200 border border-paa-navy/5 transition-colors shadow" title="Details">
+                       <button onClick={() => setSelectedAuthor(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Details">
                          <Eye className="w-4 h-4" />
                        </button>
-                       <button onClick={() => handleDeleteAuthor(author.id)} className="p-1.5 text-white bg-[#d9534f] hover:bg-[#c9302c] transition-colors shadow" title="Delete">
+                       <button onClick={() => handleDeleteAuthor(author.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">
                          <Trash2 className="w-4 h-4" />
                        </button>
                     </div>
                     {author.status === 'Rejected' && author.rejectionReason && (
-                      <div className="mt-1 text-[10px] text-red-600 font-medium max-w-[200px] text-left leading-tight">
+                      <div className="mt-2 text-[10px] text-red-600 font-medium max-w-[200px] mx-auto text-left leading-tight bg-red-50 p-2 rounded-lg">
                         Reason: {author.rejectionReason}
                       </div>
                     )}
-                 </td>
-               </tr>
+                  </td>
+                </tr>
              ))}
              {authors.length === 0 && (
                <tr>
@@ -1232,20 +1263,62 @@ export function OperationsDashboardPage() {
     );
   };
 
-  const BooksTab = () => (
-    <div className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+  const BooksTab = () => {
+    if (selectedBookDetails) {
+      return (
+        <div className="bg-white border border-paa-navy/5 p-8 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+          <button onClick={() => setSelectedBookDetails(null)} className="mb-6 p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded-full active:scale-95 transition-all duration-300 shadow-sm">
+             <ArrowLeft className="w-5 h-5 text-paa-navy" />
+          </button>
+          
+          <div className="space-y-6">
+             <div className="flex gap-6">
+               {selectedBookDetails.coverUrl && (
+                 <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-40 h-56 object-cover border border-paa-navy/20 shadow-md" />
+               )}
+               <div className="flex-1">
+                  <h3 className="text-3xl font-serif font-bold text-paa-navy mb-1">{selectedBookDetails.title}</h3>
+                  {selectedBookDetails.subtitle && <p className="text-lg font-medium text-paa-gray-text mb-2">{selectedBookDetails.subtitle}</p>}
+                  <p className="text-base font-medium mb-2">Author: <span className="font-bold text-paa-navy">{selectedBookDetails.authorName}</span></p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mt-2 bg-[#eef2f6] inline-block px-3 py-1">{selectedBookDetails.genre} {selectedBookDetails.subGenre && `> ${selectedBookDetails.subGenre}`}</p>
+               </div>
+             </div>
+             
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 border-t border-paa-navy/5 pt-6 mt-6">
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">MRP</span><span className="text-lg font-black text-green-700">₹{selectedBookDetails.mrp}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Language</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pages</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.pages || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Publisher</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pub Date</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">ISBN</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Current Stock</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.stock}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Total Sales</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.sales}</span></div>
+             </div>
+             
+             <div className="border-t border-paa-navy/5 pt-6 mt-6">
+               <span className="text-sm font-bold uppercase tracking-widest text-paa-navy block mb-3">Synopsis</span>
+               <p className="text-sm text-paa-gray-text leading-relaxed whitespace-pre-wrap">{selectedBookDetails.synopsis || 'No synopsis provided.'}</p>
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
        <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e6f2eb]">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Inventory Management</h3>
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Inventory Management</h3>
           </div>
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2">
-                <div className="flex bg-gray-100 rounded-2xl-2xl p-1">
+                <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
                   {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
                     <button 
                       key={status}
                       onClick={() => setBookStatusFilter(status)}
-                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-2xl-2xl ${bookStatusFilter === status ? 'bg-white text-paa-navy shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300' : 'text-gray-500 hover:text-paa-navy'}`}
+                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${bookStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
                     >
                       {status}
                     </button>
@@ -1263,69 +1336,69 @@ export function OperationsDashboardPage() {
        </div>
        
        <div className="overflow-x-auto">
-         <table className="w-full text-left text-sm whitespace-nowrap">
-           <thead className="bg-[#eef2f6] text-paa-navy text-xs uppercase tracking-widest font-bold">
-             <tr>
-               <th className="px-6 py-4">Book Info</th>
-               <th className="px-6 py-4">Author</th>
-               <th className="px-6 py-4 text-center">Status</th>
-               <th className="px-6 py-4 text-center">Price</th>
-               <th className="px-6 py-4 text-center bg-yellow-100 border-x border-paa-navy/5">Stock</th>
-               <th className="px-6 py-4 text-center bg-green-100">Sales</th>
-               <th className="px-6 py-4 text-center">Actions</th>
-             </tr>
-           </thead>
-           <tbody className="divide-y divide-paa-navy/5">
+         <table className="dash-table">
+            <thead>
+              <tr>
+                <th>Book Info</th>
+                <th>Author</th>
+                <th style={{textAlign: 'center'}}>Status</th>
+                <th style={{textAlign: 'center'}}>Price</th>
+                <th style={{textAlign: 'center'}}>Stock</th>
+                <th style={{textAlign: 'center'}}>Sales</th>
+                <th style={{textAlign: 'center'}}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
              {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter)).map((book) => (
-               <tr key={book.id} className="hover:bg-gray-50 bg-white transition-colors">
-                 <td className="px-6 py-4">
+               <tr key={book.id}>
+                 <td>
                    <p className="font-bold text-paa-navy mb-1">{book.title}</p>
                    <div className="flex items-center gap-2 text-xs font-medium">
                      <span className="text-[#5bc0de] font-bold uppercase">{book.genre}</span>
                    </div>
                  </td>
-                 <td className="px-6 py-4">
+                 <td>
                     <p className="text-paa-navy font-bold">{book.authorName}</p>
                  </td>
-                 <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${book.status === 'Approved' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : book.status === 'Rejected' ? 'bg-[#d9534f] text-white border-[#c9302c]' : 'bg-[#f0ad4e] text-white border-[#eea236]'}`}>
+                 <td style={{textAlign: 'center'}}>
+                    <span className={`dash-badge ${book.status === 'Approved' ? 'approved' : book.status === 'Rejected' ? 'rejected' : 'pending'}`}>
                       {book.status}
                     </span>
                  </td>
-                 <td className="px-6 py-4 text-center font-bold text-paa-navy">
+                 <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
                     ₹{book.mrp}
                  </td>
-                 <td className="px-6 py-4 text-center bg-yellow-50 border-x border-paa-navy/5">
-                    {book.stock > 10 ? (
-                      <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-[10px] font-bold uppercase border border-green-200">{book.stock} left</span>
+                 <td style={{textAlign: 'center'}}>
+                    {book.stock >= 10 ? (
+                      <span className="dash-badge active">OK: {book.stock}</span>
                     ) : book.stock > 0 ? (
-                      <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-[10px] font-bold uppercase border border-yellow-200">Only {book.stock} left</span>
+                      <span className="dash-badge pending"><AlertCircle className="w-3 h-3"/> {book.stock} LEFT</span>
                     ) : (
-                      <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-[10px] font-bold uppercase border border-red-200">Out of Stock</span>
+                      <span className="dash-badge rejected"><AlertCircle className="w-3 h-3"/> OUT OF STOCK</span>
                     )}
                  </td>
-                 <td className="px-6 py-4 text-center font-bold text-paa-navy bg-green-50">
+                 <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
                     {book.sales}
                  </td>
-                 <td className="px-6 py-4 text-center">
+                 <td style={{textAlign: 'center'}}>
                     <div className="flex items-center justify-center gap-2">
                        {book.status === 'Pending' && (
-                         <button onClick={() => handleApproveBook(book.id)} className="p-1.5 text-white bg-[#5cb85c] hover:bg-[#4cae4c] border border-[transparent] shadow" title="Approve">
+                         <button onClick={() => handleApproveBook(book.id)} className="dash-btn dash-btn-success dash-btn-icon" title="Approve">
                            <Check className="w-4 h-4" />
                          </button>
                        )}
                        {book.status !== 'Rejected' && (
-                         <button onClick={() => handleRejectBook(book.id)} className="p-1.5 text-white bg-orange-500 hover:bg-orange-600 border border-[transparent] shadow" title="Reject">
+                         <button onClick={() => handleRejectBook(book.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Reject">
                            <X className="w-4 h-4" />
                          </button>
                        )}
-                       <button onClick={() => setSelectedBookDetails(book)} className="p-1.5 text-white bg-purple-500 hover:bg-purple-600 border border-[transparent] shadow" title="View Details">
+                       <button onClick={() => setSelectedBookDetails(book)} className="dash-btn dash-btn-ghost dash-btn-icon" title="View Details">
                          <Eye className="w-4 h-4" />
                        </button>
-                       <button onClick={() => handleEditBookClick(book)} className="p-1.5 text-white bg-blue-500 hover:bg-blue-600 border border-[transparent] shadow" title="Edit Details">
+                       <button onClick={() => handleEditBookClick(book)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Details">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDeleteBook(book.id)} className="p-1.5 text-white bg-[#d9534f] hover:bg-[#c9302c] transition-colors shadow" title="Delete">
+                        <button onClick={() => handleDeleteBook(book.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">
                           <Trash2 className="w-4 h-4" />
                         </button>
                      </div>
@@ -1341,13 +1414,14 @@ export function OperationsDashboardPage() {
          </table>
        </div>
     </div>
-  );
+    );
+  };
 
   const EventsTab = () => (
     <div className="space-y-6">
        <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
           <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Ecosystem</h3>
-          <button onClick={() => setIsEventModalOpen(true)} className="flex items-center gap-2 px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy transition-colors">
+          <button onClick={() => setIsEventModalOpen(true)} className="dash-btn dash-btn-primary">
             <Plus className="w-4 h-4" /> Create Event
           </button>
        </div>
@@ -1356,17 +1430,26 @@ export function OperationsDashboardPage() {
           <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2">Active / Upcoming Events</h4>
        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {events.filter(e => e.status === 'Upcoming').map((evt) => (
-             <div key={evt.id} className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
-                <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center`}>
+             <div key={evt.id} className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out hover:shadow-md flex flex-col relative overflow-hidden h-full">
+                <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative`}>
                    <span>{evt.status}</span>
                    <div className="flex gap-2 items-center">
-                     {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded-2xl-2xl text-[10px]">Authors Notified</span>}
-                     {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded-2xl-2xl text-[10px]">Public</span>}
-                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-2xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
-                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-2xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                     {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Authors Notified</span>}
+                     {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Public</span>}
+                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
+                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
                    </div>
                 </div>
-                <div className="p-6">
+                <div className="p-6 flex-1 flex flex-col">
+                  {evt.bannerUrl ? (
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 bg-gray-100">
+                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 flex items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100">
+                       <CalendarIcon className="w-8 h-8 text-gray-300" />
+                    </div>
+                  )}
                   <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
                   <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-paa-gray-text">
                      <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50"/> {evt.date} &bull; {evt.duration}</p>
@@ -1374,21 +1457,21 @@ export function OperationsDashboardPage() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-gray-50 p-2 text-center rounded-2xl-2xl border border-gray-100">
+                     <div className="bg-gray-50 p-2 text-center rounded-3xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Authors</p>
                         <p className="text-lg font-black text-paa-navy">{evt._count?.eventAuthors || 0}</p>
                      </div>
-                     <div className="bg-gray-50 p-2 text-center rounded-2xl-2xl border border-gray-100">
+                     <div className="bg-gray-50 p-2 text-center rounded-3xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Linked</p>
                         <p className="text-lg font-black text-paa-navy">{evt._count?.eventBooks || 0}</p>
                      </div>
                   </div>
 
-                  <div className="pt-4 border-t border-paa-navy/5 flex flex-col gap-2">
-                     <button onClick={() => fetchEventRegistrations(evt.id)} className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-widest transition-colors border border-orange-200">
+                  <div className="pt-4 border-t border-paa-navy/5 flex flex-col gap-2 mt-auto">
+                     <button onClick={() => fetchEventRegistrations(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800">
                         View Author Registrations
                      </button>
-                     <button onClick={() => fetchEventReport(evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 mt-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                     <button onClick={() => fetchEventReport(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
                         View Live Event Report
                      </button>
                   </div>
@@ -1396,7 +1479,7 @@ export function OperationsDashboardPage() {
              </div>
           ))}
           {events.filter(e => e.status === 'Upcoming').length === 0 && (
-             <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-2xl-2xl border border-dashed border-gray-200">
+             <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-3xl-2xl border border-dashed border-gray-200">
                 No upcoming events.
              </div>
           )}
@@ -1405,7 +1488,7 @@ export function OperationsDashboardPage() {
        <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2 mt-12">Past Events Archive</h4>
        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {pastEventsData.map((evt: any) => (
-             <div key={'legacy_'+evt.id} className="bg-gray-50 border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col relative overflow-hidden opacity-90">
+             <div key={'legacy_'+evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90">
                 <div className="bg-gray-800 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center">
                    <span>Legacy Archive</span>
                 </div>
@@ -1416,17 +1499,17 @@ export function OperationsDashboardPage() {
                      <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400"/> {evt.address || evt.location}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-white p-2 text-center rounded-2xl-2xl border border-gray-100">
+                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
                         <p className="text-lg font-black text-gray-700">{evt.authorsParticipated || 0}</p>
                      </div>
-                     <div className="bg-white p-2 text-center rounded-2xl-2xl border border-gray-100">
+                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Sold</p>
                         <p className="text-lg font-black text-gray-700">{evt.booksSold || 0}</p>
                      </div>
                   </div>
-                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2">
-                     <button onClick={() => fetchEventReport('legacy_' + evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2 mt-auto">
+                     <button onClick={() => fetchEventReport('legacy_' + evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
                         View Legacy Settlement Report
                      </button>
                   </div>
@@ -1434,15 +1517,24 @@ export function OperationsDashboardPage() {
              </div>
           ))}
           {events.filter(e => e.status === 'Past').map((evt) => (
-             <div key={evt.id} className="bg-gray-50 border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col relative overflow-hidden opacity-90">
-                <div className="bg-gray-500 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center">
+             <div key={evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90 h-full">
+                <div className="bg-gray-500 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative">
                    <span>{evt.status}</span>
                    <div className="flex gap-2 items-center">
-                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-2xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
-                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-2xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
+                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
                    </div>
                 </div>
-                <div className="p-6 flex-1">
+                <div className="p-6 flex-1 flex flex-col">
+                  {evt.bannerUrl ? (
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 bg-gray-100">
+                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center bg-gradient-to-r from-gray-100 to-gray-50">
+                       <CalendarIcon className="w-8 h-8 text-gray-300" />
+                    </div>
+                  )}
                   <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
                   <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-gray-500">
                      <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-gray-400"/> {evt.date} &bull; {evt.duration}</p>
@@ -1450,18 +1542,18 @@ export function OperationsDashboardPage() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-white p-2 text-center rounded-2xl-2xl border border-gray-100">
+                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
                         <p className="text-lg font-black text-gray-700">{evt._count?.eventAuthors || 0}</p>
                      </div>
-                     <div className="bg-white p-2 text-center rounded-2xl-2xl border border-gray-100">
+                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Linked</p>
                         <p className="text-lg font-black text-gray-700">{evt._count?.eventBooks || 0}</p>
                      </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2">
-                     <button onClick={() => fetchEventReport(evt.id)} className="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-widest transition-colors border border-purple-200 mt-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2 mt-auto">
+                     <button onClick={() => fetchEventReport(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
                         View Sales & Settlement Report
                      </button>
                   </div>
@@ -1469,7 +1561,7 @@ export function OperationsDashboardPage() {
              </div>
           ))}
           {events.filter(e => e.status === 'Past').length === 0 && (
-             <div className="col-span-full py-8 text-center text-gray-400 bg-gray-50 rounded-2xl-2xl border border-dashed border-gray-200">
+             <div className="col-span-full py-8 text-center text-gray-400 bg-gray-50 rounded-3xl-2xl border border-dashed border-gray-200">
                 No past events archived yet.
              </div>
           )}
@@ -1479,63 +1571,63 @@ export function OperationsDashboardPage() {
   );
 
   const OrdersTab = () => (
-    <div className="bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col">
+    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
        <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy">Web Orders</h3>
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Web Orders</h3>
           </div>
           <div className="flex items-center gap-3">
              <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
                 <input type="text" placeholder="SEARCH ORDERS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
              </div>
-             <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 active:scale-95 transition-all duration-300">
+             <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                <ClipboardList className="w-4 h-4" /> Export CSV
              </button>
           </div>
        </div>
        
        <div className="overflow-x-auto">
-         <table className="w-full text-left text-sm whitespace-nowrap">
-           <thead className="bg-[#eef2f6] text-paa-navy text-xs uppercase tracking-widest font-bold">
-             <tr>
-               <th className="px-6 py-4">Order ID & Date</th>
-               <th className="px-6 py-4">Customer</th>
-               <th className="px-6 py-4">Items / Books</th>
-               <th className="px-6 py-4 text-center">Amount</th>
-               <th className="px-6 py-4 text-center">Status</th>
-               <th className="px-6 py-4 text-center">Actions</th>
-             </tr>
-           </thead>
-           <tbody className="divide-y divide-paa-navy/5">
+          <table className="dash-table">
+            <thead>
+              <tr>
+                <th>Order ID & Date</th>
+                <th>Customer</th>
+                <th>Items / Books</th>
+                <th style={{textAlign: 'center'}}>Amount</th>
+                <th style={{textAlign: 'center'}}>Status</th>
+                <th style={{textAlign: 'center'}}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
              {orders.map((ord) => (
-               <tr key={ord.dbId} className="hover:bg-gray-50 bg-white transition-colors">
-                 <td className="px-6 py-4">
+                <tr key={ord.dbId}>
+                  <td>
                    <p className="font-bold text-paa-navy mb-1">{ord.id}</p>
                    <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3"/> {ord.date}</p>
-                 </td>
-                 <td className="px-6 py-4 font-bold text-paa-navy">
-                    {ord.customer}
-                 </td>
-                 <td className="px-6 py-4">
-                    <ul className="text-xs text-paa-gray-text font-medium space-y-1">
-                      {ord.items.map((it: any, idx: number) => (
-                        <li key={idx} className="flex gap-2"><span className="text-paa-navy font-bold">{it.qty}x</span> <span>{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span></li>
-                      ))}
-                    </ul>
-                 </td>
-                 <td className="px-6 py-4 text-center font-bold text-paa-navy bg-gray-50">
-                    ₹{ord.total}
-                 </td>
-                 <td className="px-6 py-4 text-center">
-                    <span className={`inline-block px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${ord.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : ord.status === 'Payment Not Received' ? 'bg-[#d9534f] text-white border-[#c9302c]' : 'bg-[#f0ad4e] text-white border-[#eea236]'}`}>
-                      {ord.status === 'Completed' ? 'Payment Verified' : ord.status === 'Payment Not Received' ? 'Payment Failed' : 'Pending Verification'}
-                    </span>
-                 </td>
-                 <td className="px-6 py-4 text-center">
-                    <button onClick={() => setSelectedOrder(ord)} className="text-[#5bc0de] text-xs font-bold uppercase tracking-widest hover:text-paa-navy transition-colors">Details</button>
-                 </td>
-               </tr>
+                  </td>
+                  <td className="font-bold text-paa-navy">
+                     {ord.customer}
+                  </td>
+                  <td>
+                     <ul className="text-xs text-paa-gray-text font-medium space-y-1">
+                       {ord.items.map((it: any, idx: number) => (
+                         <li key={idx} className="flex gap-2"><span className="text-paa-navy font-bold">{it.qty}x</span> <span>{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span></li>
+                       ))}
+                     </ul>
+                  </td>
+                  <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
+                     ₹{ord.total}
+                  </td>
+                  <td style={{textAlign: 'center'}}>
+                     <span className={`dash-badge ${ord.status === 'Completed' ? 'active' : ord.status === 'Payment Not Received' ? 'rejected' : 'pending'}`}>
+                       {ord.status === 'Completed' ? 'Payment Verified' : ord.status === 'Payment Not Received' ? 'Payment Failed' : 'Pending Verification'}
+                     </span>
+                  </td>
+                  <td style={{textAlign: 'center'}}>
+                     <button onClick={() => setSelectedOrder(ord)} className="dash-btn dash-btn-ghost">Details</button>
+                  </td>
+                </tr>
              ))}
              {orders.length === 0 && (
                <tr><td colSpan={6} className="text-center py-8">No orders yet.</td></tr>
@@ -1551,7 +1643,7 @@ export function OperationsDashboardPage() {
 
     return (
     <div className="space-y-8 max-w-2xl">
-      <div className="bg-white p-8 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+      <div className="bg-white p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
          <div className="border-b border-paa-navy/5 pb-4 mb-8">
             <h2 className="text-xl font-serif font-medium text-paa-navy mb-1">System Settings</h2>
             <p className="text-paa-gray-text text-sm">Configure global application parameters, notification rules, and access control here.</p>
@@ -1560,11 +1652,11 @@ export function OperationsDashboardPage() {
          <div className="space-y-6">
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Platform Name</label>
-              <input type="text" defaultValue="Pune Authors' Association" className="w-full border border-paa-navy/20 bg-gray-50 rounded-2xl-2xl-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
+              <input type="text" defaultValue="Pune Authors' Association" className="w-full border border-paa-navy/20 bg-gray-50 rounded-3xl-2xl-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Support Email</label>
-              <input type="email" defaultValue="support@puneauthors.com" className="w-full border border-paa-navy/20 bg-gray-50 rounded-2xl-2xl-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
+              <input type="email" defaultValue="support@puneauthors.com" className="w-full border border-paa-navy/20 bg-gray-50 rounded-3xl-2xl-none p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" />
             </div>
             
             <div className="pt-6 border-t border-paa-navy/5">
@@ -1592,23 +1684,21 @@ export function OperationsDashboardPage() {
   const Modal = ({ isOpen, onClose, title, children }: any) => {
     if (!isOpen) return null;
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
-        <div className="bg-white border text-paa-navy border-paa-navy/5 shadow-xl w-full max-w-lg">
-          <div className="bg-[#eef2f6] p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center border-b border-paa-navy/5">
-            {title}
-            <button type="button" onClick={onClose} className="text-paa-navy hover:text-black active:scale-95 transition-all duration-300">
-              <X className="w-5 h-5" />
+      <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="dash-modal">
+          <div className="dash-modal-header">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">{title}</h3>
+            <button type="button" onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text hover:text-paa-navy transition-colors">
+              <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="p-6">
+          <div className="dash-modal-body space-y-4">
             {children}
           </div>
         </div>
       </div>
     );
   };
-
-
 
   const AuthorDataTab = ({ refreshTrigger }: any) => {
     const [fields, setFields] = useState<any[]>([]);
@@ -1681,16 +1771,16 @@ export function OperationsDashboardPage() {
 
     return (
       <div className="space-y-8 max-w-6xl">
-        <div className="bg-white p-6 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 rounded-2xl-2xl">
+        <div className="bg-white p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl">
           <h3 className="text-xl font-serif font-medium text-paa-navy mb-1">Author Dynamic Fields Management</h3>
           <p className="text-paa-gray-text text-sm mb-6 border-b border-paa-navy/5 pb-4">Define extra information that all authors must provide. This will appear on their dashboard until filled.</p>
           
           <div className="flex flex-wrap gap-3 mb-6">
             {fields.map((f, i) => (
-               <div key={i} className="flex items-center gap-2 bg-gray-50 border border-paa-navy/20 px-3 py-1.5 rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 text-sm">
+               <div key={i} className="flex items-center gap-2 bg-gray-50 border border-paa-navy/20 px-3 py-1.5 rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out text-sm">
                   <span className="font-bold text-paa-navy">{f.name}</span>
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">({f.type})</span>
-                  {f.requiredForRegistration && <span className="text-[9px] bg-paa-navy text-white px-1.5 py-0.5 rounded-2xl-2xl uppercase tracking-widest font-bold">Registration</span>}
+                  {f.requiredForRegistration && <span className="text-[9px] bg-paa-navy text-white px-1.5 py-0.5 rounded-3xl-2xl uppercase tracking-widest font-bold">Registration</span>}
                   <button onClick={() => setFields(fields.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700 ml-2" title="Remove Field">
                      <X className="w-3.5 h-3.5" />
                   </button>
@@ -1699,16 +1789,16 @@ export function OperationsDashboardPage() {
             {fields.length === 0 && <p className="text-sm text-gray-500 italic w-full">No dynamic fields created yet.</p>}
           </div>
 
-          <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded-2xl-2xl mb-6 flex flex-col md:flex-row gap-4 items-center">
+          <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded-3xl-2xl mb-6 flex flex-col md:flex-row gap-4 items-center">
             <input 
                type="text" 
                placeholder="New Field Name (e.g. Aadhar Number)" 
-               className="border border-paa-navy/20 p-2 text-sm flex-1 outline-none focus:border-paa-navy bg-white rounded-2xl-2xl w-full md:w-auto"
+               className="border border-paa-navy/20 p-2 text-sm flex-1 outline-none focus:border-paa-navy bg-white rounded-3xl-2xl w-full md:w-auto"
                value={newField.name}
                onChange={e => setNewField({...newField, name: e.target.value})}
             />
             <select 
-               className="border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy bg-white rounded-2xl-2xl"
+               className="border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy bg-white rounded-3xl-2xl"
                value={newField.type}
                onChange={e => setNewField({...newField, type: e.target.value})}
             >
@@ -1731,18 +1821,18 @@ export function OperationsDashboardPage() {
                  setFields([...fields, { ...newField, required: true }]);
                  setNewField({ name: '', type: 'text', requiredForRegistration: false });
                }} 
-               className="px-4 py-2 border border-paa-navy text-paa-navy bg-white text-xs font-bold uppercase tracking-widest hover:bg-paa-navy hover:text-white transition-colors rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 whitespace-nowrap"
+               className="px-4 py-2 border border-paa-navy text-paa-navy bg-white text-xs font-bold uppercase tracking-widest hover:bg-paa-navy hover:text-white transition-colors rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out whitespace-nowrap"
             >
                Add Field
             </button>
           </div>
           
           <div className="flex">
-            <button onClick={saveFields} className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 active:scale-95 transition-all duration-300">Save Fields Settings</button>
+            <button onClick={saveFields} className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">Save Fields Settings</button>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl-2xl border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+        <div className="bg-white p-6 rounded-3xl-2xl border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-xl font-bold text-paa-navy uppercase tracking-widest flex items-center gap-2">
@@ -1756,12 +1846,12 @@ export function OperationsDashboardPage() {
                  <div className="relative">
                    <button 
                      onClick={() => setShowColumnsMenu(!showColumnsMenu)}
-                     className="px-3 py-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-2xl-2xl text-paa-navy transition-colors text-xs font-bold uppercase tracking-widest flex items-center gap-1"
+                     className="px-3 py-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors text-xs font-bold uppercase tracking-widest flex items-center gap-1"
                    >
                      Columns <ChevronDown className="w-4 h-4" />
                    </button>
                    {showColumnsMenu && (
-                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-xl rounded-2xl-2xl z-20 py-2">
+                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-xl rounded-3xl-2xl z-20 py-2">
                         {dynamicKeys.map(key => (
                           <label key={key} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-xs font-bold uppercase tracking-widest text-paa-navy cursor-pointer whitespace-nowrap">
                             <input 
@@ -1777,36 +1867,36 @@ export function OperationsDashboardPage() {
                    )}
                  </div>
                )}
-               <button onClick={handleExportCSV} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-widest rounded-2xl-2xl transition-colors shadow active:scale-95 transition-all duration-300">
+               <button onClick={handleExportCSV} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-widest rounded-3xl-2xl transition-colors shadow rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                   Export CSV
                </button>
-               <button onClick={fetchAuthors} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-2xl-2xl text-paa-navy transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 active:scale-95 transition-all duration-300">
+               <button onClick={fetchAuthors} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                   <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
                </button>
             </div>
           </div>
 
-          <div className="border border-paa-navy/5 rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 overflow-hidden">
+          <div className="border border-paa-navy/5 rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
+              <table className="dash-table">
+                <thead>
                   <tr>
-                    <th className="px-6 py-4 font-bold">Author Name</th>
-                    <th className="px-6 py-4 font-bold">Email</th>
+                    <th>Author Name</th>
+                    <th>Email</th>
                     {dynamicKeys.filter(k => selectedColumns.includes(k)).map(key => (
-                      <th key={key} className="px-6 py-4 font-bold text-paa-gold">{key}</th>
+                      <th key={key} className="text-paa-gold">{key}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-paa-navy/5">
+                <tbody>
                   {authors.length === 0 ? (
                     <tr><td colSpan={selectedColumns.length + 2} className="px-6 py-8 text-center text-gray-500 italic">No authors found.</td></tr>
                   ) : authors.map(author => (
-                    <tr key={author.id} className="hover:bg-[#f8fafc] transition-colors">
-                      <td className="px-6 py-4 font-medium text-paa-navy">{author.name}</td>
-                      <td className="px-6 py-4 text-gray-500">{author.email}</td>
+                    <tr key={author.id}>
+                      <td className="font-medium text-paa-navy">{author.name}</td>
+                      <td className="text-gray-500">{author.email}</td>
                       {dynamicKeys.filter(k => selectedColumns.includes(k)).map(key => (
-                        <td key={key} className="px-6 py-4 text-gray-700">
+                        <td key={key} className="text-gray-700">
                           {author.extraData && author.extraData[key] ? String(author.extraData[key]) : <span className="text-gray-300 italic">-</span>}
                         </td>
                       ))}
@@ -1825,7 +1915,7 @@ export function OperationsDashboardPage() {
   const FormsTab = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy border-l-4 border-paa-navy pl-2">Forms Management</h3>
+        <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight border-l-4 border-paa-navy pl-2">Forms Management</h3>
         <button 
           onClick={() => setIsFormModalOpen(true)}
           className="px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase transition hover:bg-paa-gold"
@@ -1845,21 +1935,21 @@ export function OperationsDashboardPage() {
             </button>
             <h4 className="font-bold text-paa-navy">Responses for: {selectedFormResponses.formTitle}</h4>
           </div>
-          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-paa-navy/5 text-xs uppercase font-bold text-paa-navy/60">
+          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+            <table className="dash-table">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3">Author</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Answers</th>
+                  <th>Author</th>
+                  <th>Date</th>
+                  <th>Answers</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-paa-navy/10">
+              <tbody>
                 {selectedFormResponses.responses.map((r: any) => (
-                  <tr key={r.id} className="hover:bg-paa-navy/5">
-                    <td className="px-4 py-3 font-medium text-paa-navy">{r.author?.name}</td>
-                    <td className="px-4 py-3 text-paa-gray-text">{new Date(r.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-paa-gray-text max-w-sm truncate">
+                  <tr key={r.id}>
+                    <td><p className="font-bold text-paa-navy">{r.author?.name}</p></td>
+                    <td>{new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td className="max-w-sm truncate text-xs text-paa-gray-text font-medium">
                       {JSON.stringify(r.answers)}
                     </td>
                   </tr>
@@ -1877,7 +1967,7 @@ export function OperationsDashboardPage() {
               <div className="text-xs text-paa-gray-text">Fields: {f.fields.length}</div>
               <div className="flex gap-2 mt-4">
                 <button 
-                  className="px-3 py-1.5 bg-paa-navy/10 text-paa-navy text-xs font-bold uppercase hover:bg-paa-navy hover:text-white transition active:scale-95 transition-all duration-300"
+                  className="px-3 py-1.5 bg-paa-navy/10 text-paa-navy text-xs font-bold uppercase hover:bg-paa-navy hover:text-white transition rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out"
                   onClick={() => {
                     axios.get(`${API}/api/admin/forms/${f.id}/responses`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }})
                       .then(res => setSelectedFormResponses({ formTitle: f.title, responses: res.data }));
@@ -1886,7 +1976,7 @@ export function OperationsDashboardPage() {
                   View Responses
                 </button>
                 <button 
-                  className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold uppercase hover:bg-red-600 hover:text-white transition active:scale-95 transition-all duration-300"
+                  className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold uppercase hover:bg-red-600 hover:text-white transition rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out"
                   onClick={() => {
                     if (window.confirm("Delete this form and all its responses?")) {
                       axios.delete(`${API}/api/admin/forms/${f.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }})
@@ -1907,7 +1997,7 @@ export function OperationsDashboardPage() {
   const GalleryTab = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy border-l-4 border-paa-navy pl-2">Gallery Management</h3>
+        <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight border-l-4 border-paa-navy pl-2">Gallery Management</h3>
         <button 
           onClick={() => setIsGalleryModalOpen(true)}
           className="px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase transition hover:bg-paa-gold"
@@ -1916,41 +2006,41 @@ export function OperationsDashboardPage() {
         </button>
       </div>
 
-      <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
-        <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead className="bg-paa-navy/5 text-xs uppercase font-bold text-paa-navy/60">
+      <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+        <table className="dash-table">
+          <thead>
             <tr>
-              <th className="px-4 py-3">Photo</th>
-              <th className="px-4 py-3">Location</th>
-              <th className="px-4 py-3">City</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th>Photo</th>
+              <th>Location</th>
+              <th>City</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th style={{textAlign: 'right'}}>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-paa-navy/10">
+          <tbody>
             {gallery.map((g: any) => (
-              <tr key={g.id} className="hover:bg-paa-navy/5 transition-colors">
-                <td className="px-4 py-3">
-                  <img src={g.photoUrl ? (g.photoUrl.startsWith('http') ? g.photoUrl : `${API}${g.photoUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded-2xl-2xl" />
+              <tr key={g.id}>
+                <td>
+                  <img src={g.photoUrl ? (g.photoUrl.startsWith('http') ? g.photoUrl : `${API}${g.photoUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded-3xl-2xl" />
                 </td>
-                <td className="px-4 py-3 font-medium text-paa-navy">{g.location}</td>
-                <td className="px-4 py-3 text-paa-gray-text">{g.city}</td>
-                <td className="px-4 py-3 text-paa-gray-text">{g.type}</td>
-                <td className="px-4 py-3 text-paa-gray-text">{new Date(g.date).toLocaleDateString()}</td>
-                <td className="px-4 py-3 text-right">
+                <td className="font-bold text-paa-navy">{g.location}</td>
+                <td>{g.city}</td>
+                <td>{g.type}</td>
+                <td>{new Date(g.date).toLocaleDateString()}</td>
+                <td style={{textAlign: 'right'}}>
                   <button 
                     onClick={() => setSelectedGalleryEvent(g)}
-                    className="text-blue-500 hover:text-blue-700 text-xs font-bold uppercase transition"
+                    className="dash-btn dash-btn-ghost mr-2"
                   >
-                    Manage Images ({g.images?.length || 0})
+                    Images ({g.images?.length || 0})
                   </button>
                   <button 
                     onClick={() => {
                       setEditingGalleryEvent(g);
                       setIsEditGalleryModalOpen(true);
                     }}
-                    className="text-gray-500 hover:text-gray-700 text-xs font-bold uppercase ml-4 transition"
+                    className="dash-btn dash-btn-ghost mr-2"
                   >
                     Edit
                   </button>
@@ -1961,7 +2051,7 @@ export function OperationsDashboardPage() {
                           .then(() => fetchGallery());
                       }
                     }}
-                    className="text-red-500 hover:text-red-700 text-xs font-bold uppercase ml-4 transition"
+                    className="dash-btn dash-btn-danger"
                   >
                     Delete
                   </button>
@@ -1976,22 +2066,17 @@ export function OperationsDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-paa-cream animate-fade-in-up flex flex-col md:flex-row p-6 font-sans">
-        <div className="w-64 shrink-0 h-screen hidden md:block space-y-4">
-          <div className="h-10 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
-          <div className="h-10 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
-          <div className="h-10 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
-          <div className="h-10 bg-gray-200 animate-pulse rounded-2xl-2xl"></div>
+      <div className="min-h-screen flex font-sans" style={{background:'#f8f8f6'}}>
+        <div className="w-64 shrink-0 h-screen hidden md:flex flex-col p-5 gap-3 dash-sidebar">
+          <div className="h-14 mb-4 dash-skeleton opacity-20 rounded-xl"></div>
+          {[...Array(7)].map((_,i) => <div key={i} className="h-10 dash-skeleton opacity-10 rounded-xl"></div>)}
         </div>
-        <div className="flex-1 space-y-6 md:pl-6">
-          <div className="h-16 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
-            <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
-            <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
-            <div className="h-32 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
+        <div className="flex-1 p-8 space-y-6">
+          <div className="h-16 dash-skeleton w-full rounded-2xl"></div>
+          <div className="grid grid-cols-4 gap-5">
+            {[...Array(4)].map((_,i) => <div key={i} className="h-28 dash-skeleton rounded-2xl"></div>)}
           </div>
-          <div className="h-96 bg-gray-200 animate-pulse rounded-2xl-2xl w-full"></div>
+          <div className="h-80 dash-skeleton rounded-2xl"></div>
         </div>
       </div>
     );
@@ -2002,14 +2087,27 @@ export function OperationsDashboardPage() {
       
       {/* SIDEBAR */}
       <aside className={`w-64 flex flex-col shrink-0 h-screen fixed md:sticky top-0 bg-paa-cream z-50 transform transition-transform duration-300 border-r border-paa-navy/5 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="p-4 md:p-6 h-20 flex items-center justify-between shrink-0">
-          <span className="font-serif font-bold text-lg md:hidden">Menu</span>
+        <div className="p-4 md:p-6 h-20 flex items-center justify-between shrink-0 border-b border-paa-navy/5">
+          <div className="flex items-center gap-2">
+            <img 
+              src="/logo.png" 
+              alt="PAA Logo" 
+              className="h-8 w-auto object-contain" 
+              onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} 
+            />
+            <div className="hidden w-8 h-8 rounded-full bg-[#b44d28] flex items-center justify-center text-white text-sm font-bold">
+              P
+            </div>
+            <span className="font-serif font-bold text-lg tracking-tight hidden md:block text-paa-navy ml-1">Admin Portal</span>
+          </div>
+          <span className="font-serif font-bold text-lg md:hidden text-paa-navy">Menu</span>
           <button onClick={() => setSidebarOpen(false)} className="md:hidden p-2 text-paa-navy"><X size={20} /></button>
         </div>
 
         <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
            {[
              { id: 'overview', label: 'Overview', icon: BarChart3 },
+             { id: 'reports', label: 'Sales Reports', icon: FileText },
              { id: 'authors', label: 'Authors Menu', icon: Users, hasAlert: pendingAlerts.authors },
              { id: 'books', label: 'Inventory / Books', icon: BookOpen, hasAlert: pendingAlerts.books },
              { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
@@ -2026,23 +2124,23 @@ export function OperationsDashboardPage() {
                   localStorage.setItem('adminActiveTab', item.id);
                   setSidebarOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-bold tracking-widest uppercase transition-colors border ${
+                className={`w-full flex items-center justify-start text-left gap-3 px-4 py-3 text-xs font-bold tracking-widest uppercase transition-all duration-300 rounded-xl border ${
                   activeTab === item.id 
-                  ? 'bg-paa-navy text-paa-cream border-paa-navy' 
-                  : 'text-paa-navy border-[transparent] hover:bg-paa-navy/5 border border-paa-navy/0 hover:border-paa-navy/5'
+                  ? 'bg-paa-navy text-paa-cream border-paa-navy shadow-premium' 
+                  : 'text-paa-navy border-[transparent] hover:bg-black/5 hover:border-black/5'
                 }`}
               >
-                <item.icon className="w-4 h-4" /> 
-                {item.label}
+                <item.icon className="w-4 h-4 shrink-0" /> 
+                <span className="flex-1 truncate">{item.label}</span>
                 {item.hasAlert && (
-                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse ml-auto shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
                 )}
               </button>
            ))}
         </nav>
 
         <div className="p-4 shrink-0 flex gap-2">
-           <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-paa-navy/5 bg-white text-xs font-bold uppercase hover:bg-red-50 text-red-600 transition-colors active:scale-95 transition-all duration-300">
+           <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-paa-navy/5 bg-white text-xs font-bold uppercase hover:bg-red-50 text-red-600 transition-colors rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
               <LogOut size={14} /> Logout
            </button>
         </div>
@@ -2051,83 +2149,80 @@ export function OperationsDashboardPage() {
 
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-paa-cream relative">
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative" style={{background:'#f5f5f3'}}>
         
         {/* Top Header */}
-        <header className="h-20 flex items-center justify-between px-8 shrink-0 bg-paa-cream">
-           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-paa-gray-text">
-              <span>Admin Portal</span>
-              <span className="text-paa-navy/30">/</span>
-              <span className="text-paa-navy">{activeTab.replace('-', ' ')}</span>
+        <header className="dash-header h-[68px] flex items-center justify-between px-6 md:px-8 shrink-0">
+           <div className="flex items-center gap-2">
+             <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
+               <Menu className="w-5 h-5" />
+             </button>
+             <div className="flex items-center gap-2 text-xs font-medium">
+               <span className="text-paa-gray-text">Admin Portal</span>
+               <span className="text-paa-navy/20">/</span>
+               <span className="font-semibold text-paa-navy capitalize">{activeTab.replace(/_/g,' ')}</span>
+             </div>
            </div>
            
-           <div className="flex items-center gap-4 relative">
-              <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 text-paa-navy border border-paa-navy/5 bg-white hover:bg-paa-navy hover:text-paa-cream transition-colors">
+           <div className="flex items-center gap-3 relative">
+              {/* Refresh spinner */}
+              {isRefreshing && <RefreshCw className="w-3.5 h-3.5 text-paa-gray-text animate-spin" />}
+
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-black/8 text-paa-navy hover:bg-black/4 transition-colors"
+              >
                  <Bell className="w-4 h-4" />
                  {(pendingAlerts.orders || pendingAlerts.queries || pendingAlerts.authors || pendingAlerts.books) && (
-                   <span className="absolute top-1 right-1 w-2 h-2 bg-[#d9534f] rounded-full border border-white"></span>
+                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                  )}
               </button>
               
               {showNotifications && (
-                 <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-paa-navy/5 shadow-lg z-50 rounded-2xl-2xl text-sm">
-                    <div className="p-3 border-b bg-gray-50 font-bold uppercase tracking-widest text-xs text-paa-navy">Notifications</div>
-                    <div className="max-h-64 overflow-y-auto">
+                 <div className="dash-notification-panel">
+                    <div className="px-4 py-3 border-b border-black/6 bg-gray-50">
+                      <p className="text-xs font-bold uppercase tracking-widest text-paa-navy">Notifications</p>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto divide-y divide-black/5">
                        {pendingAlerts.authors && (
-                          <button onClick={() => { setActiveTab('authors'); localStorage.setItem('adminActiveTab', 'authors'); setShowNotifications(false); }} className="w-full text-left p-3 hover:bg-gray-50 border-b flex items-start gap-2 transition-colors">
+                          <button onClick={() => { setActiveTab('authors'); localStorage.setItem('adminActiveTab', 'authors'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
                              <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                             <div>
-                                <p className="font-bold text-paa-navy">Authors Pending</p>
-                                <p className="text-xs text-gray-500">There are authors waiting for approval.</p>
-                             </div>
+                             <div><p className="text-sm font-semibold text-paa-navy">Authors Pending</p><p className="text-xs text-paa-gray-text mt-0.5">Authors waiting for approval</p></div>
                           </button>
                        )}
                        {pendingAlerts.books && (
-                          <button onClick={() => { setActiveTab('books'); localStorage.setItem('adminActiveTab', 'books'); setShowNotifications(false); }} className="w-full text-left p-3 hover:bg-gray-50 border-b flex items-start gap-2 transition-colors">
-                             <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 shrink-0"></div>
-                             <div>
-                                <p className="font-bold text-paa-navy">Books Pending</p>
-                                <p className="text-xs text-gray-500">New books have been listed for review.</p>
-                             </div>
+                          <button onClick={() => { setActiveTab('books'); localStorage.setItem('adminActiveTab', 'books'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
+                             <div className="w-2 h-2 rounded-full bg-violet-500 mt-1.5 shrink-0"></div>
+                             <div><p className="text-sm font-semibold text-paa-navy">Books Pending</p><p className="text-xs text-paa-gray-text mt-0.5">New books listed for review</p></div>
                           </button>
                        )}
                        {pendingAlerts.orders && (
-                          <button onClick={() => { setActiveTab('orders'); localStorage.setItem('adminActiveTab', 'orders'); setShowNotifications(false); }} className="w-full text-left p-3 hover:bg-gray-50 border-b flex items-start gap-2 transition-colors">
-                             <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
-                             <div>
-                                <p className="font-bold text-paa-navy">Orders Pending</p>
-                                <p className="text-xs text-gray-500">There are pending customer web orders.</p>
-                             </div>
+                          <button onClick={() => { setActiveTab('orders'); localStorage.setItem('adminActiveTab', 'orders'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                             <div><p className="text-sm font-semibold text-paa-navy">Orders Pending</p><p className="text-xs text-paa-gray-text mt-0.5">Pending customer web orders</p></div>
                           </button>
                        )}
                        {pendingAlerts.queries && (
-                          <button onClick={() => { setActiveTab('helpdesk'); localStorage.setItem('adminActiveTab', 'helpdesk'); setShowNotifications(false); }} className="w-full text-left p-3 hover:bg-gray-50 flex items-start gap-2 transition-colors">
-                             <div className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0"></div>
-                             <div>
-                                <p className="font-bold text-paa-navy">Unanswered Queries</p>
-                                <p className="text-xs text-gray-500">Helpdesk tickets need your response.</p>
-                             </div>
+                          <button onClick={() => { setActiveTab('helpdesk'); localStorage.setItem('adminActiveTab', 'helpdesk'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
+                             <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
+                             <div><p className="text-sm font-semibold text-paa-navy">Unanswered Queries</p><p className="text-xs text-paa-gray-text mt-0.5">Helpdesk tickets need response</p></div>
                           </button>
                        )}
                        {!(pendingAlerts.orders || pendingAlerts.queries || pendingAlerts.authors || pendingAlerts.books) && (
-                          <div className="p-4 text-center text-gray-500 text-xs italic">No new notifications.</div>
+                          <div className="px-4 py-6 text-center text-paa-gray-text text-xs">All clear — no new notifications.</div>
                        )}
                     </div>
                  </div>
               )}
-
-              <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-paa-navy border border-paa-navy/5 bg-white hover:bg-paa-navy hover:text-paa-cream transition-colors">
-                 <Menu className="w-4 h-4" />
-              </button>
            </div>
         </header>
-        {/* Blinking under tab name */}
-        <div className="h-0.5 w-full bg-gray-200 overflow-hidden shrink-0">
-           {isRefreshing && <div className="h-full bg-paa-navy animate-[pulse_0.5s_ease-in-out_infinite] w-full" />}
+        {/* Thin refresh sweep bar */}
+        <div className="dash-refresh-bar shrink-0">
+           {isRefreshing && <div className="sweep" />}
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-auto p-4 sm:p-8 pt-0">
+        <div className="flex-1 overflow-auto p-4 sm:p-7">
            {activeTab === 'overview' && <OverviewTab />}
            {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
            {activeTab === 'books' && <BooksTab refreshTrigger={lastRefreshTime} />}
@@ -2135,9 +2230,15 @@ export function OperationsDashboardPage() {
            {activeTab === 'orders' && <OrdersTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'forms' && <FormsTab />}
            {activeTab === 'gallery' && <GalleryTab refreshTrigger={lastRefreshTime} />}
-                      {activeTab === 'author_data' && <AuthorDataTab refreshTrigger={lastRefreshTime} />}
+           {activeTab === 'author_data' && <AuthorDataTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
-           {activeTab === 'settings' && <SettingsTab />}
+           {activeTab === 'reports' && <ReportsTab />}
+           {activeTab === 'settings' && (
+             <div className="p-8 text-center text-gray-500">
+               <h2 className="text-2xl font-bold mb-2">System Settings</h2>
+               <p>Settings panel coming soon...</p>
+             </div>
+           )}
         </div>
       </main>
 
@@ -2146,9 +2247,9 @@ export function OperationsDashboardPage() {
         {loadingRegistrations ? (
           <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-paa-navy" /></div>
         ) : (
-          <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+          <div className="space-y-6 max-h-[70vh] min-h-[60vh] overflow-y-auto pr-2 flex flex-col">
             
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-2 shrink-0">
               {['All', 'Awaiting Approval', 'Opted-In', 'Rejected'].map(status => {
                 const count = status === 'All' ? eventRegistrations.length : eventRegistrations.filter(r => r.optInStatus === status).length;
                 return (
@@ -2165,14 +2266,14 @@ export function OperationsDashboardPage() {
               const paginatedRegistrations = filteredRegistrations.slice((registrationsPage - 1) * PAGE_SIZE, registrationsPage * PAGE_SIZE);
 
               if (filteredRegistrations.length === 0) {
-                return <p className="text-gray-500 text-center py-8">No registrations found for this filter.</p>;
+                return <div className="flex-1 flex items-center justify-center"><p className="text-gray-500 text-center py-8">No registrations found for this filter.</p></div>;
               }
 
               return (
                 <>
                   <div className="space-y-4">
                     {paginatedRegistrations.map((reg) => (
-                      <div key={reg.id} className={`border p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 flex flex-col gap-4 ${reg.optInStatus === 'Awaiting Approval' ? 'bg-orange-50 border-orange-200' : reg.optInStatus === 'Opted-In' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                      <div key={reg.id} className="bg-white border border-paa-navy/5 p-4 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col gap-4">
                   
                   <div className="flex justify-between items-start border-b pb-3">
                     <div>
@@ -2201,7 +2302,7 @@ export function OperationsDashboardPage() {
                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Category Breakdown</p>
                        <div className="flex flex-wrap gap-2">
                          {Object.entries(reg.categoryCounts || {}).map(([cat, count]: [string, any]) => (
-                           <span key={cat} className="text-[10px] font-bold bg-white border border-gray-200 px-2 py-1 rounded-2xl-2xl">
+                           <span key={cat} className="text-[10px] font-bold bg-white border border-gray-200 px-2 py-1 rounded-3xl-2xl">
                              {cat}: {count}
                            </span>
                          ))}
@@ -2213,17 +2314,17 @@ export function OperationsDashboardPage() {
                     <div className="mt-2 border-t pt-3">
                       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Payment Screenshot</p>
                       <a href={`${API}${reg.paymentScreenshot}`} target="_blank" rel="noopener noreferrer">
-                        <img src={`${API}${reg.paymentScreenshot}`} alt="Payment Proof" className="w-32 h-auto border shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 hover:opacity-80 transition-opacity" />
+                        <img src={`${API}${reg.paymentScreenshot}`} alt="Payment Proof" className="w-32 h-auto border shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out hover:opacity-80 transition-opacity" />
                       </a>
                     </div>
                   )}
 
                   {reg.optInStatus === 'Awaiting Approval' && (
                     <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-black/5">
-                      <button onClick={() => handleRejectRegistration(reg.eventId, reg.authorId)} className="px-4 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors">
+                      <button onClick={() => handleRejectRegistration(reg.eventId, reg.authorId)} className="dash-btn dash-btn-danger">
                         Reject
                       </button>
-                      <button onClick={() => handleApproveRegistration(reg.eventId, reg.authorId)} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors">
+                      <button onClick={() => handleApproveRegistration(reg.eventId, reg.authorId)} className="dash-btn dash-btn-success">
                         Approve Registration
                       </button>
                     </div>
@@ -2245,6 +2346,41 @@ export function OperationsDashboardPage() {
             </>
             );
           })()}
+          </div>
+        )}
+      </Modal>
+
+      <Modal isOpen={!!selectedBookDetails} onClose={() => setSelectedBookDetails(null)} title="Book Details">
+        {selectedBookDetails && (
+          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
+             <div className="flex gap-4">
+               {selectedBookDetails.coverUrl && (
+                 <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-32 h-44 object-cover border border-paa-navy/20 shadow-sm" />
+               )}
+               <div>
+                  <h3 className="text-xl font-bold text-paa-navy">{selectedBookDetails.title}</h3>
+                  {selectedBookDetails.subtitle && <p className="text-sm font-medium text-paa-gray-text">{selectedBookDetails.subtitle}</p>}
+                  <p className="text-sm font-medium mt-1">Author: <span className="font-bold">{selectedBookDetails.authorName}</span></p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mt-2 bg-[#eef2f6] inline-block px-2 py-0.5">{selectedBookDetails.genre} {selectedBookDetails.subGenre && `> ${selectedBookDetails.subGenre}`}</p>
+               </div>
+             </div>
+             
+             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-paa-navy/5 pt-4">
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">MRP</span><span className="text-sm font-bold text-green-700">₹{selectedBookDetails.mrp}</span></div>
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">Language</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">Format</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">Pages</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.pages || '-'}</span></div>
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">Publisher</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">Pub Date</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">ISBN</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">Current Stock</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.stock}</span></div>
+               <div><span className="text-[10px] uppercase text-paa-gray-text block">Total Sales</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.sales}</span></div>
+             </div>
+             
+             <div className="border-t border-paa-navy/5 pt-4">
+               <span className="text-[10px] uppercase text-paa-gray-text block mb-1">Synopsis</span>
+               <p className="text-sm text-paa-navy whitespace-pre-wrap">{selectedBookDetails.synopsis || 'No synopsis provided.'}</p>
+             </div>
           </div>
         )}
       </Modal>
@@ -2277,14 +2413,14 @@ export function OperationsDashboardPage() {
             setIsSubmittingEvent(false);
           }
         }}>
-          <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Name</label><input required name="name" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
-          <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Description</label><textarea name="description" rows={2} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" placeholder="Short details about the event..."></textarea></div>
-          <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+          <div><label className="dash-label">Event Name</label><input required name="name" type="text" className="dash-input" /></div>
+          <div><label className="dash-label">Event Description</label><textarea name="description" rows={2} className="dash-input" placeholder="Short details about the event..."></textarea></div>
+          <div><label className="dash-label">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="dash-input" /></div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Type</label>
-              <select name="eventType" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" onChange={(e) => {
+              <label className="dash-label">Event Type</label>
+              <select name="eventType" className="dash-input" onChange={(e) => {
                 const customInput = document.getElementById('customEventTypeContainer');
                 if (customInput) customInput.style.display = e.target.value === 'Other' ? 'block' : 'none';
               }}>
@@ -2297,25 +2433,25 @@ export function OperationsDashboardPage() {
               </select>
             </div>
             <div id="customEventTypeContainer" style={{display: 'none'}}>
-               <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Specify Type</label>
-               <input name="customEventType" type="text" placeholder="Enter custom type" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+               <label className="dash-label">Specify Type</label>
+               <input name="customEventType" type="text" placeholder="Enter custom type" className="dash-input" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Date (e.g. 15 Aug 2026)</label><input required name="date" type="date" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
-            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Duration (e.g. 3 days)</label><input required name="duration" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+            <div><label className="dash-label">Date (e.g. 15 Aug 2026)</label><input required name="date" type="date" className="dash-input" /></div>
+            <div><label className="dash-label">Duration (e.g. 3 days)</label><input required name="duration" type="text" className="dash-input" /></div>
           </div>
-          <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Location</label><input required name="location" type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+          <div><label className="dash-label">Location</label><input required name="location" type="text" className="dash-input" /></div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Registration Fee (₹)</label>
-              <input required name="registrationFee" type="number" min="0" step="0.01" defaultValue="0" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+              <label className="dash-label">Registration Fee (₹)</label>
+              <input required name="registrationFee" type="number" min="0" step="0.01" defaultValue="0" className="dash-input" />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Fee Type</label>
-              <select name="feeType" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy">
+              <label className="dash-label">Fee Type</label>
+              <select name="feeType" className="dash-input">
                 <option value="Per Author">Per Author</option>
                 <option value="Per Title">Per Title</option>
                 <option value="Flat Fee">Flat Fee</option>
@@ -2324,7 +2460,7 @@ export function OperationsDashboardPage() {
           </div>
 
           <div className="pt-4 mt-4 border-t border-paa-navy/5 flex justify-end">
-            <button type="submit" disabled={isSubmittingEvent} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 active:scale-95 transition-all duration-300">
+            <button type="submit" disabled={isSubmittingEvent} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
               {isSubmittingEvent ? "Creating Event..." : "Create Event"}
             </button>
           </div>
@@ -2334,14 +2470,14 @@ export function OperationsDashboardPage() {
       <Modal isOpen={isEditEventModalOpen} onClose={() => setIsEditEventModalOpen(false)} title="Edit Event">
         {editingEvent && (
           <form className="space-y-4" onSubmit={handleEditEventSubmit}>
-            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Name</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.name} onChange={e => setEditingEvent({...editingEvent, name: e.target.value})} /></div>
-            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Description</label><textarea name="description" rows={2} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" defaultValue={editingEvent.description || ''}></textarea></div>
-            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Banner (Leave empty to keep existing)</label><input name="banner" type="file" accept="image/*" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" /></div>
+            <div><label className="dash-label">Event Name</label><input required type="text" className="dash-input" value={editingEvent.name} onChange={e => setEditingEvent({...editingEvent, name: e.target.value})} /></div>
+            <div><label className="dash-label">Event Description</label><textarea name="description" rows={2} className="dash-input" defaultValue={editingEvent.description || ''}></textarea></div>
+            <div><label className="dash-label">Event Banner (Leave empty to keep existing)</label><input name="banner" type="file" accept="image/*" className="dash-input" /></div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Event Type</label>
-                <select name="eventType" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.eventType} onChange={e => setEditingEvent({...editingEvent, eventType: e.target.value})}>
+                <label className="dash-label">Event Type</label>
+                <select name="eventType" className="dash-input" value={editingEvent.eventType} onChange={e => setEditingEvent({...editingEvent, eventType: e.target.value})}>
                   <option value="Book Fair">Book Fair</option>
                   <option value="Literature Festival">Literature Festival</option>
                   <option value="Book Launch">Book Launch</option>
@@ -2352,26 +2488,26 @@ export function OperationsDashboardPage() {
               </div>
               {editingEvent.eventType === 'Other' && (
                 <div>
-                   <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Specify Type</label>
-                   <input required name="customEventType" type="text" placeholder="Enter custom type" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+                   <label className="dash-label">Specify Type</label>
+                   <input required name="customEventType" type="text" placeholder="Enter custom type" className="dash-input" />
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Date</label><input required type="date" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} /></div>
-              <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Duration</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.duration} onChange={e => setEditingEvent({...editingEvent, duration: e.target.value})} /></div>
+              <div><label className="dash-label">Date</label><input required type="date" className="dash-input" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} /></div>
+              <div><label className="dash-label">Duration</label><input required type="text" className="dash-input" value={editingEvent.duration} onChange={e => setEditingEvent({...editingEvent, duration: e.target.value})} /></div>
             </div>
-            <div><label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Location</label><input required type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} /></div>
+            <div><label className="dash-label">Location</label><input required type="text" className="dash-input" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} /></div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Registration Fee (₹)</label>
-                <input required type="number" min="0" step="0.01" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.registrationFee} onChange={e => setEditingEvent({...editingEvent, registrationFee: parseFloat(e.target.value)})} />
+                <label className="dash-label">Registration Fee (₹)</label>
+                <input required type="number" min="0" step="0.01" className="dash-input" value={editingEvent.registrationFee} onChange={e => setEditingEvent({...editingEvent, registrationFee: parseFloat(e.target.value)})} />
               </div>
               <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Fee Type</label>
-                <select className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.feeType} onChange={e => setEditingEvent({...editingEvent, feeType: e.target.value})}>
+                <label className="dash-label">Fee Type</label>
+                <select className="dash-input" value={editingEvent.feeType} onChange={e => setEditingEvent({...editingEvent, feeType: e.target.value})}>
                   <option value="Per Author">Per Author</option>
                   <option value="Per Title">Per Title</option>
                   <option value="Flat Fee">Flat Fee</option>
@@ -2380,8 +2516,8 @@ export function OperationsDashboardPage() {
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 block">Status</label>
-              <select className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={editingEvent.status} onChange={e => setEditingEvent({...editingEvent, status: e.target.value})}>
+              <label className="dash-label">Status</label>
+              <select className="dash-input" value={editingEvent.status} onChange={e => setEditingEvent({...editingEvent, status: e.target.value})}>
                 <option value="Upcoming">Upcoming</option>
                 <option value="Ongoing">Ongoing</option>
                 <option value="Past">Past</option>
@@ -2390,7 +2526,7 @@ export function OperationsDashboardPage() {
 
             <div className="pt-4 mt-4 border-t border-paa-navy/5 flex justify-end gap-2">
               <button type="button" onClick={() => setIsEditEventModalOpen(false)} className="bg-gray-100 text-paa-navy px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">Cancel</button>
-              <button type="submit" className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors active:scale-95 transition-all duration-300">Save Changes</button>
+              <button type="submit" className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">Save Changes</button>
             </div>
           </form>
         )}
@@ -2400,17 +2536,17 @@ export function OperationsDashboardPage() {
       <Modal isOpen={!!selectedGalleryEvent} onClose={() => setSelectedGalleryEvent(null)} title={`Manage Images: ${selectedGalleryEvent?.location}`}>
         {selectedGalleryEvent && (
           <div className="space-y-6">
-            <form onSubmit={handleUploadGalleryImage} className="space-y-4 bg-gray-50 p-4 border border-paa-navy/5 rounded-2xl-2xl">
+            <form onSubmit={handleUploadGalleryImage} className="space-y-4 bg-gray-50 p-4 border border-paa-navy/5 rounded-3xl-2xl">
               <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Upload New Image</h4>
               <div>
-                <input required type="file" name="photo" accept="image/*" className="w-full text-sm text-paa-gray-text file:mr-4 file:py-2 file:px-4 file:rounded-2xl-2xl file:border-0 file:text-xs file:font-bold file:bg-paa-navy/10 file:text-paa-navy hover:file:bg-paa-navy/20 transition-colors" />
+                <input required type="file" name="photo" accept="image/*" className="w-full text-sm text-paa-gray-text file:mr-4 file:py-2 file:px-4 file:rounded-3xl-2xl file:border-0 file:text-xs file:font-bold file:bg-paa-navy/10 file:text-paa-navy hover:file:bg-paa-navy/20 transition-colors" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1 block">Caption (Optional)</label><input type="text" name="caption" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-white focus:border-paa-navy" placeholder="E.g. Audience cheering" /></div>
                 <div><label className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1 block">Date Taken (Optional)</label><input type="date" name="dateTaken" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-white focus:border-paa-navy" /></div>
               </div>
               <div className="flex justify-end pt-2">
-                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold transition-colors active:scale-95 transition-all duration-300">Upload</button>
+                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold transition-colors rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">Upload</button>
               </div>
             </form>
 
@@ -2421,11 +2557,11 @@ export function OperationsDashboardPage() {
               ) : (
                 <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
                   {selectedGalleryEvent.images.map((img: any) => (
-                    <div key={img.id} className="relative group rounded-2xl-2xl overflow-hidden border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 bg-white">
+                    <div key={img.id} className="relative group rounded-3xl-2xl overflow-hidden border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out bg-white">
                       <img src={img.url.startsWith('http') ? img.url : `${API}${img.url}`} alt={img.caption || 'Event Image'} className="w-full h-32 object-cover" />
                       <button 
                         onClick={() => handleDeleteGalleryImage(img.id)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-2xl-2xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow"
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-3xl-2xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow"
                         title="Delete Image"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -2449,8 +2585,8 @@ export function OperationsDashboardPage() {
       {/* Event Report Modal */}
       {reportEventId && (
         <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-2xl-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-y-auto">
-            <div className="p-6 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
+          <div className="bg-white rounded-3xl-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-y-auto">
+            <div className="p-8 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
               <div>
                  <h2 className="text-2xl font-serif text-paa-navy">Event Settlement Report</h2>
                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-1">Full breakdown of all author sales and revenue.</p>
@@ -2474,7 +2610,7 @@ export function OperationsDashboardPage() {
                     a.href = url;
                     a.download = `event_sales_report_${reportEventId}.csv`;
                     a.click();
-                 }} className="bg-paa-navy text-paa-cream px-4 py-2 font-bold text-xs uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                 }} className="bg-paa-navy text-paa-cream px-4 py-2 font-bold text-xs uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
                     Download CSV Report
                  </button>
                  <button onClick={() => setReportEventId(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={24} className="text-gray-500" /></button>
@@ -2482,7 +2618,7 @@ export function OperationsDashboardPage() {
             </div>
             <div className="p-6 flex-1">
                {pendingReportStatus && (
-                  <div className="text-center p-8 bg-gray-50 border border-paa-navy/5 rounded-2xl-2xl mb-6">
+                  <div className="text-center p-8 bg-gray-50 border border-paa-navy/5 rounded-3xl-2xl mb-6">
                      <h3 className="text-2xl font-serif text-paa-navy mb-2">Awaiting Author Settlements</h3>
                      <p className="text-sm text-gray-500 mb-6">The detailed report is partially complete. The following authors have not yet submitted their post-event inventory counts:</p>
                      <div className="flex flex-wrap gap-2 justify-center mb-8">
@@ -2490,19 +2626,19 @@ export function OperationsDashboardPage() {
                            <span key={a.id} className="px-3 py-1 bg-red-50 text-red-700 text-xs font-bold rounded-full border border-red-200">{a.name}</span>
                         ))}
                      </div>
-                     <button onClick={handleNotifySettlement} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors no-print active:scale-95 transition-all duration-300">Notify Pending Authors</button>
+                     <button onClick={handleNotifySettlement} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors no-print rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">Notify Pending Authors</button>
                   </div>
                )}
                {eventReportData && Array.isArray(eventReportData) && eventReportData[0]?.isLegacySummary ? (
-                  <div className="text-center p-8 bg-gray-50 border border-paa-navy/5 rounded-2xl-2xl">
+                  <div className="text-center p-8 bg-gray-50 border border-paa-navy/5 rounded-3xl-2xl">
                      <h3 className="text-2xl font-serif text-paa-navy mb-2">Legacy Event Overview</h3>
                      <p className="text-sm text-gray-500 mb-8">Granular transaction records are not available for this archived event.</p>
                      <div className="flex justify-center gap-12">
-                        <div className="bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl min-w-[150px]">
+                        <div className="bg-white p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out border border-gray-100 rounded-3xl-2xl min-w-[150px]">
                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Total Authors</p>
                            <p className="text-4xl font-black text-paa-navy">{eventReportData[0].authorsParticipated}</p>
                         </div>
-                        <div className="bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl min-w-[150px]">
+                        <div className="bg-white p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out border border-gray-100 rounded-3xl-2xl min-w-[150px]">
                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Books Sold</p>
                            <p className="text-4xl font-black text-paa-navy">{eventReportData[0].booksSold}</p>
                         </div>
@@ -2512,19 +2648,19 @@ export function OperationsDashboardPage() {
                   <div className="space-y-8">
                      {/* OVERALL STATS */}
                      <div className="grid grid-cols-4 gap-4">
-                        <div className="bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl">
+                        <div className="bg-white p-4 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out border border-gray-100 rounded-3xl-2xl">
                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Revenue</p>
                            <p className="text-2xl font-black text-green-700">₹{eventReportData.overallStats.totalRevenue.toFixed(2)}</p>
                         </div>
-                        <div className="bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl">
+                        <div className="bg-white p-4 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out border border-gray-100 rounded-3xl-2xl">
                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Sold</p>
                            <p className="text-2xl font-black text-paa-navy">{eventReportData.overallStats.totalBooksSold}</p>
                         </div>
-                        <div className="bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl">
+                        <div className="bg-white p-4 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out border border-gray-100 rounded-3xl-2xl">
                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Listed</p>
                            <p className="text-2xl font-black text-paa-navy">{eventReportData.overallStats.totalBooksListed}</p>
                         </div>
-                        <div className="bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 border border-gray-100 rounded-2xl-2xl">
+                        <div className="bg-white p-4 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out border border-gray-100 rounded-3xl-2xl">
                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors Registered</p>
                            <p className="text-2xl font-black text-paa-navy">{eventReportData.overallStats.totalAuthorsRegistered}</p>
                         </div>
@@ -2535,7 +2671,7 @@ export function OperationsDashboardPage() {
                         <h3 className="text-lg font-serif text-paa-navy mb-3">Sales by Category</h3>
                         <div className="grid grid-cols-3 gap-4">
                            {Object.entries(eventReportData.categorySales).map(([cat, stats]: any) => (
-                              <div key={cat} className="bg-[#f8fafc] p-3 border border-gray-200 rounded-2xl-2xl flex justify-between items-center">
+                              <div key={cat} className="bg-[#f8fafc] p-3 border border-gray-200 rounded-3xl-2xl flex justify-between items-center">
                                  <span className="font-bold text-xs text-paa-navy">{cat}</span>
                                  <div className="text-right">
                                     <p className="text-sm font-bold text-green-700">₹{stats.revenue.toFixed(2)}</p>
@@ -2551,7 +2687,7 @@ export function OperationsDashboardPage() {
                         <h3 className="text-lg font-serif text-paa-navy mb-3">Author Sales Breakdown</h3>
                         <div className="space-y-6">
                            {eventReportData.authors.map((author: any) => (
-                              <div key={author.id} className="border border-paa-navy/5 rounded-2xl-2xl overflow-hidden">
+                              <div key={author.id} className="border border-paa-navy/5 rounded-3xl-2xl overflow-hidden">
                                  <div className="bg-[#f0f4f8] p-3 flex justify-between items-center border-b border-paa-navy/5">
                                     <div>
                                        <p className="font-bold text-paa-navy flex items-center gap-2">
@@ -2679,19 +2815,37 @@ export function OperationsDashboardPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-3">Ordered Books</h3>
+              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-3">Ordered Books</h3>
               <ul className="space-y-2">
-                {selectedOrder.items.map((it: any, idx: number) => (
-                  <li key={idx} className="flex justify-between items-center border-b border-paa-navy/5 pb-2">
-                    <span className="font-medium text-sm text-paa-navy">{it.title} <span className="text-gray-400 italic font-normal text-xs ml-1">by {it.authorName}</span></span>
-                    <span className="font-bold text-paa-navy text-sm">Qty: {it.qty}</span>
+                {selectedOrder.items.map((it: any, idx: number) => {
+                  let processingDays = null;
+                  let deliveryDays = null;
+                  if (it.createdAt && it.dispatchedAt) {
+                     processingDays = Math.max(0, Math.round((new Date(it.dispatchedAt).getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600 * 24)));
+                  }
+                  if (it.dispatchedAt && it.deliveredAt) {
+                     deliveryDays = Math.max(0, Math.round((new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24)));
+                  }
+                  
+                  return (
+                  <li key={idx} className="flex flex-col border-b border-paa-navy/5 pb-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-sm text-paa-navy">{it.title} <span className="text-gray-400 italic font-normal text-xs ml-1">by {it.authorName}</span></span>
+                      <span className="font-bold text-paa-navy text-sm">Qty: {it.qty}</span>
+                    </div>
+                    {(processingDays !== null || deliveryDays !== null) && (
+                      <div className="flex gap-4 mt-1 text-[10px] uppercase font-bold tracking-widest text-paa-gray-text">
+                         {processingDays !== null && <span>Processing Time: <span className="text-paa-navy">{processingDays} {processingDays === 1 ? 'day' : 'days'}</span></span>}
+                         {deliveryDays !== null && <span>Delivery Time: <span className="text-paa-navy">{deliveryDays} {deliveryDays === 1 ? 'day' : 'days'}</span></span>}
+                      </div>
+                    )}
                   </li>
-                ))}
+                )})}
               </ul>
             </div>
 
             <div>
-              <h3 className="text-sm font-bold tracking-widest uppercase text-paa-navy mb-3">Payment Information</h3>
+              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-3">Payment Information</h3>
               {selectedOrder.payment === 'Paid' ? (
                 <div className="bg-[#f0f4f8] p-4 border border-paa-navy/5 flex items-center justify-between">
                   <div>
@@ -2708,10 +2862,10 @@ export function OperationsDashboardPage() {
                     </div>
                   ) : (
                     <div className="flex gap-2">
-                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} disabled={loadingAction === 'verifyOrder_' + selectedOrder.dbId} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors disabled:opacity-50">
+                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} disabled={loadingAction === 'verifyOrder_' + selectedOrder.dbId} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
                         {loadingAction === 'verifyOrder_' + selectedOrder.dbId ? 'Verifying...' : 'Verify'}
                       </button>
-                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors disabled:opacity-50">
+                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
                         {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Rejecting...' : 'Reject'}
                       </button>
                     </div>
@@ -2724,7 +2878,7 @@ export function OperationsDashboardPage() {
                     <span className="text-sm font-bold">No payment screenshot uploaded</span>
                   </div>
                   {selectedOrder.status !== 'Payment Not Received' && (
-                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 transition-colors disabled:opacity-50">
+                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
                       {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Updating...' : 'Mark Failed'}
                     </button>
                   )}
@@ -2773,15 +2927,14 @@ export function OperationsDashboardPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Description (Optional)</label>
-            <textarea name="formDescription" className="w-full p-2 border border-paa-navy/20" rows={2}></textarea>
+            <label className="dash-label">Description (Optional)</label>
+            <textarea name="formDescription" className="dash-input" rows={2}></textarea>
           </div>
           <div>
-            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Fields (JSON Array)</label>
-            <textarea name="formFields" required className="w-full p-2 border border-paa-navy/20 font-mono text-xs" rows={4} defaultValue={`[\n  {"name": "Name", "type": "text"},\n  {"name": "Feedback", "type": "textarea"}\n]`}></textarea>
-            <p className="text-xs text-gray-500 mt-1">Supported types: text, textarea, select (needs "options": ["A","B"])</p>
+            <label className="dash-label">Fields Config (JSON array)</label>
+            <textarea name="formFields" required className="dash-input font-mono" rows={6} placeholder={`[{"label": "Name", "type": "text", "required": true}]`}></textarea>
           </div>
-          <button type="submit" disabled={loadingAction === 'createForm'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50 active:scale-95 transition-all duration-300">
+          <button type="submit" disabled={loadingAction === 'createForm'} className="dash-btn dash-btn-primary w-full justify-center py-3">
             {loadingAction === 'createForm' ? 'Creating...' : 'Create Form'}
           </button>
         </form>
@@ -2818,27 +2971,27 @@ export function OperationsDashboardPage() {
           } finally { setLoadingAction(null); }
         }}>
           <div>
-            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Event Title / Location</label>
-            <input name="loc" required className="w-full p-2 border border-paa-navy/20" />
+            <label className="dash-label">Event Title / Location</label>
+            <input name="loc" required className="dash-input" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Place</label>
-              <input name="place" required className="w-full p-2 border border-paa-navy/20" />
+              <label className="dash-label">Place</label>
+              <input name="place" required className="dash-input" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">City</label>
-              <input name="city" required className="w-full p-2 border border-paa-navy/20" />
+              <label className="dash-label">City</label>
+              <input name="city" required className="dash-input" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Date</label>
-              <input type="date" name="date" required className="w-full p-2 border border-paa-navy/20" />
+              <label className="dash-label">Date</label>
+              <input type="date" name="date" required className="dash-input" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Type</label>
-              <select name="type" required className="w-full p-2 border border-paa-navy/20 bg-white">
+              <label className="dash-label">Type</label>
+              <select name="type" required className="dash-input">
                 <option value="Literary Event">Literary Event</option>
                 <option value="Book Fair">Book Fair</option>
                 <option value="Corporate Activation">Corporate Activation</option>
@@ -2848,27 +3001,27 @@ export function OperationsDashboardPage() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Duration</label>
-              <input name="duration" placeholder="e.g. 2 Days" className="w-full p-2 border border-paa-navy/20" />
+              <label className="dash-label">Duration</label>
+              <input name="duration" placeholder="e.g. 2 Days" className="dash-input" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Authors</label>
-              <input type="number" name="authors" placeholder="Count" className="w-full p-2 border border-paa-navy/20" />
+              <label className="dash-label">Authors</label>
+              <input type="number" name="authors" placeholder="Count" className="dash-input" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Books Sold</label>
-              <input type="number" name="booksSold" placeholder="Count" className="w-full p-2 border border-paa-navy/20" />
+              <label className="dash-label">Books Sold</label>
+              <input type="number" name="booksSold" placeholder="Count" className="dash-input" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Description</label>
-            <textarea name="description" required className="w-full p-2 border border-paa-navy/20" rows={2}></textarea>
+            <label className="dash-label">Description</label>
+            <textarea name="description" required className="dash-input" rows={2}></textarea>
           </div>
           <div>
-            <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Photo</label>
-            <input type="file" accept="image/*" name="photo" required className="w-full p-2 border border-paa-navy/20 bg-white" />
+            <label className="dash-label">Photo</label>
+            <input type="file" accept="image/*" name="photo" required className="dash-input" />
           </div>
-          <button type="submit" disabled={loadingAction === 'addGalleryEvent'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50 active:scale-95 transition-all duration-300">
+          <button type="submit" disabled={loadingAction === 'addGalleryEvent'} className="dash-btn dash-btn-primary w-full justify-center py-3">
             {loadingAction === 'addGalleryEvent' ? 'Adding...' : 'Add Gallery Event'}
           </button>
         </form>
@@ -2904,27 +3057,27 @@ export function OperationsDashboardPage() {
             } finally { setLoadingAction(null); }
           }}>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Event Title / Location</label>
-              <input name="loc" defaultValue={editingGalleryEvent.location} required className="w-full p-2 border border-paa-navy/20" />
+              <label className="dash-label">Event Title / Location</label>
+              <input name="loc" defaultValue={editingGalleryEvent.location} required className="dash-input" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Place</label>
-                <input name="place" defaultValue={editingGalleryEvent.place} required className="w-full p-2 border border-paa-navy/20" />
+                <label className="dash-label">Place</label>
+                <input name="place" defaultValue={editingGalleryEvent.place} required className="dash-input" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">City</label>
-                <input name="city" defaultValue={editingGalleryEvent.city} required className="w-full p-2 border border-paa-navy/20" />
+                <label className="dash-label">City</label>
+                <input name="city" defaultValue={editingGalleryEvent.city} required className="dash-input" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Date</label>
-                <input type="date" name="date" defaultValue={editingGalleryEvent.date.split('T')[0]} required className="w-full p-2 border border-paa-navy/20" />
+                <label className="dash-label">Date</label>
+                <input type="date" name="date" defaultValue={editingGalleryEvent.date.split('T')[0]} required className="dash-input" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Type</label>
-                <select name="type" defaultValue={editingGalleryEvent.type} required className="w-full p-2 border border-paa-navy/20 bg-white">
+                <label className="dash-label">Type</label>
+                <select name="type" defaultValue={editingGalleryEvent.type} required className="dash-input">
                   <option value="Literary Event">Literary Event</option>
                   <option value="Book Fair">Book Fair</option>
                   <option value="Corporate Activation">Corporate Activation</option>
@@ -2934,27 +3087,27 @@ export function OperationsDashboardPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Duration</label>
-                <input name="duration" defaultValue={editingGalleryEvent.duration} className="w-full p-2 border border-paa-navy/20" />
+                <label className="dash-label">Duration</label>
+                <input name="duration" defaultValue={editingGalleryEvent.duration} placeholder="e.g. 2 Days" className="dash-input" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Authors Participated</label>
-                <input type="number" name="authors" defaultValue={editingGalleryEvent.authors} className="w-full p-2 border border-paa-navy/20" />
+                <label className="dash-label">Authors</label>
+                <input type="number" name="authors" defaultValue={editingGalleryEvent.authors} placeholder="Count" className="dash-input" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Books Sold</label>
-                <input type="number" name="booksSold" defaultValue={editingGalleryEvent.booksSold} className="w-full p-2 border border-paa-navy/20" />
+                <label className="dash-label">Books Sold</label>
+                <input type="number" name="booksSold" defaultValue={editingGalleryEvent.booksSold} placeholder="Count" className="dash-input" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Description</label>
-              <textarea name="description" defaultValue={editingGalleryEvent.description} required className="w-full p-2 border border-paa-navy/20" rows={2}></textarea>
+              <label className="dash-label">Description</label>
+              <textarea name="description" defaultValue={editingGalleryEvent.description} required className="dash-input" rows={2}></textarea>
             </div>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Change Main Photo (Optional)</label>
-              <input type="file" name="photo" accept="image/*" className="w-full p-2 border border-paa-navy/20 text-xs bg-white" />
+              <label className="dash-label">Update Cover Photo (Optional)</label>
+              <input type="file" name="photo" accept="image/*" className="dash-input" />
             </div>
-            <button type="submit" disabled={loadingAction === 'editGalleryEvent'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold transition disabled:opacity-50 active:scale-95 transition-all duration-300">
+            <button type="submit" disabled={loadingAction === 'editGalleryEvent'} className="dash-btn dash-btn-primary w-full justify-center py-3">
               {loadingAction === 'editGalleryEvent' ? 'Updating...' : 'Save Changes'}
             </button>
           </form>
@@ -2965,38 +3118,38 @@ export function OperationsDashboardPage() {
         {editingBook && (
           <form className="space-y-4" onSubmit={handleUpdateBook}>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Title</label>
-              <input required type="text" value={editingBook.title} onChange={(e) => setEditingBook({ ...editingBook, title: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+              <label className="dash-label">Title</label>
+              <input required type="text" value={editingBook.title} onChange={(e) => setEditingBook({ ...editingBook, title: e.target.value })} className="dash-input" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Genre</label>
-                <select value={editingBook.genre} onChange={(e) => setEditingBook({ ...editingBook, genre: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy">
+                <label className="dash-label">Genre</label>
+                <select value={editingBook.genre} onChange={(e) => setEditingBook({ ...editingBook, genre: e.target.value })} className="dash-input">
                   <option value="Fiction">Fiction</option>
                   <option value="Non-Fiction">Non-Fiction</option>
                   <option value="Children's corner">Children's corner</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Subgenre</label>
-                <input type="text" value={editingBook.subGenre} onChange={(e) => setEditingBook({ ...editingBook, subGenre: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" placeholder="e.g. Thriller, Biography" />
+                <label className="dash-label">Subgenre</label>
+                <input type="text" value={editingBook.subGenre} onChange={(e) => setEditingBook({ ...editingBook, subGenre: e.target.value })} className="dash-input" placeholder="e.g. Thriller, Biography" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">MRP (Price in ₹)</label>
-                <input required type="number" step="any" value={editingBook.mrp} onChange={(e) => setEditingBook({ ...editingBook, mrp: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+                <label className="dash-label">MRP (Price in ₹)</label>
+                <input required type="number" step="any" value={editingBook.mrp} onChange={(e) => setEditingBook({ ...editingBook, mrp: e.target.value })} className="dash-input" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Stock</label>
-                <input required type="number" value={editingBook.stock} onChange={(e) => setEditingBook({ ...editingBook, stock: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+                <label className="dash-label">Stock</label>
+                <input required type="number" value={editingBook.stock} onChange={(e) => setEditingBook({ ...editingBook, stock: e.target.value })} className="dash-input" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Synopsis</label>
-              <textarea value={editingBook.synopsis} onChange={(e) => setEditingBook({ ...editingBook, synopsis: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" rows={4}></textarea>
+              <label className="dash-label">Synopsis</label>
+              <textarea value={editingBook.synopsis} onChange={(e) => setEditingBook({ ...editingBook, synopsis: e.target.value })} className="dash-input" rows={4}></textarea>
             </div>
-            <button type="submit" disabled={loadingAction === 'updateBook'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow disabled:opacity-50 active:scale-95 transition-all duration-300">
+            <button type="submit" disabled={loadingAction === 'updateBook'} className="dash-btn dash-btn-primary w-full justify-center py-3">
               {loadingAction === 'updateBook' ? 'Updating...' : 'Save Changes'}
             </button>
           </form>
@@ -3045,7 +3198,7 @@ export function OperationsDashboardPage() {
                 <button onClick={() => setRejectAuthorTarget(null)} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy font-bold uppercase tracking-widest">
                   Cancel
                 </button>
-                <button onClick={handleRejectAuthorSubmit} disabled={loadingAction === 'rejectAuthor'} className="px-6 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow transition-colors disabled:opacity-50 active:scale-95 transition-all duration-300">
+                <button onClick={handleRejectAuthorSubmit} disabled={loadingAction === 'rejectAuthor'} className="px-6 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow transition-colors disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                   {loadingAction === 'rejectAuthor' ? 'Rejecting...' : 'Confirm Rejection'}
                 </button>
               </div>
@@ -3059,24 +3212,24 @@ export function OperationsDashboardPage() {
         {editingAuthor && (
           <form className="space-y-4" onSubmit={handleUpdateAuthor}>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Full Name</label>
-              <input required type="text" value={editingAuthor.name} onChange={(e) => setEditingAuthor({ ...editingAuthor, name: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+              <label className="dash-label">Full Name</label>
+              <input required type="text" value={editingAuthor.name} onChange={(e) => setEditingAuthor({ ...editingAuthor, name: e.target.value })} className="dash-input" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Phone</label>
-                <input type="text" value={editingAuthor.phone} onChange={(e) => setEditingAuthor({ ...editingAuthor, phone: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+                <label className="dash-label">Phone</label>
+                <input type="text" value={editingAuthor.phone} onChange={(e) => setEditingAuthor({ ...editingAuthor, phone: e.target.value })} className="dash-input" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">WhatsApp</label>
-                <input type="text" value={editingAuthor.whatsapp} onChange={(e) => setEditingAuthor({ ...editingAuthor, whatsapp: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" />
+                <label className="dash-label">WhatsApp</label>
+                <input type="text" value={editingAuthor.whatsapp} onChange={(e) => setEditingAuthor({ ...editingAuthor, whatsapp: e.target.value })} className="dash-input" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-paa-navy mb-1 uppercase">Author Bio</label>
-              <textarea required value={editingAuthor.bio} onChange={(e) => setEditingAuthor({ ...editingAuthor, bio: e.target.value })} className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" rows={5} />
+              <label className="dash-label">Author Bio</label>
+              <textarea required value={editingAuthor.bio} onChange={(e) => setEditingAuthor({ ...editingAuthor, bio: e.target.value })} className="dash-input" rows={5} />
             </div>
-            <button type="submit" disabled={loadingAction === 'updateAuthor'} className="w-full py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition shadow disabled:opacity-50 active:scale-95 transition-all duration-300">
+            <button type="submit" disabled={loadingAction === 'updateAuthor'} className="dash-btn dash-btn-primary w-full justify-center py-3">
               {loadingAction === 'updateAuthor' ? 'Updating...' : 'Save Author Profile'}
             </button>
           </form>
@@ -3126,7 +3279,7 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
 
   return (
     <div className="space-y-6 max-w-6xl">
-       <div className="bg-white p-6 border border-paa-navy/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 rounded-2xl-2xl">
+       <div className="bg-white p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl">
           <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
              <div>
                 <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
@@ -3134,7 +3287,7 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
                 </h3>
                 <p className="text-paa-gray-text text-sm">Manage and respond to author queries.</p>
              </div>
-             <button onClick={fetchQueries} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-2xl-2xl text-paa-navy transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300 active:scale-95 transition-all duration-300">
+             <button onClick={fetchQueries} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                 <RefreshCw size={18} />
              </button>
           </div>
@@ -3143,17 +3296,17 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
              {queries.length === 0 ? (
                 <p className="text-sm text-gray-500 italic text-center py-8">No queries found.</p>
              ) : queries.map(q => (
-                <div key={q.id} className="border border-gray-200 rounded-2xl-2xl p-6 bg-gray-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300">
+                <div key={q.id} className="border border-gray-200 rounded-3xl-2xl p-6 bg-gray-50 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
                       <div>
                          <h4 className="font-bold text-paa-navy text-lg">{q.subject}</h4>
                          <p className="text-xs text-gray-500 mt-1">From: <span className="font-bold">{q.author?.name}</span> ({q.author?.email})</p>
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-2xl-2xl ${q.status === 'Answered' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-3xl-2xl ${q.status === 'Answered' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}>
                         {q.status}
                       </span>
                    </div>
-                   <div className="bg-white p-4 rounded-2xl-2xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-inner">
+                   <div className="bg-white p-4 rounded-3xl-2xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-inner">
                       {q.message}
                    </div>
 
@@ -3163,26 +3316,173 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
                          <textarea 
                            rows={3} 
                            placeholder="Type your reply here..." 
-                           className="w-full border border-paa-navy/20 p-3 text-sm outline-none focus:border-paa-navy bg-white rounded-2xl-2xl resize-y mb-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300"
+                           className="w-full border border-paa-navy/20 p-3 text-sm outline-none focus:border-paa-navy bg-white rounded-3xl-2xl resize-y mb-3 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out"
                            value={replyText[q.id] || ''}
                            onChange={e => setReplyText({ ...replyText, [q.id]: e.target.value })}
                          />
                          <button 
                            onClick={() => handleReply(q.id)} 
                            disabled={isReplying[q.id]}
-                           className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-2xl-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-shadow duration-300"
+                           className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out"
                          >
                            {isReplying[q.id] ? 'Sending...' : 'Send Reply'}
                          </button>
                       </div>
                    ) : (
-                      <div className="mt-4 pt-4 border-t border-gray-200 bg-green-50/50 p-4 rounded-2xl-2xl">
+                      <div className="mt-4 pt-4 border-t border-gray-200 bg-green-50/50 p-4 rounded-3xl-2xl">
                          <p className="text-xs font-bold uppercase tracking-widest text-paa-gold mb-2">Your Reply:</p>
                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{q.reply}</p>
                       </div>
                    )}
                 </div>
              ))}
+          </div>
+       </div>
+    </div>
+  );
+};
+
+const ReportsTab = () => {
+  const [reportPeriod, setReportPeriod] = useState('daily');
+  const [isExporting, setIsExporting] = useState(false);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [tableData, setTableData] = useState<any[]>([]);
+  const [isLoadingTable, setIsLoadingTable] = useState(false);
+  const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      try {
+        const res = await axios.get(`${API}/api/admin/reports/chart?period=${reportPeriod}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setChartData(res.data);
+      } catch (err) {
+        toast.error('Failed to load chart data');
+      }
+    };
+    const fetchTableData = async () => {
+      setIsLoadingTable(true);
+      try {
+        const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}&format=json`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setTableData(res.data);
+      } catch (err) {
+        setTableData([]);
+      } finally {
+        setIsLoadingTable(false);
+      }
+    };
+    fetchChartData();
+    fetchTableData();
+  }, [reportPeriod, API]);
+
+  const handleExportSalesReport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      const today = new Date().toISOString().split('T')[0];
+      link.href = url;
+      link.setAttribute('download', `sales_report_${reportPeriod}_${today}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      toast.success('Sales report exported successfully');
+    } catch (err: any) {
+      if (err.response && err.response.status === 404) {
+        toast.error('No sales data found for this period format.');
+      } else {
+        toast.error('Failed to export sales report');
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+       <div className="bg-white p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl">
+          <div className="mb-6 border-b border-paa-navy/5 pb-4">
+             <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
+                <FileText className="w-5 h-5" /> Sales & Revenue Reports
+             </h3>
+             <p className="text-paa-gray-text text-sm">Generate comprehensive reports on books sold through all channels (Web & Live Events).</p>
+          </div>
+          
+          
+          {chartData.length > 0 && (
+            <div className="mb-8 border border-paa-navy/5 p-4 rounded-xl">
+               <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Books Sold By Channel</h4>
+               <div className="h-64">
+                 <ResponsiveContainer width="100%" height="100%">
+                   <AreaChart data={chartData}>
+                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                     <XAxis dataKey="name" fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                     <YAxis fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                     <RechartsTooltip contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                     <Area type="monotone" dataKey="Web" stackId="1" stroke="#3b82f6" fill="#bfdbfe" name="Online Orders (Web)" />
+                     <Area type="monotone" dataKey="POS" stackId="1" stroke="#10b981" fill="#a7f3d0" name="Event Sales (POS)" />
+                   </AreaChart>
+                 </ResponsiveContainer>
+               </div>
+            </div>
+          )}
+
+          <div className="flex flex-col md:flex-row gap-6 items-end">
+            <div className="flex-1">
+              <label className="dash-label">Report Grouping Period</label>
+              <select className="dash-input" value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}>
+                <option value="daily">Daily (Group by Day)</option>
+                <option value="weekly">Weekly (Group by Week)</option>
+                <option value="monthly">Monthly (Group by Month)</option>
+                <option value="yearly">Yearly (Group by Year)</option>
+                <option value="lifelong">Lifelong (All Time)</option>
+              </select>
+            </div>
+            <button 
+              onClick={handleExportSalesReport}
+              disabled={isExporting}
+              className="dash-btn dash-btn-primary whitespace-nowrap h-12 px-8"
+            >
+              {isExporting ? 'Generating Report...' : 'Download CSV Report'}
+            </button>
+          </div>
+          <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm">
+             <div className="overflow-x-auto">
+               <table className="dash-table w-full text-left">
+                  <thead className="bg-[#f0f4f8]">
+                     <tr>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Period</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Channel</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Author</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Book Title</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Qty</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Revenue</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-paa-navy/5 bg-white">
+                     {isLoadingTable ? (
+                        <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text"><Loader2 className="w-5 h-5 animate-spin mx-auto text-paa-navy" /></td></tr>
+                     ) : tableData.length === 0 ? (
+                        <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text italic">No sales data found for this period.</td></tr>
+                     ) : tableData.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                           <td className="px-4 py-3 text-sm font-medium text-paa-navy">{row.Period}</td>
+                           <td className="px-4 py-3 text-sm text-paa-gray-text"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${row.Channel === 'Web' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>{row.Channel}</span></td>
+                           <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{row.Author}</td>
+                           <td className="px-4 py-3 text-sm text-paa-navy">{row.BookTitle}</td>
+                           <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{row.QuantitySold}</td>
+                           <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{row.Revenue}</td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+             </div>
           </div>
        </div>
     </div>

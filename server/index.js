@@ -582,14 +582,29 @@ app.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) => 
   try {
     const totalAuthors = await prisma.author.count();
     const totalBooks = await prisma.book.count();
-    const eventParticipations = await prisma.eventRegistration.count();
+    const eventParticipations = await prisma.eventAuthor.count({
+      where: { optInStatus: 'Opted-In' }
+    });
+    const pendingEventRegistrations = await prisma.eventAuthor.count({
+      where: { optInStatus: 'Awaiting Approval' }
+    });
     
     const orders = await prisma.order.findMany({
       where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } },
       orderBy: { createdAt: 'asc' },
       include: { items: { include: { book: { include: { author: true } } } } }
     });
-    const totalRevenue = orders.reduce((sum, o) => sum + o.amount, 0);
+
+    const posOrders = await prisma.posOrder.findMany({
+      include: {
+        event: true,
+        items: true
+      }
+    });
+
+    const webRevenue = orders.reduce((sum, o) => sum + o.amount, 0);
+    const posRevenue = posOrders.reduce((sum, po) => sum + po.totalAmount, 0);
+    const totalRevenue = webRevenue + posRevenue;
 
     // Revenue Data Generation
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -655,13 +670,6 @@ app.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) => 
     const topCustomers = Object.values(customerPurchasesMap).sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 10);
 
     // Event Sales Data (for the new Chart)
-    const posOrders = await prisma.posOrder.findMany({
-      include: {
-        event: true,
-        items: true
-      }
-    });
-
     const eventSalesMap = {};
     posOrders.forEach(po => {
       const eventName = po.event.name;
@@ -689,19 +697,19 @@ app.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) => 
     // Recent Activities
     const recentAuthors = await prisma.author.findMany({ orderBy: { createdAt: 'desc' }, take: 5 });
     const recentOrders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 5 });
-    const recentEvents = await prisma.eventRegistration.findMany({ include: { author: true, activity: true }, orderBy: { createdAt: 'desc' }, take: 5 });
+    const recentEvents = await prisma.eventAuthor.findMany({ include: { author: true, event: true }, orderBy: { createdAt: 'desc' }, take: 5 });
     
     const activities = [];
     recentAuthors.forEach(a => activities.push({ id: `auth-${a.id}`, action: 'New Author Registration', subject: a.name, createdAt: a.createdAt, type: 'author' }));
     recentOrders.forEach(o => activities.push({ id: `ord-${o.id}`, action: 'Order Received', subject: `INR ${o.amount} from ${o.customerName}`, createdAt: o.createdAt, type: 'order' }));
-    recentEvents.forEach(e => activities.push({ id: `evt-${e.id}`, action: 'Event RSVP', subject: `${e.author?.name || 'Author'} joined ${e.activity?.name || 'Event'}`, createdAt: e.createdAt, type: 'event' }));
+    recentEvents.forEach(e => activities.push({ id: `evt-${e.id}`, action: 'Event RSVP', subject: `${e.author?.name || 'Author'} joined ${e.event?.name || 'Event'}`, createdAt: e.createdAt, type: 'event' }));
 
     activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const recentActivities = activities.slice(0, 8);
 
     const result = { 
       totalAuthors, totalBooks, eventParticipations, totalRevenue, revenueData, recentActivities,
-      salesByAuthor, salesByGenre, topSellingBooks, topCustomers, lowStockAlerts, eventSalesData
+      salesByAuthor, salesByGenre, topSellingBooks, topCustomers, lowStockAlerts, eventSalesData, pendingEventRegistrations
     };
     setCache('admin:dashboard-stats', result, 45 * 1000); // 45s cache
     res.json(result);
@@ -1073,7 +1081,7 @@ app.post('/api/admin/books/:id/approve', verifyToken, isAdmin, async (req, res) 
 });
 app.post('/api/author/books', verifyToken, upload.single('cover'), async (req, res) => {
   try {
-    const { title, genre, synopsis, pages, mrp, stock, overpriced } = req.body;
+    const { title, subtitle, genre, subGenre, synopsis, pages, mrp, stock, overpriced, language, isbn, publisher, publicationDate, edition, format } = req.body;
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(403).json({ error: 'Not an author' });
 
@@ -1082,12 +1090,20 @@ app.post('/api/author/books', verifyToken, upload.single('cover'), async (req, r
     const newBook = await prisma.book.create({
       data: {
         title,
+        subtitle: subtitle || null,
         genre,
+        subGenre: subGenre || null,
         synopsis,
         pages: parseInt(pages) || null,
         mrp: parseFloat(mrp),
         stock: parseInt(stock) || 0,
         overpriced: overpriced === 'true',
+        language: language || null,
+        isbn: isbn || null,
+        publisher: publisher || null,
+        publicationDate: publicationDate || null,
+        edition: edition || null,
+        format: format || null,
         coverUrl,
         authorId: author.id,
         status: 'Pending'
@@ -1451,6 +1467,156 @@ app.put('/api/order-items/:id/author-reject', verifyToken, async (req, res) => {
 });
 
 // 7. Operations/Author Dashboard - Get all orders
+app.get('/api/admin/reports/sales', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const period = req.query.period || 'daily';
+    const webOrders = await prisma.order.findMany({
+      where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } },
+      include: { items: { include: { book: { include: { author: true } } } } }
+    });
+    
+    const posOrders = await prisma.posOrder.findMany({
+      include: { event: true, items: { include: { book: { include: { author: true } } } } }
+    });
+
+    const flatData = [];
+    
+    const getDateString = (dateObj) => {
+      if (period === 'monthly') {
+        return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+      } else if (period === 'weekly') {
+        const d = new Date(dateObj);
+        d.setHours(0,0,0,0);
+        d.setDate(d.getDate() + 4 - (d.getDay()||7));
+        const yearStart = new Date(d.getFullYear(),0,1);
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+        return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+      } else if (period === 'yearly') {
+        return `${dateObj.getFullYear()}`;
+      } else if (period === 'lifelong') {
+        return 'All Time';
+      }
+      return dateObj.toISOString().split('T')[0];
+    };
+
+    webOrders.forEach(o => {
+      const dateStr = getDateString(o.createdAt);
+      o.items.forEach(i => {
+        flatData.push({
+          Period: dateStr,
+          Channel: 'Web',
+          Event: '-',
+          Author: i.book.author.name,
+          BookTitle: i.book.title,
+          QuantitySold: i.quantity,
+          Revenue: i.quantity * i.book.mrp
+        });
+      });
+    });
+
+    posOrders.forEach(po => {
+      const dateStr = getDateString(po.createdAt);
+      po.items.forEach(i => {
+        flatData.push({
+          Period: dateStr,
+          Channel: 'POS',
+          Event: po.event.name,
+          Author: i.book.author.name,
+          BookTitle: i.book.title,
+          QuantitySold: i.quantity,
+          Revenue: i.quantity * i.price
+        });
+      });
+    });
+
+    const aggregated = {};
+    flatData.forEach(row => {
+      const key = `${row.Period}|${row.Channel}|${row.Event}|${row.Author}|${row.BookTitle}`;
+      if (!aggregated[key]) {
+        aggregated[key] = { ...row };
+      } else {
+        aggregated[key].QuantitySold += row.QuantitySold;
+        aggregated[key].Revenue += row.Revenue;
+      }
+    });
+
+    const sortedData = Object.values(aggregated).sort((a, b) => b.Period.localeCompare(a.Period) || a.Channel.localeCompare(b.Channel));
+
+    if (sortedData.length === 0) {
+      return res.status(404).json({ error: 'No data found for the selected criteria' });
+    }
+
+    if (req.query.format === 'json') {
+      return res.json(sortedData);
+    }
+
+    const { Parser } = require('json2csv');
+    const parser = new Parser();
+    const csv = parser.parse(sortedData);
+    res.header('Content-Type', 'text/csv');
+    const today = new Date().toISOString().split('T')[0];
+    res.attachment(`sales_report_${period}_${today}.csv`);
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
+app.get('/api/admin/reports/chart', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const period = req.query.period || 'daily';
+    const webOrders = await prisma.order.findMany({
+      where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } },
+      include: { items: { include: { book: true } } }
+    });
+    const posOrders = await prisma.posOrder.findMany({
+      include: { items: true }
+    });
+
+    const getDateString = (dateObj) => {
+      if (period === 'monthly') {
+        return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+      } else if (period === 'weekly') {
+        const d = new Date(dateObj);
+        d.setHours(0,0,0,0);
+        d.setDate(d.getDate() + 4 - (d.getDay()||7));
+        const yearStart = new Date(d.getFullYear(),0,1);
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+        return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+      } else if (period === 'yearly') {
+        return `${dateObj.getFullYear()}`;
+      } else if (period === 'lifelong') {
+        return 'All Time';
+      }
+      return dateObj.toISOString().split('T')[0];
+    };
+
+    const aggregated = {};
+    webOrders.forEach(o => {
+      const dateStr = getDateString(o.createdAt);
+      if (!aggregated[dateStr]) aggregated[dateStr] = { name: dateStr, Web: 0, POS: 0 };
+      o.items.forEach(i => {
+        aggregated[dateStr].Web += i.quantity;
+      });
+    });
+
+    posOrders.forEach(po => {
+      const dateStr = getDateString(po.createdAt);
+      if (!aggregated[dateStr]) aggregated[dateStr] = { name: dateStr, Web: 0, POS: 0 };
+      po.items.forEach(i => {
+        aggregated[dateStr].POS += i.quantity;
+      });
+    });
+
+    const chartData = Object.values(aggregated).sort((a, b) => a.name.localeCompare(b.name));
+    res.json(chartData);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate chart data' });
+  }
+});
+
+// 7. Operations/Author Dashboard - Get all orders
 app.get('/api/admin/orders/export', verifyToken, isAdmin, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
@@ -1500,7 +1666,17 @@ app.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
       dbId: ord.id,
       date: ord.createdAt.toISOString().split('T')[0],
       customer: ord.customerName,
-      items: ord.items.map(i => ({ title: i.book.title, qty: i.quantity, authorName: i.book.author.name })),
+      items: ord.items.map(i => ({ 
+        id: i.id,
+        title: i.book.title, 
+        qty: i.quantity, 
+        authorName: i.book.author.name,
+        status: i.status,
+        createdAt: i.createdAt,
+        dispatchedAt: i.dispatchedAt,
+        deliveredAt: i.deliveredAt,
+        trackingNumber: i.trackingNumber
+      })),
       total: ord.amount,
       status: ord.status === 'Pending Verification' ? 'Pending' : ord.status,
       payment: ord.paymentScreenshot ? 'Paid' : 'Unpaid',
@@ -1587,7 +1763,7 @@ app.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
     const { trackingNumber } = req.body;
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'Dispatched', trackingNumber },
+      data: { status: 'Dispatched', trackingNumber, dispatchedAt: new Date() },
       include: { order: true, book: true }
     });
     
@@ -1607,7 +1783,7 @@ app.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => {
   try {
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'Completed' }
+      data: { status: 'Completed', deliveredAt: new Date() }
     });
     res.json(orderItem);
 

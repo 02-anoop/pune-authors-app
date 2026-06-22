@@ -314,6 +314,7 @@ export function OperationsDashboardPage() {
   const prevQueryCountRef = useRef<number>(0);
   const prevOrderCountRef = useRef<number>(0);
   const [dismissedActions, setDismissedActions] = useState<string[]>([]);
+  const [hasNewOrders, setHasNewOrders] = useState(false);
   useEffect(() => {
     
   }, [activeTab]);
@@ -1362,6 +1363,285 @@ export function OperationsDashboardPage() {
     );
   };
 
+
+  const renderAuthorsTab = ({ refreshTrigger }: any) => {
+    const filteredAuthors = authors.filter((a: any) => {
+      const matchesSearch = searchTerm === '' || a.name.toLowerCase().includes(searchTerm.toLowerCase()) || a.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = authorStatusFilter === 'All' || a.status === authorStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    if (selectedAuthor) {
+      return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+          <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Authors Management</h3>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                <input type="text" placeholder="SEARCH AUTHORS..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
+              </div>
+              <select value={authorStatusFilter} onChange={(e) => setAuthorStatusFilter(e.target.value)} className="px-3 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy">
+                <option value="All">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Pending">Pending</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Author</th>
+                  <th>Email</th>
+                  <th style={{textAlign:'center'}}>Books</th>
+                  <th style={{textAlign:'center'}}>Status</th>
+                  <th style={{textAlign:'center'}}>Joined</th>
+                  <th style={{textAlign:'center'}}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAuthors.map((author: any) => (
+                  <tr key={author.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-paa-navy/10 text-paa-navy flex items-center justify-center font-bold text-sm rounded-full">{author.name.charAt(0)}</div>
+                        <div>
+                          <p className="font-bold text-paa-navy">{author.name}</p>
+                          <p className="text-xs text-paa-gray-text">{author.phone}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="text-sm text-paa-gray-text">{author.email}</td>
+                    <td style={{textAlign:'center'}} className="font-bold text-paa-navy">{author.totalBooks || 0}</td>
+                    <td style={{textAlign:'center'}}>
+                      <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>{author.status}</span>
+                    </td>
+                    <td style={{textAlign:'center'}} className="text-sm text-paa-gray-text">{author.joined}</td>
+                    <td style={{textAlign:'center'}}>
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => setSelectedAuthor(author)} className="dash-btn dash-btn-ghost" title="View Profile"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => handleEditAuthorClick(author)} className="dash-btn dash-btn-ghost" title="Edit"><Edit className="w-4 h-4" /></button>
+                        {author.status === 'Pending' && (
+                          <>
+                            <button onClick={() => handleApproveAuthor(author.id)} disabled={loadingAction === 'approveAuthor_' + author.id} className="dash-btn dash-btn-success" title="Approve">
+                              {loadingAction === 'approveAuthor_' + author.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                            </button>
+                            <button onClick={() => openRejectAuthorModal(author)} className="dash-btn dash-btn-danger" title="Reject"><XCircle className="w-4 h-4" /></button>
+                          </>
+                        )}
+                        <button onClick={() => handleDeleteAuthor(author.id)} className="dash-btn dash-btn-danger" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredAuthors.length === 0 && (
+                  <tr><td colSpan={6} className="text-center py-8 text-paa-gray-text">No authors found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const BooksTab = ({ refreshTrigger }: { refreshTrigger: number }) => {
+    const filteredBooks = books.filter((b: any) => {
+      const matchesSearch = searchTerm === '' || b.title.toLowerCase().includes(searchTerm.toLowerCase()) || (b.authorName && b.authorName.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesStatus = bookStatusFilter === 'All' || b.status === bookStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+          <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Books / Inventory</h3>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                <input type="text" placeholder="SEARCH BOOKS..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
+              </div>
+              <select value={bookStatusFilter} onChange={(e) => setBookStatusFilter(e.target.value)} className="px-3 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy">
+                <option value="All">All Status</option>
+                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Cover</th>
+                  <th>Title</th>
+                  <th>Author</th>
+                  <th style={{textAlign:'center'}}>MRP</th>
+                  <th style={{textAlign:'center'}}>Stock</th>
+                  <th style={{textAlign:'center'}}>Sales</th>
+                  <th style={{textAlign:'center'}}>Status</th>
+                  <th style={{textAlign:'center'}}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBooks.map((book: any) => (
+                  <tr key={book.id}>
+                    <td>
+                      {book.coverUrl ? (
+                        <img src={book.coverUrl.startsWith('http') ? book.coverUrl : `${API}${book.coverUrl}`} alt="Cover" className="w-10 h-14 object-cover border border-paa-navy/20" />
+                      ) : (
+                        <div className="w-10 h-14 bg-gray-100 border border-paa-navy/10 flex items-center justify-center text-gray-400"><BookOpen className="w-4 h-4" /></div>
+                      )}
+                    </td>
+                    <td>
+                      <p className="font-bold text-paa-navy">{book.title}</p>
+                      <p className="text-xs text-paa-gray-text">{book.genre} {book.subGenre && `> ${book.subGenre}`}</p>
+                    </td>
+                    <td className="text-sm font-medium text-paa-navy">{book.authorName}</td>
+                    <td style={{textAlign:'center'}} className="font-bold text-green-700">₹{book.mrp}</td>
+                    <td style={{textAlign:'center'}} className={`font-bold ${book.stock < 10 ? 'text-red-600' : 'text-paa-navy'}`}>{book.stock}</td>
+                    <td style={{textAlign:'center'}} className="font-bold text-paa-navy">{book.sales || 0}</td>
+                    <td style={{textAlign:'center'}}>
+                      <span className={`dash-badge ${book.status === 'Approved' ? 'active' : book.status === 'Rejected' ? 'rejected' : 'pending'}`}>{book.status}</span>
+                    </td>
+                    <td style={{textAlign:'center'}}>
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => setSelectedBookDetails(book)} className="dash-btn dash-btn-ghost" title="View Details"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => handleEditBookClick(book)} className="dash-btn dash-btn-ghost" title="Edit"><Edit className="w-4 h-4" /></button>
+                        {book.status === 'Pending' && (
+                          <>
+                            <button onClick={() => handleApproveBook(book.id)} disabled={loadingAction === 'approveBook_' + book.id} className="dash-btn dash-btn-success" title="Approve">
+                              {loadingAction === 'approveBook_' + book.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                            </button>
+                            <button onClick={() => handleRejectBook(book.id)} className="dash-btn dash-btn-danger" title="Reject"><XCircle className="w-4 h-4" /></button>
+                          </>
+                        )}
+                        <button onClick={() => handleDeleteBook(book.id)} className="dash-btn dash-btn-danger" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredBooks.length === 0 && (
+                  <tr><td colSpan={8} className="text-center py-8 text-paa-gray-text">No books found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const EventsTab = ({ refreshTrigger }: { refreshTrigger: number }) => {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight border-l-4 border-paa-navy pl-2">Events & Fairs</h3>
+          <button onClick={() => setIsEventModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-premium rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+            <Plus className="w-4 h-4" /> Create Event
+          </button>
+        </div>
+
+        {/* Past Events from JSON */}
+        {pastEventsData && pastEventsData.length > 0 && (
+          <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+            <div className="p-4 border-b border-paa-navy/5 bg-[#f0f4f8]">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Past / Archived Events</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="dash-table">
+                <thead>
+                  <tr>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th style={{textAlign:'center'}}>Authors</th>
+                    <th style={{textAlign:'center'}}>Books Sold</th>
+                    <th style={{textAlign:'center'}}>Report</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pastEventsData.map((pe: any) => (
+                    <tr key={pe.id}>
+                      <td className="font-bold text-paa-navy">{pe.name}</td>
+                      <td className="text-sm text-paa-gray-text">{pe.date}</td>
+                      <td style={{textAlign:'center'}} className="font-bold text-paa-navy">{pe.authorsParticipated || 0}</td>
+                      <td style={{textAlign:'center'}} className="font-bold text-green-700">{pe.booksSold || 0}</td>
+                      <td style={{textAlign:'center'}}>
+                        <button onClick={() => fetchEventReport('legacy_' + pe.id)} className="dash-btn dash-btn-ghost">View Report</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Active / Upcoming Events from DB */}
+        <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+          <div className="p-4 border-b border-paa-navy/5 bg-[#f0f4f8]">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Active & Upcoming Events</h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Event Name</th>
+                  <th>Location</th>
+                  <th>Date</th>
+                  <th style={{textAlign:'center'}}>Type</th>
+                  <th style={{textAlign:'center'}}>Status</th>
+                  <th style={{textAlign:'center'}}>Registrations</th>
+                  <th style={{textAlign:'center'}}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event: any) => (
+                  <tr key={event.id}>
+                    <td>
+                      <p className="font-bold text-paa-navy">{event.name}</p>
+                      {event.description && <p className="text-xs text-paa-gray-text truncate max-w-[200px]">{event.description}</p>}
+                    </td>
+                    <td className="text-sm text-paa-gray-text flex items-center gap-1"><MapPin className="w-3 h-3" /> {event.location}</td>
+                    <td className="text-sm text-paa-gray-text">{event.date}</td>
+                    <td style={{textAlign:'center'}}>
+                      <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-paa-navy/5 text-paa-navy">{event.eventType || 'Book Fair'}</span>
+                    </td>
+                    <td style={{textAlign:'center'}}>
+                      <span className={`dash-badge ${event.status === 'Upcoming' ? 'pending' : event.status === 'Ongoing' ? 'active' : 'approved'}`}>{event.status}</span>
+                    </td>
+                    <td style={{textAlign:'center'}}>
+                      <button onClick={() => fetchEventRegistrations(event.id)} className="dash-btn dash-btn-ghost">
+                        {event._count?.eventAuthors || event.eventAuthors?.length || 0} Authors
+                      </button>
+                    </td>
+                    <td style={{textAlign:'center'}}>
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => handleEditEventClick(event)} className="dash-btn dash-btn-ghost" title="Edit"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => fetchEventReport(event.id)} className="dash-btn dash-btn-ghost" title="Report"><BarChart3 className="w-4 h-4" /></button>
+                        <button onClick={() => handleBroadcastEvent(event.id, 'Authors')} className="dash-btn dash-btn-ghost" title="Broadcast to Authors"><Bell className="w-4 h-4" /></button>
+                        <button onClick={() => handleDeleteEvent(event.id)} className="dash-btn dash-btn-danger" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {events.length === 0 && (
+                  <tr><td colSpan={7} className="text-center py-8 text-paa-gray-text">No events created yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const FormsTab = () => (
     <div className="space-y-6">

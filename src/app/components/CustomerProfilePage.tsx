@@ -178,7 +178,39 @@ export function CustomerProfilePage() {
     }
   };
 
-  if (loading) return <div style={{ padding: "4rem", textAlign: "center", fontFamily: "var(--font-body)" }}>Loading your profile...</div>;
+  if (loading) return (
+    <main style={{ fontFamily: "var(--font-body)", background: "#fafafa", minHeight: "100vh", padding: "4rem 1.5rem" }}>
+      <style>{`@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}.skel{background:linear-gradient(90deg,#eee 25%,#e0e0e0 50%,#eee 75%);background-size:800px 100%;animation:shimmer 1.5s infinite linear;border-radius:4px}`}</style>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div className="skel" style={{ width: 220, height: 28, marginBottom: 8 }}></div>
+        <div className="skel" style={{ width: 280, height: 14, marginBottom: 40 }}></div>
+        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "2rem" }} className="profile-grid">
+          <div style={{ background: "#fff", border: "1px solid #eaeaea", padding: "2rem" }}>
+            <div className="skel" style={{ width: 64, height: 64, borderRadius: "50%", marginBottom: 16 }}></div>
+            <div className="skel" style={{ width: "80%", height: 18, marginBottom: 8 }}></div>
+            <div className="skel" style={{ width: "60%", height: 14, marginBottom: 24 }}></div>
+            <div style={{ borderTop: "1px solid #eaeaea", paddingTop: 16 }}>
+              {[1,2,3].map(i => <div key={i} className="skel" style={{ width: "100%", height: 14, marginBottom: 10 }}></div>)}
+            </div>
+          </div>
+          <div style={{ background: "#fff", border: "1px solid #eaeaea" }}>
+            <div style={{ padding: "1.5rem", borderBottom: "1px solid #eaeaea" }}>
+              <div className="skel" style={{ width: 140, height: 20 }}></div>
+            </div>
+            {[1,2,3].map(i => (
+              <div key={i} style={{ padding: "1rem 1.5rem", borderBottom: "1px solid #f0f0f0", display: "flex", gap: 24 }}>
+                <div className="skel" style={{ width: 80, height: 14 }}></div>
+                <div className="skel" style={{ width: 100, height: 14 }}></div>
+                <div className="skel" style={{ width: 60, height: 14 }}></div>
+                <div className="skel" style={{ width: 80, height: 14 }}></div>
+                <div className="skel" style={{ width: 90, height: 28, marginLeft: "auto" }}></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 
   return (
     <>
@@ -211,38 +243,41 @@ export function CustomerProfilePage() {
         </div>
       )}
 
-    <main style={{ fontFamily: "var(--font-body)", minHeight: "calc(100vh - 64px)", background: "#f7f7f9", padding: "3rem 1.5rem" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+
+    <main style={{ fontFamily: "var(--font-body)", minHeight: "calc(100vh - 64px)", background: "#fafafa", padding: "4rem 1.5rem" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
           <div>
-            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 800, color: "#1a1a2e", marginBottom: "0.4rem" }}>
-              Welcome back, {userData?.name.split(' ')[0]}
+            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#555", marginBottom: "0.8rem" }}>My Account</div>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.8rem, 3vw, 2.2rem)", fontWeight: 400, color: "#111", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+              Welcome back, <span style={{ fontStyle: "italic", color: "#b44d28" }}>{userData?.name.split(' ')[0]}</span>
             </h1>
-            <p style={{ fontSize: 14, color: "#6b6b80" }}>Manage your profile and track your orders</p>
           </div>
           <button
             onClick={handleLogout}
-            style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", padding: "0.6rem 1.2rem", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "transparent", color: "#555", border: "1px solid #ddd", padding: "0.5rem 1rem", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.color = "#111"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#ddd"; e.currentTarget.style.color = "#555"; }}
           >
-            <LogOut size={16} /> Logout
+            <LogOut size={14} /> Sign Out
           </button>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "2rem" }} className="profile-grid">
           
           <div>
-            <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(0,0,0,0.07)", padding: "2rem", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}>
+            <div style={{ background: "#fff", border: "1px solid #eaeaea", padding: "2rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ width: 64, height: 64, background: "#f0f0f4", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
-                  <User size={32} color="#1a1a2e" />
+                <div style={{ width: 56, height: 56, background: "#f5f5f5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
+                  <User size={28} color="#111" />
                 </div>
                 {!isEditing ? (
-                  <button onClick={() => setIsEditing(true)} style={{ background: "none", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 6, padding: "0.4rem 0.8rem", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#1a1a2e" }}>
-                    Edit Profile
+                  <button onClick={() => setIsEditing(true)} style={{ background: "none", border: "1px solid #ddd", padding: "0.35rem 0.7rem", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "#333", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Edit
                   </button>
                 ) : (
-                  <button onClick={handleSaveProfile} disabled={saving} style={{ background: "#1a1a2e", border: "none", borderRadius: 6, padding: "0.4rem 0.8rem", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#fff" }}>
+                  <button onClick={handleSaveProfile} disabled={saving} style={{ background: "#111", border: "none", padding: "0.35rem 0.7rem", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "#fff", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {saving ? "Saving..." : "Save"}
                   </button>
                 )}
@@ -250,113 +285,112 @@ export function CustomerProfilePage() {
               
               {!isEditing ? (
                 <>
-                  <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.2rem" }}>{userData?.name}</h2>
-                  <div style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.5rem" }}>{userData?.email}</div>
+                  <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 400, color: "#111", marginBottom: "0.2rem" }}>{userData?.name}</h2>
+                  <div style={{ fontSize: 13, color: "#555", marginBottom: "1.5rem" }}>{userData?.email}</div>
                 </>
               ) : (
                 <div style={{ marginBottom: "1.5rem" }}>
-                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: "100%", padding: "0.5rem", borderRadius: 6, border: "1px solid rgba(0,0,0,0.15)", marginBottom: "0.5rem", fontSize: 14, fontWeight: 600 }} placeholder="Your Name" />
-                  <div style={{ fontSize: 13, color: "#6b6b80" }}>{userData?.email} (Cannot be changed)</div>
+                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: "100%", padding: "0.5rem", border: "none", borderBottom: "1px solid #ddd", marginBottom: "0.5rem", fontSize: 14, fontWeight: 500, outline: "none", background: "transparent" }} placeholder="Your Name" />
+                  <div style={{ fontSize: 13, color: "#555" }}>{userData?.email} (Cannot be changed)</div>
                 </div>
               )}
               
-              <div style={{ borderTop: "1px dashed rgba(0,0,0,0.1)", paddingTop: "1.5rem" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#6b6b80", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.8rem" }}>Account Details</div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#1a1a2e", marginBottom: "0.5rem" }}>
-                  <span>Role</span>
-                  <span style={{ fontWeight: 600 }}>Reader / Customer</span>
+              <div style={{ borderTop: "1px solid #eaeaea", paddingTop: "1.5rem" }}>
+                <div style={{ fontSize: 11, fontWeight: 500, color: "#555", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "1rem" }}>Account Details</div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111", marginBottom: "0.6rem" }}>
+                  <span style={{ color: "#555" }}>Role</span>
+                  <span style={{ fontWeight: 500 }}>Reader</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#1a1a2e", marginBottom: "0.5rem" }}>
-                  <span>Phone</span>
-                  <span style={{ fontWeight: 600 }}>{userData?.phone || "Not provided"}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111", marginBottom: "0.6rem" }}>
+                  <span style={{ color: "#555" }}>Phone</span>
+                  <span style={{ fontWeight: 500 }}>{userData?.phone || "—"}</span>
                 </div>
                 {isEditing ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", marginBottom: "0.5rem" }}>
-                    <span style={{ fontSize: 13, color: "#1a1a2e" }}>Address</span>
-                    <textarea rows={2} value={editAddress} onChange={(e) => setEditAddress(e.target.value)} style={{ width: "100%", padding: "0.5rem", borderRadius: 6, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13, resize: "vertical" }} placeholder="Your Address" />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", marginBottom: "0.6rem" }}>
+                    <span style={{ fontSize: 13, color: "#555" }}>Address</span>
+                    <textarea rows={2} value={editAddress} onChange={(e) => setEditAddress(e.target.value)} style={{ width: "100%", padding: "0.5rem", border: "1px solid #ddd", fontSize: 13, resize: "vertical", outline: "none" }} placeholder="Your Address" />
                   </div>
                 ) : (
                   userData?.address && (
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#1a1a2e", marginBottom: "0.5rem" }}>
-                      <span>Address</span>
-                      <span style={{ fontWeight: 600, textAlign: "right", maxWidth: "60%" }}>{userData.address}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111", marginBottom: "0.6rem" }}>
+                      <span style={{ color: "#555" }}>Address</span>
+                      <span style={{ fontWeight: 500, textAlign: "right", maxWidth: "60%" }}>{userData.address}</span>
                     </div>
                   )
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#1a1a2e" }}>
-                  <span>Member Since</span>
-                  <span style={{ fontWeight: 600 }}>{new Date(userData?.createdAt || Date.now()).getFullYear()}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111" }}>
+                  <span style={{ color: "#555" }}>Member Since</span>
+                  <span style={{ fontWeight: 500 }}>{new Date(userData?.createdAt || Date.now()).getFullYear()}</span>
                 </div>
               </div>
             </div>
           </div>
 
           <div>
-            <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}>
-              <div style={{ padding: "1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                <Package size={20} color="#2563eb" />
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: "#1a1a2e" }}>Your Orders</h2>
+            <div style={{ background: "#fff", border: "1px solid #eaeaea", overflow: "hidden" }}>
+              <div style={{ padding: "1.5rem", borderBottom: "1px solid #eaeaea", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <Package size={16} color="#111" />
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 500, color: "#111", letterSpacing: "-0.01em" }}>Your Orders</h2>
               </div>
               
               {orders.length === 0 ? (
-                <div style={{ padding: "3rem 2rem", textAlign: "center" }}>
-                  <div style={{ width: 64, height: 64, background: "#f0f8ff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-                    <Package size={28} color="#2563eb" />
+                <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
+                  <div style={{ width: 48, height: 48, background: "#f5f5f5", borderRadius: "50%", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
+                    <Package size={20} color="#111" />
                   </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.5rem" }}>No orders placed yet</h3>
-                  <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.5rem" }}>Looks like you haven't bought any books yet.</p>
-                  <Link to="/catalogue" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: "#1a1a2e", color: "#fff", textDecoration: "none", padding: "0.7rem 1.4rem", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
-                    Explore Catalogue <ArrowRight size={14} />
+                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 400, color: "#111", marginBottom: "0.5rem" }}>No orders placed yet</h3>
+                  <p style={{ fontSize: 13, color: "#555", marginBottom: "2rem" }}>Browse our curated selection and find your next read.</p>
+                  <Link to="/catalogue" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", border: "1px solid #111", color: "#111", textDecoration: "none", padding: "0.6rem 1.4rem", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#111"; }}>
+                    Explore Catalogue <ArrowRight size={12} />
                   </Link>
                 </div>
               ) : (
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
-                      <tr style={{ background: "#f7f7f9", borderBottom: "1px solid rgba(0,0,0,0.05)", textAlign: "left" }}>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Order ID</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 12, fontWeight: 600, color: "#6b6b80", textTransform: "uppercase", letterSpacing: "0.05em" }}></th>
+                      <tr style={{ background: "#fafafa", borderBottom: "1px solid #eaeaea", textAlign: "left" }}>
+                        <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Order ID</th>
+                        <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Date</th>
+                        <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Total</th>
+                        <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</th>
+                        <th style={{ padding: "1rem 1.5rem" }}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {orders.map((o) => {
                         return (
-                          <tr key={o.id} style={{ background: "#fff", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-                            <td style={{ padding: "1rem 1.5rem", fontFamily: "var(--font-mono)", fontSize: 13, color: "#1a1a2e", fontWeight: 700 }}>
+                          <tr key={o.id} style={{ background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
+                            <td style={{ padding: "1.2rem 1.5rem", fontFamily: "var(--font-mono)", fontSize: 13, color: "#111", fontWeight: 600 }}>
                               #PAA-{o.id.toString().padStart(4, '0')}
                             </td>
-                            <td style={{ padding: "1rem 1.5rem", fontFamily: "var(--font-mono)", fontSize: 12, color: "#6b6b80" }}>
+                            <td style={{ padding: "1.2rem 1.5rem", fontSize: 12, color: "#555" }}>
                               {new Date(o.createdAt).toLocaleDateString()}
                             </td>
-                            <td style={{ padding: "1rem 1.5rem", fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "#1a1a2e" }}>
+                            <td style={{ padding: "1.2rem 1.5rem", fontSize: 13, fontWeight: 600, color: "#111" }}>
                               ₹{o.amount}
                             </td>
-                            <td style={{ padding: "1rem 1.5rem" }}>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                            <td style={{ padding: "1.2rem 1.5rem" }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
                                 {o.items?.map((item: any, idx: number) => (
-                                  <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", flexDirection: "column" }}>
-                                    <span style={{ fontSize: 13, color: "#1a1a2e", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 200 }} title={item.book?.title}>
+                                  <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.2rem", flexDirection: "column" }}>
+                                    <span style={{ fontSize: 13, color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 220 }} title={item.book?.title}>
                                       {idx + 1}. {item.book?.title}
                                     </span>
                                     <span style={{ 
-                                      background: item.status.includes('Pending') ? '#fffbeb' : item.status === 'Completed' ? '#f0fdf4' : item.status === 'Rejected' ? '#fef2f2' : '#eff6ff', 
-                                      color: item.status.includes('Pending') ? '#d97706' : item.status === 'Completed' ? '#16a34a' : item.status === 'Rejected' ? '#ef4444' : '#2563eb', 
-                                      padding: "0.15rem 0.5rem", borderRadius: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", marginLeft: "1rem"
+                                      color: item.status.includes('Pending') ? '#b44d28' : item.status === 'Completed' ? '#2e7d32' : item.status === 'Rejected' ? '#c62828' : '#1565c0', 
+                                      fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em"
                                     }}>
                                       {item.status}
                                     </span>
                                     {item.status === 'Rejected' && item.rejectionReason && (
-                                      <div style={{ marginLeft: "1rem", marginTop: "0.2rem", fontSize: 10, color: "#ef4444" }}>Reason: {item.rejectionReason}</div>
+                                      <div style={{ marginTop: "0.1rem", fontSize: 10, color: "#c62828", fontStyle: "italic" }}>Reason: {item.rejectionReason}</div>
                                     )}
                                   </div>
                                 ))}
                               </div>
                             </td>
-                            <td style={{ padding: "1rem 1.5rem", verticalAlign: "middle" }}>
-                              <button onClick={() => setSelectedOrder(o)} style={{ background: "#1a1a2e", color: "#fff", border: "none", padding: "0.6rem 1.2rem", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>View Details</button>
+                            <td style={{ padding: "1.2rem 1.5rem", verticalAlign: "middle", textAlign: "right" }}>
+                              <button onClick={() => setSelectedOrder(o)} style={{ background: "transparent", border: "1px solid #111", color: "#111", padding: "0.45rem 0.9rem", fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#111"; }}>View Details</button>
                             </td>
                           </tr>
                         );
@@ -368,81 +402,78 @@ export function CustomerProfilePage() {
             </div>
           </div>
         </div>
-      </div>
-
-      {selectedOrder && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}>
-          <div style={{ background: "#f7f7f9", borderRadius: 16, width: "100%", maxWidth: 700, padding: "2rem", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", fontFamily: "var(--font-display)" }}>Order Details</h2>
+      </div>      {selectedOrder && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.4)", backdropBlur: "2px", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}>
+          <div style={{ background: "#fff", border: "1px solid #ddd", width: "100%", maxWidth: 700, padding: "2.5rem", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", borderBottom: "1px solid #eaeaea", paddingBottom: "1rem" }}>
+              <h2 style={{ fontSize: 20, fontWeight: 400, color: "#111", fontFamily: "var(--font-display)" }}>Order Details</h2>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                 {!selectedOrder.items?.some((i: any) => i.status === 'Dispatched' || i.status === 'Completed' || i.status === 'Cancelled') && (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                     <span style={{ fontSize: 10, color: "#6b6b80", fontStyle: "italic", maxWidth: 120, lineHeight: 1.2, textAlign: "right" }}>Orders cannot be cancelled once dispatched.</span>
-                     <button onClick={() => handleCancelOrder(selectedOrder.id)} style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", padding: "0.4rem 0.8rem", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Cancel Order</button>
+                     <span style={{ fontSize: 10, color: "#777", fontStyle: "italic", maxWidth: 120, lineHeight: 1.2, textAlign: "right" }}>Cannot cancel once dispatched.</span>
+                     <button onClick={() => handleCancelOrder(selectedOrder.id)} style={{ background: "transparent", color: "#c62828", border: "1px solid #c62828", padding: "0.4rem 0.8rem", fontSize: 11, fontWeight: 500, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}>Cancel Order</button>
                   </div>
                 )}
-                <button onClick={() => { setSelectedOrder(null); openQueryForOrder(selectedOrder.id); }} style={{ background: "rgba(30,58,138,0.1)", color: "#1e3a8a", border: "1px solid rgba(30,58,138,0.2)", padding: "0.4rem 0.8rem", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem" }}><MessageSquare size={14} /> Raise Query</button>
-                <button onClick={() => setSelectedOrder(null)} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#6b6b80" }}>&times;</button>
+                <button onClick={() => { setSelectedOrder(null); openQueryForOrder(selectedOrder.id); }} style={{ background: "transparent", color: "#111", border: "1px solid #111", padding: "0.4rem 0.8rem", fontSize: 11, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}><MessageSquare size={12} /> Raise Query</button>
+                <button onClick={() => setSelectedOrder(null)} style={{ background: "none", border: "none", fontSize: 28, cursor: "pointer", color: "#777", padding: "0 0.5rem" }}>&times;</button>
               </div>
             </div>
             
-            <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#fff", borderRadius: 8, border: "1px solid rgba(0,0,0,0.06)" }}>
-              <p style={{ margin: "0 0 0.5rem 0", fontSize: 13, color: "#1a1a2e" }}><strong>Order ID:</strong> #PAA-{selectedOrder.id.toString().padStart(4, '0')}</p>
-              <p style={{ margin: "0 0 0.5rem 0", fontSize: 13, color: "#1a1a2e" }}><strong>Date:</strong> {new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
-              <p style={{ margin: "0 0 0.5rem 0", fontSize: 13, color: "#1a1a2e" }}><strong>Total Amount:</strong> ₹{selectedOrder.amount}</p>
-              <p style={{ margin: "0", fontSize: 13, color: "#1a1a2e" }}><strong>Delivery Address:</strong> {selectedOrder.address || userData?.address}</p>
+            <div style={{ marginBottom: "2rem", padding: "1.5rem", background: "#fafafa", border: "1px solid #eaeaea" }}>
+              <p style={{ margin: "0 0 0.6rem 0", fontSize: 13, color: "#111" }}><strong>Order ID:</strong> <span style={{ fontFamily: "var(--font-mono)" }}>#PAA-{selectedOrder.id.toString().padStart(4, '0')}</span></p>
+              <p style={{ margin: "0 0 0.6rem 0", fontSize: 13, color: "#111" }}><strong>Date:</strong> {new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
+              <p style={{ margin: "0 0 0.6rem 0", fontSize: 13, color: "#111" }}><strong>Total Amount:</strong> ₹{selectedOrder.amount}</p>
+              <p style={{ margin: "0", fontSize: 13, color: "#111" }}><strong>Delivery Address:</strong> {selectedOrder.address || userData?.address}</p>
             </div>
             
-            <h3 style={{ fontSize: 15, fontWeight: 600, color: "#1a1a2e", marginBottom: "1rem" }}>Purchased Items</h3>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 400, color: "#111", marginBottom: "1.2rem" }}>Purchased Items</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               {selectedOrder.items?.map((item: any) => (
-                <div key={item.id} style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "1.5rem", background: "#fff" }}>
+                <div key={item.id} style={{ border: "1px solid #eaeaea", padding: "1.5rem", background: "#fff" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
                     <div>
-                      <h4 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.2rem" }}>{item.book?.title}</h4>
-                      <div style={{ fontSize: 13, color: "#6b6b80" }}>₹{item.book?.mrp} × {item.quantity} = ₹{(item.book?.mrp || 0) * item.quantity}</div>
+                      <h4 style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 500, color: "#111", marginBottom: "0.2rem" }}>{item.book?.title}</h4>
+                      <div style={{ fontSize: 13, color: "#555" }}>₹{item.book?.mrp} × {item.quantity} = ₹{(item.book?.mrp || 0) * item.quantity}</div>
                     </div>
                     <span style={{ 
-                      background: item.status.includes('Pending') ? '#fffbeb' : item.status === 'Completed' ? '#f0fdf4' : '#eff6ff', 
-                      color: item.status.includes('Pending') ? '#d97706' : item.status === 'Completed' ? '#16a34a' : '#2563eb', 
-                      padding: "0.3rem 0.8rem", borderRadius: 6, fontSize: 12, fontWeight: 700 
+                      color: item.status.includes('Pending') ? '#b44d28' : item.status === 'Completed' ? '#2e7d32' : '#1565c0', 
+                      fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em"
                     }}>
                       {item.status}
                     </span>
                   </div>
-
+ 
                   <OrderFulfillmentTimeline currentStatus={item.status} trackingNumber={item.trackingNumber} />
-
-                  <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px dashed rgba(0,0,0,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+ 
+                  <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px dashed #ddd", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "#6b6b80", marginBottom: "0.6rem" }}>Contact Author</div>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.6rem" }}>Contact Author</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                         {item.book?.author?.whatsapp && (
-                          <a href={`https://wa.me/${item.book.author.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#16a34a", textDecoration: "none", fontSize: 12, fontWeight: 600, background: "#f0fdf4", padding: "0.5rem 0.8rem", borderRadius: 6 }}>
-                            <MessageSquare size={14} /> WhatsApp: {item.book.author.whatsapp}
+                          <a href={`https://wa.me/${item.book.author.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#2e7d32", textDecoration: "none", fontSize: 12, fontWeight: 500, background: "#f1f8e9", padding: "0.4rem 0.8rem", border: "1px solid #c5e1a5" }}>
+                            <MessageSquare size={13} /> WhatsApp: {item.book.author.whatsapp}
                           </a>
                         )}
                         {item.book?.author?.email && (
-                          <a href={`mailto:${item.book.author.email}`} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#2563eb", textDecoration: "none", fontSize: 12, fontWeight: 600, background: "#eff6ff", padding: "0.5rem 0.8rem", borderRadius: 6 }}>
-                            <Mail size={14} /> {item.book.author.email}
+                          <a href={`mailto:${item.book.author.email}`} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#1565c0", textDecoration: "none", fontSize: 12, fontWeight: 500, background: "#e3f2fd", padding: "0.4rem 0.8rem", border: "1px solid #90caf9" }}>
+                            <Mail size={13} /> {item.book.author.email}
                           </a>
                         )}
                         {item.book?.author?.phone && !item.book?.author?.whatsapp && (
-                          <a href={`tel:${item.book.author.phone}`} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#475569", textDecoration: "none", fontSize: 12, fontWeight: 600, background: "#f8fafc", padding: "0.5rem 0.8rem", borderRadius: 6 }}>
-                            <Phone size={14} /> Call: {item.book.author.phone}
+                          <a href={`tel:${item.book.author.phone}`} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#333", textDecoration: "none", fontSize: 12, fontWeight: 500, background: "#f5f5f5", padding: "0.4rem 0.8rem", border: "1px solid #e0e0e0" }}>
+                            <Phone size={13} /> Call: {item.book.author.phone}
                           </a>
                         )}
                       </div>
                     </div>
-
+ 
                     {item.status === 'Dispatched' && (
                       <button 
                         onClick={() => handleAcknowledge(item.id)}
                         disabled={acknowledging === item.id}
-                        style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "#16a34a", color: "#fff", border: "none", padding: "0.7rem 1.2rem", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: acknowledging === item.id ? 0.7 : 1 }}
+                        style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "#2e7d32", color: "#fff", border: "none", padding: "0.6rem 1.2rem", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", opacity: acknowledging === item.id ? 0.7 : 1 }}
                       >
-                        <Check size={16} strokeWidth={3} /> I Received This
+                        <Check size={14} strokeWidth={2.5} /> I Received This
                       </button>
                     )}
                   </div>

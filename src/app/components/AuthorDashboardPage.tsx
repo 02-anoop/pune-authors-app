@@ -354,10 +354,10 @@ export function AuthorDashboardPage() {
 
         <div className="flex-1 bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out p-6 md:p-8">
           <Routes>
-            <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={fetchDashboardData} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
-            <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={fetchDashboardData} />} />
+            <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
+            <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} />} />
             <Route path="/forms/*" element={<FormsWrapper />} />
-            <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={fetchDashboardData} dashboardData={dashboardData} />} />
+            <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
             <Route path="/pos/:eventId" element={<LivePosDashboard />} />
           </Routes>
@@ -389,6 +389,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     format: ''
   });
   const [cover, setCover] = useState<File | null>(null);
+  const [editingBook, setEditingBook] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editBio, setEditBio] = useState('');
   const [editPhone, setEditPhone] = useState('');
@@ -435,9 +436,13 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const grossSales = completedOrders.reduce((acc: number, curr: any) => acc + curr.amount, 0);
   const netEarnings = grossSales * 0.7;
 
+  const successfulOrders = completedOrders.length;
+  const toApproveOrders = authorOrders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
+  const underDeliveryOrders = authorOrders.filter((o: any) => o.status === 'Dispatched').length;
+
   const actionItems: any[] = [];
   
-  const unapprovedOrders = authorOrders.filter((o: any) => o.status === 'Processing' || o.status === 'Pending Verification').length;
+  const unapprovedOrders = toApproveOrders;
   if (unapprovedOrders > 0 && !dismissedActions.includes('act-orders')) {
     actionItems.push({ id: 'act-orders', text: `Approve and fulfill ${unapprovedOrders} new web order${unapprovedOrders > 1 ? 's' : ''}`, icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-[#eef2f6]', link: '/dashboard/orders' });
   }
@@ -564,6 +569,48 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     }
   };
 
+  const handleEditBookOpen = (bookId: number) => {
+    const book = authorBooks.find((b: any) => b.id === bookId);
+    if (!book) return;
+    setEditingBook({
+      id: book.id,
+      title: book.title,
+      genre: book.genre,
+      subGenre: book.subGenre || '',
+      mrp: book.mrp,
+      stock: book.stock,
+      synopsis: book.synopsis || '',
+      pages: book.pages || ''
+    });
+  };
+
+  const handleEditBookSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBook) return;
+    setButtonStates(prev => ({...prev, updateBook: true}));
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/books/${editingBook.id}`, {
+        title: editingBook.title,
+        genre: editingBook.genre,
+        subGenre: editingBook.subGenre,
+        mrp: parseFloat(editingBook.mrp),
+        stock: parseInt(editingBook.stock),
+        synopsis: editingBook.synopsis,
+        pages: editingBook.pages
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Book updated and submitted for review!');
+      setEditingBook(null);
+      onRefresh();
+    } catch (err) {
+      toast.error('Failed to update book');
+    } finally {
+      setButtonStates(prev => ({...prev, updateBook: false}));
+    }
+  };
+
 
 
 
@@ -587,7 +634,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {[
           { label: 'Total Titles', value: authorBooks.length, colorClass: 'blue' },
           { label: 'Total Stock', value: authorBooks.reduce((a: number, b: any) => a + b.stock, 0), colorClass: 'green' },
@@ -600,6 +647,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           </div>
         ))}
       </div>
+
+
 
       {/* ── Pending Actions ── */}
       <div className="dash-panel flex flex-col mb-6">
@@ -855,7 +904,14 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   <td><span className={`font-bold ${row.stock < 10 ? 'text-red-500' : 'text-paa-navy'}`}>{row.stock}</span>{row.stock < 10 && <div className="text-[9px] text-red-400 font-bold">LOW</div>}</td>
                   <td className="font-semibold text-emerald-700">{row.sold}</td>
                   <td className="text-paa-gray-text text-xs whitespace-nowrap">{row.date}</td>
-                  <td><button onClick={() => { setEditCoverBookId(row.id); setNewCoverFile(null); }} className="dash-btn dash-btn-ghost text-[10px] px-2 py-1">Change</button></td>
+                  <td>
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => { setEditCoverBookId(row.id); setNewCoverFile(null); }} className="dash-btn dash-btn-ghost text-[10px] px-2 py-1">Change Cover</button>
+                      {row.status === 'Rejected' && (
+                        <button onClick={() => handleEditBookOpen(row.id)} className="dash-btn dash-btn-primary bg-paa-gold hover:bg-yellow-500 text-paa-navy text-[10px] px-2 py-1">Edit & Reapply</button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -894,6 +950,67 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           </div>
         </div>
       </div>
+
+      {/* ── Edit Book Modal (Reapply) ── */}
+      {editingBook && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
+          <div className="bg-white border border-paa-navy/5 shadow-xl w-full max-w-2xl rounded-2xl overflow-hidden">
+            <div className="bg-paa-navy p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center text-white">
+              Edit Book Details & Reapply
+              <button type="button" onClick={() => setEditingBook(null)} className="hover:text-paa-gold">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              <form onSubmit={handleEditBookSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="dash-label">Title</label>
+                    <input required type="text" className="dash-input" value={editingBook.title} onChange={e => setEditingBook({...editingBook, title: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Genre</label>
+                    <select required className="dash-input" value={editingBook.genre} onChange={e => setEditingBook({...editingBook, genre: e.target.value})}>
+                      <option value="">Select Genre</option>
+                      <option value="Fiction">Fiction</option>
+                      <option value="Non-Fiction">Non-Fiction</option>
+                      <option value="Poetry">Poetry</option>
+                      <option value="Children">Children</option>
+                      <option value="Academic">Academic</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="dash-label">Sub-Genre</label>
+                    <input type="text" className="dash-input" value={editingBook.subGenre} onChange={e => setEditingBook({...editingBook, subGenre: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Pages</label>
+                    <input type="number" className="dash-input" value={editingBook.pages} onChange={e => setEditingBook({...editingBook, pages: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">MRP (₹)</label>
+                    <input required type="number" className="dash-input" value={editingBook.mrp} onChange={e => setEditingBook({...editingBook, mrp: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Initial Stock</label>
+                    <input required type="number" className="dash-input" value={editingBook.stock} onChange={e => setEditingBook({...editingBook, stock: e.target.value})} />
+                  </div>
+                </div>
+                <div>
+                  <label className="dash-label">Synopsis</label>
+                  <textarea required className="dash-input" rows={4} value={editingBook.synopsis} onChange={e => setEditingBook({...editingBook, synopsis: e.target.value})}></textarea>
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+                  <button type="button" onClick={() => setEditingBook(null)} className="dash-btn dash-btn-ghost">Cancel</button>
+                  <button type="submit" disabled={buttonStates.updateBook} className="dash-btn dash-btn-primary bg-paa-gold hover:bg-yellow-500 text-paa-navy disabled:opacity-50">
+                    {buttonStates.updateBook ? 'Submitting...' : 'Submit & Reapply'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1288,8 +1405,16 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
 // Author Orders
 function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => void }) {
   const [loadingAction, setLoadingAction] = useState<number | null>(null);
-  const [rejectItemId, setRejectItemId] = useState<number | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
+  const [rejectReasons, setRejectReasons] = useState<string[]>(['Item out of stock']);
+  const [otherRejectReason, setOtherRejectReason] = useState('');
+
+  const ORDER_REJECTION_REASONS = [
+    'Item out of stock',
+    'Inventory is damaged',
+    'Customer address is unserviceable',
+    'Pricing error',
+    'Wrong edition requested'
+  ];
   const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   // â”€â”€â”€ Invoice generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1537,15 +1662,20 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
 
   const handleRejectSubmit = async () => {
     if (!rejectItemId) return;
+    const reasons = [...rejectReasons];
+    if (otherRejectReason.trim()) reasons.push(otherRejectReason.trim());
+    if (reasons.length === 0) { alert('Please select or enter at least one reason.'); return; }
+    
+    const finalReason = reasons.join('; ');
     setLoadingAction(rejectItemId);
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${rejectItemId}/author-reject`, { reason: rejectReason }, {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${rejectItemId}/author-reject`, { reason: finalReason }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Order Rejected');
       setRejectItemId(null);
-      setRejectReason('');
+      setRejectReasons(['Item out of stock']);
+      setOtherRejectReason('');
       onRefresh();
     } catch (e) {
       toast.error('Failed to reject order');
@@ -1578,18 +1708,38 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
       {/* Reject Reason Modal */}
       {rejectItemId !== null && (
         <div className="fixed inset-0 bg-paa-navy/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 max-w-md w-full rounded-2xl shadow-xl">
+          <div className="bg-white p-6 max-w-md w-full shadow-xl">
             <h2 className="text-xl font-serif text-paa-navy mb-3">Reason for Rejection</h2>
             <p className="text-sm text-gray-500 mb-4">Please provide a reason to inform the customer.</p>
-            <textarea
-              className="dash-input w-full resize-none h-32 mb-4"
-              placeholder="e.g. Out of stock, wrong edition requested..."
-              value={rejectReason}
-              onChange={e => setRejectReason(e.target.value)}
-            />
+            <div className="space-y-3 mb-4 max-h-60 overflow-y-auto bg-gray-50 p-3 border border-paa-navy/5">
+                {ORDER_REJECTION_REASONS.map((reason) => (
+                  <label key={reason} className="flex items-start gap-3 cursor-pointer text-sm font-medium text-paa-navy hover:text-paa-gold">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 accent-paa-navy"
+                      checked={rejectReasons.includes(reason)}
+                      onChange={(e) => {
+                        if (e.target.checked) setRejectReasons([...rejectReasons, reason]);
+                        else setRejectReasons(rejectReasons.filter(r => r !== reason));
+                      }}
+                    />
+                    {reason}
+                  </label>
+                ))}
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Other (specify):</label>
+                <input
+                  type="text"
+                  value={otherRejectReason}
+                  onChange={(e) => setOtherRejectReason(e.target.value)}
+                  placeholder="Enter additional reason..."
+                  className="w-full border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy"
+                />
+              </div>
             <div className="flex justify-end gap-3">
-              <button onClick={() => { setRejectItemId(null); setRejectReason(''); }} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy transition-colors font-bold uppercase tracking-widest">Cancel</button>
-              <button onClick={handleRejectSubmit} disabled={!rejectReason.trim() || loadingAction !== null} className="dash-btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50">Reject Order</button>
+              <button onClick={() => { setRejectItemId(null); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy transition-colors font-bold uppercase tracking-widest">Cancel</button>
+              <button onClick={handleRejectSubmit} disabled={loadingAction !== null} className="dash-btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50">Reject Order</button>
             </div>
           </div>
         </div>
@@ -1599,6 +1749,37 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
         <div>
           <h2 className="text-2xl font-serif text-paa-navy tracking-tight">My Web Orders</h2>
           <p className="text-sm text-paa-gray-text mt-1">Manage pending orders and track dispatched shipments.</p>
+        </div>
+      </div>
+
+      {/* ── Order Tracking KPIs ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+            <Check size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Successful Orders</p>
+            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Completed').length}</h3>
+          </div>
+        </div>
+        <div className="dash-kpi-card amber" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
+            <AlertCircle size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Approved</p>
+            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length}</h3>
+          </div>
+        </div>
+        <div className="dash-kpi-card blue" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <Package size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Under Delivery</p>
+            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Dispatched').length}</h3>
+          </div>
         </div>
       </div>
 
@@ -1666,21 +1847,21 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                     <td className="px-4 py-3 text-center">
                       {/* Author must Approve / Reject any Pending order regardless of payment verification */}
                       {ord.status === 'Pending Verification' || ord.status === 'Pending' ? (
-                        <div className="flex flex-col gap-2 items-center">
+                        <div className="flex gap-2 items-center justify-center">
                           <button
                             onClick={() => handleApprove(ord.id)}
                             disabled={loadingAction === ord.id}
-                            className="dash-btn-primary py-1 px-3 w-20 disabled:opacity-50"
+                            className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 rounded w-20"
                           >
-                            {loadingAction === ord.id ? '...' : 'APPROVE'}
+                            {loadingAction === ord.id ? '...' : 'Approve'}
                           </button>
                           <button
-                            onClick={() => { setRejectItemId(ord.id); setRejectReason(''); }}
-                            disabled={loadingAction === ord.id}
-                            className="text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors w-20"
-                          >
-                            REJECT
-                          </button>
+                             onClick={() => { setRejectItemId(ord.id); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }}
+                             disabled={loadingAction === ord.id}
+                             className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 rounded w-20"
+                           >
+                             Reject
+                           </button>
                         </div>
                       ) : null}
                       {/* Invoice button for all approved/dispatched orders */}
@@ -1970,8 +2151,9 @@ function EventsDashboard() {
       setOptInEventId(null);
       setPaymentScreenshotBlob(null);
       fetchAuthorEvents();
-    } catch (err) {
-      toast.error('Opt-in failed');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Opt-in failed';
+      toast.error(msg);
     } finally {
       setButtonStates(prev => ({...prev, ['optIn_' + eventId]: false}));
     }
@@ -2137,17 +2319,36 @@ function EventsDashboard() {
                                   <p className="text-xs font-bold uppercase text-paa-navy mb-2">Select Books to List:</p>
                                   {books.map(b => {
                                      const isSelected = selectedBooksToLink.find(sb => sb.bookId === String(b.id));
+                                     const availableStock = b.stock ?? 0;
+                                     const enteredQty = isSelected ? parseInt(isSelected.stock) || 0 : 0;
+                                     const isOverStock = enteredQty > availableStock;
                                      return (
-                                        <div key={b.id} className="flex items-center gap-3 bg-gray-50 p-2 border border-gray-200 rounded-lg">
+                                        <div key={b.id} className={`flex items-center gap-3 p-2 border rounded-lg ${isOverStock ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'}`}>
                                            <input type="checkbox" checked={!!isSelected} onChange={(e) => {
-                                              if (e.target.checked) setSelectedBooksToLink([...selectedBooksToLink, {bookId: String(b.id), stock: '5'}])
+                                              if (e.target.checked) setSelectedBooksToLink([...selectedBooksToLink, {bookId: String(b.id), stock: String(Math.min(5, availableStock))}])
                                               else setSelectedBooksToLink(selectedBooksToLink.filter(sb => sb.bookId !== String(b.id)))
-                                           }} />
-                                           <span className="text-sm flex-1">{b.title}</span>
+                                           }} disabled={availableStock === 0} />
+                                           <div className="flex-1 min-w-0">
+                                              <span className="text-sm block truncate">{b.title}</span>
+                                              <span className={`text-[10px] font-bold uppercase tracking-wider ${availableStock === 0 ? 'text-red-500' : availableStock < 10 ? 'text-orange-500' : 'text-green-600'}`}>
+                                                 {availableStock === 0 ? 'Out of stock' : `${availableStock} available`}
+                                              </span>
+                                           </div>
                                            {isSelected && (
-                                              <input type="number" min="1" className="w-20 p-1 text-sm border outline-none rounded" value={isSelected.stock} onChange={(e) => {
-                                                 setSelectedBooksToLink(selectedBooksToLink.map(sb => sb.bookId === String(b.id) ? {...sb, stock: e.target.value} : sb))
-                                              }} placeholder="Qty" />
+                                              <div className="flex flex-col items-end gap-1">
+                                                 <input
+                                                    type="number" min="1" max={availableStock}
+                                                    className={`w-20 p-1 text-sm border outline-none rounded ${isOverStock ? 'border-red-400 bg-red-50 text-red-700' : 'border-gray-300'}`}
+                                                    value={isSelected.stock}
+                                                    onChange={(e) => {
+                                                       setSelectedBooksToLink(selectedBooksToLink.map(sb => sb.bookId === String(b.id) ? {...sb, stock: e.target.value} : sb))
+                                                    }}
+                                                    placeholder="Qty"
+                                                 />
+                                                 {isOverStock && (
+                                                    <span className="text-[10px] text-red-600 font-bold">Exceeds stock!</span>
+                                                 )}
+                                              </div>
                                            )}
                                         </div>
                                      );
@@ -2186,7 +2387,13 @@ function EventsDashboard() {
                                    })()}
                                    <div className="flex gap-2 pt-2 mt-4">
                                       <button onClick={() => { setOptInEventId(null); setPaymentScreenshotBlob(null); }} className="dash-btn dash-btn-ghost flex-1 justify-center border-gray-300 text-gray-600">Cancel</button>
-                                      <button onClick={() => submitOptIn(evt.id, evt)} disabled={buttonStates['optIn_' + evt.id] || (selectedBooksToLink.length === 0)} className="dash-btn dash-btn-primary flex-1 justify-center disabled:opacity-50">{buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}</button>
+                                      <button
+                                         onClick={() => submitOptIn(evt.id, evt)}
+                                         disabled={buttonStates['optIn_' + evt.id] || selectedBooksToLink.length === 0 || selectedBooksToLink.some(sb => { const book = books.find(b => String(b.id) === sb.bookId); return parseInt(sb.stock) > (book?.stock ?? 0); })}
+                                         className="dash-btn dash-btn-primary flex-1 justify-center disabled:opacity-50"
+                                      >
+                                         {buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}
+                                      </button>
                                    </div>
                                </div>
                              ) : (

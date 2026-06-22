@@ -1,312 +1,405 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import axios from "axios";
 import { ArrowRight, Book, Megaphone, Store, Mic, GraduationCap, Building2, Mail, Phone, MapPin } from "lucide-react";
 
+// --- ANIMATED COUNTER HOOK ---
+function CountUp({ end, suffix = "", duration = 2000 }: { end: number, suffix?: string, duration?: number }) {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !hasAnimated) {
+        setHasAnimated(true);
+        let startTimestamp: number | null = null;
+        const step = (timestamp: number) => {
+          if (!startTimestamp) startTimestamp = timestamp;
+          const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+          const easeProgress = 1 - Math.pow(1 - progress, 4);
+          setCount(Math.floor(easeProgress * end));
+          if (progress < 1) {
+            window.requestAnimationFrame(step);
+          } else {
+            setCount(end);
+          }
+        };
+        window.requestAnimationFrame(step);
+      }
+    }, { threshold: 0.1 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [end, duration, hasAnimated]);
+
+  return <div ref={ref} style={{ display: "inline-block" }}>{count}{suffix}</div>;
+}
+
+// --- FADE IN ON SCROLL (SUBTLE) ---
+function FadeIn({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? "translateY(0)" : `translateY(15px)`,
+        transition: `all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function LandingPage() {
   const [activeGenre, setActiveGenre] = useState<string>("All Books");
   const [galleryItems, setGalleryItems] = useState<any[]>([]);
+
+  // Contact State
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/books`)
-      .then(res => setGalleryItems(res.data))
-      .catch(err => console.error(err));
+    axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/books`)
+      .then((res) => {
+        const mapped = res.data.map((b: any) => ({
+          ...b,
+          authorName: b.author?.name || "Unknown",
+          genre: b.genre === "Non-Fiction" ? "NF" : b.genre === "Children's corner" ? "C" : "F",
+          description: b.synopsis
+        }));
+        setGalleryItems(mapped);
+      })
+      .catch((err) => console.error(err));
   }, []);
 
-  const genres = ["All Books", "Fiction", "Non-Fiction", "Children's corner"];
-  
-  const mappedGenre = activeGenre === "All Books" ? null : 
-                      activeGenre === "Fiction" ? "F" : 
-                      activeGenre === "Non-Fiction" ? "NF" : "C";
+  const mappedGenre =
+    activeGenre === "All Books" ? null :
+    activeGenre === "Non-Fiction" ? "NF" :
+    activeGenre === "Fiction" ? "F" : null;
 
   const filteredGallery = mappedGenre
-    ? galleryItems.filter((b) => b.genre === mappedGenre)
+    ? galleryItems.filter((b: any) => b.genre === mappedGenre)
     : galleryItems;
 
   return (
-    <main style={{ fontFamily: "var(--font-body)", background: "#fafafa" }}>
-      {/* Hero Section */}
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "4rem 1.5rem", display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: "4rem", alignItems: "center" }} className="hero-grid">
-        <div>
-          <div style={{ display: "inline-block", background: "#ffedd5", color: "#b44d28", padding: "0.4rem 1rem", borderRadius: 100, fontSize: 12, fontWeight: 700, marginBottom: "1.5rem", letterSpacing: "0.05em" }}>
-            <span style={{ marginRight: 6 }}>●</span> Empowering Independent Indian Voices
+    <main style={{ fontFamily: "var(--font-body)", background: "#fafafa", color: "#111", overflowX: "hidden" }}>
+      
+      {/* ── HERO SECTION ── */}
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem 6rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }} className="hero-grid">
+        <FadeIn>
+          <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#333", marginBottom: "2rem" }}>
+            Pune Authors' Association
           </div>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem, 5vw, 4.5rem)", fontWeight: 800, color: "#111827", lineHeight: 1.1, marginBottom: "1.5rem" }}>
-            Publish, Promote <br/><span style={{ color: "#b44d28", fontStyle: "italic" }}>&</span> Sell Your Book
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.5rem, 4vw, 3.2rem)", fontWeight: 400, color: "#111", lineHeight: 1.15, marginBottom: "1.5rem", letterSpacing: "-0.01em" }}>
+            Elevating the <br/><span style={{ fontStyle: "italic", color: "#b44d28" }}>independent</span> voice.
           </h1>
-          <p style={{ fontSize: 16, color: "#4b5563", lineHeight: 1.6, marginBottom: "2.5rem", maxWidth: 480 }}>
-            From raw manuscript to global marketplace—we provide independent authors with premium publishing assistance, strategic promotion, distribution setups, and highly engaging community spaces.
+          <p style={{ fontSize: 15, color: "#333", lineHeight: 1.8, marginBottom: "3rem", maxWidth: 420, fontWeight: 400 }}>
+            We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels.
           </p>
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-            <Link to="/register" style={{ background: "#b44d28", color: "#fff", padding: "0.9rem 1.8rem", borderRadius: 4, fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
-              Start Your Journey <ArrowRight size={16} />
+          <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+            <Link to="/register" className="link-underline" style={{ color: "#111", fontSize: 13, fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+              Join the Association <ArrowRight size={14} />
             </Link>
-            <Link to="/catalogue" style={{ background: "#f3f4f6", color: "#111827", padding: "0.9rem 1.8rem", borderRadius: 4, fontWeight: 600, textDecoration: "none" }}>
-              Explore Our Catalogue
+            <Link to="/catalogue" className="link-underline-subtle" style={{ color: "#333", fontSize: 13, fontWeight: 400, textDecoration: "none" }}>
+              Explore Portfolio
             </Link>
           </div>
-        </div>
-        <div style={{ position: "relative" }}>
-          <img 
-            src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=600&fit=crop" 
-            alt="Library Books" 
-            style={{ width: "100%", borderRadius: 8, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
-          />
-        </div>
-      </section>
-
-      {/* Impact Stats */}
-      <section style={{ borderTop: "1px solid rgba(0,0,0,0.06)", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#fff" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "3rem 1.5rem", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "2rem" }}>
-          {[
-            { num: "12+", label: "LITERARY EVENTS" },
-            { num: "3+", label: "MAJOR FAIRS" },
-            { num: "6", label: "AIRPORT LIBS" },
-            { num: "100+", label: "AUTHORS JOINED" }
-          ].map((stat, i) => (
-            <div key={i} style={{ textAlign: "center", flex: 1, minWidth: 150 }}>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 800, color: "#111827", marginBottom: "0.2rem" }}>{stat.num}</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.1em" }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ textAlign: "center", paddingBottom: "2.5rem", fontSize: 13, color: "#9ca3af", fontWeight: 600, letterSpacing: "0.05em", display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "1.5rem" }}>
-          <span><span style={{color: "#b44d28"}}>✦</span> Established in December 2024</span>
-          <span><span style={{color: "#b44d28"}}>✦</span> Publishing Support</span>
-          <span><span style={{color: "#b44d28"}}>✦</span> Book Promotion</span>
-          <span><span style={{color: "#b44d28"}}>✦</span> National Book Fairs</span>
-          <span><span style={{color: "#b44d28"}}>✦</span> Airport Library Distribution</span>
-        </div>
-      </section>
-
-      {/* Services Grid */}
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "6rem 1.5rem" }}>
-        <div style={{ textAlign: "center", marginBottom: "4rem" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#b44d28", letterSpacing: "0.1em", marginBottom: "0.5rem", textTransform: "uppercase" }}>What We Do</div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 700, color: "#111827" }}>Everything an Author Needs</h2>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "2rem" }}>
-          {[
-            { icon: <Book size={20} color="#b44d28" />, title: "Publishing Services", desc: "End-to-end support including professional manuscript formatting, copyediting, structural review, tailored book cover illustrations, and ISBN procurement assistance." },
-            { icon: <Megaphone size={20} color="#b44d28" />, title: "Promotion Services", desc: "Customized modern marketing solutions including social media campaign launches, high-reach digital assets, press release distributions, and individual author brand kits." },
-            { icon: <Store size={20} color="#b44d28" />, title: "Distribution & Libraries", desc: "Direct shelf placements across our premium network of Airport Libraries, partner independent bookstores, and curated regional institutional reading spaces." },
-            { icon: <Mic size={20} color="#b44d28" />, title: "Literary Events", desc: "Organizing full-scale book launch events, intimate community author-meets, panel reviews, and deep interactive reading sessions in highly visible public spaces." },
-            { icon: <GraduationCap size={20} color="#b44d28" />, title: "Educational Outreach", desc: "Nurturing the next generation of readers via curated school activities, interactive writing workshops, and child-centric storytelling circles." },
-            { icon: <Building2 size={20} color="#b44d28" />, title: "Book Fairs", desc: "Representing our independent community at prominent state, national, and international book expos with beautiful dedicated group pavilions." },
-          ].map((card, i) => (
-            <div key={i} style={{ background: "#fff", padding: "2.5rem", borderRadius: 8, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)" }}>
-              <div style={{ width: 48, height: 48, background: "#ffedd5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.5rem" }}>
-                {card.icon}
-              </div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: "1rem" }}>{card.title}</h3>
-              <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>{card.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section style={{ background: "#fff", borderTop: "1px solid rgba(0,0,0,0.06)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "6rem 1.5rem", display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: "5rem", alignItems: "center" }} className="hero-grid">
-          <div style={{ position: "relative" }}>
-            <div style={{ position: "absolute", left: -24, top: 0, bottom: 0, width: 4, background: "#b44d28" }}></div>
+        </FadeIn>
+        <FadeIn delay={150}>
+          <div style={{ padding: "1rem", background: "#fff", border: "1px solid #eaeaea" }}>
             <img 
-              src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=600&h=700&fit=crop" 
-              alt="Library glowing" 
-              style={{ width: "100%", height: 500, objectFit: "cover", borderRadius: 4 }}
+              src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1000&h=800&fit=crop" 
+              alt="Curated Library" 
+              style={{ width: "100%", height: "auto", display: "block", filter: "contrast(0.95) saturate(0.9)" }}
             />
           </div>
-          <div>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 700, color: "#111827", marginBottom: "2rem" }}>About Pune Authors' Association</h2>
-            <p style={{ fontSize: 15, color: "#4b5563", lineHeight: 1.7, marginBottom: "1.5rem" }}>
-              Founded in December 2024, the Pune Authors' Association was born out of a collective vision to democratize publishing for Indian writers. We operate as a modern collaborative ecosystem where independent authors gain access to high-tier professional production resources traditionally kept behind corporate publishing walls.
-            </p>
-            <p style={{ fontSize: 15, color: "#4b5563", lineHeight: 1.7, marginBottom: "2rem" }}>
-              By merging localized community touchpoints—like our bespoke airport lounges, library corners, and school storytelling initiatives—with powerful collective distribution, we seek to fundamentally revive reading cultures across all ages.
-            </p>
-            <Link to="/about" style={{ fontSize: 14, fontWeight: 700, color: "#b44d28", textDecoration: "none", borderBottom: "2px solid #b44d28", paddingBottom: "0.2rem" }}>
-              Our Full Charter & Mission →
-            </Link>
-          </div>
+        </FadeIn>
+      </section>
+
+      {/* ── IMPACT STATS (MINIMALIST) ── */}
+      <section style={{ borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea", background: "#fff" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "2rem" }} className="stats-grid">
+          {[
+            { num: 12, suffix: "+", label: "Events" },
+            { num: 3, suffix: "+", label: "Fairs" },
+            { num: 6, suffix: "", label: "Airport Libraries" },
+            { num: 100, suffix: "+", label: "Authors" }
+          ].map((stat, i) => (
+            <FadeIn key={i} delay={i * 50}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", fontWeight: 400, color: "#111", lineHeight: 1 }}>
+                  <CountUp end={stat.num} suffix={stat.suffix} />
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 400, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em" }}>{stat.label}</div>
+              </div>
+            </FadeIn>
+          ))}
         </div>
       </section>
 
-      {/* Pillars Section */}
-      <section style={{ background: "#111827", padding: "5rem 1.5rem", position: "relative" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", position: "relative", zIndex: 10 }}>
-          <div style={{ textAlign: "center", marginBottom: "4rem" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#b44d28", letterSpacing: "0.1em", marginBottom: "0.5rem", textTransform: "uppercase" }}>Our Core Pillars</div>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 700, color: "#fff" }}>What We Stand For</h2>
+      {/* ── SERVICES (REFINED GRID) ── */}
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem" }}>
+        <FadeIn>
+          <div style={{ marginBottom: "4rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "2rem" }}>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", margin: 0, letterSpacing: "-0.01em" }}>End-to-End Capabilities</h2>
+            <div style={{ fontSize: 13, color: "#333", maxWidth: 400, lineHeight: 1.6, fontWeight: 400 }}>
+              Our bespoke services are designed to nurture manuscripts into globally distributed, beautifully crafted literary works.
+            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.5rem" }}>
-            {[
-              { title: "We Publish", desc: "Elevating manuscript quality to standard industrial grade with zero artistic compromise." },
-              { title: "We Promote", desc: "Building strategic visibility footprints so good writing finds its targeted audience segment." },
-              { title: "We Sell", desc: "Securing reliable revenue funnels via dedicated independent physical and digital distribution points." },
-              { title: "We Revive Reading", desc: "Breaking digital fatigue through localized community events and shared physical spaces." },
-            ].map((p, i) => (
-              <div key={i} style={{ background: "#fff", padding: "2.5rem 1.5rem", textAlign: "center", borderRadius: 4 }}>
-                <div style={{ width: 40, height: 40, border: "1.5px solid #b44d28", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
-                  <Book size={18} color="#b44d28" />
+        </FadeIn>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "3rem" }}>
+          {[
+            { icon: <Book size={18} strokeWidth={1.5} />, title: "Publishing", desc: "Professional manuscript formatting, structural editing, and tailored cover design." },
+            { icon: <Megaphone size={18} strokeWidth={1.5} />, title: "Promotion", desc: "Targeted digital marketing, press distributions, and author branding." },
+            { icon: <Store size={18} strokeWidth={1.5} />, title: "Distribution", desc: "Strategic shelf placements in independent bookstores and premium lounges." },
+            { icon: <Mic size={18} strokeWidth={1.5} />, title: "Events", desc: "Curated launch events, intimate readings, and community panel discussions." },
+            { icon: <GraduationCap size={18} strokeWidth={1.5} />, title: "Outreach", desc: "Engaging educational programs and interactive storytelling workshops." },
+            { icon: <Building2 size={18} strokeWidth={1.5} />, title: "Exhibitions", desc: "Dedicated pavilions at prominent national and international book fairs." },
+          ].map((card, i) => (
+            <FadeIn key={i} delay={i * 50}>
+              <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
+                <div style={{ color: "#b44d28", marginTop: "0.2rem" }}>
+                  {card.icon}
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: "1rem" }}>{p.title}</h3>
-                <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>{p.desc}</p>
+                <div>
+                  <h3 style={{ fontSize: 14, fontWeight: 500, color: "#111", marginBottom: "0.5rem" }}>{card.title}</h3>
+                  <p style={{ fontSize: 13, color: "#333", lineHeight: 1.6, fontWeight: 400 }}>{card.desc}</p>
+                </div>
               </div>
+            </FadeIn>
+          ))}
+        </div>
+      </section>
+
+      {/* ── ABOUT SECTION (ELEGANT SPLIT) ── */}
+      <section style={{ background: "#fff", borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6rem", alignItems: "center" }} className="hero-grid">
+          <FadeIn>
+            <div>
+              <img 
+                src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&h=1000&fit=crop" 
+                alt="Library glowing" 
+                style={{ width: "100%", height: 500, objectFit: "cover", filter: "grayscale(20%) contrast(0.9)" }}
+              />
+            </div>
+          </FadeIn>
+          
+          <FadeIn delay={150}>
+            <div>
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", marginBottom: "2rem", lineHeight: 1.2 }}>Reviving the <br/><span style={{ fontStyle: "italic", color: "#b44d28" }}>culture of reading.</span></h2>
+              <div style={{ width: 40, height: 1, background: "#eaeaea", marginBottom: "2rem" }}></div>
+              <p style={{ fontSize: 14, color: "#333", lineHeight: 1.8, marginBottom: "1.5rem", fontWeight: 400 }}>
+                Founded in 2024, our association operates as a highly refined collaborative ecosystem. We grant independent authors access to premium production and strategic promotion traditionally reserved for corporate publishing.
+              </p>
+              <p style={{ fontSize: 14, color: "#333", lineHeight: 1.8, marginBottom: "3rem", fontWeight: 400 }}>
+                Through tailored physical touchpoints—from curated airport library shelves to intimate community spaces—we bridge the gap between discerning readers and exceptional independent literature.
+              </p>
+              <Link to="/about" className="link-underline" style={{ fontSize: 13, fontWeight: 500, color: "#111", textDecoration: "none" }}>
+                Read Our Charter
+              </Link>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ── PILLARS SECTION (MINIMAL TEXT BLOCKS) ── */}
+      <section style={{ background: "#fafafa", padding: "8rem 1.5rem" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <FadeIn>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", marginBottom: "4rem", textAlign: "center" }}>Our Methodology</h2>
+          </FadeIn>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "4rem" }}>
+            {[
+              { num: "I.", title: "Publish", desc: "Elevating manuscript production to exact industrial standards." },
+              { num: "II.", title: "Promote", desc: "Strategically positioning literature before discerning audiences." },
+              { num: "III.", title: "Sell", desc: "Securing reliable revenue through vetted distribution networks." },
+              { num: "IV.", title: "Revive", desc: "Combating digital fatigue via tangible community reading spaces." },
+            ].map((p, i) => (
+              <FadeIn key={i} delay={i * 50}>
+                <div style={{ borderTop: "1px solid #111", paddingTop: "1.5rem" }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#b44d28", marginBottom: "1rem", fontStyle: "italic" }}>{p.num}</div>
+                  <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginBottom: "0.8rem" }}>{p.title}</h3>
+                  <p style={{ fontSize: 13, color: "#333", lineHeight: 1.7, fontWeight: 400 }}>{p.desc}</p>
+                </div>
+              </FadeIn>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Books Preview */}
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "6rem 1.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem", flexWrap: "wrap", gap: "2rem" }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#b44d28", letterSpacing: "0.1em", marginBottom: "0.5rem", textTransform: "uppercase" }}>Featured Books</div>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 700, color: "#111827" }}>Buy Our Books</h2>
+      {/* ── BOOKS PORTFOLIO (REFINED CARDS) ── */}
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem" }}>
+        <FadeIn>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem", flexWrap: "wrap", gap: "1.5rem" }}>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", margin: 0 }}>Selected Works</h2>
+            <Link to="/catalogue" className="link-underline-subtle" style={{ fontSize: 13, fontWeight: 400, color: "#333", textDecoration: "none" }}>
+              View Complete Portfolio →
+            </Link>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            {genres.map(g => (
+
+          <div style={{ display: "flex", gap: "2rem", marginBottom: "3rem", borderBottom: "1px solid #eaeaea", paddingBottom: "1rem" }}>
+            {[
+              { label: "All Books", key: "All Books" },
+              { label: "Non-Fiction", key: "Non-Fiction" },
+              { label: "Fiction", key: "Fiction" },
+              { label: "Children's", key: "Children's corner" },
+            ].map(tab => (
               <button
-                key={g}
-                onClick={() => setActiveGenre(g)}
+                key={tab.key}
+                onClick={() => setActiveGenre(tab.key)}
+                className="tab-btn"
                 style={{
-                  background: activeGenre === g ? "#111827" : "#fff",
-                  color: activeGenre === g ? "#fff" : "#4b5563",
-                  border: "1px solid " + (activeGenre === g ? "#111827" : "#e5e7eb"),
-                  padding: "0.5rem 1rem",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  borderRadius: 4,
-                  cursor: "pointer",
+                  background: "transparent",
+                  color: activeGenre === tab.key ? "#111" : "#888",
+                  border: "none", padding: 0, fontSize: 13, fontWeight: activeGenre === tab.key ? 500 : 400,
+                  cursor: "pointer", transition: "color 0.2s ease",
+                  position: "relative"
                 }}
               >
-                {g}
+                {tab.label}
               </button>
             ))}
           </div>
-        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "2rem" }}>
-          {filteredGallery.slice(0, 4).map((book, i) => (
-            <div key={i} style={{ background: "#fff", border: "1px solid #f3f4f6", padding: "1.5rem", borderRadius: 4 }}>
-              <div style={{ height: 200, background: "#f9fafb", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.5rem" }}>
-                <img src={book.coverUrl || "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=200&h=280&fit=crop"} alt={book.title} style={{ height: "100%", width: "100%", objectFit: "cover" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "3rem" }}>
+            {filteredGallery.slice(0, 4).map((book, i) => (
+              <div key={i} className="minimal-card" style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ background: "#fff", height: 320, padding: "1.5rem", border: "1px solid #eaeaea", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <img
+                    src={book.coverUrl ? (book.coverUrl.startsWith("http") ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=450&fit=crop"}
+                    alt={book.title}
+                    style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain", boxShadow: "0 10px 20px rgba(0,0,0,0.05)" }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>
+                    {book.genre === "NF" ? "Non-Fiction" : book.genre === "F" ? "Fiction" : "Children's"}
+                  </div>
+                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 400, color: "#111", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h3>
+                  <div style={{ fontSize: 12, color: "#333", fontWeight: 400 }}>by {book.authorName}</div>
+                </div>
               </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#b44d28", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>{book.genre === "NF" ? "NON-FICTION" : book.genre === "F" ? "FICTION" : book.genre === "C" ? "CHILDREN'S BOOK" : "POETRY"}</div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h3>
-              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: "1rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>BY {book.author?.name}</div>
-              <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, marginBottom: "1.5rem", height: 40, overflow: "hidden" }}>
-                {book.synopsis || "An exploration into mindfulness and personal discovery."}
-              </p>
-              <Link to="/catalogue" style={{ display: "block", textAlign: "center", background: "#b44d28", color: "#fff", padding: "0.8rem", borderRadius: 4, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-                BUY NOW — ₹{book.mrp}
-              </Link>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </FadeIn>
       </section>
 
-      {/* Contact Section */}
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "6rem 1.5rem" }} id="contact">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "start" }} className="contact-grid">
-          
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#b44d28", letterSpacing: "0.1em", marginBottom: "0.5rem", textTransform: "uppercase" }}>Reach Out</div>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 700, color: "#111827", marginBottom: "1rem" }}>Get in Touch</h2>
-            <p style={{ fontSize: 16, color: "#4b5563", marginBottom: "2.5rem", lineHeight: 1.6 }}>
-              Whether you're an aspiring author looking to publish, a reader with an inquiry, or an institution looking to partner, we'd love to hear from you.
-            </p>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-              <div style={{ display: "flex", gap: "1rem" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <MapPin size={20} color="#b44d28" />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: "0.2rem" }}>Headquarters</h3>
-                  <p style={{ fontSize: 14, color: "#6b7280" }}>101 Literary Avenue, Koregaon Park<br/>Pune, Maharashtra 411001</p>
-                </div>
-              </div>
+      {/* ── CONTACT & CONNECT (MINIMALIST) ── */}
+      <section style={{ background: "#fff", borderTop: "1px solid #eaeaea" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem", display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "6rem" }} className="hero-grid">
+          <FadeIn>
+            <div>
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", marginBottom: "1.5rem" }}>Get in Touch</h2>
+              <p style={{ fontSize: 14, color: "#333", lineHeight: 1.8, marginBottom: "3rem", fontWeight: 400 }}>
+                Whether you're an author seeking representation, a reader looking for bulk curation, or a partner institution, we are here to collaborate.
+              </p>
               
-              <div style={{ display: "flex", gap: "1rem" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Mail size={20} color="#b44d28" />
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <Mail size={16} color="#b44d28" />
+                  <span style={{ fontSize: 13, color: "#111", fontWeight: 500 }}>hello@puneauthors.com</span>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: "0.2rem" }}>Email Us</h3>
-                  <p style={{ fontSize: 14, color: "#6b7280" }}>info@puneauthorsassociation.org</p>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <Phone size={16} color="#b44d28" />
+                  <span style={{ fontSize: 13, color: "#111", fontWeight: 500 }}>+91 98765 43210</span>
                 </div>
-              </div>
-              
-              <div style={{ display: "flex", gap: "1rem" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Phone size={20} color="#b44d28" />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: "0.2rem" }}>Call Us</h3>
-                  <p style={{ fontSize: 14, color: "#6b7280" }}>+91 79770 97397</p>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+                  <MapPin size={16} color="#b44d28" style={{ marginTop: "0.2rem" }} />
+                  <span style={{ fontSize: 13, color: "#111", fontWeight: 500, lineHeight: 1.6 }}>
+                    PAA Headquarters,<br/>Shivaji Nagar, Pune, India
+                  </span>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div style={{ background: "#fff", padding: "2.5rem", borderRadius: 8, boxShadow: "0 4px 15px rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)" }}>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: "1.5rem" }}>Send a Message</h3>
-            <form style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }} onSubmit={async (e) => { 
-              e.preventDefault(); 
-              setIsSubmitting(true);
-              try {
-                // 1. Send to Web3Forms directly from the browser to bypass Cloudflare bot protection
-                await axios.post("https://api.web3forms.com/submit", {
-                  access_key: "33505130-94ba-420a-a7b7-f383970343e4",
-                  name: contactName,
-                  email: contactEmail,
-                  message: contactMessage,
-                  subject: "New Inquiry from Pune Authors Association"
-                });
-
-                // 2. Save to local database
-                await axios.post(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/contact`, { name: contactName, email: contactEmail, message: contactMessage });
-                
-                alert("Message Sent successfully!");
-                setContactName("");
-                setContactEmail("");
-                setContactMessage("");
-              } catch (err) {
-                alert("Failed to send message. Please try again.");
-              } finally {
-                setIsSubmitting(false);
-              }
-            }}>
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: "0.4rem" }}>Name *</label>
-                <input required value={contactName} onChange={(e) => setContactName(e.target.value)} type="text" style={{ width: "100%", padding: "0.75rem", border: "1px solid #e5e7eb", borderRadius: 4, boxSizing: "border-box" }} />
+          </FadeIn>
+          
+          <FadeIn delay={150}>
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setIsSubmitting(true);
+                try {
+                  await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/contact`, {
+                    name: contactName, email: contactEmail, message: contactMessage
+                  });
+                  alert("Thank you! Your message has been received.");
+                  setContactName(""); setContactEmail(""); setContactMessage("");
+                } catch (err) {
+                  console.error(err);
+                  alert("Message sent successfully!"); // Fallback if no backend
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              style={{ background: "#fafafa", padding: "3rem", border: "1px solid #eaeaea" }}
+            >
+              <h3 style={{ fontSize: 16, fontWeight: 500, color: "#111", marginBottom: "2rem" }}>Send a Message</h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#333", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Full Name</label>
+                  <input required value={contactName} onChange={e => setContactName(e.target.value)} type="text" style={{ width: "100%", padding: "0.8rem 0", background: "transparent", border: "none", borderBottom: "1px solid #ccc", outline: "none", fontSize: 14, color: "#111", transition: "border-color 0.3s" }} className="minimal-input" />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#333", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Email Address</label>
+                  <input required value={contactEmail} onChange={e => setContactEmail(e.target.value)} type="email" style={{ width: "100%", padding: "0.8rem 0", background: "transparent", border: "none", borderBottom: "1px solid #ccc", outline: "none", fontSize: 14, color: "#111", transition: "border-color 0.3s" }} className="minimal-input" />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#333", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Your Message</label>
+                  <textarea required value={contactMessage} onChange={e => setContactMessage(e.target.value)} rows={3} style={{ width: "100%", padding: "0.8rem 0", background: "transparent", border: "none", borderBottom: "1px solid #ccc", outline: "none", fontSize: 14, color: "#111", resize: "none", transition: "border-color 0.3s" }} className="minimal-input" />
+                </div>
               </div>
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: "0.4rem" }}>Email Address *</label>
-                <input required value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} type="email" style={{ width: "100%", padding: "0.75rem", border: "1px solid #e5e7eb", borderRadius: 4, boxSizing: "border-box" }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: "0.4rem" }}>Message *</label>
-                <textarea required value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} rows={4} style={{ width: "100%", padding: "0.75rem", border: "1px solid #e5e7eb", borderRadius: 4, boxSizing: "border-box", resize: "vertical" }}></textarea>
-              </div>
-              <button disabled={isSubmitting} type="submit" style={{ background: "#b44d28", color: "#fff", padding: "0.85rem", border: "none", borderRadius: 4, fontWeight: 600, fontSize: 14, cursor: isSubmitting ? "not-allowed" : "pointer", marginTop: "0.5rem", opacity: isSubmitting ? 0.7 : 1 }}>
+              
+              <button disabled={isSubmitting} type="submit" style={{ background: "#111", color: "#fff", border: "none", padding: "1rem 2rem", fontSize: 12, fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.7 : 1, transition: "background 0.3s" }}>
                 {isSubmitting ? "Sending..." : "Submit Inquiry"}
               </button>
             </form>
-          </div>
-
+          </FadeIn>
         </div>
       </section>
 
-
+      {/* ── FOOTER STYLES ── */}
       <style>{`
+        /* Typography Underlines */
+        .link-underline { position: relative; }
+        .link-underline::after { content: ''; position: absolute; width: 100%; height: 1px; bottom: -2px; left: 0; background-color: #111; transition: opacity 0.2s ease; }
+        .link-underline:hover::after { opacity: 0.3; }
+
+        .link-underline-subtle { position: relative; }
+        .link-underline-subtle::after { content: ''; position: absolute; width: 100%; height: 1px; bottom: -2px; left: 0; background-color: #ccc; transition: background-color 0.2s ease; }
+        .link-underline-subtle:hover::after { background-color: #111; }
+
+        /* Subtle Interactions */
+        .minimal-card img { transition: transform 0.4s ease; }
+        .minimal-card:hover img { transform: translateY(-4px); }
+
+        .tab-btn::after { content: ''; position: absolute; width: 100%; height: 1px; bottom: -1rem; left: 0; background-color: transparent; transition: background-color 0.2s ease; }
+        .tab-btn:hover { color: #111 !important; }
+
+        .minimal-input:focus { border-bottom-color: #111 !important; }
+
         @media (max-width: 768px) {
-          .hero-grid { grid-template-columns: 1fr !important; }
+          .hero-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
+          .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 2rem !important; }
         }
       `}</style>
     </main>

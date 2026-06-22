@@ -1,5 +1,6 @@
 import { Calendar, MapPin, Clock, Users, BookOpen, Filter } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
 
 interface EventRecord {
   id: number;
@@ -13,21 +14,49 @@ interface EventRecord {
   type: string;
   description: string;
   photoUrl: string;
+  images?: { id: number; url: string; caption?: string; dateTaken?: string }[];
 }
 
 const typeColors: Record<string, { color: string; bg: string; border: string }> = {
-  "Literary Event": { color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
-  "Book Fair": { color: "#db2777", bg: "#fdf2f8", border: "#fbcfe8" },
-  "Corporate Activation": { color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  "Airport Library": { color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+  "Literary Event": { color: "#111", bg: "#f3f3f3", border: "#eaeaea" },
+  "Book Fair": { color: "#111", bg: "#f3f3f3", border: "#eaeaea" },
+  "Corporate Activation": { color: "#111", bg: "#f3f3f3", border: "#eaeaea" },
+  "Airport Library": { color: "#111", bg: "#f3f3f3", border: "#eaeaea" },
 };
 
-import axios from "axios";
-import { useEffect } from "react";
+// --- FADE IN ON SCROLL (SUBTLE) ---
+function FadeIn({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? "translateY(0)" : `translateY(15px)`,
+        transition: `all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function EventLogPage() {
   const [filter, setFilter] = useState("All");
-  const [viewMode, setViewMode] = useState<"timeline" | "grid">("timeline");
+  const [viewMode, setViewMode] = useState<"timeline" | "grid">("grid");
   const [events, setEvents] = useState<EventRecord[]>([]);
 
   useEffect(() => {
@@ -43,53 +72,57 @@ export function EventLogPage() {
   const totalAuthors = new Set(events.map((e) => e.authors)).size;
 
   return (
-    <main style={{ fontFamily: "var(--font-body)" }}>
-      {/* Header */}
-      <section style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #2d2d50 100%)", padding: "2rem 1.5rem" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Archive</div>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 800, color: "#fff", lineHeight: 1.15, marginBottom: "0.75rem" }}>
-            Historical Event Log<br />&amp; Memories
-          </h1>
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", maxWidth: 480, lineHeight: 1.7, marginBottom: "2rem" }}>
-            A curated record of every PAA literary event, fair, corporate activation, and airport library initiative since our founding.
-          </p>
+    <main style={{ fontFamily: "var(--font-body)", background: "#fafafa", color: "#111", minHeight: "calc(100vh - 64px)", overflowX: "hidden" }}>
+      
+      {/* ── HERO ── */}
+      <section style={{ borderBottom: "1px solid #eaeaea", background: "#fff" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem" }}>
+          <FadeIn>
+            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#333", marginBottom: "2rem" }}>
+              Archive & Memories
+            </div>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem, 5vw, 4rem)", fontWeight: 400, color: "#111", lineHeight: 1.1, letterSpacing: "-0.01em", maxWidth: 800 }}>
+              Event <span style={{ fontStyle: "italic", color: "#b44d28" }}>Gallery.</span>
+            </h1>
+            <p style={{ fontSize: 15, color: "#333", lineHeight: 1.8, marginTop: "2rem", maxWidth: 600, fontWeight: 400 }}>
+              A curated record of every PAA literary event, fair, corporate activation, and airport library initiative since our founding.
+            </p>
 
-          <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-            {[
-              { label: "Total Events", value: events.length },
-              { label: "Books Sold (All Events)", value: totalBooksSold.toLocaleString() },
-              { label: "Cities Reached", value: 3 },
-              { label: "Unique Participations", value: "150+" },
-            ].map((s) => (
-              <div key={s.label} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "0.75rem 1.25rem" }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 800, color: "#fff" }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: "0.15rem" }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
+            <div style={{ display: "flex", gap: "3rem", flexWrap: "wrap", marginTop: "4rem", borderTop: "1px solid #eaeaea", paddingTop: "2rem" }}>
+              {[
+                { label: "Total Events", value: events.length },
+                { label: "Books Sold", value: totalBooksSold.toLocaleString() },
+                { label: "Unique Participations", value: "150+" },
+              ].map((s, i) => (
+                <div key={s.label}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: "#111" }}>{s.value}</div>
+                  <div style={{ fontSize: 10, color: "#555", marginTop: "0.3rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </FadeIn>
         </div>
       </section>
 
-      {/* Filter bar */}
-      <section style={{ background: "#fff", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "1rem 1.5rem", position: "sticky", top: 64, zIndex: 40 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+      {/* ── FILTER BAR ── */}
+      <section style={{ borderBottom: "1px solid #eaeaea", background: "#fff" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "2rem" }}>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
             {eventTypes.map((t) => {
-              const tColor = t !== "All" ? typeColors[t] : null;
               const isActive = filter === t;
               return (
                 <button
                   key={t}
                   onClick={() => setFilter(t)}
+                  className="filter-btn"
                   style={{
-                    padding: "0.4rem 0.85rem",
-                    borderRadius: 8,
-                    border: isActive ? "1.5px solid " + (tColor?.color || "#1a1a2e") : "1px solid rgba(0,0,0,0.1)",
-                    background: isActive ? (tColor ? tColor.bg : "#1a1a2e") : "#fff",
-                    color: isActive ? (tColor ? tColor.color : "#fff") : "#6b6b80",
-                    fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)",
-                    whiteSpace: "nowrap",
+                    padding: "0.4rem 1rem",
+                    borderRadius: 20,
+                    border: isActive ? "1px solid #111" : "1px solid #eaeaea",
+                    background: isActive ? "#111" : "transparent",
+                    color: isActive ? "#fff" : "#666",
+                    fontSize: 11, fontWeight: 500, cursor: "pointer",
+                    textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s"
                   }}
                 >
                   {t}
@@ -97,19 +130,19 @@ export function EventLogPage() {
               );
             })}
           </div>
-          <div style={{ display: "flex", gap: "0.4rem" }}>
-            {(["timeline", "grid"] as const).map((mode) => (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            {(["grid", "timeline"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 style={{
-                  padding: "0.4rem 0.85rem",
-                  borderRadius: 8,
-                  border: viewMode === mode ? "1.5px solid #1a1a2e" : "1px solid rgba(0,0,0,0.1)",
-                  background: viewMode === mode ? "#1a1a2e" : "#fff",
-                  color: viewMode === mode ? "#fff" : "#6b6b80",
-                  fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-mono)",
-                  textTransform: "capitalize",
+                  padding: "0.4rem 1rem",
+                  borderRadius: 20,
+                  border: viewMode === mode ? "1px solid #111" : "1px solid #eaeaea",
+                  background: viewMode === mode ? "#111" : "transparent",
+                  color: viewMode === mode ? "#fff" : "#666",
+                  fontSize: 11, fontWeight: 500, cursor: "pointer",
+                  textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s"
                 }}
               >
                 {mode}
@@ -119,125 +152,83 @@ export function EventLogPage() {
         </div>
       </section>
 
-      <section style={{ padding: "3rem 1.5rem" }}>
+      {/* ── GALLERY CONTENT ── */}
+      <section style={{ padding: "6rem 1.5rem" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          {viewMode === "timeline" ? (
-            /* Timeline view */
-            <div style={{ position: "relative" }}>
-              <div style={{ position: "absolute", left: 20, top: 0, bottom: 0, width: 2, background: "rgba(0,0,0,0.06)" }} className="timeline-line" />
-              <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
-                {filtered.map((event, i) => {
-                  const tColor = typeColors[event.type];
-                  return (
-                    <div key={event.id} style={{ display: "flex", gap: "2rem", paddingLeft: 52, position: "relative" }}>
-                      {/* Timeline dot */}
-                      <div style={{
-                        position: "absolute", left: 0, top: 24,
-                        width: 42, height: 42, borderRadius: "50%",
-                        background: tColor?.bg || '#fff', border: "2px solid " + (tColor?.border || '#000'),
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        zIndex: 1,
-                      }}>
-                        <div style={{ width: 14, height: 14, borderRadius: "50%", background: tColor?.color || '#000' }} />
-                      </div>
-
-                      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "1.5rem", alignItems: "start" }} className="event-card">
-                        {/* Image */}
-                        <div style={{ borderRadius: 14, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)", aspectRatio: "16/9" }}>
-                          <img src={event.photoUrl ? (event.photoUrl.startsWith('http') ? event.photoUrl : `${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}${event.photoUrl}`) : ''} alt={event.location} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        </div>
-
-                        {/* Content */}
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
-                            <span style={{ background: tColor?.bg || '#000', color: tColor?.color || '#fff', border: "1px solid " + (tColor?.border || '#000'), fontSize: 10, fontWeight: 700, padding: "0.2rem 0.6rem", borderRadius: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
-                              {event.type}
-                            </span>
-                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#6b6b80" }}>
-                              {new Date(event.date).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}
-                            </span>
-                          </div>
-
-                          <h3 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: "#1a1a2e", lineHeight: 1.25, marginBottom: "0.3rem" }}>
-                            {event.location}
-                          </h3>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: 12, color: "#6b6b80", marginBottom: "0.75rem" }}>
-                            <MapPin size={12} /> {event.place}, {event.city}
-                          </div>
-
-                          <p style={{ fontSize: 13, color: "#444", lineHeight: 1.7, marginBottom: "1rem" }}>{event.description}</p>
-
-                          {/* Metrics */}
-                          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                            {[
-                              { icon: <Clock size={12} />, label: "Duration", val: event.duration },
-                              { icon: <Users size={12} />, label: "Authors", val: event.authors },
-                              { icon: <BookOpen size={12} />, label: "Books Sold", val: event.booksSold },
-                            ].map((m) => (
-                              <div key={m.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "#f7f7f9", borderRadius: 8, padding: "0.4rem 0.75rem" }}>
-                                <span style={{ color: "#6b6b80" }}>{m.icon}</span>
-                                <span style={{ fontSize: 11, color: "#6b6b80" }}>{m.label}:</span>
-                                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: "#1a1a2e" }}>{m.val}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+          {viewMode === "grid" ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "4rem" }}>
+              {filtered.map((event, i) => (
+                <FadeIn key={event.id} delay={i * 50}>
+                  <div className="gallery-card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                    <div style={{ height: 240, overflow: "hidden", marginBottom: "1.5rem", border: "1px solid #eaeaea", background: "#fff", padding: "0.5rem" }}>
+                      <img src={event.photoUrl ? (event.photoUrl.startsWith('http') ? event.photoUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${event.photoUrl}`) : ''} alt={event.location} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s ease" }} className="gallery-img" />
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            /* Grid view */
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.5rem" }}>
-              {filtered.map((event) => {
-                const tColor = typeColors[event.type];
-                return (
-                  <div
-                    key={event.id}
-                    style={{
-                      background: "#fff",
-                      borderRadius: 16,
-                      border: "1px solid rgba(0,0,0,0.07)",
-                      overflow: "hidden",
-                      boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
-                    }}
-                  >
-                    <div style={{ height: 180, overflow: "hidden", position: "relative" }}>
-                      <img src={event.photoUrl ? (event.photoUrl.startsWith('http') ? event.photoUrl : `${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}${event.photoUrl}`) : ''} alt={event.location} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      <div style={{ position: "absolute", top: 10, left: 10 }}>
-                        <span style={{ background: tColor?.bg || '#000', color: tColor?.color || '#fff', border: "1px solid " + (tColor?.border || '#000'), fontSize: 10, fontWeight: 700, padding: "0.25rem 0.6rem", borderRadius: 5, fontFamily: "var(--font-mono)" }}>
-                          {event.type}
+                    <div style={{ flexGrow: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.8rem" }}>
+                        <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#b44d28" }}>{event.type}</span>
+                        <span style={{ fontSize: 10, color: "#555", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                          {new Date(event.date).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
                         </span>
                       </div>
+                      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 400, color: "#111", lineHeight: 1.3, marginBottom: "0.5rem" }}>{event.location}</h3>
+                      <div style={{ fontSize: 12, color: "#333", display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "1rem" }}>
+                        <MapPin size={12} /> {event.city}
+                      </div>
                     </div>
-                    <div style={{ padding: "1.25rem" }}>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#6b6b80", marginBottom: "0.4rem" }}>
-                        {new Date(event.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1rem", marginTop: "1rem" }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Authors</div>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#111" }}>{event.authors}</div>
                       </div>
-                      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 700, color: "#1a1a2e", lineHeight: 1.3, marginBottom: "0.3rem" }}>{event.location}</h3>
-                      <div style={{ fontSize: 12, color: "#6b6b80", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                        <MapPin size={11} /> {event.city}
-                      </div>
-                      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-                        <div style={{ fontSize: 12, color: "#1a1a2e" }}><span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{event.duration}</span> <span style={{ color: "#6b6b80" }}>duration</span></div>
-                        <div style={{ fontSize: 12, color: "#1a1a2e" }}><span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{event.authors}</span> <span style={{ color: "#6b6b80" }}>authors</span></div>
-                        <div style={{ fontSize: 12, color: "#1a1a2e" }}><span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{event.booksSold}</span> <span style={{ color: "#6b6b80" }}>sold</span></div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Books Sold</div>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#111" }}>{event.booksSold}</div>
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                </FadeIn>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "4rem", maxWidth: 800, margin: "0 auto" }}>
+              {filtered.map((event, i) => (
+                <FadeIn key={event.id} delay={i * 50}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }} className="timeline-row">
+                    <div style={{ height: 300, border: "1px solid #eaeaea", padding: "0.5rem", background: "#fff" }}>
+                       <img src={event.photoUrl ? (event.photoUrl.startsWith('http') ? event.photoUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${event.photoUrl}`) : ''} alt={event.location} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#b44d28", marginBottom: "1rem" }}>
+                        {new Date(event.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+                      </div>
+                      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: "#111", lineHeight: 1.2, marginBottom: "0.5rem" }}>{event.location}</h3>
+                      <div style={{ fontSize: 13, color: "#333", marginBottom: "1.5rem" }}>{event.city} — {event.type}</div>
+                      <p style={{ fontSize: 14, color: "#222", lineHeight: 1.8, fontWeight: 400, marginBottom: "2rem" }}>{event.description}</p>
+                      
+                      <div style={{ display: "flex", gap: "2rem" }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Authors</div>
+                          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event.authors}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Sales</div>
+                          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event.booksSold}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </FadeIn>
+              ))}
             </div>
           )}
         </div>
       </section>
 
       <style>{`
-        @media (max-width: 768px) {
-          .timeline-line { display: none; }
-          .event-card { grid-template-columns: 1fr !important; }
+        .filter-btn:hover { background: #fafafa !important; border-color: #ccc !important; color: #111 !important; }
+        .gallery-card:hover .gallery-img { transform: scale(1.03); }
+        @media (max-width: 800px) {
+          .timeline-row { grid-template-columns: 1fr !important; gap: 2rem !important; }
         }
       `}</style>
     </main>

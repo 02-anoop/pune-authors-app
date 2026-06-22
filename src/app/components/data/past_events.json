@@ -1,0 +1,23 @@
+[
+  { "id": 1, "name": "Nyati Estate", "address": "Mohmmadwadi, Pune", "date": "26-Jan 2025", "duration": "90 minutes", "authorsParticipated": 8, "booksSold": 40 },
+  { "id": 2, "name": "Nyati Windchimes", "address": "Mohmmadwadi, Pune", "date": "02-Feb 2025", "duration": "90 minutes", "authorsParticipated": 6, "booksSold": 55 },
+  { "id": 3, "name": "Clover Highlands", "address": "NIBM, Pune", "date": "23-Mar 2025", "duration": "90 minutes", "authorsParticipated": 10, "booksSold": 30 },
+  { "id": 4, "name": "Kalpatru Estate", "address": "Pimple Gurav, Pune", "date": "22-Mar 2025", "duration": "90 minutes", "authorsParticipated": 8, "booksSold": 15 },
+  { "id": 5, "name": "Salunke Vihar", "address": "Salunke Vihar, Pune", "date": "11-Apr 2025", "duration": "90 minutes", "authorsParticipated": 6, "booksSold": 15 },
+  { "id": 6, "name": "AFMC", "address": "Cantonment, Pune", "date": "31-May 2025", "duration": "90 minutes", "authorsParticipated": 8, "booksSold": 45 },
+  { "id": 7, "name": "Bengali Mela Stall", "address": "Prabha Devi, Mumbai", "date": "October 2025", "duration": "6 hours", "authorsParticipated": 5, "booksSold": 20 },
+  { "id": 8, "name": "Pune Book Fair Stall", "address": "Ferguson College, Pune", "date": "December 2025", "duration": "9 days", "authorsParticipated": 34, "booksSold": 261 },
+  { "id": 9, "name": "Diwali Stall, Clover Highlands", "address": "NIBM, Pune", "date": "20-Dec 2025", "duration": "2 hours", "authorsParticipated": 5, "booksSold": 10 },
+  { "id": 10, "name": "Naval Officers' Residential Area", "address": "Navy Nagar, Colaba, Mumbai", "date": "11-Jan 2026", "duration": "6 hours", "authorsParticipated": 11, "booksSold": 244 },
+  { "id": 11, "name": "Goa Book Fair Stall", "address": "Panjim, Goa", "date": "February 2026", "duration": "5 days", "authorsParticipated": 26, "booksSold": 296 },
+  { "id": 12, "name": "Thakur College of Engineering", "address": "Kandivali, Mumbai", "date": "18-Feb 2026", "duration": "90 minutes", "authorsParticipated": 8, "booksSold": 47 },
+  { "id": 13, "name": "Clover Highlands", "address": "NIBM, Pune", "date": "15-Mar 2026", "duration": "90 minutes", "authorsParticipated": 11, "booksSold": 41 },
+  { "id": 14, "name": "Persistent Systems Stall", "address": "Pune", "date": "24-Mar 2026", "duration": "3 hours", "authorsParticipated": 4, "booksSold": 28 },
+  { "id": 15, "name": "Persistent Systems Stall", "address": "Pune", "date": "25-Mar 2026", "duration": "3 hours", "authorsParticipated": 4, "booksSold": 41 },
+  { "id": 16, "name": "Nyati Estaben", "address": "Undri", "date": "28-Mar 2026", "duration": "90 minutes", "authorsParticipated": 9, "booksSold": 26 },
+  { "id": 17, "name": "Dehradun Book Fair Stall", "address": "Parade Ground, Dehradun", "date": "04-Apr 2026", "duration": "9 days", "authorsParticipated": 39, "booksSold": 135 },
+  { "id": 18, "name": "St Xavier's College, Mapusa", "address": "Goa", "date": "16-Jul 2026", "duration": "3 hours", "authorsParticipated": 10, "booksSold": null },
+  { "id": 19, "name": "Goa University", "address": "Dona Poula, Goa", "date": "17-Jul 2026", "duration": "4 hours", "authorsParticipated": 10, "booksSold": null },
+  { "id": 20, "name": "Naval War College", "address": "Verem, Goa", "date": "17-Jul 2026", "duration": "2 hours", "authorsParticipated": 10, "booksSold": null },
+  { "id": 21, "name": "Parvatibai Chowgule College", "address": "Margoa, Goa", "date": "18-Jul 2026", "duration": "3 hours", "authorsParticipated": 10, "booksSold": null }
+]

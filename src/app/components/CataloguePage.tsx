@@ -1,50 +1,24 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
+import { bookCategories } from "../data/categories";
 import { ShoppingCart, Search, SlidersHorizontal, Star, ChevronRight, X, BookOpen, Info, Download } from "lucide-react";
 // ── Category config ─────────────────────────────────────────────────────────
-const CATEGORIES = {
-  "Non-Fiction": {
-    code: "NF",
-    color: "#2563eb",
-    bg: "#eff6ff",
-    border: "#bfdbfe",
-    subGenres: ["All", "Spiritual/Self-Help", "Geopolitics", "Historical", "Biographies", "Short Stories"],
-  },
-  Fiction: {
-    code: "F",
-    color: "#db2777",
-    bg: "#fdf2f8",
-    border: "#fbcfe8",
-    subGenres: ["All", "Romance", "Thriller", "Mysteries", "Sci-Fi", "Poetry"],
-  },
-  Children: {
-    code: "C",
-    color: "#16a34a",
-    bg: "#f0fdf4",
-    border: "#bbf7d0",
-    subGenres: ["All"],
-  },
-} as const;
-type CategoryName = keyof typeof CATEGORIES;
-
-// ── MRP parser ──────────────────────────────────────────────────────────────
-function parseMrp(s: string): number | null {
-  if (!s || s === "Not specified") return null;
-  const m = s.match(/[\d.]+/);
-  return m ? parseFloat(m[0]) : null;
-}
-
-// Detect children's category from bio text
-function isChildrensAuthor(bio: string): boolean {
-  const b = bio.toLowerCase();
-  return (
-    b.includes("early childhood") ||
-    b.includes("children's fiction") ||
-    (b.includes("children") && b.includes("storybook")) ||
-    b.includes("children's book") ||
-    b.includes("young reader")
-  );
-}
+const getCategoryColor = (cat: string) => {
+    const colors = [
+        { color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
+        { color: "#db2777", bg: "#fdf2f8", border: "#fbcfe8" },
+        { color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+        { color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+        { color: "#9333ea", bg: "#faf5ff", border: "#e9d5ff" },
+        { color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
+    ];
+    if (cat === "All" || !cat) return { color: "#1a1a2e", bg: "#f3f3f7", border: "transparent" };
+    let hash = 0;
+    for (let i = 0; i < cat.length; i++) {
+        hash = cat.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+};
 
 // ── Normalise both JSON files into one flat list ─────────────────────────────
 interface CatalogueBook {
@@ -56,53 +30,184 @@ interface CatalogueBook {
   coverUrl: string;
   authorName: string;
   authorBio: string;
-  genre: "NF" | "F" | "C";
+  authorPhotoUrl?: string;
+  authorInstagram?: string;
+  authorFacebook?: string;
+  authorWhatsapp?: string;
+  genre: string;
   subGenre: string;
+  pages?: number | null;
+  language?: string;
+  isbn?: string;
+  publisher?: string;
+  publicationDate?: string;
+  edition?: string;
+  format?: string;
 }
 
 
 // ── PDF catalogue download ───────────────────────────────────────────────────
-function downloadCataloguePDF(label: string, books: CatalogueBook[]) {
-  const win = window.open("", "_blank")!;
-  const rows = books
-    .map(
-      (b) => `<tr>
-      <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600">${b.title}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee">${b.authorName}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee">${b.mrp != null ? "₹" + b.mrp : b.mrpRaw || "—"}</td>
-    </tr>`
-    )
-    .join("");
-  win.document.write(`<!DOCTYPE html><html><head><title>PAA — ${label}</title>
-  <style>body{font-family:Georgia,serif;padding:40px;color:#111}h1{color:#b44d28}table{width:100%;border-collapse:collapse}th{background:#1a1a2e;color:#fff;padding:10px 8px;text-align:left}@media print{button{display:none}}</style>
-  </head><body>
-  <h1>Pune Authors' Association</h1><h2>${label} Catalogue</h2>
-  <p style="color:#666">Generated: ${new Date().toLocaleDateString("en-IN")} &nbsp;·&nbsp; ${books.length} title(s)</p>
-  <table><thead><tr><th>Title</th><th>Author</th><th>MRP</th></tr></thead><tbody>${rows}</tbody></table>
-  <br/><button onclick="window.print()" style="background:#b44d28;color:#fff;border:none;padding:10px 24px;font-size:14px;cursor:pointer;border-radius:4px">Print / Save as PDF</button>
-  </body></html>`);
-  win.document.close();
+const loadHtml2Pdf = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if ((window as any).html2pdf) return resolve((window as any).html2pdf);
+    const script = document.createElement('script');
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+    script.onload = () => resolve((window as any).html2pdf);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
+
+async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDownloading: (val: boolean) => void) {
+  try {
+    setDownloading(true);
+    const html2pdf = await loadHtml2Pdf();
+    
+    // Group books by author
+    const byAuthor: Record<string, { name: string; bio: string; photoUrl: string; instagram: string; facebook: string; whatsapp: string; books: CatalogueBook[] }> = {};
+    books.forEach(b => {
+      if (!byAuthor[b.authorName]) {
+        byAuthor[b.authorName] = {
+          name: b.authorName,
+          bio: b.authorBio,
+          photoUrl: b.authorPhotoUrl || "",
+          instagram: b.authorInstagram || "",
+          facebook: b.authorFacebook || "",
+          whatsapp: b.authorWhatsapp || "",
+          books: []
+        };
+      }
+      byAuthor[b.authorName].books.push(b);
+    });
+    
+    const contentHtml = Object.values(byAuthor).map((author, index) => {
+      // Social links block
+      const socials = [];
+      if (author.whatsapp) socials.push(`<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px;">&#128222; ${author.whatsapp}</span>`);
+      if (author.instagram) socials.push(`<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px;">&#128247; ${author.instagram.replace('https://instagram.com/', '@')}</span>`);
+      if (author.facebook) socials.push(`<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px;">&#128101; Facebook</span>`);
+      const socialHtml = socials.length > 0 ? `<div style="margin-top: 20px; font-size: 11px; color: #cbd5e1; display: flex; gap: 10px; flex-wrap: wrap;">${socials.join('')}</div>` : '';
+
+      const authorBooksHtml = author.books.map((b, bIdx) => `
+        <div style="display: flex; gap: 30px; margin-bottom: 40px; padding-bottom: 40px; border-bottom: ${bIdx === author.books.length - 1 ? 'none' : '1px solid #e2e8f0'}; break-inside: avoid;">
+          <div style="flex-shrink: 0; width: 180px;">
+            ${b.coverUrl ? `<img src="${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${b.coverUrl.startsWith('/') ? b.coverUrl : '/' + b.coverUrl}" crossorigin="anonymous" style="width: 100%; height: 270px; object-fit: cover; border-radius: 4px; box-shadow: 15px 15px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;" />` : `<div style="width: 100%; height: 270px; background: #f8fafc; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px dashed #cbd5e1;"><span style="color:#94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">No Cover</span></div>`}
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column;">
+            <div style="margin-bottom: 15px;">
+              <h3 style="margin: 0 0 5px; color: #0f172a; font-size: 26px; font-family: 'Playfair Display', Georgia, serif; line-height: 1.2;">${b.title}</h3>
+              <p style="margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #b44d28; font-weight: 800; font-family: system-ui, sans-serif;">
+                ${b.genre} ${b.subGenre ? `<span style="color: #cbd5e1; margin: 0 5px;">/</span> ${b.subGenre}` : ''}
+              </p>
+            </div>
+            <div style="flex: 1;">
+              <p style="margin: 0 0 20px; font-size: 13px; line-height: 1.8; color: #475569; text-align: justify;">${b.synopsis}</p>
+            </div>
+            <div style="background: #f8fafc; padding: 20px; border-top: 3px solid #1e293b;">
+              <table style="width: 100%; font-size: 11px; color: #334155; border-collapse: collapse; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Price:</strong> <span style="color:#b44d28; font-weight: 800; font-size: 14px;">${b.mrp != null ? "₹" + b.mrp : b.mrpRaw || "—"}</span></td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Pages:</strong> ${b.pages || "—"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Language:</strong> ${b.language || "—"}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Format:</strong> ${b.format || "—"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;"><strong>Publisher:</strong> ${b.publisher || "—"}</td>
+                  <td style="padding: 8px 0;"><strong>ISBN:</strong> <span style="font-family: monospace;">${b.isbn || "—"}</span></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      `).join("");
+
+      return `
+        <div style="page-break-before: ${index === 0 ? 'auto' : 'always'}; font-family: 'Georgia', serif;">
+          <!-- Magazine Author Header -->
+          <div style="position: relative; background: #0f172a; color: #fff; padding: 60px 50px; display: flex; gap: 40px; align-items: center; overflow: hidden;">
+            <div style="position: absolute; right: -50px; top: -50px; font-size: 300px; color: rgba(255,255,255,0.02); font-family: 'Playfair Display', serif; font-weight: 900; line-height: 1; pointer-events: none;">${author.name.charAt(0)}</div>
+            <div style="flex-shrink: 0; width: 180px; height: 180px; border-radius: 50%; border: 4px solid #b44d28; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); background: #1e293b; position: relative; z-index: 2;">
+              ${author.photoUrl ? `<img src="${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${author.photoUrl.startsWith('/') ? author.photoUrl : '/' + author.photoUrl}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover;" />` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 60px; color: #94a3b8; font-family: serif;">${author.name.charAt(0)}</div>`}
+            </div>
+            <div style="flex: 1; position: relative; z-index: 2;">
+              <div style="display: inline-block; background: #b44d28; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 4px 10px; margin-bottom: 15px; font-weight: 800; font-family: system-ui, sans-serif;">Featured Author</div>
+              <h2 style="margin: 0 0 15px; font-size: 42px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">${author.name}</h2>
+              <p style="margin: 0; font-size: 14px; line-height: 1.8; color: #cbd5e1; text-align: justify; font-style: italic;">${author.bio}</p>
+              ${socialHtml}
+            </div>
+          </div>
+
+          <!-- Magazine Content Body -->
+          <div style="padding: 50px;">
+            <div style="margin-bottom: 40px; border-bottom: 2px solid #0f172a; padding-bottom: 15px;">
+              <h4 style="margin: 0; color: #0f172a; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 3px; font-size: 14px; font-weight: 800;">Literary Portfolio</h4>
+            </div>
+            ${authorBooksHtml}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <div id="pdf-content-wrapper" style="width: 800px; background: #fff;">
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&display=swap');
+        </style>
+        <!-- Magazine Cover Page -->
+        <div style="position: relative; width: 800px; height: 1131px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a;">
+          <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop" crossorigin="anonymous" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: grayscale(100%);" />
+          <div style="position: relative; z-index: 10; padding: 80px; width: 80%; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5);">
+            <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 6px; color: #b44d28; margin-bottom: 30px; font-weight: 800; font-family: system-ui, sans-serif;">Exclusive Collection</div>
+            <h1 style="color: #fff; font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 900; line-height: 1.1; margin: 0 0 20px; letter-spacing: -1px;">Pune Authors' Association</h1>
+            <div style="width: 80px; height: 3px; background: #b44d28; margin: 30px auto;"></div>
+            <h2 style="color: #e2e8f0; margin: 0 0 40px; font-size: 32px; font-weight: 400; font-style: italic; font-family: 'Playfair Display', serif;">The ${label} Portfolio</h2>
+            <p style="color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 4px; font-family: system-ui, sans-serif;">
+              Volume &middot; ${new Date().toLocaleDateString("en-US", { month: 'long', year: 'numeric' })} &nbsp;|&nbsp; ${books.length} Curated Title(s)
+            </p>
+          </div>
+        </div>
+        ${contentHtml}
+      </div>
+    `;
+
+    const opt = {
+      margin:       0,
+      filename:     `PAA_${label.replace(/\s+/g, '_')}_Catalogue.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
+      jsPDF:        { unit: 'px', format: [800, 1131], orientation: 'portrait' }
+    };
+
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    document.body.appendChild(container);
+
+    await html2pdf().set(opt).from(container.firstElementChild).save();
+    
+    document.body.removeChild(container);
+    setDownloading(false);
+  } catch (err) {
+    console.error("PDF Generation failed", err);
+    setDownloading(false);
+    alert("Failed to generate PDF. Please try again.");
+  }
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
 export function CataloguePage() {
-  const [activeCategory, setActiveCategory] = useState<"All" | CategoryName>("All");
-  const [activeSubGenre, setActiveSubGenre] = useState("All");
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [activeSubcategory, setActiveSubcategory] = useState<string>("All");
+  const [activeSubSubcategory, setActiveSubSubcategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "title">("default");
   const [cart, setCart] = useState<string[]>([]);
   const [tooltip, setTooltip] = useState<{ name: string; bio: string; x: number; y: number } | null>(null);
   const [allBooks, setAllBooks] = useState<CatalogueBook[]>([]);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const userRole = localStorage.getItem("userRole");
-
-  // Normalize genre string to internal code
-  const toGenreCode = (g: string): "NF" | "F" | "C" => {
-    const norm = g?.toLowerCase().trim();
-    if (norm === "non-fiction" || norm === "nf") return "NF";
-    if (norm === "children" || norm === "children's corner" || norm === "c") return "C";
-    // fiction, f, p, or anything else → Fiction
-    return "F";
-  };
 
   useEffect(() => {
     const w = window as any;
@@ -124,8 +229,19 @@ export function CataloguePage() {
           coverUrl: b.coverUrl || "",
           authorName: b.author?.name || "Unknown",
           authorBio: b.author?.bio || "",
-          genre: toGenreCode(b.genre),
-          subGenre: b.subGenre || ""
+          authorPhotoUrl: b.author?.photoUrl || "",
+          authorInstagram: b.author?.instagram || "",
+          authorFacebook: b.author?.facebook || "",
+          authorWhatsapp: b.author?.whatsapp || "",
+          genre: b.genre || "Unknown",
+          subGenre: b.subGenre || "",
+          pages: b.pages || null,
+          language: b.language || "",
+          isbn: b.isbn || "",
+          publisher: b.publisher || "",
+          publicationDate: b.publicationDate || "",
+          edition: b.edition || "",
+          format: b.format || ""
         }));
         w.__apiCache.catalogueBooks = mapped;
         setAllBooks(mapped);
@@ -133,25 +249,38 @@ export function CataloguePage() {
       .catch(console.error);
   }, []);
 
-  const catMeta = activeCategory !== "All" ? CATEGORIES[activeCategory as CategoryName] : null;
-  const subGenres = catMeta ? catMeta.subGenres : [];
-
-  // Reset subgenre on category change
-  const handleCategoryChange = (cat: "All" | CategoryName) => {
+  const handleCategoryChange = (cat: string) => {
     setActiveCategory(cat);
-    setActiveSubGenre("All");
+    setActiveSubcategory("All");
+    setActiveSubSubcategory("All");
+  };
+
+  const handleSubcategoryChange = (sc: string) => {
+    setActiveSubcategory(sc);
+    setActiveSubSubcategory("All");
   };
 
   const filteredBooks = useMemo(() => {
     let list = allBooks;
 
     if (activeCategory !== "All") {
-      const code = CATEGORIES[activeCategory as CategoryName].code;
-      list = list.filter((b) => b.genre === code);
+      list = list.filter((b) => b.genre === activeCategory);
     }
 
-    if (activeSubGenre !== "All") {
-      list = list.filter((b) => b.subGenre.toLowerCase() === activeSubGenre.toLowerCase());
+    if (activeSubcategory !== "All") {
+      list = list.filter((b) => {
+        if (!b.subGenre) return false;
+        const parts = b.subGenre.split(" > ").map(s => s.trim());
+        return parts[0] === activeSubcategory;
+      });
+    }
+
+    if (activeSubSubcategory !== "All") {
+      list = list.filter((b) => {
+        if (!b.subGenre) return false;
+        const parts = b.subGenre.split(" > ").map(s => s.trim());
+        return parts.length > 1 && parts[1] === activeSubSubcategory;
+      });
     }
 
     if (searchQuery.trim()) {
@@ -169,7 +298,7 @@ export function CataloguePage() {
     else if (sortBy === "title") list.sort((a, b) => a.title.localeCompare(b.title));
 
     return list;
-  }, [activeCategory, activeSubGenre, searchQuery, sortBy, allBooks]);
+  }, [activeCategory, activeSubcategory, activeSubSubcategory, searchQuery, sortBy, allBooks]);
 
   const addToCart = (id: string) =>
     setCart((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -179,25 +308,23 @@ export function CataloguePage() {
     return acc + (book?.mrp || 0);
   }, 0);
 
-  const genreLabel = (g: string) =>
-    g === "NF" ? "Non-Fiction" : g === "F" ? "Fiction" : "Children";
-  const genreColor = (g: string) =>
-    g === "NF" ? CATEGORIES["Non-Fiction"] : g === "F" ? CATEGORIES.Fiction : CATEGORIES.Children;
+  const genreLabel = (g: string) => g || "Unknown";
+  const genreColor = (g: string) => getCategoryColor(g);
 
   return (
-    <main style={{ fontFamily: "var(--font-body)", minHeight: "100vh", background: "#f8f8fa" }}>
+    <main style={{ fontFamily: "var(--font-body)", minHeight: "100vh", background: "#fafafa" }}>
       {/* ── Header ── */}
-      <section style={{ background: "#fff", borderBottom: "1px solid rgba(0,0,0,0.07)", padding: "2.5rem 1.5rem" }}>
+      <section style={{ background: "#fff", borderBottom: "1px solid #eaeaea", padding: "4rem 1.5rem" }}>
         <div style={{ maxWidth: 1320, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1.5rem", marginBottom: "2rem" }}>
             <div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#b44d28", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.4rem" }}>
                 PAA Book Catalogue
               </div>
-              <h1 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 800, color: "#1a1a2e", margin: 0 }}>
+              <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400, color: "#111", margin: 0, letterSpacing: "-0.01em" }}>
                 Explore &amp; Buy Books
               </h1>
-              <p style={{ fontSize: 14, color: "#6b6b80", marginTop: "0.3rem" }}>
+              <p style={{ fontSize: 15, color: "#333", marginTop: "0.5rem", fontWeight: 400 }}>
                 {allBooks.length} titles by Pune Authors' Association members
               </p>
             </div>
@@ -209,47 +336,39 @@ export function CataloguePage() {
             )}
           </div>
 
-          {/* PDF Catalogue Downloads */}
+          {/* Dynamic PDF Catalogue Download */}
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
-            <a
-              href="/catalogues/fiction-catalogue.pdf"
-              download="Fiction-Catalogue-PAA.pdf"
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#fdf2f8", color: "#db2777", border: "1.5px solid #fbcfe8", borderRadius: 10, padding: "0.55rem 1.1rem", fontSize: 13, fontWeight: 700, textDecoration: "none", transition: "background 0.15s" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#fce7f3")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#fdf2f8")}
+            <button
+              disabled={isDownloadingPDF}
+              onClick={() => downloadCataloguePDF(activeCategory === "All" ? "Complete" : activeCategory, filteredBooks, setIsDownloadingPDF)}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: isDownloadingPDF ? "#475569" : "#1a1a2e", color: "#fff", border: "none", borderRadius: 10, padding: "0.55rem 1.1rem", fontSize: 13, fontWeight: 700, cursor: isDownloadingPDF ? "not-allowed" : "pointer", transition: "background 0.15s" }}
             >
-              <Download size={13} /> Download Fiction Catalogue (PDF)
-            </a>
-            <a
-              href="/catalogues/non-fiction-catalogue.pdf"
-              download="Non-Fiction-Catalogue-PAA.pdf"
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#eff6ff", color: "#2563eb", border: "1.5px solid #bfdbfe", borderRadius: 10, padding: "0.55rem 1.1rem", fontSize: 13, fontWeight: 700, textDecoration: "none", transition: "background 0.15s" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#dbeafe")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#eff6ff")}
-            >
-              <Download size={13} /> Download Non-Fiction Catalogue (PDF)
-            </a>
+              {isDownloadingPDF ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Download size={13} />} 
+              {isDownloadingPDF ? "Generating PDF..." : `Download ${activeCategory === "All" ? "Complete" : activeCategory} Catalogue (PDF)`}
+            </button>
           </div>
 
-          {/* Top-level category tabs (no emojis) */}
+          {/* Top-level category tabs */}
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
-            {(["All", "Non-Fiction", "Fiction", "Children"] as Array<"All" | CategoryName>).map((cat) => {
-              const meta = cat !== "All" ? CATEGORIES[cat as CategoryName] : null;
+            {(["All", ...Object.keys(bookCategories)]).map((cat) => {
+              const meta = getCategoryColor(cat);
               const isActive = activeCategory === cat;
               return (
                 <button
                   key={cat}
                   onClick={() => handleCategoryChange(cat)}
                   style={{
-                    padding: "0.55rem 1.25rem",
-                    borderRadius: 10,
-                    border: `2px solid ${isActive ? (meta?.color || "#1a1a2e") : "transparent"}`,
-                    background: isActive ? (meta?.bg || "#1a1a2e") : "#f3f3f7",
-                    color: isActive ? (meta?.color || "#fff") : "#4b5563",
-                    fontSize: 14,
-                    fontWeight: 700,
+                    padding: "0.4rem 1rem",
+                    borderRadius: 20,
+                    border: `1px solid ${isActive ? "#111" : "#eaeaea"}`,
+                    background: isActive ? "#111" : "transparent",
+                    color: isActive ? "#fff" : "#666",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
                     cursor: "pointer",
-                    transition: "all 0.15s",
+                    transition: "all 0.2s",
                   }}
                 >
                   {cat === "All" ? "All Books" : cat}
@@ -258,28 +377,59 @@ export function CataloguePage() {
             })}
           </div>
 
-          {/* Sub-genre chips */}
-          {subGenres.length > 1 && (
+          {/* Subcategory chips */}
+          {activeCategory !== "All" && Object.keys(bookCategories[activeCategory as keyof typeof bookCategories] || {}).length > 0 && (
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
-              {subGenres.map((sg) => {
-                const isActive = activeSubGenre === sg;
+              {["All", ...Object.keys(bookCategories[activeCategory as keyof typeof bookCategories] || {})].map((sc) => {
+                const isActive = activeSubcategory === sc;
                 return (
                   <button
-                    key={sg}
-                    onClick={() => setActiveSubGenre(sg)}
+                    key={sc}
+                    onClick={() => handleSubcategoryChange(sc)}
                     style={{
-                      padding: "0.35rem 0.9rem",
+                      padding: "0.3rem 0.8rem",
                       borderRadius: 20,
-                      border: `1.5px solid ${isActive ? catMeta!.color : "rgba(0,0,0,0.1)"}`,
-                      background: isActive ? catMeta!.color : "#fff",
-                      color: isActive ? "#fff" : "#6b6b80",
-                      fontSize: 12,
+                      border: `1px solid ${isActive ? "#111" : "transparent"}`,
+                      background: isActive ? "#fafafa" : "#fff",
+                      color: isActive ? "#111" : "#888",
+                      fontSize: 11,
+                      fontWeight: 500,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {sc}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Sub-Subcategory chips */}
+          {activeCategory !== "All" && activeSubcategory !== "All" && ((bookCategories[activeCategory as keyof typeof bookCategories] as any)[activeSubcategory] || []).length > 0 && (
+            <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+              {["All", ...((bookCategories[activeCategory as keyof typeof bookCategories] as any)[activeSubcategory] || [])].map((ssc: string) => {
+                const isActive = activeSubSubcategory === ssc;
+                const meta = getCategoryColor(activeCategory);
+                return (
+                  <button
+                    key={ssc}
+                    onClick={() => setActiveSubSubcategory(ssc)}
+                    style={{
+                      padding: "0.3rem 0.8rem",
+                      borderRadius: 20,
+                      border: `1px solid ${isActive ? meta.color : "rgba(0,0,0,0.1)"}`,
+                      background: isActive ? meta.bg : "#f9fafb",
+                      color: isActive ? meta.color : "#6b6b80",
+                      fontSize: 11,
                       fontWeight: 600,
                       cursor: "pointer",
                       transition: "all 0.15s",
                     }}
                   >
-                    {sg}
+                    {ssc}
                   </button>
                 );
               })}
@@ -297,15 +447,20 @@ export function CataloguePage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   width: "100%",
-                  padding: "0.65rem 2.5rem 0.65rem 2.25rem",
-                  border: "1.5px solid rgba(0,0,0,0.1)",
-                  borderRadius: 10,
+                  padding: "0.6rem 2.5rem 0.6rem 2rem",
+                  border: "none",
+                  borderBottom: "1px solid #eaeaea",
+                  background: "transparent",
                   fontFamily: "var(--font-body)",
-                  fontSize: 14,
-                  background: "#fff",
+                  fontSize: 12,
                   outline: "none",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
                   boxSizing: "border-box",
+                  transition: "border-color 0.2s"
                 }}
+                onFocus={e => e.currentTarget.style.borderColor = "#111"}
+                onBlur={e => e.currentTarget.style.borderColor = "#eaeaea"}
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", display: "flex" }}>
@@ -315,7 +470,7 @@ export function CataloguePage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <span style={{ fontSize: 13, color: "#666", fontWeight: 600 }}>
+            <span style={{ fontSize: 13, color: "#333", fontWeight: 600 }}>
               {filteredBooks.length} result{filteredBooks.length !== 1 && "s"}
             </span>
               <select
@@ -339,8 +494,8 @@ export function CataloguePage() {
           Showing <strong style={{ color: "#1a1a2e" }}>{filteredBooks.length}</strong> book{filteredBooks.length !== 1 ? "s" : ""}
           {searchQuery && <> for "<strong>{searchQuery}</strong>"</>}
         </span>
-        {activeCategory !== "All" && catMeta && (
-          <span style={{ background: catMeta.bg, color: catMeta.color, border: `1px solid ${catMeta.border}`, borderRadius: 20, padding: "0.2rem 0.7rem", fontSize: 12, fontWeight: 600 }}>
+        {activeCategory !== "All" && (
+          <span style={{ background: getCategoryColor(activeCategory).bg, color: getCategoryColor(activeCategory).color, border: `1px solid ${getCategoryColor(activeCategory).border}`, borderRadius: 20, padding: "0.2rem 0.7rem", fontSize: 12, fontWeight: 600 }}>
             {activeCategory}
           </span>
         )}
@@ -352,7 +507,7 @@ export function CataloguePage() {
           <div style={{ textAlign: "center", padding: "5rem", color: "#6b6b80" }}>
             <BookOpen size={40} style={{ margin: "0 auto 1rem", opacity: 0.3, display: "block" }} />
             <p style={{ fontSize: 15, fontWeight: 600 }}>No books found</p>
-            <button onClick={() => { setSearchQuery(""); setActiveCategory("All"); setActiveSubGenre("All"); }}
+            <button onClick={() => { setSearchQuery(""); setActiveCategory("All"); setActiveSubcategory("All"); setActiveSubSubcategory("All"); }}
               style={{ marginTop: "1.5rem", background: "#1a1a2e", color: "#fff", border: "none", padding: "0.6rem 1.5rem", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
               Clear Filters
             </button>
@@ -361,7 +516,7 @@ export function CataloguePage() {
                 style={{
                   display: "flex", alignItems: "center", gap: "0.4rem",
                   padding: "0.6rem 1.1rem",
-                  background: catMeta ? catMeta.color : "#1a1a2e",
+                  background: activeCategory !== "All" ? getCategoryColor(activeCategory).color : "#1a1a2e",
                   color: "#fff", border: "none", borderRadius: 10,
                   fontSize: 13, fontWeight: 700, cursor: "pointer",
                   fontFamily: "var(--font-body)", whiteSpace: "nowrap",

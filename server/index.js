@@ -1025,6 +1025,38 @@ app.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async (r
   }
 });
 
+// Author: Update book details (reapply)
+app.put('/api/author/books/:id', verifyToken, async (req, res) => {
+  try {
+    const bookId = parseInt(req.params.id);
+    const { title, genre, subGenre, mrp, stock, synopsis, pages } = req.body;
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    const book = await prisma.book.findUnique({ where: { id: bookId } });
+    if (!book || book.authorId !== author.id) return res.status(403).json({ error: 'Not authorized' });
+
+    const updated = await prisma.book.update({
+      where: { id: bookId },
+      data: {
+        ...(title !== undefined && { title }),
+        ...(genre !== undefined && { genre }),
+        ...(subGenre !== undefined && { subGenre: subGenre || null }),
+        ...(mrp !== undefined && { mrp: parseFloat(mrp) }),
+        ...(stock !== undefined && { stock: parseInt(stock) }),
+        ...(synopsis !== undefined && { synopsis }),
+        ...(pages !== undefined && { pages: parseInt(pages) || null }),
+        status: 'Pending', // Setting back to pending for re-evaluation
+        rejectionReason: null
+      }
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update book' });
+  }
+});
+
 // Author: Update book cover image
 app.put('/api/author/books/:id/cover', verifyToken, upload.single('cover'), async (req, res) => {
   try {
@@ -2381,7 +2413,44 @@ app.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('payme
     if (req.file) {
       paymentScreenshot = `/uploads/${req.file.filename}`;
     }
-    
+
+    // ── STEP 1: Restore any previously committed stock back to Book.stock ──
+    // This handles the case where an author re-opts-in with different quantities
+    const previousEventBooks = await prisma.eventBook.findMany({
+      where: { eventId, authorId: author.id },
+      include: { book: true }
+    });
+    for (const prev of previousEventBooks) {
+      // Only restore stock that hasn't been sold yet
+      const uncommittedStock = prev.listedStock - prev.soldStock;
+      if (uncommittedStock > 0) {
+        await prisma.book.update({
+          where: { id: prev.bookId },
+          data: { stock: { increment: uncommittedStock } }
+        });
+      }
+    }
+
+    // ── STEP 2: Validate new listing quantities against current (now-restored) Book.stock ──
+    if (booksToLink && booksToLink.length > 0) {
+      for (const b of booksToLink) {
+        const book = await prisma.book.findUnique({ where: { id: parseInt(b.bookId) } });
+        if (!book) {
+          return res.status(400).json({ error: `Book not found (ID: ${b.bookId})` });
+        }
+        const requested = parseInt(b.stock);
+        if (requested <= 0) {
+          return res.status(400).json({ error: `Listed quantity must be at least 1 for "${book.title}"` });
+        }
+        if (book.stock < requested) {
+          return res.status(400).json({ 
+            error: `Insufficient stock for "${book.title}". You have ${book.stock} available but listed ${requested}.` 
+          });
+        }
+      }
+    }
+
+    // ── STEP 3: Update EventAuthor status ──
     await prisma.eventAuthor.updateMany({
       where: { eventId, authorId: author.id },
       data: { 
@@ -2390,10 +2459,18 @@ app.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('payme
       }
     });
     
-    // Remove old mappings for this event/author and recreate
+    // ── STEP 4: Remove old EventBook records and recreate ──
     await prisma.eventBook.deleteMany({ where: { eventId, authorId: author.id } });
     
+    // ── STEP 5: Deduct new listedStock from Book.stock and create EventBook records ──
     if (booksToLink && booksToLink.length > 0) {
+       for (const b of booksToLink) {
+         const requested = parseInt(b.stock);
+         await prisma.book.update({
+           where: { id: parseInt(b.bookId) },
+           data: { stock: { decrement: requested } }
+         });
+       }
        const eventBooksData = booksToLink.map((b) => ({
           eventId,
           authorId: author.id,
@@ -2409,6 +2486,7 @@ app.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('payme
     res.status(500).json({ error: 'Failed to opt in' });
   }
 });
+
 
 
 // PUBLIC EVENTS ENDPOINT

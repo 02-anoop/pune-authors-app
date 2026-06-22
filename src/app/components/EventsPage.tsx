@@ -1,11 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import pastEvents from './data/past_events.json';
 import { Calendar, MapPin, Users, BookOpen, Clock, TrendingUp, Search, Download } from 'lucide-react';
 
+// --- FADE IN ON SCROLL (SUBTLE) ---
+function FadeIn({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? "translateY(0)" : `translateY(15px)`,
+        transition: `all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function EventsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('past');
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
 
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
 
@@ -27,176 +57,196 @@ export function EventsPage() {
   ).reverse();
 
   return (
-    <div className="min-h-screen bg-[#f7f7f9] font-sans pb-20">
-      {/* Header */}
-      <section className="bg-[#1a1a2e] pt-32 pb-16 px-6 relative overflow-hidden text-center">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/80 text-[10px] font-bold tracking-widest uppercase mb-6 border border-white/10">
-            <Calendar className="w-3 h-3" /> PAA Community Events
-          </div>
-          <h1 className="text-4xl md:text-6xl font-serif font-bold text-white mb-6">
-            Connecting Authors <span className="text-[#b44d28] italic">&</span> Readers
-          </h1>
-          <p className="text-white/70 max-w-2xl mx-auto text-lg leading-relaxed">
-            Discover our upcoming book fairs, reading sessions, and literary festivals across India. 
-            Join the movement and celebrate the written word with the Pune Authors' Association.
-          </p>
+    <main style={{ fontFamily: "var(--font-body)", background: "#fafafa", color: "#111", minHeight: "calc(100vh - 64px)", overflowX: "hidden" }}>
+      
+      {/* ── HERO ── */}
+      <section style={{ borderBottom: "1px solid #eaeaea", background: "#fff" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem" }}>
+          <FadeIn>
+            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#333", marginBottom: "2rem" }}>
+              PAA Community
+            </div>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem, 5vw, 4rem)", fontWeight: 400, color: "#111", lineHeight: 1.1, letterSpacing: "-0.01em", maxWidth: 800 }}>
+              Literary <span style={{ fontStyle: "italic", color: "#b44d28" }}>Events.</span>
+            </h1>
+            <p style={{ fontSize: 15, color: "#333", lineHeight: 1.8, marginTop: "2rem", maxWidth: 600, fontWeight: 400 }}>
+              Discover our upcoming book fairs, reading sessions, and literary festivals across India. Join the movement and celebrate the written word.
+            </p>
+          </FadeIn>
         </div>
       </section>
 
-      {/* Tabs & Search */}
-      <div className="max-w-7xl mx-auto px-6 -mt-8 relative z-20">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-2">
+      {/* ── TABS & SEARCH (MINIMALIST) ── */}
+      <section style={{ borderBottom: "1px solid #eaeaea", background: "#fff" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "2rem" }}>
+          <div style={{ display: "flex", gap: "2rem" }}>
             <button 
               onClick={() => setActiveTab('upcoming')}
-              className={`px-6 py-3 rounded-xl text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'upcoming' ? 'bg-[#1a1a2e] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+              className="tab-btn"
+              style={{
+                background: "transparent", border: "none", padding: 0,
+                color: activeTab === 'upcoming' ? "#111" : "#888",
+                fontSize: 13, fontWeight: activeTab === 'upcoming' ? 500 : 400,
+                letterSpacing: "0.05em", textTransform: "uppercase",
+                cursor: "pointer", transition: "color 0.2s ease", position: "relative"
+              }}
             >
-              Upcoming Events ({upcomingEvents.length})
+              Upcoming ({upcomingEvents.length})
             </button>
             <button 
               onClick={() => setActiveTab('past')}
-              className={`px-6 py-3 rounded-xl text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'past' ? 'bg-[#1a1a2e] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+              className="tab-btn"
+              style={{
+                background: "transparent", border: "none", padding: 0,
+                color: activeTab === 'past' ? "#111" : "#888",
+                fontSize: 13, fontWeight: activeTab === 'past' ? 500 : 400,
+                letterSpacing: "0.05em", textTransform: "uppercase",
+                cursor: "pointer", transition: "color 0.2s ease", position: "relative"
+              }}
             >
-              Past Events ({pastEvents.length})
+              Past ({pastEvents.length})
             </button>
           </div>
-          <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          
+          <div style={{ position: "relative", width: "100%", maxWidth: 300 }}>
+            <Search size={14} color="#888" style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }} />
             <input 
               type="text" 
               placeholder="SEARCH EVENTS..." 
-              className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-xl text-xs font-bold tracking-widest uppercase outline-none focus:ring-2 focus:ring-[#1a1a2e]/20 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="minimal-input"
+              style={{
+                width: "100%", padding: "0.5rem 0 0.5rem 1.8rem",
+                background: "transparent", border: "none", borderBottom: "1px solid #ccc",
+                outline: "none", fontSize: 12, color: "#111", letterSpacing: "0.05em", textTransform: "uppercase",
+                transition: "border-color 0.3s"
+              }}
             />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 mt-12">
+      {/* ── CONTENT (ELEGANT GRID) ── */}
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "6rem 1.5rem" }}>
         {activeTab === 'upcoming' ? (
           upcomingEvents.length === 0 ? (
-            <div className="text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm">
-              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-500">
-                <Calendar className="w-10 h-10" />
+            <FadeIn>
+              <div style={{ padding: "6rem 0", textAlign: "center", borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea" }}>
+                <Calendar size={32} color="#ccc" style={{ margin: "0 auto 1.5rem" }} />
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: "#111", marginBottom: "1rem" }}>No Upcoming Events</h2>
+                <p style={{ fontSize: 14, color: "#333", fontWeight: 400, maxWidth: 400, margin: "0 auto" }}>
+                  Our event coordinators are busy planning the next big literary gathering. Check back soon or join our mailing list.
+                </p>
               </div>
-              <h2 className="text-2xl font-serif text-[#1a1a2e] font-bold mb-3">No Upcoming Events</h2>
-              <p className="text-gray-500 max-w-md mx-auto">
-                Our event coordinators are busy planning the next big literary gathering. 
-                Check back soon or join our mailing list to stay updated!
-              </p>
-            </div>
+            </FadeIn>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {upcomingEvents.map((event) => (
-                <div key={event.id} className="bg-white border border-blue-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col h-full relative">
-                  <div className="absolute top-4 right-4 bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm z-10">
-                    Upcoming
-                  </div>
-                  <div className="p-6 flex-grow pt-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold tracking-widest uppercase">
-                        <Clock className="w-3 h-3" /> {event.duration}
-                      </span>
-                      <span className="text-blue-900 font-bold text-sm bg-blue-100/50 px-3 py-1 rounded-full border border-blue-200">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "3rem" }}>
+              {upcomingEvents.map((event, i) => (
+                <FadeIn key={event.id} delay={i * 100}>
+                  <div className="event-card" style={{ display: "flex", flexDirection: "column", height: "100%", border: "1px solid #eaeaea", background: "#fff", padding: "2rem", transition: "transform 0.4s ease, box-shadow 0.4s ease" }}>
+                    <div style={{ height: 180, overflow: "hidden", marginBottom: "1.5rem", border: "1px solid #eaeaea", background: "#fafafa", padding: "0.25rem" }}>
+                      <img src={(event as any).bannerUrl || "https://images.unsplash.com/photo-1544928147-79a2dbc1f389?w=800&q=80"} alt={event.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+                      <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#b44d28" }}>
                         {event.date}
                       </span>
+                      <span style={{ fontSize: 10, color: "#555", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                        <Clock size={12} /> {event.duration}
+                      </span>
                     </div>
-                    
-                    <h3 className="text-xl font-bold text-[#1a1a2e] mb-3 line-clamp-2">
-                      {event.name}
-                    </h3>
-                    
-                    <p className="text-sm text-gray-500 flex items-start gap-2 mb-6 h-10 line-clamp-2">
-                      <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-[#b44d28]" /> {event.location}
+                    <h3 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 400, color: "#111", marginBottom: "1rem", flexGrow: 1 }}>{event.name}</h3>
+                    <p style={{ fontSize: 13, color: "#333", fontWeight: 400, display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "2rem" }}>
+                      <MapPin size={14} color="#ccc" style={{ marginTop: "0.2rem", flexShrink: 0 }} /> {event.location}
                     </p>
-
-                    <div className="grid grid-cols-2 gap-3 mt-auto">
-                      <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 text-center">
-                        <div className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-1">Authors Participating</div>
-                        <div className="text-xl font-black text-[#1a1a2e]">{event._count?.eventAuthors || 0}</div>
+                    
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1.5rem", marginBottom: "2rem" }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Authors</div>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event._count?.eventAuthors || 0}</div>
                       </div>
-                      <div className="bg-blue-50 rounded-2xl p-3 border border-blue-100 text-center">
-                        <div className="text-[10px] font-bold tracking-widest uppercase text-blue-600/70 mb-1">Books Showcased</div>
-                        <div className="text-xl font-black text-blue-600">{event._count?.eventBooks || 0}</div>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Books</div>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event._count?.eventBooks || 0}</div>
                       </div>
                     </div>
                   </div>
-                  <a href={`/events/${event.id}/catalogue`} className="block w-full text-center py-4 bg-[#1a1a2e] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#b44d28] transition-colors">
-                    View Live Catalogue
-                  </a>
-                </div>
+                </FadeIn>
               ))}
             </div>
           )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPastEvents.map((event, index) => (
-              <div 
-                key={event.id} 
-                className="bg-white border border-gray-100 rounded-3xl overflow-hidden hover:shadow-xl transition-all flex flex-col h-full"
-              >
-                <div className="p-6 flex-grow">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold tracking-widest uppercase">
-                      <Clock className="w-3 h-3" /> {event.duration}
-                    </span>
-                    <span className="text-[#1a1a2e] font-bold text-sm bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                      {event.date}
-                    </span>
-                  </div>
-                  
-                  <h3 className="text-xl font-bold text-[#1a1a2e] mb-2 line-clamp-2 hover:text-[#b44d28] cursor-pointer transition-colors">
-                    {event.name}
-                  </h3>
-                  
-                  <p className="text-sm text-gray-500 flex items-start gap-2 mb-6 h-10 line-clamp-2">
-                    <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-[#b44d28]" /> {event.address}
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-3 mt-auto">
-                    <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 text-center">
-                      <div className="text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-1 flex items-center justify-center gap-1.5">
-                        <Users className="w-3 h-3" /> Authors
+          <div>
+            {filteredPastEvents.length === 0 ? (
+              <FadeIn>
+                <div style={{ padding: "6rem 0", textAlign: "center", borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea" }}>
+                  <Search size={32} color="#ccc" style={{ margin: "0 auto 1.5rem" }} />
+                  <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: "#111", marginBottom: "1rem" }}>No Events Found</h2>
+                  <p style={{ fontSize: 14, color: "#333", fontWeight: 400 }}>Try adjusting your search criteria.</p>
+                </div>
+              </FadeIn>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "3rem" }}>
+                {filteredPastEvents.map((event, i) => (
+                  <FadeIn key={event.id} delay={i * 50}>
+                    <div className="event-card" style={{ display: "flex", flexDirection: "column", height: "100%", border: "1px solid #eaeaea", background: "#fff", padding: "2rem", transition: "transform 0.4s ease, box-shadow 0.4s ease" }}>
+                      <div style={{ height: 180, overflow: "hidden", marginBottom: "1.5rem", border: "1px solid #eaeaea", background: "#fafafa", padding: "0.25rem" }}>
+                        <img src={(event as any).photoUrl || "https://images.unsplash.com/photo-1506880018603-83d5b62f40e5?w=800&q=80"} alt={event.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
-                      <div className="text-2xl font-black text-[#1a1a2e]">{event.authorsParticipated}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+                        <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#333" }}>
+                          {event.date}
+                        </span>
+                        <span style={{ fontSize: 10, color: "#555", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                          <Clock size={12} /> {event.duration}
+                        </span>
+                      </div>
+                      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 400, color: "#111", marginBottom: "1rem", flexGrow: 1 }}>{event.name}</h3>
+                      <p style={{ fontSize: 13, color: "#333", fontWeight: 400, display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "2rem" }}>
+                        <MapPin size={14} color="#ccc" style={{ marginTop: "0.2rem", flexShrink: 0 }} /> {event.address}
+                      </p>
+                      
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1.5rem", marginBottom: "2rem" }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Authors</div>
+                          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event.authorsParticipated}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Books Sold</div>
+                          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event.booksSold !== null ? event.booksSold : "TBA"}</div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #eaeaea", paddingTop: "1.5rem", cursor: "pointer" }} className="report-hover">
+                        <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#111", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <TrendingUp size={12} /> View Report
+                        </span>
+                        <Download size={14} color="#888" className="report-icon" />
+                      </div>
                     </div>
-                    <div className="bg-blue-50/50 rounded-2xl p-3 border border-blue-100/50 text-center">
-                      <div className="text-[10px] font-bold tracking-widest uppercase text-blue-600/70 mb-1 flex items-center justify-center gap-1.5">
-                        <BookOpen className="w-3 h-3" /> Books Sold
-                      </div>
-                      <div className="text-2xl font-black text-blue-600">
-                        {event.booksSold !== null ? event.booksSold : "TBA"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between hover:bg-[#1a1a2e] hover:text-white transition-colors cursor-pointer group">
-                  <span className="text-xs font-bold tracking-widest uppercase flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 group-hover:text-[#b44d28]" /> View Event Report
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#1a1a2e] group-hover:text-[#b44d28] shadow-sm">
-                    <Download className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            {filteredPastEvents.length === 0 && (
-              <div className="col-span-full text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm">
-                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400">
-                  <Search className="w-10 h-10" />
-                </div>
-                <h2 className="text-2xl font-serif text-[#1a1a2e] font-bold mb-2">No Past Events Found</h2>
-                <p className="text-gray-500">Try adjusting your search criteria.</p>
+                  </FadeIn>
+                ))}
               </div>
             )}
           </div>
         )}
-      </div>
-    </div>
+      </section>
+
+      <style>{`
+        .tab-btn::after { content: ''; position: absolute; width: 100%; height: 1px; bottom: -2rem; left: 0; background-color: transparent; transition: background-color 0.2s ease; }
+        .tab-btn:hover { color: #111 !important; }
+        .tab-btn:hover::after { background-color: #111; }
+        .minimal-input:focus { border-bottom-color: #111 !important; }
+
+        .link-underline { position: relative; }
+        .link-underline::after { content: ''; position: absolute; width: 100%; height: 1px; bottom: -2px; left: 0; background-color: #111; transition: opacity 0.2s ease; }
+        .link-underline:hover::after { opacity: 0.3; }
+
+        .event-card:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
+        .report-hover:hover span { color: #b44d28 !important; }
+        .report-hover:hover .report-icon { color: #b44d28 !important; }
+      `}</style>
+    </main>
   );
 }

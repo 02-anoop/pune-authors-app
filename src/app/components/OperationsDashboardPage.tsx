@@ -30,7 +30,7 @@ import {
   RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search, 
   Eye, Edit, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle, 
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
-  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2, FileText
+  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2, FileText, AlertCircle
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell
@@ -305,7 +305,7 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'authors' | 'books' | 'events' | 'orders' | 'settings' | 'forms' | 'gallery' | 'author_data' | 'helpdesk' | 'reports'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
+  const [activeTab, setActiveTab] = useState<'orders' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'orders');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
@@ -716,6 +716,20 @@ export function OperationsDashboardPage() {
     'Content policy violation',
   ];
 
+  const BOOK_REJECTION_REASONS = [
+    'Cover image is blurry, low quality, or inappropriate',
+    'Synopsis is missing, unclear, or too short',
+    'Book pricing is missing or incorrect',
+    'Content violates platform guidelines',
+    'Formatting, language, or metadata issues',
+    'Duplicate book entry detected',
+    'ISBN or Publication details are invalid'
+  ];
+
+  const [rejectBookTarget, setRejectBookTarget] = useState<any>(null);
+  const [rejectBookReasons, setRejectBookReasons] = useState<string[]>([]);
+  const [otherBookReason, setOtherBookReason] = useState('');
+
   const openRejectAuthorModal = (author: any) => {
     setRejectAuthorTarget(author);
     setRejectReasons([]);
@@ -785,13 +799,26 @@ export function OperationsDashboardPage() {
     } finally { setLoadingAction(null); }
   };
 
-  const handleRejectBook = async (id: number) => {
-    const reason = window.prompt("Please provide a reason for rejecting this book:");
-    if (reason === null) return; // User cancelled
-    setLoadingAction('rejectBook_' + id);
+  const handleRejectBook = (bookId: number) => {
+    const book = books.find(b => b.id === bookId);
+    if (!book) return;
+    setRejectBookTarget(book);
+    setRejectBookReasons([]);
+    setOtherBookReason('');
+  };
+
+  const handleRejectBookSubmit = async () => {
+    if (!rejectBookTarget) return;
+    const reasons = [...rejectBookReasons];
+    if (otherBookReason.trim()) reasons.push(otherBookReason.trim());
+    if (reasons.length === 0) { alert('Please select or enter at least one reason.'); return; }
+    
+    const finalReason = reasons.join('; ');
+    setLoadingAction('rejectBook_' + rejectBookTarget.id);
     try {
-      await axios.post(`${API}/api/admin/books/${id}/reject`, { reason });
+      await axios.post(`${API}/api/admin/books/${rejectBookTarget.id}/reject`, { reason: finalReason });
       fetchBooks();
+      setRejectBookTarget(null);
     } catch (err) {
       alert("Failed to reject book");
     } finally { setLoadingAction(null); }
@@ -877,47 +904,80 @@ export function OperationsDashboardPage() {
     navigate('/login');
   };
 
-  const OverviewTab = () => {
-    const actionItems: any[] = [];
-    
-    const pendingAuthors = authors.filter((a: any) => a.status === 'Pending').length;
-    if (pendingAuthors > 0 && !dismissedActions.includes('act-authors')) {
-      actionItems.push({ id: 'act-authors', text: `Approve ${pendingAuthors} new author${pendingAuthors > 1 ? 's' : ''}`, icon: Users, color: 'text-blue-600', bg: 'bg-[#eef2f6]', action: () => setActiveTab('authors') });
-    }
-    
-    const pendingBooks = books.filter((b: any) => b.status === 'Pending').length;
-    if (pendingBooks > 0 && !dismissedActions.includes('act-books')) {
-      actionItems.push({ id: 'act-books', text: `Approve ${pendingBooks} new book${pendingBooks > 1 ? 's' : ''} (added by authors via dashboard)`, icon: BookOpen, color: 'text-green-600', bg: 'bg-[#e6f2eb]', action: () => setActiveTab('books') });
-    }
-    
-    const pendingOrders = orders.filter((o: any) => o.status === 'Pending Verification').length;
-    if (pendingOrders > 0 && !dismissedActions.includes('act-orders')) {
-      actionItems.push({ id: 'act-orders', text: `Verify ${pendingOrders} new web order${pendingOrders > 1 ? 's' : ''}`, icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-200', action: () => setActiveTab('orders') });
-    }
-    
-    const endedEvents = events.filter((e: any) => e.status === 'Past');
-    if (endedEvents.length > 0 && !dismissedActions.includes('act-events')) {
-      actionItems.push({ id: 'act-events', text: `${endedEvents.length} event${endedEvents.length > 1 ? 's' : ''} ended. View generated report${endedEvents.length > 1 ? 's' : ''}`, icon: FileText, color: 'text-orange-600', bg: 'bg-orange-100', action: () => setActiveTab('events') });
-    }
-    
-    const pendingEventRegs = stats?.pendingEventRegistrations || 0;
-    if (pendingEventRegs > 0 && !dismissedActions.includes('act-eventregs')) {
-      actionItems.push({ id: 'act-eventregs', text: `Approve ${pendingEventRegs} new author${pendingEventRegs > 1 ? 's' : ''} registered for events`, icon: CalendarIcon, color: 'text-pink-600', bg: 'bg-pink-100', action: () => setActiveTab('events') });
-    }
-    
-    if (actionItems.length === 0) {
-      actionItems.push({ id: 'act-none', text: 'All caught up! No pending actions.', icon: CheckCircle2, color: 'text-gray-600', bg: 'bg-gray-100', action: () => {} });
-    }
+  const OrdersTab = ({ refreshTrigger }: { refreshTrigger: number }) => {
+    const [reportPeriod, setReportPeriod] = useState('daily');
+    const [isExporting, setIsExporting] = useState(false);
+    const [salesChartData, setSalesChartData] = useState<any[]>([]);
+    const [salesTableData, setSalesTableData] = useState<any[]>([]);
+    const [isLoadingTable, setIsLoadingTable] = useState(false);
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+    useEffect(() => {
+      const fetchChartData = async () => {
+        try {
+          const res = await axios.get(`${API}/api/admin/reports/chart?period=${reportPeriod}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          setSalesChartData(res.data);
+        } catch (err) {
+          toast.error('Failed to load chart data');
+        }
+      };
+      const fetchTableData = async () => {
+        setIsLoadingTable(true);
+        try {
+          const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}&format=json`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          setSalesTableData(res.data);
+        } catch (err) {
+          setSalesTableData([]);
+        } finally {
+          setIsLoadingTable(false);
+        }
+      };
+      fetchChartData();
+      fetchTableData();
+    }, [reportPeriod, API, refreshTrigger]);
+
+    const handleExportSalesReport = async () => {
+      setIsExporting(true);
+      try {
+        const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          responseType: 'blob',
+        });
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const link = document.createElement('a');
+        const today = new Date().toISOString().split('T')[0];
+        link.href = url;
+        link.setAttribute('download', `sales_report_${reportPeriod}_${today}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        toast.success('Sales report exported successfully');
+      } catch (err: any) {
+        if (err.response && err.response.status === 404) {
+          toast.error('No sales data found for this period format.');
+        } else {
+          toast.error('Failed to export sales report');
+        }
+      } finally {
+        setIsExporting(false);
+      }
+    };
+    const successfulOrders = orders.filter((o: any) => o.status === 'Completed').length;
+    const toApproveOrders = orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
+    const underDeliveryOrders = orders.filter((o: any) => o.status === 'Dispatched').length;
 
     return (
     <div className="space-y-6">
-      {/* KPI Cards */}
+      {/* ── High Level KPIs ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { label: 'Total Authors', value: stats.totalAuthors, icon: Users, colorClass: 'blue' },
-          { label: 'Books Published', value: stats.totalBooks, icon: BookOpen, colorClass: 'green' },
-          { label: 'Event Participations', value: stats.eventParticipations, icon: CalendarIcon, colorClass: 'amber' },
-          { label: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },
+          { label: 'Total Authors', value: stats?.totalAuthors || 0, icon: Users, colorClass: 'blue' },
+          { label: 'Books Published', value: stats?.totalBooks || 0, icon: BookOpen, colorClass: 'green' },
+          { label: 'Event Participations', value: stats?.eventParticipations || 0, icon: CalendarIcon, colorClass: 'amber' },
+          { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },
         ].map((kpi, i) => (
           <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
             <div className="flex items-start justify-between mb-4">
@@ -929,665 +989,54 @@ export function OperationsDashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Main Chart */}
-        <div className="lg:col-span-2 dash-panel flex flex-col">
-           <div className="dash-panel-header">
-              <h3 className="dash-panel-title">Revenue & Registrations</h3>
-              <select className="text-xs border border-black/10 bg-gray-50 text-paa-navy px-3 py-1.5 rounded-lg outline-none font-medium">
-                <option>Last 6 Months</option>
-                <option>This Year</option>
-              </select>
-           </div>
-           <div className="h-[300px] p-6">
-             <ResponsiveContainer width="100%" height="100%">
-               <AreaChart data={stats.revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                 <defs>
-                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                     <stop offset="5%" stopColor="#0b1a2e" stopOpacity={0.1}/>
-                     <stop offset="95%" stopColor="#0b1a2e" stopOpacity={0}/>
-                   </linearGradient>
-                 </defs>
-                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(11, 26, 46, 0.1)" />
-                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
-                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
-                 <RechartsTooltip 
-                   contentStyle={{ borderRadius: '0px', border: '1px solid rgba(11,26,46,0.1)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                   cursor={{ stroke: 'rgba(11,26,46,0.1)', strokeWidth: 2 }}
-                 />
-                 <Area type="monotone" dataKey="revenue" stroke="#0b1a2e" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" />
-               </AreaChart>
-             </ResponsiveContainer>
-           </div>
-        </div>
-
-         {/* Pending Actions */}
-        <div className="dash-panel flex flex-col">
-           <div className="dash-panel-header">
-              <h3 className="dash-panel-title">Pending Actions</h3>
-           </div>
-           <div className="p-5 space-y-5 overflow-auto">
-             {actionItems.map((action) => {
-               const Icon = action.icon;
-               return (
-               <div key={action.id} className="flex gap-4 items-center group">
-                 <div className="flex-1 flex items-center gap-4 cursor-pointer" onClick={action.action}>
-                   <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${action.bg} ${action.color} border border-paa-navy/5 rounded-full transition-transform group-hover:scale-110`}>
-                     <Icon className="w-4 h-4" />
-                   </div>
-                   <div className="flex-1">
-                     <p className="text-sm font-bold text-paa-navy group-hover:underline">{action.text}</p>
-                   </div>
-                   {action.id !== 'act-none' && (
-                     <ChevronDown className="w-4 h-4 text-paa-gray-text -rotate-90 group-hover:text-paa-navy transition-colors mr-2" />
-                   )}
-                 </div>
-                 {action.id !== 'act-none' && (
-                   <button onClick={(e) => { e.stopPropagation(); setDismissedActions([...dismissedActions, action.id]); }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Dismiss">
-                     <X className="w-4 h-4" />
-                   </button>
-                 )}
-               </div>
-             )})}
-           </div>
-        </div>
-      </div>
-
-      {/* Event Sales Chart */}
-      <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-         <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Event Sales 2026</h3>
-         </div>
-         <div className="h-[350px] p-6">
-           <ResponsiveContainer width="100%" height="100%">
-             <BarChart data={stats.eventSalesData} margin={{ top: 20, right: 30, left: -20, bottom: 60 }}>
-               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(11, 26, 46, 0.1)" />
-               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280' }} angle={-45} textAnchor="end" />
-               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
-               <RechartsTooltip 
-                 contentStyle={{ borderRadius: '0px', border: '1px solid rgba(11,26,46,0.1)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                 cursor={{ fill: 'rgba(11,26,46,0.05)' }}
-               />
-               <Bar dataKey="booksSold" fill="#0b1a2e" radius={[4, 4, 0, 0]} barSize={40} name="Books Sold">
-                 {stats.eventSalesData?.map((entry: any, index: number) => (
-                   <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#0b1a2e' : '#5bc0de'} />
-                 ))}
-               </Bar>
-             </BarChart>
-           </ResponsiveContainer>
-         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Sales by Author */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Top Authors by Sales</h3>
-           </div>
-           <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
-             {stats.salesByAuthor && stats.salesByAuthor.map((author: any, i: number) => (
-               <div key={i} className="flex justify-between items-center border-b border-paa-navy/5 pb-2">
-                 <div>
-                   <p className="text-sm font-bold text-paa-navy">{author.name}</p>
-                   <p className="text-xs text-paa-gray-text">{author.units} units sold</p>
-                 </div>
-                 <p className="text-sm font-bold text-green-700">₹{author.revenue}</p>
-               </div>
-             ))}
-           </div>
-        </div>
-
-        {/* Top Selling Books */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Top Selling Books</h3>
-           </div>
-           <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
-             {stats.topSellingBooks && stats.topSellingBooks.map((book: any, i: number) => (
-               <div key={i} className="flex justify-between items-center border-b border-paa-navy/5 pb-2">
-                 <div>
-                   <p className="text-sm font-bold text-paa-navy truncate max-w-[150px]">{book.title}</p>
-                   <p className="text-xs text-paa-gray-text truncate max-w-[150px]">{book.author}</p>
-                 </div>
-                 <div className="text-right">
-                   <p className="text-sm font-bold text-paa-navy">{book.units} units</p>
-                   <p className="text-xs text-green-600 font-bold">₹{book.revenue}</p>
-                 </div>
-               </div>
-             ))}
-           </div>
-        </div>
-
-        {/* Low Stock Alerts */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Low Stock Alerts</h3>
-           </div>
-           <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
-             {stats.lowStockAlerts && stats.lowStockAlerts.length > 0 ? stats.lowStockAlerts.map((book: any, i: number) => (
-               <div key={i} className="flex justify-between items-center border-b border-paa-navy/5 pb-2">
-                 <div>
-                   <p className="text-sm font-bold text-paa-navy truncate max-w-[150px]">{book.title}</p>
-                   <p className="text-xs text-paa-gray-text truncate max-w-[150px]">{book.author?.name}</p>
-                 </div>
-                 <span className={`px-2 py-1 text-xs font-bold rounded-3xl-2xl ${book.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                   {book.stock} left
-                 </span>
-               </div>
-             )) : (
-               <p className="text-sm text-paa-gray-text text-center py-8">All books are sufficiently stocked.</p>
-             )}
-           </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Sales by Genre */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Sales by Genre</h3>
-           </div>
-           <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
-             {stats.salesByGenre && stats.salesByGenre.map((genre: any, i: number) => (
-               <div key={i} className="flex justify-between items-center border-b border-paa-navy/5 pb-2">
-                 <div>
-                   <p className="text-sm font-bold text-paa-navy">{genre.name}</p>
-                   <p className="text-xs text-paa-gray-text">{genre.units} units sold</p>
-                 </div>
-                 <p className="text-sm font-bold text-paa-navy">₹{genre.revenue}</p>
-               </div>
-             ))}
-           </div>
-        </div>
-
-        {/* Top Customers */}
-        <div className="bg-white p-0 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-           <div className="bg-white px-8 py-6 z-10 flex items-center justify-between">
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Top Customers</h3>
-           </div>
-           <div className="p-6 space-y-4 overflow-auto max-h-[300px]">
-             {stats.topCustomers && stats.topCustomers.map((customer: any, i: number) => (
-               <div key={i} className="flex justify-between items-center border-b border-paa-navy/5 pb-2">
-                 <div>
-                   <p className="text-sm font-bold text-paa-navy">{customer.name}</p>
-                   <p className="text-xs text-paa-gray-text">{customer.email}</p>
-                 </div>
-                 <div className="text-right">
-                   <p className="text-sm font-bold text-green-700">₹{customer.totalSpent}</p>
-                   <p className="text-xs text-paa-gray-text">{customer.ordersCount} orders</p>
-                 </div>
-               </div>
-             ))}
-           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-  const renderAuthorsTab = ({ refreshTrigger }: any) => {
-    if (selectedAuthor) {
-      return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;
-    }
-
-    return (
-    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-       <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
-          <div className="flex items-center gap-3">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Authors Directory</h3>
-            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">{authors.length} Total</span>
+      {/* ── Order Tracking KPIs ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+            <Check size={20} />
           </div>
-          <div className="flex items-center gap-3">
-             <div className="flex items-center gap-2">
-                <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
-                  {['All', 'Pending', 'Active', 'Rejected'].map(status => (
-                    <button 
-                      key={status}
-                      onClick={() => setAuthorStatusFilter(status)}
-                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
-                    >
-                      {status}
-                    </button>
-                  ))}
-                </div>
-                <div className="relative">
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Successful Orders</p>
+            <h3 className="text-2xl font-bold text-paa-navy">{successfulOrders}</h3>
+          </div>
+        </div>
+        <div className="dash-kpi-card amber" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
+            <AlertCircle size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Approved</p>
+            <h3 className="text-2xl font-bold text-paa-navy">{toApproveOrders}</h3>
+          </div>
+        </div>
+        <div className="dash-kpi-card blue" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <Package size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Under Delivery</p>
+            <h3 className="text-2xl font-bold text-paa-navy">{underDeliveryOrders}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+         <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
+            <div className="flex items-center gap-2">
+              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Web Orders</h3>
+            </div>
+            <div className="flex items-center gap-3">
+               <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                  <input 
-                    type="text" 
-                    placeholder="SEARCH AUTHORS..." 
-                    className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-             </div>
-          </div>
-       </div>
-       
-       <div className="overflow-x-auto">
-         <table className="dash-table">
-           <thead>
-              <tr>
-                <th>Author Details</th>
-                <th>Contact</th>
-                <th>Payment Info</th>
-                <th style={{textAlign: 'center'}}>Status</th>
-                <th style={{textAlign: 'center'}}>Books</th>
-                <th style={{textAlign: 'center'}}>Events</th>
-                <th style={{textAlign: 'center'}}>Actions</th>
-              </tr>
-           </thead>
-           <tbody>
-              {authors.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) && (authorStatusFilter === 'All' || a.status === authorStatusFilter)).map((author) => (
-                <tr key={author.id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#f0f4f8] border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
-                        {author.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-paa-navy">{author.name}</p>
-                        <p className="text-xs text-paa-gray-text flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3"/> Joined {author.joined}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <p className="text-paa-navy font-medium">{author.email}</p>
-                    <p className="text-paa-gray-text text-xs mt-0.5 font-medium">{author.phone}</p>
-                  </td>
-                  <td>
-                    {author.transactionId ? (
-                      <div>
-                        <p className="text-[10px] font-bold text-paa-navy uppercase bg-gray-100 inline-block px-1 mb-1">TXN: {author.transactionId}</p>
-                        <br />
-                        {author.paymentScreenshot ? (
-                           <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + author.paymentScreenshot : "http://localhost:3001" + author.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline font-medium mt-1 inline-block hover:text-blue-800">View Receipt</a>
-                        ) : (
-                           <span className="text-[10px] text-red-500 font-bold uppercase block mt-1">No Receipt</span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-gray-400 font-bold uppercase">No Payment Info</span>
-                    )}
-                  </td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
-                      {author.status}
-                    </span>
-                  </td>
-                  <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
-                    {author.totalBooks}
-                  </td>
-                  <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
-                    {author.eventsPart}
-                  </td>
-                  <td style={{textAlign: 'center'}}>
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                       {author.status === 'Pending' && (
-                         <>
-                           <button onClick={() => handleApproveAuthor(author.id)} className="dash-btn dash-btn-success" title="Approve">
-                             {loadingAction === 'approveAuthor_' + author.id ? '...' : <Check className="w-4 h-4" />} Approve
-                           </button>
-                           <button onClick={() => openRejectAuthorModal(author)} className="dash-btn dash-btn-danger" title="Reject">
-                             <X className="w-4 h-4" /> Reject
-                           </button>
-                         </>
-                       )}
-                       <button onClick={() => handleEditAuthorClick(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Profile">
-                         <Edit className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => setSelectedAuthor(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Details">
-                         <Eye className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => handleDeleteAuthor(author.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">
-                         <Trash2 className="w-4 h-4" />
-                       </button>
-                    </div>
-                    {author.status === 'Rejected' && author.rejectionReason && (
-                      <div className="mt-2 text-[10px] text-red-600 font-medium max-w-[200px] mx-auto text-left leading-tight bg-red-50 p-2 rounded-lg">
-                        Reason: {author.rejectionReason}
-                      </div>
-                    )}
-                  </td>
-                </tr>
-             ))}
-             {authors.length === 0 && (
-               <tr>
-                 <td colSpan={7} className="text-center py-8 text-paa-gray-text bg-white">No authors found.</td>
-               </tr>
-             )}
-           </tbody>
-         </table>
-       </div>
-    </div>
-    );
-  };
-
-  const BooksTab = () => {
-    if (selectedBookDetails) {
-      return (
-        <div className="bg-white border border-paa-navy/5 p-8 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-          <button onClick={() => setSelectedBookDetails(null)} className="mb-6 p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded-full active:scale-95 transition-all duration-300 shadow-sm">
-             <ArrowLeft className="w-5 h-5 text-paa-navy" />
-          </button>
-          
-          <div className="space-y-6">
-             <div className="flex gap-6">
-               {selectedBookDetails.coverUrl && (
-                 <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-40 h-56 object-cover border border-paa-navy/20 shadow-md" />
-               )}
-               <div className="flex-1">
-                  <h3 className="text-3xl font-serif font-bold text-paa-navy mb-1">{selectedBookDetails.title}</h3>
-                  {selectedBookDetails.subtitle && <p className="text-lg font-medium text-paa-gray-text mb-2">{selectedBookDetails.subtitle}</p>}
-                  <p className="text-base font-medium mb-2">Author: <span className="font-bold text-paa-navy">{selectedBookDetails.authorName}</span></p>
-                  <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mt-2 bg-[#eef2f6] inline-block px-3 py-1">{selectedBookDetails.genre} {selectedBookDetails.subGenre && `> ${selectedBookDetails.subGenre}`}</p>
+                  <input type="text" placeholder="SEARCH ORDERS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
                </div>
-             </div>
-             
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 border-t border-paa-navy/5 pt-6 mt-6">
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">MRP</span><span className="text-lg font-black text-green-700">₹{selectedBookDetails.mrp}</span></div>
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Language</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pages</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.pages || '-'}</span></div>
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Publisher</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pub Date</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">ISBN</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Current Stock</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.stock}</span></div>
-               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Total Sales</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.sales}</span></div>
-             </div>
-             
-             <div className="border-t border-paa-navy/5 pt-6 mt-6">
-               <span className="text-sm font-bold uppercase tracking-widest text-paa-navy block mb-3">Synopsis</span>
-               <p className="text-sm text-paa-gray-text leading-relaxed whitespace-pre-wrap">{selectedBookDetails.synopsis || 'No synopsis provided.'}</p>
-             </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-       <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e6f2eb]">
-          <div className="flex items-center gap-2">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Inventory Management</h3>
-          </div>
-          <div className="flex items-center gap-3">
-             <div className="flex items-center gap-2">
-                <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
-                  {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
-                    <button 
-                      key={status}
-                      onClick={() => setBookStatusFilter(status)}
-                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${bookStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
-                    >
-                      {status}
-                    </button>
-                  ))}
-                </div>
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                  <input type="text" placeholder="SEARCH BOOKS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
-                </div>
-             </div>
-             {/* <button onClick={() => setIsBookModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
-               <Plus className="w-4 h-4" /> Add Book
-             </button> */}
-          </div>
-       </div>
-       
-       <div className="overflow-x-auto">
-         <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Book Info</th>
-                <th>Author</th>
-                <th style={{textAlign: 'center'}}>Status</th>
-                <th style={{textAlign: 'center'}}>Price</th>
-                <th style={{textAlign: 'center'}}>Stock</th>
-                <th style={{textAlign: 'center'}}>Sales</th>
-                <th style={{textAlign: 'center'}}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-             {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter)).map((book) => (
-               <tr key={book.id}>
-                 <td>
-                   <p className="font-bold text-paa-navy mb-1">{book.title}</p>
-                   <div className="flex items-center gap-2 text-xs font-medium">
-                     <span className="text-[#5bc0de] font-bold uppercase">{book.genre}</span>
-                   </div>
-                 </td>
-                 <td>
-                    <p className="text-paa-navy font-bold">{book.authorName}</p>
-                 </td>
-                 <td style={{textAlign: 'center'}}>
-                    <span className={`dash-badge ${book.status === 'Approved' ? 'approved' : book.status === 'Rejected' ? 'rejected' : 'pending'}`}>
-                      {book.status}
-                    </span>
-                 </td>
-                 <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
-                    ₹{book.mrp}
-                 </td>
-                 <td style={{textAlign: 'center'}}>
-                    {book.stock >= 10 ? (
-                      <span className="dash-badge active">OK: {book.stock}</span>
-                    ) : book.stock > 0 ? (
-                      <span className="dash-badge pending"><AlertCircle className="w-3 h-3"/> {book.stock} LEFT</span>
-                    ) : (
-                      <span className="dash-badge rejected"><AlertCircle className="w-3 h-3"/> OUT OF STOCK</span>
-                    )}
-                 </td>
-                 <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
-                    {book.sales}
-                 </td>
-                 <td style={{textAlign: 'center'}}>
-                    <div className="flex items-center justify-center gap-2">
-                       {book.status === 'Pending' && (
-                         <button onClick={() => handleApproveBook(book.id)} className="dash-btn dash-btn-success dash-btn-icon" title="Approve">
-                           <Check className="w-4 h-4" />
-                         </button>
-                       )}
-                       {book.status !== 'Rejected' && (
-                         <button onClick={() => handleRejectBook(book.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Reject">
-                           <X className="w-4 h-4" />
-                         </button>
-                       )}
-                       <button onClick={() => setSelectedBookDetails(book)} className="dash-btn dash-btn-ghost dash-btn-icon" title="View Details">
-                         <Eye className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => handleEditBookClick(book)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Details">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDeleteBook(book.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                     </div>
-                 </td>
-               </tr>
-             ))}
-             {books.length === 0 && (
-               <tr>
-                 <td colSpan={7} className="text-center py-8 text-paa-gray-text bg-white">No books found.</td>
-               </tr>
-             )}
-           </tbody>
-         </table>
-       </div>
-    </div>
-    );
-  };
-
-  const EventsTab = () => (
-    <div className="space-y-6">
-       <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
-          <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Ecosystem</h3>
-          <button onClick={() => setIsEventModalOpen(true)} className="dash-btn dash-btn-primary">
-            <Plus className="w-4 h-4" /> Create Event
-          </button>
-       </div>
-
-       <div className="space-y-4">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2">Active / Upcoming Events</h4>
-       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {events.filter(e => e.status === 'Upcoming').map((evt) => (
-             <div key={evt.id} className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out hover:shadow-md flex flex-col relative overflow-hidden h-full">
-                <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative`}>
-                   <span>{evt.status}</span>
-                   <div className="flex gap-2 items-center">
-                     {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Authors Notified</span>}
-                     {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Public</span>}
-                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
-                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
-                   </div>
-                </div>
-                <div className="p-6 flex-1 flex flex-col">
-                  {evt.bannerUrl ? (
-                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 bg-gray-100">
-                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
-                    </div>
-                  ) : (
-                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 flex items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100">
-                       <CalendarIcon className="w-8 h-8 text-gray-300" />
-                    </div>
-                  )}
-                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
-                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-paa-gray-text">
-                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50"/> {evt.date} &bull; {evt.duration}</p>
-                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-paa-navy/50"/> {evt.location}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-gray-50 p-2 text-center rounded-3xl-2xl border border-gray-100">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Authors</p>
-                        <p className="text-lg font-black text-paa-navy">{evt._count?.eventAuthors || 0}</p>
-                     </div>
-                     <div className="bg-gray-50 p-2 text-center rounded-3xl-2xl border border-gray-100">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Linked</p>
-                        <p className="text-lg font-black text-paa-navy">{evt._count?.eventBooks || 0}</p>
-                     </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-paa-navy/5 flex flex-col gap-2 mt-auto">
-                     <button onClick={() => fetchEventRegistrations(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800">
-                        View Author Registrations
-                     </button>
-                     <button onClick={() => fetchEventReport(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
-                        View Live Event Report
-                     </button>
-                  </div>
-                </div>
-             </div>
-          ))}
-          {events.filter(e => e.status === 'Upcoming').length === 0 && (
-             <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-3xl-2xl border border-dashed border-gray-200">
-                No upcoming events.
-             </div>
-          )}
-       </div>
-
-       <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2 mt-12">Past Events Archive</h4>
-       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {pastEventsData.map((evt: any) => (
-             <div key={'legacy_'+evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90">
-                <div className="bg-gray-800 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center">
-                   <span>Legacy Archive</span>
-                </div>
-                <div className="p-6 flex-1">
-                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
-                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-gray-500">
-                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-gray-400"/> {evt.date} &bull; {evt.duration}</p>
-                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400"/> {evt.address || evt.location}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
-                        <p className="text-lg font-black text-gray-700">{evt.authorsParticipated || 0}</p>
-                     </div>
-                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Sold</p>
-                        <p className="text-lg font-black text-gray-700">{evt.booksSold || 0}</p>
-                     </div>
-                  </div>
-                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2 mt-auto">
-                     <button onClick={() => fetchEventReport('legacy_' + evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
-                        View Legacy Settlement Report
-                     </button>
-                  </div>
-                </div>
-             </div>
-          ))}
-          {events.filter(e => e.status === 'Past').map((evt) => (
-             <div key={evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90 h-full">
-                <div className="bg-gray-500 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative">
-                   <span>{evt.status}</span>
-                   <div className="flex gap-2 items-center">
-                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
-                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
-                   </div>
-                </div>
-                <div className="p-6 flex-1 flex flex-col">
-                  {evt.bannerUrl ? (
-                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 bg-gray-100">
-                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
-                    </div>
-                  ) : (
-                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center bg-gradient-to-r from-gray-100 to-gray-50">
-                       <CalendarIcon className="w-8 h-8 text-gray-300" />
-                    </div>
-                  )}
-                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
-                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-gray-500">
-                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-gray-400"/> {evt.date} &bull; {evt.duration}</p>
-                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400"/> {evt.location}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
-                        <p className="text-lg font-black text-gray-700">{evt._count?.eventAuthors || 0}</p>
-                     </div>
-                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Linked</p>
-                        <p className="text-lg font-black text-gray-700">{evt._count?.eventBooks || 0}</p>
-                     </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2 mt-auto">
-                     <button onClick={() => fetchEventReport(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
-                        View Sales & Settlement Report
-                     </button>
-                  </div>
-                </div>
-             </div>
-          ))}
-          {events.filter(e => e.status === 'Past').length === 0 && (
-             <div className="col-span-full py-8 text-center text-gray-400 bg-gray-50 rounded-3xl-2xl border border-dashed border-gray-200">
-                No past events archived yet.
-             </div>
-          )}
-       </div>
-       </div>
-    </div>
-  );
-
-  const OrdersTab = () => (
-    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-       <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
-          <div className="flex items-center gap-2">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Web Orders</h3>
-          </div>
-          <div className="flex items-center gap-3">
-             <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                <input type="text" placeholder="SEARCH ORDERS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
-             </div>
-             <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
-               <ClipboardList className="w-4 h-4" /> Export CSV
-             </button>
-          </div>
-       </div>
-       
-       <div className="overflow-x-auto">
+               <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+                 <ClipboardList className="w-4 h-4" /> Export CSV
+               </button>
+            </div>
+         </div>
+         
+         <div className="overflow-x-auto">
           <table className="dash-table">
             <thead>
               <tr>
@@ -1636,7 +1085,9 @@ export function OperationsDashboardPage() {
          </table>
        </div>
     </div>
+    </div>
   );
+  };
 
   const SettingsTab = () => {
 
@@ -2106,12 +1557,10 @@ export function OperationsDashboardPage() {
 
         <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
            {[
-             { id: 'overview', label: 'Overview', icon: BarChart3 },
-             { id: 'reports', label: 'Sales Reports', icon: FileText },
+             { id: 'orders', label: 'Web Orders & Reports', icon: ShoppingCart, hasAlert: pendingAlerts.orders },
              { id: 'authors', label: 'Authors Menu', icon: Users, hasAlert: pendingAlerts.authors },
              { id: 'books', label: 'Inventory / Books', icon: BookOpen, hasAlert: pendingAlerts.books },
              { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
-             { id: 'orders', label: 'Web Orders', icon: ShoppingCart, hasAlert: pendingAlerts.orders },
              { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
              { id: 'author_data', label: 'Author Extra Data', icon: ClipboardList },
              { id: 'helpdesk', label: 'Helpdesk / Queries', icon: Users, hasAlert: pendingAlerts.queries },
@@ -2223,16 +1672,14 @@ export function OperationsDashboardPage() {
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-auto p-4 sm:p-7">
-           {activeTab === 'overview' && <OverviewTab />}
+           {activeTab === 'orders' && <OrdersTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
            {activeTab === 'books' && <BooksTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'events' && <EventsTab refreshTrigger={lastRefreshTime} />}
-           {activeTab === 'orders' && <OrdersTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'forms' && <FormsTab />}
            {activeTab === 'gallery' && <GalleryTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'author_data' && <AuthorDataTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
-           {activeTab === 'reports' && <ReportsTab />}
            {activeTab === 'settings' && (
              <div className="p-8 text-center text-gray-500">
                <h2 className="text-2xl font-bold mb-2">System Settings</h2>
@@ -3207,6 +2654,57 @@ export function OperationsDashboardPage() {
         </div>
       )}
 
+      {/* Reject Book Modal */}
+      {rejectBookTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
+          <div className="bg-white border border-paa-navy/5 shadow-xl w-full max-w-lg">
+            <div className="bg-[#d9534f] p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center border-b border-paa-navy/5 text-white">
+              Reject Book: {rejectBookTarget.title}
+              <button type="button" onClick={() => setRejectBookTarget(null)} className="hover:opacity-70">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4">Select rejection reason(s):</p>
+              <div className="space-y-3 mb-4 max-h-60 overflow-y-auto bg-gray-50 p-3 border border-paa-navy/5">
+                {BOOK_REJECTION_REASONS.map((reason) => (
+                  <label key={reason} className="flex items-start gap-3 cursor-pointer text-sm font-medium text-paa-navy hover:text-paa-gold">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 accent-paa-navy"
+                      checked={rejectBookReasons.includes(reason)}
+                      onChange={(e) => {
+                        if (e.target.checked) setRejectBookReasons([...rejectBookReasons, reason]);
+                        else setRejectBookReasons(rejectBookReasons.filter(r => r !== reason));
+                      }}
+                    />
+                    {reason}
+                  </label>
+                ))}
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Other (specify):</label>
+                <input
+                  type="text"
+                  value={otherBookReason}
+                  onChange={(e) => setOtherBookReason(e.target.value)}
+                  placeholder="Enter additional reason..."
+                  className="w-full border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setRejectBookTarget(null)} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy font-bold uppercase tracking-widest">
+                  Cancel
+                </button>
+                <button onClick={handleRejectBookSubmit} disabled={loadingAction === `rejectBook_${rejectBookTarget.id}`} className="px-6 py-2 bg-[#d9534f] hover:bg-[#c9302c] text-white text-xs font-bold uppercase tracking-widest shadow transition-colors disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+                  {loadingAction === `rejectBook_${rejectBookTarget.id}` ? 'Rejecting...' : 'Confirm Rejection'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Author Modal */}
       <Modal isOpen={isEditAuthorModalOpen} onClose={() => { setIsEditAuthorModalOpen(false); setEditingAuthor(null); }} title="Edit Author Profile">
         {editingAuthor && (
@@ -3339,152 +2837,7 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
           </div>
        </div>
     </div>
-  );
+   );
 };
 
-const ReportsTab = () => {
-  const [reportPeriod, setReportPeriod] = useState('daily');
-  const [isExporting, setIsExporting] = useState(false);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [tableData, setTableData] = useState<any[]>([]);
-  const [isLoadingTable, setIsLoadingTable] = useState(false);
-  const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-  useEffect(() => {
-    const fetchChartData = async () => {
-      try {
-        const res = await axios.get(`${API}/api/admin/reports/chart?period=${reportPeriod}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        setChartData(res.data);
-      } catch (err) {
-        toast.error('Failed to load chart data');
-      }
-    };
-    const fetchTableData = async () => {
-      setIsLoadingTable(true);
-      try {
-        const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}&format=json`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        setTableData(res.data);
-      } catch (err) {
-        setTableData([]);
-      } finally {
-        setIsLoadingTable(false);
-      }
-    };
-    fetchChartData();
-    fetchTableData();
-  }, [reportPeriod, API]);
-
-  const handleExportSalesReport = async () => {
-    setIsExporting(true);
-    try {
-      const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      const today = new Date().toISOString().split('T')[0];
-      link.href = url;
-      link.setAttribute('download', `sales_report_${reportPeriod}_${today}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      toast.success('Sales report exported successfully');
-    } catch (err: any) {
-      if (err.response && err.response.status === 404) {
-        toast.error('No sales data found for this period format.');
-      } else {
-        toast.error('Failed to export sales report');
-      }
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6 max-w-6xl">
-       <div className="bg-white p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl">
-          <div className="mb-6 border-b border-paa-navy/5 pb-4">
-             <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
-                <FileText className="w-5 h-5" /> Sales & Revenue Reports
-             </h3>
-             <p className="text-paa-gray-text text-sm">Generate comprehensive reports on books sold through all channels (Web & Live Events).</p>
-          </div>
-          
-          
-          {chartData.length > 0 && (
-            <div className="mb-8 border border-paa-navy/5 p-4 rounded-xl">
-               <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Books Sold By Channel</h4>
-               <div className="h-64">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <AreaChart data={chartData}>
-                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                     <XAxis dataKey="name" fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
-                     <YAxis fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
-                     <RechartsTooltip contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                     <Area type="monotone" dataKey="Web" stackId="1" stroke="#3b82f6" fill="#bfdbfe" name="Online Orders (Web)" />
-                     <Area type="monotone" dataKey="POS" stackId="1" stroke="#10b981" fill="#a7f3d0" name="Event Sales (POS)" />
-                   </AreaChart>
-                 </ResponsiveContainer>
-               </div>
-            </div>
-          )}
-
-          <div className="flex flex-col md:flex-row gap-6 items-end">
-            <div className="flex-1">
-              <label className="dash-label">Report Grouping Period</label>
-              <select className="dash-input" value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}>
-                <option value="daily">Daily (Group by Day)</option>
-                <option value="weekly">Weekly (Group by Week)</option>
-                <option value="monthly">Monthly (Group by Month)</option>
-                <option value="yearly">Yearly (Group by Year)</option>
-                <option value="lifelong">Lifelong (All Time)</option>
-              </select>
-            </div>
-            <button 
-              onClick={handleExportSalesReport}
-              disabled={isExporting}
-              className="dash-btn dash-btn-primary whitespace-nowrap h-12 px-8"
-            >
-              {isExporting ? 'Generating Report...' : 'Download CSV Report'}
-            </button>
-          </div>
-          <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm">
-             <div className="overflow-x-auto">
-               <table className="dash-table w-full text-left">
-                  <thead className="bg-[#f0f4f8]">
-                     <tr>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Period</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Channel</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Author</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Book Title</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Qty</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Revenue</th>
-                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-paa-navy/5 bg-white">
-                     {isLoadingTable ? (
-                        <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text"><Loader2 className="w-5 h-5 animate-spin mx-auto text-paa-navy" /></td></tr>
-                     ) : tableData.length === 0 ? (
-                        <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text italic">No sales data found for this period.</td></tr>
-                     ) : tableData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                           <td className="px-4 py-3 text-sm font-medium text-paa-navy">{row.Period}</td>
-                           <td className="px-4 py-3 text-sm text-paa-gray-text"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${row.Channel === 'Web' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>{row.Channel}</span></td>
-                           <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{row.Author}</td>
-                           <td className="px-4 py-3 text-sm text-paa-navy">{row.BookTitle}</td>
-                           <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{row.QuantitySold}</td>
-                           <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{row.Revenue}</td>
-                        </tr>
-                     ))}
-                  </tbody>
-               </table>
-             </div>
-          </div>
-       </div>
-    </div>
-  );
-};
+export default OperationsDashboardPage;

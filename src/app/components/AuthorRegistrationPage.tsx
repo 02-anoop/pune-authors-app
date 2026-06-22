@@ -106,139 +106,116 @@ export function AuthorRegistrationPage() {
     validateField(key, val);
   };
 
-  const inputStyle = {
-    width: "100%",
-    padding: "0.65rem 0.9rem",
-    border: "1px solid rgba(0,0,0,0.12)",
-    borderRadius: 10,
-    fontFamily: "var(--font-body)",
-    fontSize: 14,
-    background: "#f7f7f9",
-    outline: "none",
-    boxSizing: "border-box" as const,
-  };
-
-  const labelStyle = {
-    display: "block" as const,
-    fontSize: 12,
-    fontWeight: 600 as const,
-    color: "#1a1a2e",
-    marginBottom: "0.3rem",
-  };
-
   return (
-    <main style={{ fontFamily: "var(--font-body)", minHeight: "100vh", background: "#f7f7f9" }}>
+    <main className="font-sans min-h-screen bg-[#F8FAFC] text-paa-navy">
       {/* Header */}
-      <section style={{ background: "#1a1a2e", padding: "3rem 1.5rem", textAlign: "center" }}>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.5)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.5rem" }}>New Author Onboarding</div>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 800, color: "#fff" }}>Join Pune Authors' Association</h1>
-        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginTop: "0.5rem" }}>A one-time application reviewed by our editorial team within 5-7 working days.</p>
+      <section className="bg-paa-navy py-16 px-6 text-center text-white">
+        <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-3">New Author Onboarding</div>
+        <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight mb-3">Join Pune Authors' Association</h1>
+        <p className="text-sm text-white/60 max-w-lg mx-auto">A one-time application reviewed by our editorial team within 5-7 working days.</p>
       </section>
 
       {/* Stepper */}
-      <div style={{ background: "#fff", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "1rem 1.5rem" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 0 }}>
+      <div className="bg-white border-b border-paa-navy/5 px-6 py-5 sticky top-0 z-40 shadow-sm">
+        <div className="max-w-3xl mx-auto flex items-center justify-center">
           {steps.map((s, i) => (
-            <div key={s.title} style={{ display: "flex", alignItems: "center" }}>
+            <div key={s.title} className="flex items-center">
               <div
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", cursor: i <= step ? "pointer" : "default",
-                  padding: "0 0.75rem",
-                }}
+                className={`flex flex-col items-center px-3 ${i <= step ? "cursor-pointer" : "cursor-default"}`}
                 onClick={() => { if (i <= step) setStep(i); }}
               >
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%",
-                  background: i < step ? "#16a34a" : i === step ? "#1a1a2e" : "#f0f0f4",
-                  color: i < step || i === step ? "#fff" : "#6b6b80",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  marginBottom: "0.4rem",
-                  transition: "all 0.3s",
-                }}>
-                  {i < step ? <CheckCircle size={16} /> : s.icon}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all duration-300 shadow-sm
+                  ${i < step ? "bg-emerald-500 text-white shadow-emerald-500/20" : i === step ? "bg-paa-gold text-paa-navy shadow-paa-gold/20" : "bg-gray-100 text-gray-400"}`}>
+                  {i < step ? <CheckCircle size={18} /> : s.icon}
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: i === step ? "#1a1a2e" : "#6b6b80", textAlign: "center", maxWidth: 80, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</span>
+                <span className={`text-[10px] font-bold uppercase tracking-widest text-center max-w-[80px] truncate transition-colors ${i === step ? "text-paa-navy" : "text-gray-400"}`}>
+                  {s.title}
+                </span>
               </div>
               {i < steps.length - 1 && (
-                <div style={{ width: 48, height: 2, background: i < step ? "#16a34a" : "rgba(0,0,0,0.1)", transition: "background 0.3s" }} />
+                <div className={`w-12 h-0.5 transition-colors ${i < step ? "bg-emerald-500" : "bg-gray-200"}`} />
               )}
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ maxWidth: 720, margin: "2.5rem auto", padding: "0 1.5rem 4rem" }}>
+      <div className="max-w-3xl mx-auto my-12 px-6 pb-20">
         {!submitted ? (
-          <div style={{ background: "#fff", borderRadius: 20, border: "1px solid rgba(0,0,0,0.07)", padding: "2.5rem", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+          <div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-8 md:p-12 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out">
             {/* Step 0: Author Profile */}
             {step === 0 && (
-              <div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.3rem" }}>Author Profile</h2>
-                <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>Tell us about yourself. This information will be publicly displayed on your PAA author page.</p>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Author Profile</h2>
+                <p className="text-sm text-paa-gray-text mb-8">Tell us about yourself. This information will be publicly displayed on your PAA author page.</p>
 
-                <div style={{ display: "grid", gap: "1rem" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label style={labelStyle}>Full Name *</label>
-                      <input type="text" value={form.name} onChange={(e) => update("name", e.target.value)} style={{...inputStyle, borderColor: errors.name ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.name && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.name}</div>}
+                      <label className="dash-label">Full Name *</label>
+                      <input type="text" value={form.name} onChange={(e) => update("name", e.target.value)} className={`dash-input w-full ${errors.name ? '!border-red-500' : ''}`} placeholder="e.g. Jane Doe" />
+                      {errors.name && <div className="text-red-500 text-xs mt-1 font-medium">{errors.name}</div>}
                     </div>
                     <div>
-                      <label style={labelStyle}>Pen Name</label>
-                      <input type="text" value={form.penName} onChange={(e) => update("penName", e.target.value)} style={inputStyle} />
+                      <label className="dash-label">Pen Name</label>
+                      <input type="text" value={form.penName} onChange={(e) => update("penName", e.target.value)} className="dash-input w-full" placeholder="e.g. J.D." />
                     </div>
                     <div>
-                      <label style={labelStyle}>Email Address *</label>
-                      <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} style={{...inputStyle, borderColor: errors.email ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.email && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.email}</div>}
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                    <div>
-                      <label style={labelStyle}>Phone Number *</label>
-                      <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} style={{...inputStyle, borderColor: errors.phone ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.phone && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.phone}</div>}
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Password (For Login) *</label>
-                      <input type="password" value={form.password} onChange={(e) => update("password", e.target.value)} style={{...inputStyle, borderColor: errors.password ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.password && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.password}</div>}
+                      <label className="dash-label">Email Address *</label>
+                      <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className={`dash-input w-full ${errors.email ? '!border-red-500' : ''}`} placeholder="jane@example.com" />
+                      {errors.email && <div className="text-red-500 text-xs mt-1 font-medium">{errors.email}</div>}
                     </div>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label style={labelStyle}>City *</label>
-                      <input type="text" value={form.city} onChange={(e) => update("city", e.target.value)} style={{...inputStyle, borderColor: errors.city ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.city && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.city}</div>}
+                      <label className="dash-label">Phone Number *</label>
+                      <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''}`} placeholder="10-digit mobile number" />
+                      {errors.phone && <div className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</div>}
                     </div>
                     <div>
-                      <label style={labelStyle}>State *</label>
-                      <input type="text" value={form.state} onChange={(e) => update("state", e.target.value)} style={{...inputStyle, borderColor: errors.state ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.state && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.state}</div>}
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                    <div>
-                      <label style={labelStyle}>Instagram Profile</label>
-                      <input type="text" value={form.instagram} onChange={(e) => update("instagram", e.target.value)} style={inputStyle} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Facebook / LinkedIn Profile</label>
-                      <input type="text" value={form.facebook} onChange={(e) => update("facebook", e.target.value)} style={inputStyle} />
+                      <label className="dash-label">Password (For Login) *</label>
+                      <input type="password" value={form.password} onChange={(e) => update("password", e.target.value)} className={`dash-input w-full ${errors.password ? '!border-red-500' : ''}`} placeholder="Min 6 characters" />
+                      {errors.password && <div className="text-red-500 text-xs mt-1 font-medium">{errors.password}</div>}
                     </div>
                   </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="dash-label">City *</label>
+                      <input type="text" value={form.city} onChange={(e) => update("city", e.target.value)} className={`dash-input w-full ${errors.city ? '!border-red-500' : ''}`} placeholder="e.g. Pune" />
+                      {errors.city && <div className="text-red-500 text-xs mt-1 font-medium">{errors.city}</div>}
+                    </div>
+                    <div>
+                      <label className="dash-label">State *</label>
+                      <input type="text" value={form.state} onChange={(e) => update("state", e.target.value)} className={`dash-input w-full ${errors.state ? '!border-red-500' : ''}`} placeholder="e.g. Maharashtra" />
+                      {errors.state && <div className="text-red-500 text-xs mt-1 font-medium">{errors.state}</div>}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="dash-label">Instagram Profile</label>
+                      <input type="text" value={form.instagram} onChange={(e) => update("instagram", e.target.value)} className="dash-input w-full" placeholder="@username" />
+                    </div>
+                    <div>
+                      <label className="dash-label">Facebook / LinkedIn Profile</label>
+                      <input type="text" value={form.facebook} onChange={(e) => update("facebook", e.target.value)} className="dash-input w-full" placeholder="Profile URL" />
+                    </div>
+                  </div>
+                  
                   <div>
-                    <label style={labelStyle}>Author Bio (100 words) *</label>
+                    <label className="dash-label">Author Bio (100 words) *</label>
                     <textarea
                       placeholder="Tell us a little bit about yourself, your background, and your journey as a writer..."
                       value={form.bio}
                       onChange={(e) => update("bio", e.target.value)}
                       rows={5}
-                      style={{ ...inputStyle, resize: "vertical", borderColor: errors.bio ? "#ef4444" : "rgba(0,0,0,0.12)" }}
+                      className={`dash-input w-full resize-y ${errors.bio ? '!border-red-500' : ''}`}
                     />
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "0.3rem" }}>
-                      {errors.bio ? <div style={{ color: "#ef4444", fontSize: 11 }}>{errors.bio}</div> : <div></div>}
-                      <div style={{ fontSize: 11, color: "#6b6b80", textAlign: "right" }}>
+                    <div className="flex justify-between items-start mt-1">
+                      {errors.bio ? <div className="text-red-500 text-xs font-medium">{errors.bio}</div> : <div></div>}
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">
                         {form.bio.split(/\s+/).filter(Boolean).length} / 100 words
                       </div>
                     </div>
@@ -246,18 +223,18 @@ export function AuthorRegistrationPage() {
 
 
                   {dynamicFields.length > 0 && (
-                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: '1rem' }}>Additional Required Information</h3>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div className="mt-8 pt-8 border-t border-paa-navy/5">
+                      <h3 className="font-serif text-lg font-medium text-paa-navy mb-4">Additional Required Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {dynamicFields.map(f => (
                           <div key={f.name}>
-                            <label style={labelStyle}>{f.name} *</label>
+                            <label className="dash-label">{f.name} *</label>
                             {f.type === 'number' ? (
-                              <input type="number" required style={inputStyle} value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                              <input type="number" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
                             ) : f.type === 'date' ? (
-                              <input type="date" required style={inputStyle} value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                              <input type="date" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
                             ) : (
-                              <input type="text" required style={inputStyle} value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                              <input type="text" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
                             )}
                           </div>
                         ))}
@@ -265,74 +242,76 @@ export function AuthorRegistrationPage() {
                     </div>
                   )}
 
-                  {/* Author photo upload */}
-                  <div>
-                    <label style={labelStyle}>Author Photo</label>
-                    <div
-                      style={{ border: "2px dashed rgba(0,0,0,0.12)", borderRadius: 12, padding: "1.5rem", textAlign: "center", background: "#f7f7f9", cursor: "pointer" }}
-                      onClick={() => document.getElementById("author-photo")?.click()}
-                    >
-                      {authorPhotoUrl ? (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
-                          <img src={authorPhotoUrl} alt="preview" style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover" }} />
-                          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Photo uploaded ✓</span>
-                        </div>
-                      ) : (
-                        <>
-                          <Upload size={24} color="#6b6b80" style={{ margin: "0 auto 0.5rem" }} />
-                          <div style={{ fontSize: 13, color: "#6b6b80" }}>Click to upload author headshot</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: "0.25rem" }}>JPG, PNG up to 5MB</div>
-                        </>
-                      )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
+                    {/* Author photo upload */}
+                    <div>
+                      <label className="dash-label">Author Photo</label>
+                      <div
+                        className="border border-dashed border-paa-navy/20 rounded-3xl-2xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex flex-col items-center justify-center min-h-[140px]"
+                        onClick={() => document.getElementById("author-photo")?.click()}
+                      >
+                        {authorPhotoUrl ? (
+                          <div className="flex flex-col items-center gap-3">
+                            <img src={authorPhotoUrl} alt="preview" className="w-16 h-16 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/20" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Photo Uploaded</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-paa-navy/40 mb-3" />
+                            <div className="text-sm font-medium text-paa-navy mb-1">Click to upload headshot</div>
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">JPG, PNG up to 5MB</div>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        id="author-photo"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setAuthorBlob(file);
+                            setAuthorPhotoUrl(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
                     </div>
-                    <input
-                      id="author-photo"
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setAuthorBlob(file);
-                          setAuthorPhotoUrl(URL.createObjectURL(file));
-                        }
-                      }}
-                    />
-                  </div>
 
-                  {/* QR Code upload */}
-                  <div>
-                    <label style={labelStyle}>Your Payment QR Code * <span style={{ fontSize: 11, color: "#6b6b80", fontWeight: 400 }}>(This QR will be shown to customers when they purchase your book)</span></label>
-                    <div
-                      style={{ border: "2px dashed rgba(0,0,0,0.12)", borderRadius: 12, padding: "1.5rem", textAlign: "center", background: "#f7f7f9", cursor: "pointer" }}
-                      onClick={() => document.getElementById("qr-code-upload")?.click()}
-                    >
-                      {qrCodeUrl ? (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
-                          <img src={qrCodeUrl} alt="QR preview" style={{ width: 80, height: 80, objectFit: "contain", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)" }} />
-                          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>QR Code uploaded ✓</span>
-                        </div>
-                      ) : (
-                        <>
-                          <Upload size={24} color="#6b6b80" style={{ margin: "0 auto 0.5rem" }} />
-                          <div style={{ fontSize: 13, color: "#6b6b80" }}>Click to upload your UPI / Bank QR code</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: "0.25rem" }}>PNG, JPG up to 5MB</div>
-                        </>
-                      )}
+                    {/* QR Code upload */}
+                    <div>
+                      <label className="dash-label">Your Payment QR Code * <span className="font-normal normal-case tracking-normal opacity-70">(Shown to customers for direct payment)</span></label>
+                      <div
+                        className="border border-dashed border-paa-navy/20 rounded-3xl-2xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex flex-col items-center justify-center min-h-[140px]"
+                        onClick={() => document.getElementById("qr-code-upload")?.click()}
+                      >
+                        {qrCodeUrl ? (
+                          <div className="flex flex-col items-center gap-3">
+                            <img src={qrCodeUrl} alt="QR preview" className="w-16 h-16 object-contain rounded-lg border border-paa-navy/10 bg-white" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">QR Code Uploaded</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-paa-navy/40 mb-3" />
+                            <div className="text-sm font-medium text-paa-navy mb-1">Click to upload UPI/Bank QR</div>
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">PNG, JPG up to 5MB</div>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        id="qr-code-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setQrCodeBlob(file);
+                            setQrCodeUrl(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
                     </div>
-                    <input
-                      id="qr-code-upload"
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setQrCodeBlob(file);
-                          setQrCodeUrl(URL.createObjectURL(file));
-                        }
-                      }}
-                    />
                   </div>
                 </div>
               </div>
@@ -340,52 +319,53 @@ export function AuthorRegistrationPage() {
 
             {/* Step 1: Book Details */}
             {step === 1 && (
-              <div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.3rem" }}>Book Details</h2>
-                <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>Information about the book(s) you wish to publish or register with PAA.</p>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Book Details</h2>
+                <p className="text-sm text-paa-gray-text mb-8">Information about the book(s) you wish to publish or register with PAA.</p>
 
                 {books.length > 0 && (
-                  <div style={{ marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>Added Books ({books.length})</h3>
+                  <div className="mb-8 flex flex-col gap-3">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Added Books ({books.length})</h3>
                     {books.map((b, idx) => (
-                      <div key={idx} style={{ background: "#f8f9fa", padding: "0.75rem 1rem", borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div key={idx} className="bg-gray-50 p-4 rounded-2xl border border-paa-navy/10 flex justify-between items-center shadow-sm">
                         <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e" }}>{b.title}</div>
-                          <div style={{ fontSize: 12, color: "#6b6b80" }}>{b.genre} {b.subcategory && `> ${b.subcategory}`}</div>
+                          <div className="font-bold text-paa-navy text-sm mb-0.5">{b.title}</div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">{b.genre} {b.subcategory && `> ${b.subcategory}`}</div>
                         </div>
-                        {b.coverFileUrl && <img src={b.coverFileUrl} alt="cover" style={{ height: 40, width: 30, objectFit: "cover", borderRadius: 4 }} />}
+                        {b.coverFileUrl && <img src={b.coverFileUrl} alt="cover" className="h-12 w-9 object-cover rounded shadow-sm border border-paa-navy/10" />}
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div style={{ display: "grid", gap: "1rem", padding: books.length > 0 ? "1.5rem" : "0", background: books.length > 0 ? "#fff" : "transparent", borderRadius: 12, border: books.length > 0 ? "1px solid #e5e7eb" : "none" }}>
-                  {books.length > 0 && <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e", marginBottom: "-0.5rem" }}>Add Another Book</h3>}
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
-                    <div>
-                      <label style={labelStyle}>Book Title *</label>
-                      <input type="text" placeholder="e.g. The Forgotten Horizon" value={form.title} onChange={(e) => update("title", e.target.value)} style={{...inputStyle, borderColor: errors.title ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.title && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.title}</div>}
+                <div className={`space-y-6 ${books.length > 0 ? 'p-8 bg-gray-50/50 rounded-3xl-2xl border border-paa-navy/5' : ''}`}>
+                  {books.length > 0 && <h3 className="font-serif text-lg font-medium text-paa-navy mb-2">Add Another Book</h3>}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="dash-label">Book Title *</label>
+                      <input type="text" placeholder="e.g. The Forgotten Horizon" value={form.title} onChange={(e) => update("title", e.target.value)} className={`dash-input w-full ${errors.title ? '!border-red-500' : ''}`} />
+                      {errors.title && <div className="text-red-500 text-xs mt-1 font-medium">{errors.title}</div>}
                     </div>
                     <div>
-                      <label style={labelStyle}>Subtitle</label>
-                      <input type="text" placeholder="e.g. A Journey Through Time" value={form.subtitle} onChange={(e) => update("subtitle", e.target.value)} style={inputStyle} />
+                      <label className="dash-label">Subtitle</label>
+                      <input type="text" placeholder="e.g. A Journey Through Time" value={form.subtitle} onChange={(e) => update("subtitle", e.target.value)} className="dash-input w-full" />
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label style={labelStyle}>Category *</label>
-                      <select value={form.genre} onChange={(e) => { update("genre", e.target.value); update("subcategory", ""); update("subSubcategory", ""); }} style={{...inputStyle, borderColor: errors.genre ? "#ef4444" : "rgba(0,0,0,0.12)"}}>
+                      <label className="dash-label">Category *</label>
+                      <select value={form.genre} onChange={(e) => { update("genre", e.target.value); update("subcategory", ""); update("subSubcategory", ""); }} className={`dash-input w-full ${errors.genre ? '!border-red-500' : ''}`}>
                         <option value="">Select Category</option>
                         {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
-                      {errors.genre && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.genre}</div>}
+                      {errors.genre && <div className="text-red-500 text-xs mt-1 font-medium">{errors.genre}</div>}
                     </div>
                     {form.genre && Object.keys(bookCategories[form.genre as keyof typeof bookCategories] || {}).length > 0 && (
                       <div>
-                        <label style={labelStyle}>Subcategory</label>
-                        <select value={form.subcategory} onChange={(e) => { update("subcategory", e.target.value); update("subSubcategory", ""); }} style={inputStyle}>
+                        <label className="dash-label">Subcategory</label>
+                        <select value={form.subcategory} onChange={(e) => { update("subcategory", e.target.value); update("subSubcategory", ""); }} className="dash-input w-full">
                           <option value="">Select Subcategory</option>
                           {Object.keys(bookCategories[form.genre as keyof typeof bookCategories] || {}).map(sc => <option key={sc} value={sc}>{sc}</option>)}
                         </select>
@@ -393,8 +373,8 @@ export function AuthorRegistrationPage() {
                     )}
                     {form.genre && form.subcategory && ((bookCategories[form.genre as keyof typeof bookCategories] as any)[form.subcategory] || []).length > 0 && (
                       <div>
-                        <label style={labelStyle}>Specific Genre</label>
-                        <select value={form.subSubcategory} onChange={(e) => update("subSubcategory", e.target.value)} style={inputStyle}>
+                        <label className="dash-label">Specific Genre</label>
+                        <select value={form.subSubcategory} onChange={(e) => update("subSubcategory", e.target.value)} className="dash-input w-full">
                           <option value="">Select Specific Genre</option>
                           {((bookCategories[form.genre as keyof typeof bookCategories] as any)[form.subcategory] || []).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
                         </select>
@@ -403,94 +383,94 @@ export function AuthorRegistrationPage() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>Synopsis (100 words) *</label>
+                    <label className="dash-label">Synopsis (100 words) *</label>
                     <textarea
                       placeholder="A compelling description of your book — what it's about, who it's for, and what makes it unique..."
                       value={form.synopsis}
                       onChange={(e) => update("synopsis", e.target.value)}
                       rows={5}
-                      style={{ ...inputStyle, resize: "vertical", borderColor: errors.synopsis ? "#ef4444" : "rgba(0,0,0,0.12)" }}
+                      className={`dash-input w-full resize-y ${errors.synopsis ? '!border-red-500' : ''}`}
                     />
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "0.3rem" }}>
-                      {errors.synopsis ? <div style={{ color: "#ef4444", fontSize: 11 }}>{errors.synopsis}</div> : <div></div>}
-                      <div style={{ fontSize: 11, color: "#6b6b80", textAlign: "right" }}>
+                    <div className="flex justify-between items-start mt-1">
+                      {errors.synopsis ? <div className="text-red-500 text-xs font-medium">{errors.synopsis}</div> : <div></div>}
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">
                         {form.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label style={labelStyle}>Language *</label>
-                      <input type="text" placeholder="e.g. English, Marathi" value={form.language} onChange={(e) => update("language", e.target.value)} style={{...inputStyle, borderColor: errors.language ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.language && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.language}</div>}
+                      <label className="dash-label">Language *</label>
+                      <input type="text" placeholder="e.g. English, Marathi" value={form.language} onChange={(e) => update("language", e.target.value)} className={`dash-input w-full ${errors.language ? '!border-red-500' : ''}`} />
+                      {errors.language && <div className="text-red-500 text-xs mt-1 font-medium">{errors.language}</div>}
                     </div>
                     <div>
-                      <label style={labelStyle}>Publisher Name *</label>
-                      <input type="text" placeholder="e.g. Self-Published" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} style={{...inputStyle, borderColor: errors.publisher ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.publisher && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.publisher}</div>}
+                      <label className="dash-label">Publisher Name *</label>
+                      <input type="text" placeholder="e.g. Self-Published" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} className={`dash-input w-full ${errors.publisher ? '!border-red-500' : ''}`} />
+                      {errors.publisher && <div className="text-red-500 text-xs mt-1 font-medium">{errors.publisher}</div>}
                     </div>
                     <div>
-                      <label style={labelStyle}>Publication Date *</label>
-                      <input type="date" value={form.publicationDate} onChange={(e) => update("publicationDate", e.target.value)} style={{...inputStyle, borderColor: errors.publicationDate ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.publicationDate && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.publicationDate}</div>}
+                      <label className="dash-label">Publication Date *</label>
+                      <input type="date" value={form.publicationDate} onChange={(e) => update("publicationDate", e.target.value)} className={`dash-input w-full ${errors.publicationDate ? '!border-red-500' : ''}`} />
+                      {errors.publicationDate && <div className="text-red-500 text-xs mt-1 font-medium">{errors.publicationDate}</div>}
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label style={labelStyle}>ISBN Number</label>
-                      <input type="text" placeholder="e.g. 978-3-16-148410-0" value={form.isbn} onChange={(e) => update("isbn", e.target.value)} style={inputStyle} />
+                      <label className="dash-label">ISBN Number</label>
+                      <input type="text" placeholder="e.g. 978-3-16-148410-0" value={form.isbn} onChange={(e) => update("isbn", e.target.value)} className="dash-input w-full" />
                     </div>
                     <div>
-                      <label style={labelStyle}>Edition</label>
-                      <input type="text" placeholder="e.g. 1st Edition" value={form.edition} onChange={(e) => update("edition", e.target.value)} style={inputStyle} />
+                      <label className="dash-label">Edition</label>
+                      <input type="text" placeholder="e.g. 1st Edition" value={form.edition} onChange={(e) => update("edition", e.target.value)} className="dash-input w-full" />
                     </div>
                     <div>
-                      <label style={labelStyle}>Book Format *</label>
-                      <select value={form.format} onChange={(e) => update("format", e.target.value)} style={{...inputStyle, borderColor: errors.format ? "#ef4444" : "rgba(0,0,0,0.12)"}}>
+                      <label className="dash-label">Book Format *</label>
+                      <select value={form.format} onChange={(e) => update("format", e.target.value)} className={`dash-input w-full ${errors.format ? '!border-red-500' : ''}`}>
                         <option value="">Select Format</option>
                         <option value="Paperback">Paperback</option>
                         <option value="Hardcover">Hardcover</option>
                         <option value="Ebook">Ebook</option>
                       </select>
-                      {errors.format && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.format}</div>}
+                      {errors.format && <div className="text-red-500 text-xs mt-1 font-medium">{errors.format}</div>}
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label style={labelStyle}>Number of Pages</label>
-                      <input type="number" placeholder="256" value={form.pages} onChange={(e) => update("pages", e.target.value)} style={inputStyle} />
+                      <label className="dash-label">Number of Pages</label>
+                      <input type="number" placeholder="256" value={form.pages} onChange={(e) => update("pages", e.target.value)} className="dash-input w-full" />
                     </div>
                     <div>
-                      <label style={labelStyle}>MRP (₹) *</label>
-                      <input type="number" placeholder="299" value={form.mrp} onChange={(e) => update("mrp", e.target.value)} style={{...inputStyle, borderColor: errors.mrp ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                      {errors.mrp && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.mrp}</div>}
+                      <label className="dash-label">MRP (₹) *</label>
+                      <input type="number" placeholder="299" value={form.mrp} onChange={(e) => update("mrp", e.target.value)} className={`dash-input w-full ${errors.mrp ? '!border-red-500' : ''}`} />
+                      {errors.mrp && <div className="text-red-500 text-xs mt-1 font-medium">{errors.mrp}</div>}
                     </div>
                     <div>
-                      <label style={labelStyle}>Initial Stock (Optional)</label>
-                      <input type="number" placeholder="0" value={form.stock} onChange={(e) => update("stock", e.target.value)} style={inputStyle} />
+                      <label className="dash-label">Initial Stock (Optional)</label>
+                      <input type="number" placeholder="0" value={form.stock} onChange={(e) => update("stock", e.target.value)} className="dash-input w-full" />
                     </div>
                   </div>
 
                   {/* Cover upload */}
-                  <div>
-                    <label style={labelStyle}>Book Cover Upload *</label>
+                  <div className="pt-2">
+                    <label className="dash-label">Book Cover Upload *</label>
                     <div
-                      style={{ border: "2px dashed rgba(0,0,0,0.12)", borderRadius: 12, padding: "2rem", textAlign: "center", background: "#f7f7f9", cursor: "pointer" }}
+                      className="border border-dashed border-paa-navy/20 rounded-3xl-2xl p-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex flex-col items-center justify-center"
                       onClick={() => document.getElementById("cover-upload")?.click()}
                     >
                       {coverFileUrl ? (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
-                          <img src={coverFileUrl} alt="cover preview" style={{ height: 80, objectFit: "contain", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)" }} />
-                          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Cover uploaded ✓</span>
+                        <div className="flex flex-col items-center gap-3">
+                          <img src={coverFileUrl} alt="cover preview" className="h-24 object-contain rounded shadow-sm border border-paa-navy/10 bg-white" />
+                          <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Cover Uploaded</span>
                         </div>
                       ) : (
                         <>
-                          <Upload size={32} color="#6b6b80" style={{ margin: "0 auto 0.75rem" }} />
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.25rem" }}>Upload Book Cover</div>
-                          <div style={{ fontSize: 12, color: "#6b6b80" }}>High resolution JPG or PNG, ideally 1600×2400px</div>
+                          <Upload className="w-8 h-8 text-paa-navy/40 mb-3" />
+                          <div className="text-sm font-medium text-paa-navy mb-1">Upload Book Cover</div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">High resolution JPG or PNG, ideally 1600×2400px</div>
                         </>
                       )}
                     </div>
@@ -498,7 +478,7 @@ export function AuthorRegistrationPage() {
                       id="cover-upload"
                       type="file"
                       accept="image/*"
-                      style={{ display: "none" }}
+                      className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -509,7 +489,7 @@ export function AuthorRegistrationPage() {
                     />
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
+                  <div className="flex justify-end mt-4">
                     <button
                       type="button"
                       onClick={() => {
@@ -522,12 +502,9 @@ export function AuthorRegistrationPage() {
                         setCoverBlob(null);
                         setCoverFileUrl(null);
                       }}
-                      style={{
-                        background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0",
-                        padding: "0.5rem 1rem", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer"
-                      }}
+                      className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
                     >
-                      + Save & Add Another Book
+                      <Plus className="w-3 h-3" /> Save & Add Another Book
                     </button>
                   </div>
                 </div>
@@ -536,36 +513,43 @@ export function AuthorRegistrationPage() {
 
             {/* Step 2: Payment */}
             {step === 2 && (
-              <div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "#1a1a2e", marginBottom: "0.3rem" }}>Application Fee Payment</h2>
-                <p style={{ fontSize: 13, color: "#6b6b80", marginBottom: "1.75rem" }}>A one-time registration fee of ₹1000 secures your PAA membership and editorial review.</p>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Application Fee Payment</h2>
+                <p className="text-sm text-paa-gray-text mb-8">A one-time registration fee of ₹1000 secures your PAA membership and editorial review.</p>
 
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "1.5rem" }}>
-                  <img src={qrCode} alt="Payment QR" style={{ width: 200, height: 200, borderRadius: 12, border: "2px solid #e5e7eb" }} />
-                  <p style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e", marginTop: "0.5rem" }}>Scan QR to Pay ₹1000</p>
+                <div className="flex flex-col items-center mb-10">
+                  <div className="p-2 bg-white rounded-2xl border border-paa-navy/10 shadow-sm mb-4">
+                    <img src={qrCode} alt="Payment QR" className="w-48 h-48 object-cover rounded-xl" />
+                  </div>
+                  <p className="text-sm font-bold uppercase tracking-widest text-paa-navy bg-paa-gold/20 px-4 py-1.5 rounded-full">Scan QR to Pay ₹1000</p>
                 </div>
 
-                <div style={{ display: "grid", gap: "1rem" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label style={labelStyle}>Transaction ID *</label>
-                    <input type="text" required placeholder="e.g. T23456789012" value={form.transactionId} onChange={(e) => update("transactionId", e.target.value)} style={{...inputStyle, borderColor: errors.transactionId ? "#ef4444" : "rgba(0,0,0,0.12)"}} />
-                    {errors.transactionId && <div style={{ color: "#ef4444", fontSize: 11, marginTop: "0.2rem" }}>{errors.transactionId}</div>}
+                    <label className="dash-label">Transaction ID *</label>
+                    <input type="text" required placeholder="e.g. T23456789012" value={form.transactionId} onChange={(e) => update("transactionId", e.target.value)} className={`dash-input w-full ${errors.transactionId ? '!border-red-500' : ''}`} />
+                    {errors.transactionId && <div className="text-red-500 text-xs mt-1 font-medium">{errors.transactionId}</div>}
+                    
+                    <div className="mt-8 bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800 leading-relaxed shadow-sm">
+                      <strong className="font-bold text-emerald-900 block mb-1">Application Fee: ₹1000</strong>
+                      <span className="opacity-90 text-xs">Your application will be reviewed within 5-7 business days. You will be notified via email once approved.</span>
+                    </div>
                   </div>
                   <div>
-                    <label style={labelStyle}>Payment Screenshot *</label>
+                    <label className="dash-label">Payment Screenshot *</label>
                     <div
-                      style={{ border: "2px dashed rgba(0,0,0,0.12)", borderRadius: 12, padding: "1.5rem", textAlign: "center", background: "#f7f7f9", cursor: "pointer" }}
+                      className="border border-dashed border-paa-navy/20 rounded-3xl-2xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex flex-col items-center justify-center min-h-[160px]"
                       onClick={() => document.getElementById("payment-screenshot-upload")?.click()}
                     >
                       {paymentScreenshotUrl ? (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
-                          <img src={paymentScreenshotUrl} alt="screenshot preview" style={{ height: 60, objectFit: "contain", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)" }} />
-                          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Screenshot uploaded ✓</span>
+                        <div className="flex flex-col items-center gap-3">
+                          <img src={paymentScreenshotUrl} alt="screenshot preview" className="h-16 object-contain rounded shadow-sm border border-paa-navy/10 bg-white" />
+                          <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Screenshot Uploaded</span>
                         </div>
                       ) : (
                         <>
-                          <Upload size={24} color="#6b6b80" style={{ margin: "0 auto 0.5rem" }} />
-                          <div style={{ fontSize: 13, color: "#6b6b80" }}>Click to upload payment screenshot</div>
+                          <Upload className="w-6 h-6 text-paa-navy/40 mb-3" />
+                          <div className="text-sm font-medium text-paa-navy mb-1">Upload payment screenshot</div>
                         </>
                       )}
                     </div>
@@ -573,7 +557,7 @@ export function AuthorRegistrationPage() {
                       id="payment-screenshot-upload"
                       type="file"
                       accept="image/*"
-                      style={{ display: "none" }}
+                      className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -584,28 +568,17 @@ export function AuthorRegistrationPage() {
                     />
                   </div>
                 </div>
-
-                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "1rem", marginTop: "1rem", fontSize: 12, color: "#166534" }}>
-                  <strong>Application Fee:</strong> ₹1000 (one-time minimum fee)<br />
-                  Your application will be reviewed within 5-7 business days. You will be notified via email once approved.
-                </div>
               </div>
             )}
 
             {/* Navigation buttons */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+            <div className="flex justify-between items-center mt-10 pt-8 border-t border-paa-navy/5">
               <button
                 onClick={() => setStep((s) => Math.max(0, s - 1))}
                 disabled={step === 0}
-                style={{
-                  display: "flex", alignItems: "center", gap: "0.4rem",
-                  background: "transparent", border: "1.5px solid rgba(0,0,0,0.12)",
-                  color: step === 0 ? "#c0c0c8" : "#1a1a2e", padding: "0.65rem 1.2rem",
-                  borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: step === 0 ? "default" : "pointer",
-                  fontFamily: "var(--font-body)",
-                }}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${step === 0 ? "text-gray-300 cursor-default" : "text-paa-navy hover:bg-gray-100 active:scale-95 border border-paa-navy/10"}`}
               >
-                <ChevronLeft size={16} /> Back
+                <ChevronLeft size={14} /> Back
               </button>
 
               {step < steps.length - 1 ? (
@@ -618,7 +591,7 @@ export function AuthorRegistrationPage() {
                       if (!qrCodeBlob) {
                         alert("Please upload your Payment QR Code — customers will use it to pay you directly."); return;
                       }
-                                            if (dynamicFields.length > 0) {
+                      if (dynamicFields.length > 0) {
                         for (const f of dynamicFields) {
                           if (!extraDataState[f.name]) {
                             alert(`Please fill the required field: ${f.name}`); return;
@@ -646,14 +619,9 @@ export function AuthorRegistrationPage() {
                     }
                     setStep((s) => Math.min(steps.length - 1, s + 1));
                   }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "0.4rem",
-                    background: "#1a1a2e", color: "#fff", border: "none",
-                    padding: "0.65rem 1.4rem", borderRadius: 10, fontSize: 14, fontWeight: 600,
-                    cursor: "pointer", fontFamily: "var(--font-body)",
-                  }}
+                  className="dash-btn dash-btn-primary rounded-full px-6 py-2.5 flex items-center gap-2"
                 >
-                  Continue <ChevronRight size={16} />
+                  Continue <ChevronRight size={14} />
                 </button>
               ) : (
                 <button
@@ -723,52 +691,48 @@ export function AuthorRegistrationPage() {
                       setIsSubmitting(false);
                     }
                   }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "0.4rem",
-                    background: isSubmitting ? "#6b6b80" : "#16a34a", color: "#fff", border: "none",
-                    padding: "0.65rem 1.4rem", borderRadius: 10, fontSize: 14, fontWeight: 600,
-                    cursor: isSubmitting ? "not-allowed" : "pointer", fontFamily: "var(--font-body)",
-                  }}
+                  className={`dash-btn px-6 py-2.5 rounded-full flex items-center gap-2 ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-premium hover:-translate-y-0.5"}`}
                 >
-                  <CheckCircle size={16} /> {isSubmitting ? "Submitting..." : "Submit Application & Wait for Review"}
+                  {isSubmitting ? <span className="animate-pulse">Submitting...</span> : <><CheckCircle size={14} /> Submit Application</>}
                 </button>
               )}
             </div>
           </div>
         ) : (
           /* Success state */
-          <div style={{ background: "#fff", borderRadius: 20, border: "1px solid rgba(0,0,0,0.07)", padding: "3rem", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-            <div style={{ width: 72, height: 72, background: "#f0fdf4", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
-              <CheckCircle size={36} color="#16a34a" />
+          <div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-10 md:p-14 text-center shadow-premium animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
+              <CheckCircle className="w-10 h-10 text-emerald-500" />
             </div>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800, color: "#1a1a2e", marginBottom: "0.5rem" }}>Application Submitted!</h2>
-            <p style={{ fontSize: 14, color: "#6b6b80", lineHeight: 1.7, maxWidth: 440, margin: "0 auto 1.5rem" }}>
-              Thank you, <strong>{form.name || "Author"}</strong>! Your application for <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em> has been received. <br/><br/>
-              <strong style={{ color: "#d97706" }}>Approval Pending:</strong> You must wait for the Admin to approve your account. Once approved, you will be able to log in to your Author Dashboard.
+            <h2 className="font-serif text-3xl font-medium text-paa-navy mb-3">Application Submitted!</h2>
+            <p className="text-sm text-paa-gray-text leading-relaxed max-w-md mx-auto mb-8">
+              Thank you, <strong className="text-paa-navy font-bold">{form.name || "Author"}</strong>! Your application for <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em> has been received. <br/><br/>
+              <strong className="text-paa-gold">Approval Pending:</strong> You must wait for the Admin to approve your account. Once approved, you will be able to log in to your Author Dashboard.
             </p>
+            
             {/* Receipt */}
-            <div style={{ background: "#f7f7f9", borderRadius: 14, padding: "1.5rem", maxWidth: 380, margin: "0 auto", textAlign: "left", border: "1px dashed rgba(0,0,0,0.12)" }}>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#6b6b80", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.75rem", textAlign: "center" }}>Application Receipt</div>
-              {[
-                { label: "Application ID", value: "PAA-APP-2025-" + Math.floor(Math.random() * 9000 + 1000) },
-                { label: "Author Name", value: form.name || "—" },
-                { label: "Book Title(s)", value: [...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "—" },
-                { label: "Genre", value: Array.from(new Set([...books.map(b => b.genre), form.genre].filter(Boolean))).join(", ") || "—" },
-                { label: "Fee Paid", value: "₹1000" },
-                { label: "Status", value: "Pending Review" },
-              ].map((item) => (
-                <div key={item.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "0.35rem 0", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-                  <span style={{ color: "#6b6b80" }}>{item.label}</span>
-                  <span style={{ color: "#1a1a2e", fontWeight: 600 }}>{item.value}</span>
-                </div>
-              ))}
+            <div className="bg-gray-50 rounded-2xl p-6 max-w-sm mx-auto text-left border border-dashed border-paa-navy/20 shadow-sm mb-10">
+              <div className="font-mono text-[10px] font-bold text-paa-gray-text tracking-widest uppercase mb-4 text-center">Application Receipt</div>
+              <div className="space-y-3">
+                {[
+                  { label: "Application ID", value: "PAA-APP-2025-" + Math.floor(Math.random() * 9000 + 1000) },
+                  { label: "Author Name", value: form.name || "—" },
+                  { label: "Book Title(s)", value: [...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "—" },
+                  { label: "Genre", value: Array.from(new Set([...books.map(b => b.genre), form.genre].filter(Boolean))).join(", ") || "—" },
+                  { label: "Fee Paid", value: "₹1000" },
+                  { label: "Status", value: "Pending Review", isStatus: true },
+                ].map((item) => (
+                  <div key={item.label} className="flex justify-between items-center text-xs pb-2 border-b border-paa-navy/5 last:border-0 last:pb-0">
+                    <span className="text-paa-gray-text font-medium">{item.label}</span>
+                    <span className={`font-bold ${item.isStatus ? "text-amber-600 bg-amber-50 px-2 py-0.5 rounded uppercase tracking-widest text-[9px]" : "text-paa-navy text-right max-w-[150px] truncate"}`}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div style={{ marginTop: "2rem" }}>
-              <button onClick={() => window.location.href = "/login"} style={{ background: "#1a1a2e", color: "#fff", border: "none", padding: "0.8rem 1.5rem", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)" }}>
-                Go to Login
-              </button>
-            </div>
+            <button onClick={() => window.location.href = "/login"} className="dash-btn dash-btn-primary rounded-full px-8 py-3">
+              Go to Login
+            </button>
           </div>
         )}
       </div>

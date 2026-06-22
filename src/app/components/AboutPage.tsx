@@ -1,34 +1,107 @@
+import { useState, useEffect, useRef } from "react";
 import { Users } from "lucide-react";
+
+// --- FADE IN ON SCROLL (SUBTLE) ---
+function FadeIn({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? "translateY(0)" : `translateY(15px)`,
+        transition: `all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function AboutPage() {
   return (
-    <main style={{ fontFamily: "var(--font-body)", background: "#f7f7f9", minHeight: "calc(100vh - 64px)", padding: "4rem 1.5rem" }}>
-      <div style={{ maxWidth: 800, margin: "0 auto", background: "#fff", padding: "3rem", borderRadius: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.05)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem" }}>
-          <div style={{ width: 56, height: 56, background: "#1a1a2e", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Users size={28} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#6b6b80", letterSpacing: "0.15em", textTransform: "uppercase" }}>Origins</div>
-            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 32, fontWeight: 800, color: "#1a1a2e", lineHeight: 1.1 }}>About The Group</h1>
-          </div>
+    <main style={{ fontFamily: "var(--font-body)", background: "#fafafa", color: "#111", minHeight: "calc(100vh - 64px)", overflowX: "hidden" }}>
+      
+      {/* ── HERO ── */}
+      <section style={{ borderBottom: "1px solid #eaeaea", background: "#fff" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem" }}>
+          <FadeIn>
+            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#333", marginBottom: "2rem" }}>
+              Origins & Mission
+            </div>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem, 5vw, 4rem)", fontWeight: 400, color: "#111", lineHeight: 1.1, letterSpacing: "-0.01em", maxWidth: 800 }}>
+              About <span style={{ fontStyle: "italic", color: "#b44d28" }}>The Group.</span>
+            </h1>
+          </FadeIn>
         </div>
+      </section>
 
-        <div style={{ fontSize: 16, color: "#4a4a5a", lineHeight: 1.8 }}>
-          <p style={{ marginBottom: "1.5rem" }}>
-            The group was conceived in <strong>Dec 2024</strong> after the Pune Book Fair 2024, where some of the authors from Pune met at a book stall.
-          </p>
-          <p style={{ marginBottom: "1.5rem" }}>
-            The idea to form a group of authors from Pune was conceived by <strong>Cdr Shiv Mathur</strong>; after seeing the way authors struggle to sell their books. The vision was to find ways to promote our books together in a collaborative way. 
-          </p>
-          <p style={{ marginBottom: "1.5rem" }}>
-            This way the cost gets shared and many activities can be conducted with pooled in resources and funds, that may not be possible for authors individually due to the costs involved as well as any approach available to do self-marketing.
-          </p>
-          <p style={{ marginBottom: "1.5rem" }}>
-            A group guideline document was also created so that every author knows the agenda and the rules of the group. As the group started expanding, we decided to welcome authors from Mumbai also to join our group. Now we are getting authors from other parts of the country also.
-          </p>
+      {/* ── CONTENT (ELEGANT SPLIT) ── */}
+      <section style={{ padding: "8rem 1.5rem", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6rem", alignItems: "start" }} className="about-grid">
+          
+          <FadeIn delay={150}>
+            <div>
+              <div style={{ width: "100%", height: 500, background: "#fff", border: "1px solid #eaeaea", padding: "1rem" }}>
+                <img 
+                  src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=800&h=1000&fit=crop" 
+                  alt="Authors collaborating" 
+                  style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(20%) contrast(0.9)" }}
+                />
+              </div>
+            </div>
+          </FadeIn>
+
+          <FadeIn delay={300}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+              <div>
+                <div style={{ width: 30, height: 1, background: "#111", marginBottom: "1.5rem" }}></div>
+                <p style={{ fontSize: 16, color: "#222", lineHeight: 1.8, fontWeight: 400 }}>
+                  The group was conceived in <strong>December 2024</strong> following the Pune Book Fair. While networking at a local stall, several authors recognized a shared challenge: the immense difficulty of selling independently in a saturated market.
+                </p>
+              </div>
+              
+              <div>
+                <p style={{ fontSize: 16, color: "#222", lineHeight: 1.8, fontWeight: 400 }}>
+                  The idea to form a unified coalition of Pune authors was spearheaded by <strong>Cdr Shiv Mathur</strong>. Having witnessed firsthand the struggles authors face with visibility and distribution, the vision became clear: find a way to promote literature collaboratively rather than competitively.
+                </p>
+              </div>
+
+              <div>
+                <p style={{ fontSize: 16, color: "#222", lineHeight: 1.8, fontWeight: 400 }}>
+                  By pooling resources, we discovered that financial barriers to self-marketing drastically decreased. Shared costs allow us to execute large-scale activities, prominent stall placements, and robust marketing campaigns that would be prohibitively expensive for an individual author.
+                </p>
+              </div>
+
+              <div>
+                <p style={{ fontSize: 16, color: "#222", lineHeight: 1.8, fontWeight: 400 }}>
+                  Today, a strict group guideline document ensures every author understands our shared agenda and ethical rules. As our success grew, we expanded our invitation to authors from Mumbai, and we are now proudly welcoming talent from across the entire country into our literary ecosystem.
+                </p>
+              </div>
+            </div>
+          </FadeIn>
+          
         </div>
-      </div>
+      </section>
+
+      <style>{`
+        @media (max-width: 800px) {
+          .about-grid { grid-template-columns: 1fr !important; gap: 4rem !important; }
+        }
+      `}</style>
     </main>
   );
 }

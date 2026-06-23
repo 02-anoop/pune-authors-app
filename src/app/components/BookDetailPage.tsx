@@ -28,6 +28,7 @@ interface BookDetail {
     bio: string;
     photoUrl: string | null;
     email: string;
+    extraData?: any;
   };
   reviews: Review[];
 }

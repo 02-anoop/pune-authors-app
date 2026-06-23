@@ -395,6 +395,11 @@ app.post('/api/authors/register', upload.any(), async (req, res) => {
           }
        }
     }
+    
+    // Explicitly validate payment requirements
+    if (!paymentScreenshotUrl || !transactionId) {
+      return res.status(400).json({ error: 'Payment screenshot and Transaction ID are mandatory for registration.' });
+    }
 
     // Create login user
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -530,9 +535,9 @@ app.post('/api/admin/authors/:id/approve', verifyToken, isAdmin, async (req, res
     <p>Your books are now live in the catalogue. You can log in to your dashboard to manage your inventory, track orders, and participate in upcoming events.</p>
     <p>Welcome to the community!</p>
   `;
-  // Assuming getEmailTemplate is available globally in index.js
-  if (typeof sendNotificationEmail === 'function' && typeof getEmailTemplate === 'function') {
-    sendNotificationEmail(author.email, "Welcome to PAA - Your Profile is Approved!", getEmailTemplate("Profile Approved", emailContent));
+  // Assuming emailWrap is available globally in index.js
+  if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+    sendNotificationEmail(author.email, "Welcome to PAA - Your Profile is Approved!", emailWrap("Profile Approved", emailContent));
   }
   
   res.json(author);
@@ -547,6 +552,22 @@ app.post('/api/admin/authors/:id/reject', verifyToken, isAdmin, async (req, res)
       where: { id },
       data: { status: 'Rejected', rejectionReason: reason || 'No reason provided.' }
     });
+    
+    // Send rejection email
+    const emailContent = `
+      <p>Dear ${author.name},</p>
+      <p>We have reviewed your author profile application for the Pune Authors' Association.</p>
+      <p>Unfortunately, your application has been rejected at this time for the following reason(s):</p>
+      <p style="padding: 10px; background-color: #fef2f2; border-left: 4px solid #ef4444; color: #b91c1c;">
+        <strong>${reason || 'No specific reason provided.'}</strong>
+      </p>
+      <p>Please log in to your dashboard to resolve these issues and update your profile. Once the necessary changes are made, your profile will be re-evaluated.</p>
+    `;
+    
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      sendNotificationEmail(author.email, "Action Required: Your PAA Profile Status", emailWrap("Profile Review Update", emailContent));
+    }
+    
     res.json(author);
   } catch (err) {
     console.error(err);
@@ -1231,6 +1252,15 @@ app.post('/api/orders', verifyToken, upload.single('paymentScreenshot'), async (
     const parsedItems = Array.isArray(items) ? items : JSON.parse(items);
     const paymentScreenshot = req.file ? `/uploads/${req.file.filename}` : null;
 
+    // Validate stock before allowing order placement
+    for (const item of parsedItems) {
+      const book = await prisma.book.findUnique({ where: { id: parseInt(item.bookId) } });
+      if (!book) return res.status(404).json({ error: `Book ID ${item.bookId} not found` });
+      if (book.stock < parseInt(item.quantity)) {
+        return res.status(400).json({ error: `Insufficient stock for book: ${book.title}. Available: ${book.stock}` });
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         customerName,
@@ -1343,6 +1373,16 @@ app.put('/api/order-items/:id/author-approve', verifyToken, async (req, res) => 
     });
     if (!orderItem || orderItem.book.authorId !== author.id) {
       return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    // Idempotency: Prevent double approval and double stock deduction
+    if (orderItem.status !== 'Pending Verification') {
+      return res.status(400).json({ error: 'Order is no longer pending verification.' });
+    }
+    
+    // Prevent negative inventory
+    if (orderItem.book.stock < orderItem.quantity) {
+      return res.status(400).json({ error: `Insufficient stock to approve. Available: ${orderItem.book.stock}` });
     }
 
     const updated = await prisma.orderItem.update({
@@ -1485,6 +1525,14 @@ app.put('/api/order-items/:id/author-reject', verifyToken, async (req, res) => {
       data: { status: 'Rejected', rejectionReason: reason || 'Rejected by author' },
       include: { book: true, order: true }
     });
+
+    // Bug Fix #9: Restore stock if the order was already accepted
+    if (orderItem.status === 'Accepted' || orderItem.status === 'Dispatched') {
+       await prisma.book.update({
+         where: { id: orderItem.bookId },
+         data: { stock: { increment: orderItem.quantity } }
+       });
+    }
 
     if (updated.order?.customerEmail) {
       await sendNotificationEmail(updated.order.customerEmail, 'Order Rejected', `We\'re sorry. Your order for "${updated.book.title}" was rejected. Reason: ${reason || 'No specific reason provided.'}`);
@@ -1751,11 +1799,22 @@ app.put('/api/order-items/:id/status', verifyToken, async (req, res) => {
 app.put('/api/order-items/:id/reject', verifyToken, async (req, res) => {
   try {
     const { reason } = req.body;
+    const existing = await prisma.orderItem.findUnique({ where: { id: parseInt(req.params.id) } });
+
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
       data: { status: 'Rejected', rejectionReason: reason },
       include: { order: true, book: true }
     });
+
+    // Bug Fix #9: Restore stock if the order was already accepted
+    if (existing && (existing.status === 'Accepted' || existing.status === 'Dispatched')) {
+       await prisma.book.update({
+         where: { id: existing.bookId },
+         data: { stock: { increment: existing.quantity } }
+       });
+    }
+
     if (orderItem.order && orderItem.order.customerEmail) {
        await sendNotificationEmail(orderItem.order.customerEmail, 'Order Item Rejected', `Your order for book "${orderItem.book.title}" was rejected by the author. Reason: ${reason}`);
     }
@@ -1768,6 +1827,17 @@ app.put('/api/order-items/:id/reject', verifyToken, async (req, res) => {
 
 app.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
   try {
+    const existing = await prisma.orderItem.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: { book: true }
+    });
+    if (!existing || existing.status !== 'Pending Verification') {
+      return res.status(400).json({ error: 'Order is not pending verification.' });
+    }
+    if (existing.book.stock < existing.quantity) {
+      return res.status(400).json({ error: 'Insufficient stock' });
+    }
+
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
       data: { status: 'Accepted' },
@@ -2414,75 +2484,89 @@ app.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('payme
       paymentScreenshot = `/uploads/${req.file.filename}`;
     }
 
-    // ── STEP 1: Restore any previously committed stock back to Book.stock ──
-    // This handles the case where an author re-opts-in with different quantities
-    const previousEventBooks = await prisma.eventBook.findMany({
-      where: { eventId, authorId: author.id },
-      include: { book: true }
-    });
-    for (const prev of previousEventBooks) {
-      // Only restore stock that hasn't been sold yet
-      const uncommittedStock = prev.listedStock - prev.soldStock;
-      if (uncommittedStock > 0) {
-        await prisma.book.update({
-          where: { id: prev.bookId },
-          data: { stock: { increment: uncommittedStock } }
-        });
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    
+    // Validate payment screenshot requirement
+    if (event.registrationFee > 0 && !paymentScreenshot) {
+      // Allow if they already have an existing screenshot attached to their EventAuthor profile
+      const existingOptIn = await prisma.eventAuthor.findFirst({ where: { eventId, authorId: author.id } });
+      if (!existingOptIn || !existingOptIn.paymentScreenshot) {
+        return res.status(400).json({ error: 'Payment screenshot is required for this event.' });
       }
     }
 
-    // ── STEP 2: Validate new listing quantities against current (now-restored) Book.stock ──
-    if (booksToLink && booksToLink.length > 0) {
-      for (const b of booksToLink) {
-        const book = await prisma.book.findUnique({ where: { id: parseInt(b.bookId) } });
-        if (!book) {
-          return res.status(400).json({ error: `Book not found (ID: ${b.bookId})` });
-        }
-        const requested = parseInt(b.stock);
-        if (requested <= 0) {
-          return res.status(400).json({ error: `Listed quantity must be at least 1 for "${book.title}"` });
-        }
-        if (book.stock < requested) {
-          return res.status(400).json({ 
-            error: `Insufficient stock for "${book.title}". You have ${book.stock} available but listed ${requested}.` 
+    // Wrap the entire process in a transaction to prevent partial updates and stock generation exploits
+    await prisma.$transaction(async (tx) => {
+      // ── STEP 1: Restore any previously committed stock back to Book.stock ──
+      const previousEventBooks = await tx.eventBook.findMany({
+        where: { eventId, authorId: author.id },
+        include: { book: true }
+      });
+      for (const prev of previousEventBooks) {
+        const uncommittedStock = prev.listedStock - prev.soldStock;
+        if (uncommittedStock > 0) {
+          await tx.book.update({
+            where: { id: prev.bookId },
+            data: { stock: { increment: uncommittedStock } }
           });
         }
       }
-    }
 
-    // ── STEP 3: Update EventAuthor status ──
-    await prisma.eventAuthor.updateMany({
-      where: { eventId, authorId: author.id },
-      data: { 
-        optInStatus: 'Awaiting Approval',
-        ...(paymentScreenshot && { paymentScreenshot })
+      // ── STEP 2: Validate new listing quantities against current (now-restored) Book.stock ──
+      if (booksToLink && booksToLink.length > 0) {
+        for (const b of booksToLink) {
+          const book = await tx.book.findUnique({ where: { id: parseInt(b.bookId) } });
+          if (!book) {
+            throw new Error(`Book not found (ID: ${b.bookId})`);
+          }
+          const requested = parseInt(b.stock);
+          if (requested <= 0) {
+            throw new Error(`Listed quantity must be at least 1 for "${book.title}"`);
+          }
+          if (book.stock < requested) {
+            throw new Error(`Insufficient stock for "${book.title}". You have ${book.stock} available but listed ${requested}.`);
+          }
+        }
+      }
+
+      // ── STEP 3: Update EventAuthor status ──
+      await tx.eventAuthor.updateMany({
+        where: { eventId, authorId: author.id },
+        data: { 
+          optInStatus: 'Awaiting Approval',
+          ...(paymentScreenshot && { paymentScreenshot })
+        }
+      });
+      
+      // ── STEP 4: Remove old EventBook records and recreate ──
+      await tx.eventBook.deleteMany({ where: { eventId, authorId: author.id } });
+      
+      // ── STEP 5: Deduct new listedStock from Book.stock and create EventBook records ──
+      if (booksToLink && booksToLink.length > 0) {
+         for (const b of booksToLink) {
+           const requested = parseInt(b.stock);
+           await tx.book.update({
+             where: { id: parseInt(b.bookId) },
+             data: { stock: { decrement: requested } }
+           });
+         }
+         const eventBooksData = booksToLink.map((b) => ({
+            eventId,
+            authorId: author.id,
+            bookId: parseInt(b.bookId),
+            listedStock: parseInt(b.stock)
+         }));
+         await tx.eventBook.createMany({ data: eventBooksData });
       }
     });
-    
-    // ── STEP 4: Remove old EventBook records and recreate ──
-    await prisma.eventBook.deleteMany({ where: { eventId, authorId: author.id } });
-    
-    // ── STEP 5: Deduct new listedStock from Book.stock and create EventBook records ──
-    if (booksToLink && booksToLink.length > 0) {
-       for (const b of booksToLink) {
-         const requested = parseInt(b.stock);
-         await prisma.book.update({
-           where: { id: parseInt(b.bookId) },
-           data: { stock: { decrement: requested } }
-         });
-       }
-       const eventBooksData = booksToLink.map((b) => ({
-          eventId,
-          authorId: author.id,
-          bookId: parseInt(b.bookId),
-          listedStock: parseInt(b.stock)
-       }));
-       await prisma.eventBook.createMany({ data: eventBooksData });
-    }
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error(error);
+    if (error.message.includes('Insufficient stock') || error.message.includes('Listed quantity') || error.message.includes('Book not found')) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Failed to opt in' });
   }
 });
@@ -2727,26 +2811,28 @@ app.put('/api/author/events/:id/settle', verifyToken, async (req, res) => {
     const authorId = author.id;
     const { settlements } = req.body; // Array of { eventBookId, soldStock, returnedStock }
     
-    for (const settlement of settlements) {
-       console.log('Processing settlement:', settlement);
-       const eb = await prisma.eventBook.findUnique({ where: { id: settlement.eventBookId }, include: { book: true } });
-       console.log('Found EventBook:', !!eb, 'author match:', eb?.authorId === authorId, 'event match:', eb?.eventId === eventId);
-       if (eb && eb.authorId === authorId && eb.eventId === eventId) {
-          // Verify they haven't already settled this book
-          console.log('Stock Check. listed:', eb.listedStock, 'sold:', eb.soldStock, 'returned:', eb.returnedStock);
-          if (eb.listedStock !== eb.soldStock + eb.returnedStock) {
-             await prisma.eventBook.update({
-                where: { id: eb.id },
-                data: { soldStock: settlement.soldStock, returnedStock: settlement.returnedStock }
-             });
-             // Add returned stock back to inventory
-             await prisma.book.update({
-                where: { id: eb.bookId },
-                data: { stock: eb.book.stock + settlement.returnedStock }
-             });
-          }
-       }
-    }
+    await prisma.$transaction(async (tx) => {
+      for (const settlement of settlements) {
+         console.log('Processing settlement:', settlement);
+         const eb = await tx.eventBook.findUnique({ where: { id: settlement.eventBookId }, include: { book: true } });
+         console.log('Found EventBook:', !!eb, 'author match:', eb?.authorId === authorId, 'event match:', eb?.eventId === eventId);
+         if (eb && eb.authorId === authorId && eb.eventId === eventId) {
+            // Verify they haven't already settled this book
+            console.log('Stock Check. listed:', eb.listedStock, 'sold:', eb.soldStock, 'returned:', eb.returnedStock);
+            if (eb.listedStock !== eb.soldStock + eb.returnedStock) {
+               await tx.eventBook.update({
+                  where: { id: eb.id },
+                  data: { soldStock: settlement.soldStock, returnedStock: settlement.returnedStock }
+               });
+               // Add returned stock back to inventory safely using atomic increment
+               await tx.book.update({
+                  where: { id: eb.bookId },
+                  data: { stock: { increment: settlement.returnedStock } }
+               });
+            }
+         }
+      }
+    });
     res.json({ success: true });
   } catch (error) {
     console.error(error);
@@ -2859,7 +2945,7 @@ app.post('/api/author/events/:eventId/pos-checkout', verifyToken, async (req, re
        if (eb) {
           await prisma.eventBook.update({
              where: { id: eb.id },
-             data: { soldStock: eb.soldStock + item.quantity }
+             data: { soldStock: { increment: item.quantity } }
           });
        }
     }

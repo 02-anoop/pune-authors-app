@@ -89,7 +89,7 @@ model Book {
   publicationDate String?
   edition         String?
   format          String?
-  author          Author      @relation(fields: [authorId], references: [id])
+  author          Author      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   orderItems      OrderItem[]
   reviews         BookReview[]
   eventBooks      EventBook[]
@@ -121,7 +121,7 @@ model OrderItem {
   deliveredAt    DateTime?
   trackingNumber  String?
   rejectionReason String?
-  book            Book     @relation(fields: [bookId], references: [id])
+  book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
@@ -181,8 +181,8 @@ model EventRegistration {
   booksIds          String
   paymentScreenshot String?
   status            String   @default("Pending Verification")
-  activity          Activity @relation(fields: [activityId], references: [id])
-  author            Author   @relation(fields: [authorId], references: [id])
+  activity          Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author            Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 model FormTemplate {
@@ -201,8 +201,8 @@ model FormResponse {
   authorId       Int
   answers        Json
   createdAt      DateTime     @default(now())
-  author         Author       @relation(fields: [authorId], references: [id])
-  formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id])
+  author         Author       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
 }
 
 model BookReview {

@@ -1405,6 +1405,7 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
 // Author Orders
 function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => void }) {
   const [loadingAction, setLoadingAction] = useState<number | null>(null);
+  const [rejectItemId, setRejectItemId] = useState<number | null>(null);
   const [rejectReasons, setRejectReasons] = useState<string[]>(['Item out of stock']);
   const [otherRejectReason, setOtherRejectReason] = useState('');
 
@@ -2014,7 +2015,7 @@ function FormsWrapper() {
   );
 }
 
-function EventsDashboard() {
+function EventsDashboard({ registrations }: any) {
   const [invites, setInvites] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
   const [listedBooks, setListedBooks] = useState<any[]>([]);
@@ -2103,8 +2104,12 @@ function EventsDashboard() {
      setSettleEventId(eventId);
   };
 
+  const [isSubmittingSettlement, setIsSubmittingSettlement] = useState(false);
+
   const handleSubmitSettlement = async (e: React.FormEvent) => {
      e.preventDefault();
+     if (isSubmittingSettlement) return;
+     setIsSubmittingSettlement(true);
      try {
         await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${settleEventId}/settle`, {
            settlements: settlementData
@@ -2115,6 +2120,8 @@ function EventsDashboard() {
         setTimeout(() => window.location.reload(), 1500); // Reload the whole page to update the root dashboardData state!
      } catch (err) {
         toast.error("Failed to submit settlement");
+     } finally {
+        setIsSubmittingSettlement(false);
      }
   };
 
@@ -2230,7 +2237,7 @@ function EventsDashboard() {
                   {invites.some((inv: any) => inv.eventId === settleEventId && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === settleEventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) ? null : (
                      <button type="button" onClick={() => setSettleEventId(null)} className="px-6 py-2 bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest hover:bg-gray-200">Cancel</button>
                   )}
-                  <button type="submit" disabled={buttonStates.submitSettlement || settlementData.every(s => s.isSettled) || settlementData.some(s => s.listedStock !== s.soldStock + s.returnedStock)} className="px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy disabled:opacity-50">{buttonStates.submitSettlement ? 'Submitting...' : 'Submit Settlement'}</button>
+                  <button type="submit" disabled={isSubmittingSettlement || settlementData.every(s => s.isSettled) || settlementData.some(s => s.listedStock !== s.soldStock + s.returnedStock)} className="px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy disabled:opacity-50">{isSubmittingSettlement ? 'Submitting...' : 'Submit Settlement'}</button>
                </div>
             </form>
           </div>

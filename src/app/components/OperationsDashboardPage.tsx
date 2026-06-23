@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { 
+  RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search, 
+  Eye, Edit, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle, 
+  TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
+  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2, FileText, AlertCircle,
+  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare
+} from 'lucide-react';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie
+} from 'recharts';
+import { useNavigate } from 'react-router';
+import { toast } from 'sonner';
+import pastEventsData from './data/past_events.json';
 
 // Automatically attach token to all admin requests
 axios.interceptors.request.use((config) => {
@@ -26,18 +39,6 @@ axios.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-import { 
-  RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search, 
-  Eye, Edit, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle, 
-  TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
-  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2, FileText, AlertCircle
-} from 'lucide-react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell
-} from 'recharts';
-import { useNavigate } from 'react-router';
-import { toast } from 'sonner';
-import pastEventsData from './data/past_events.json';
 
 const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => void }) => {
   const [activeProfileTab, setActiveProfileTab] = useState<'profile' | 'inventory' | 'orders' | 'events' | 'distribution' | 'forms'>('profile');
@@ -305,11 +306,23 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'orders' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'orders');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
   const [pendingAlerts, setPendingAlerts] = useState({ orders: false, queries: false, authors: false, books: false });
+
+  useEffect(() => {
+    setPendingAlerts(prev => {
+      const next = { ...prev };
+      if (activeTab === 'orders' || activeTab === 'web_orders') next.orders = false;
+      if (activeTab === 'helpdesk') next.queries = false;
+      if (activeTab === 'authors') next.authors = false;
+      if (activeTab === 'books') next.books = false;
+      return next;
+    });
+  }, [activeTab]);
+
   const prevCountsRef = React.useRef({ orders: 0, queries: 0, authors: 0, books: 0 });
   const prevQueryCountRef = useRef<number>(0);
   const prevOrderCountRef = useRef<number>(0);
@@ -334,7 +347,7 @@ export function OperationsDashboardPage() {
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [reportEventId, setReportEventId] = useState<number | null>(null);
-  const [eventReportData, setEventReportData] = useState<any[]>([]);
+  const [eventReportData, setEventReportData] = useState<any>(null);
   const [pendingReportStatus, setPendingReportStatus] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
@@ -469,7 +482,7 @@ export function OperationsDashboardPage() {
          authorsParticipated: legacyEvt.authorsParticipated || 0,
          booksSold: legacyEvt.booksSold || 0
       }]);
-      setReportEventId(eventId);
+      setReportEventId(Number(eventId));
       return;
     }
     try {
@@ -579,7 +592,7 @@ export function OperationsDashboardPage() {
       const newCount = res.data.length;
       
       if (background && prevOrderCountRef.current > 0 && newCount > prevOrderCountRef.current && activeTab !== 'orders') {
-         setHasNewOrders(true);
+         setPendingAlerts(prev => ({ ...prev, orders: true }));
       }
       prevOrderCountRef.current = newCount;
       w.__apiCache.adminOrders = res.data;
@@ -590,7 +603,7 @@ export function OperationsDashboardPage() {
   };
 
 
-  const fetchQueriesAlert = async () => {
+  const fetchQueriesAlert = async (silent?: boolean) => {
     try {
       const res = await axios.get(`${API}/api/admin/queries`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
       const c = res.data.filter((q: any) => q.status === 'Pending').length; if (c > prevCountsRef.current.queries) setPendingAlerts(prev => ({ ...prev, queries: true })); prevCountsRef.current.queries = c;
@@ -904,7 +917,408 @@ export function OperationsDashboardPage() {
     navigate('/login');
   };
 
-  const OrdersTab = ({ refreshTrigger }: { refreshTrigger: number }) => {
+  const OverviewTab = ({ refreshTrigger }: { refreshTrigger: number }) => {
+    const [localDismissed, setLocalDismissed] = useState<string[]>(() => {
+       const saved = localStorage.getItem('paa_dismissed_actions');
+       return saved ? JSON.parse(saved) : [];
+    });
+    const [notifiedBooks, setNotifiedBooks] = useState<Record<string, number>>(() => {
+       const saved = localStorage.getItem('paa_notified_lowstock');
+       return saved ? JSON.parse(saved) : {};
+    });
+
+    const handleDismiss = (e: React.MouseEvent, id: string) => {
+       e.stopPropagation();
+       setLocalDismissed(prev => {
+          const next = [...prev, id];
+          localStorage.setItem('paa_dismissed_actions', JSON.stringify(next));
+          return next;
+       });
+    };
+
+    // Low stock books (threshold < 15)
+    // Only exclude if the inventory HAS NOT changed since we notified them.
+    const lowStockBooks = books.filter((b: any) => {
+       const inv = b.inventory || 0;
+       const id = b.id || b.dbId;
+       if (inv >= 15 || b.status !== 'Approved') return false;
+       if (notifiedBooks[id] !== undefined && notifiedBooks[id] === inv) return false;
+       return true;
+    });
+
+    const handleNotifyAllLowStock = () => {
+       setNotifiedBooks(prev => {
+          const next = { ...prev };
+          lowStockBooks.forEach((b: any) => {
+             next[b.id || b.dbId] = b.inventory || 0;
+          });
+          localStorage.setItem('paa_notified_lowstock', JSON.stringify(next));
+          return next;
+       });
+       toast.success(`Notified ${lowStockBooks.length} authors about low stock!`);
+    };
+
+    const handleNotifySingleBook = (id: string, currentInventory: number) => {
+       setNotifiedBooks(prev => {
+          const next = { ...prev, [id]: currentInventory };
+          localStorage.setItem('paa_notified_lowstock', JSON.stringify(next));
+          return next;
+       });
+       toast.success('Author notified about low stock!');
+    };
+
+    // KPIs & Insights
+    const pendingAuthors = authors.filter((a: any) => a.status === 'Pending').length;
+    const pendingEvents = authors.filter((a: any) => a.eventParticipation && a.eventParticipation.length > 0 && a.eventParticipation.some((e: any) => e.status === 'Pending')).length;
+    const pendingOrders = orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
+    const pendingQueries = prevCountsRef.current?.queries || 0;
+
+    const totalOrders = orders.length;
+    const completedOrders = orders.filter((o: any) => o.status === 'Completed' || o.status === 'Dispatched').length;
+    const orderCompletionRate = totalOrders ? Math.round((completedOrders / totalOrders) * 100) : 0;
+
+    const totalAuthorsCount = authors.length;
+    const eventAuthors = authors.filter((a: any) => a.eventParticipation && a.eventParticipation.length > 0).length;
+    const eventAdoptionRate = totalAuthorsCount ? Math.round((eventAuthors / totalAuthorsCount) * 100) : 0;
+
+    // Chart Data 1: Category Sales
+    const categorySalesMap: Record<string, number> = {};
+    orders.forEach((o: any) => {
+       if (o.status === 'Completed' || o.status === 'Dispatched') {
+          o.items?.forEach((item: any) => {
+             const book = books.find((b: any) => b.title === item.title || b.id === item.bookId);
+             const cat = book && book.category ? book.category : 'Unknown';
+             categorySalesMap[cat] = (categorySalesMap[cat] || 0) + (item.qty || 1);
+          });
+       }
+    });
+    const categoryChartData = Object.entries(categorySalesMap)
+      .filter(([name]) => name !== 'Others' && name !== 'Uncategorized' && name !== 'N/A' && name !== 'Unknown')
+      .map(([name, sales]) => ({ name, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 6);
+
+    // Chart Data 2: Order Status
+    const orderStatusMap: Record<string, number> = {};
+    orders.forEach((o: any) => {
+      const s = o.status || 'Pending';
+      orderStatusMap[s] = (orderStatusMap[s] || 0) + 1;
+    });
+    const orderStatusData = Object.entries(orderStatusMap).map(([name, value]) => ({ name, value }));
+
+    // Chart Data 3: Top Authors
+    const authorSalesMap: Record<string, number> = {};
+    orders.forEach((o: any) => {
+      if (o.status === 'Completed' || o.status === 'Dispatched') {
+        o.items?.forEach((it: any) => {
+          const aName = it.authorName || 'Unknown Author';
+          authorSalesMap[aName] = (authorSalesMap[aName] || 0) + (it.qty || 1);
+        });
+      }
+    });
+    const topAuthorsData = Object.entries(authorSalesMap)
+      .map(([name, sales]) => ({ name, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
+
+    // Chart Data 4: Revenue Trend
+    const revenueTrendMap: Record<string, number> = {};
+    orders.forEach((o: any) => {
+      if (o.status === 'Completed' || o.status === 'Dispatched') {
+        const d = o.date || 'Unknown';
+        if (d !== 'Unknown') {
+           revenueTrendMap[d] = (revenueTrendMap[d] || 0) + (o.total || 0);
+        }
+      }
+    });
+    const uniqueDates = Array.from(new Set(orders.filter((o: any) => o.date).map((o: any) => o.date)));
+    const recentDates = uniqueDates.slice(0, 7).reverse();
+    const revenueTrendData = recentDates.map(d => ({ date: d, revenue: revenueTrendMap[d] || 0 }));
+
+    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+    const totalBooksSoldWeb = Object.values(categorySalesMap).reduce((a: number,b: number) => a+b, 0);
+    const totalRevenueWeb = orders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
+    const avgOrderValue = completedOrders > 0 ? Math.round(totalRevenueWeb / completedOrders) : 0;
+
+    const insights = [
+      { label: 'Avg Order Value', value: `₹${avgOrderValue}`, desc: 'Avg revenue per successful order', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+      { label: 'Order Completion', value: `${orderCompletionRate}%`, desc: 'Of all web orders', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
+      { label: 'Web Books Sold', value: totalBooksSoldWeb, desc: 'Total physical copies sold online', icon: ShoppingCart, color: 'text-purple-600', bg: 'bg-purple-50' },
+      { label: 'Event Adoption', value: `${eventAdoptionRate}%`, desc: 'Authors in live events', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' }
+    ];
+
+    return (
+    <div className="space-y-6">
+      {/* ── High Level KPIs ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {[
+          { label: 'Total Authors', value: stats?.totalAuthors || 0, icon: Users, colorClass: 'blue' },
+          { label: 'Books Published', value: stats?.totalBooks || 0, icon: BookOpen, colorClass: 'green' },
+          { label: 'Event Participations', value: stats?.eventParticipations || 0, icon: CalendarIcon, colorClass: 'amber' },
+          { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },
+        ].map((kpi, i) => (
+          <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
+            <div className="flex items-start justify-between mb-4">
+              <div className={`dash-kpi-icon ${kpi.colorClass}`}><kpi.icon className="w-5 h-5" /></div>
+            </div>
+            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{kpi.value}</h3>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* ── Visual Data Insights (col-span-2) ── */}
+        <div className="lg:col-span-2 space-y-6">
+           {/* Mini Insight Cards */}
+           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+             {insights.map((insight, idx) => (
+               <div key={idx} className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${insight.bg} ${insight.color}`}>
+                     <insight.icon size={16} />
+                  </div>
+                  <h4 className="text-2xl font-bold text-paa-navy mb-1">{insight.value}</h4>
+                  <p className="text-xs font-semibold text-gray-800 mb-1">{insight.label}</p>
+                  <p className="text-[10px] text-paa-gray-text">{insight.desc}</p>
+               </div>
+             ))}
+           </div>
+
+           {/* Charts Row 1 */}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+               <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-500" /> Recent Revenue Trend
+               </h3>
+               <div className="h-48 w-full">
+                 {revenueTrendData.length > 0 ? (
+                   <ResponsiveContainer width="100%" height="100%">
+                     <AreaChart data={revenueTrendData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                       <defs>
+                         <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                           <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                           <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                         </linearGradient>
+                       </defs>
+                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                       <XAxis dataKey="date" fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                       <YAxis fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                       <RechartsTooltip cursor={{stroke: '#10b981', strokeWidth: 1, strokeDasharray: '3 3'}} contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px'}} />
+                       <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" name="Revenue (₹)" />
+                     </AreaChart>
+                   </ResponsiveContainer>
+                 ) : (
+                   <div className="h-full flex items-center justify-center text-gray-400 text-xs">No revenue data.</div>
+                 )}
+               </div>
+             </div>
+
+             <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+               <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
+                  <PieChart className="w-4 h-4 text-indigo-500" /> Order Status Distribution
+               </h3>
+               <div className="h-48 w-full">
+                 {orderStatusData.length > 0 ? (
+                   <ResponsiveContainer width="100%" height="100%">
+                     <RechartsPieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                       <Pie data={orderStatusData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
+                         {orderStatusData.map((entry, index) => (
+                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                         ))}
+                       </Pie>
+                       <RechartsTooltip contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px'}} />
+                     </RechartsPieChart>
+                   </ResponsiveContainer>
+                 ) : (
+                   <div className="h-full flex items-center justify-center text-gray-400 text-xs">No orders.</div>
+                 )}
+               </div>
+             </div>
+           </div>
+
+           {/* Charts Row 2 */}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+               <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
+                  <BarChart2 className="w-4 h-4 text-blue-500" /> Most Popular Categories
+               </h3>
+               <div className="h-56 w-full">
+                 {categoryChartData.length > 0 ? (
+                   <ResponsiveContainer width="100%" height="100%">
+                     <BarChart data={categoryChartData} layout="vertical" margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+                       <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
+                       <XAxis type="number" fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                       <YAxis dataKey="name" type="category" fontSize={10} tick={{fill:'#4B5563', fontWeight: 600}} axisLine={false} tickLine={false} width={80} />
+                       <RechartsTooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px'}} />
+                       <Bar dataKey="sales" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Books Sold">
+                          {categoryChartData.map((entry, index) => (
+                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                       </Bar>
+                     </BarChart>
+                   </ResponsiveContainer>
+                 ) : (
+                   <div className="h-full flex items-center justify-center text-gray-400 text-xs">No category data.</div>
+                 )}
+               </div>
+             </div>
+
+             <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+               <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-amber-500" /> Top Performing Authors
+               </h3>
+               <div className="h-56 w-full">
+                 {topAuthorsData.length > 0 ? (
+                   <ResponsiveContainer width="100%" height="100%">
+                     <BarChart data={topAuthorsData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                       <XAxis dataKey="name" fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                       <YAxis fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                       <RechartsTooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px'}} />
+                       <Bar dataKey="sales" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Books Sold">
+                          {topAuthorsData.map((entry, index) => (
+                             <Cell key={`cell-${index}`} fill={['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][index % 5]} />
+                          ))}
+                       </Bar>
+                     </BarChart>
+                   </ResponsiveContainer>
+                 ) : (
+                   <div className="h-full flex items-center justify-center text-gray-400 text-xs">No author sales data.</div>
+                 )}
+               </div>
+             </div>
+           </div>
+        </div>
+
+        {/* ── Pending Actions & Low Stock (col-span-1) ── */}
+        <div className="space-y-6">
+           <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+             <h3 className="text-lg font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-500" /> Pending Actions
+             </h3>
+             <div className="space-y-3">
+                {!localDismissed.includes('authors') && pendingAuthors > 0 && (
+                  <div className="group relative flex items-center justify-between p-3 rounded-xl border border-paa-navy/10 hover:bg-paa-navy/5 transition-colors text-left cursor-pointer" onClick={() => setActiveTab('authors')}>
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                           <Users size={18} />
+                        </div>
+                        <div>
+                           <p className="text-sm font-bold text-paa-navy">Approve New Authors</p>
+                           <p className="text-xs text-paa-gray-text">{pendingAuthors} authors waiting for approval</p>
+                        </div>
+                     </div>
+                     <button onClick={(e) => handleDismiss(e, 'authors')} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                        <X size={16} />
+                     </button>
+                  </div>
+                )}
+
+                {!localDismissed.includes('events') && pendingEvents > 0 && (
+                  <div className="group relative flex items-center justify-between p-3 rounded-xl border border-paa-navy/10 hover:bg-paa-navy/5 transition-colors text-left cursor-pointer" onClick={() => setActiveTab('events')}>
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                           <CalendarIcon size={18} />
+                        </div>
+                        <div>
+                           <p className="text-sm font-bold text-paa-navy">Event Registrations</p>
+                           <p className="text-xs text-paa-gray-text">{pendingEvents} new event participations pending</p>
+                        </div>
+                     </div>
+                     <button onClick={(e) => handleDismiss(e, 'events')} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                        <X size={16} />
+                     </button>
+                  </div>
+                )}
+
+                {!localDismissed.includes('orders') && pendingOrders > 0 && (
+                  <div className="group relative flex items-center justify-between p-3 rounded-xl border border-paa-navy/10 hover:bg-paa-navy/5 transition-colors text-left cursor-pointer" onClick={() => setActiveTab('web_orders')}>
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                           <ShoppingCart size={18} />
+                        </div>
+                        <div>
+                           <p className="text-sm font-bold text-paa-navy">Fulfill Web Orders</p>
+                           <p className="text-xs text-paa-gray-text">{pendingOrders} orders pending verification or dispatch</p>
+                        </div>
+                     </div>
+                     <button onClick={(e) => handleDismiss(e, 'orders')} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                        <X size={16} />
+                     </button>
+                  </div>
+                )}
+                
+                {!localDismissed.includes('helpdesk') && pendingQueries > 0 && (
+                  <div className="group relative flex items-center justify-between p-3 rounded-xl border border-paa-navy/10 hover:bg-paa-navy/5 transition-colors text-left cursor-pointer" onClick={() => setActiveTab('helpdesk')}>
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                           <MessageSquare size={18} />
+                        </div>
+                        <div>
+                           <p className="text-sm font-bold text-paa-navy">Author Queries</p>
+                           <p className="text-xs text-paa-gray-text">{pendingQueries} unread helpdesk queries</p>
+                        </div>
+                     </div>
+                     <button onClick={(e) => handleDismiss(e, 'helpdesk')} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                        <X size={16} />
+                     </button>
+                  </div>
+                )}
+
+                {((localDismissed.includes('authors') || pendingAuthors === 0) &&
+                  (localDismissed.includes('events') || pendingEvents === 0) &&
+                  (localDismissed.includes('orders') || pendingOrders === 0) &&
+                  (localDismissed.includes('helpdesk') || pendingQueries === 0)) && (
+                   <div className="text-center py-6 text-sm text-paa-gray-text">No pending actions to display.</div>
+                )}
+             </div>
+           </div>
+
+           <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col h-[500px]">
+             <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-serif font-semibold text-paa-navy flex items-center gap-2">
+                   <Package className="w-5 h-5 text-red-500" /> Low Stock Books Alert
+                </h3>
+                {lowStockBooks.length > 0 && (
+                   <button onClick={handleNotifyAllLowStock} className="text-xs flex items-center gap-1 font-bold text-paa-navy bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors uppercase tracking-wider">
+                      <Bell size={12} className="text-amber-500" /> Notify All
+                   </button>
+                )}
+             </div>
+             {lowStockBooks.length === 0 ? (
+                <div className="text-center py-8 text-sm text-paa-gray-text my-auto">All books have sufficient inventory or authors notified.</div>
+             ) : (
+                <div className="space-y-3 overflow-y-auto pr-2 flex-1">
+                   {lowStockBooks.map((b: any) => (
+                      <div key={b.dbId || b.id} className="flex items-center justify-between p-3 rounded-xl border border-red-100 bg-red-50/30 group">
+                         <div className="flex-1 min-w-0 pr-4">
+                            <p className="text-sm font-bold text-paa-navy line-clamp-1">{b.title}</p>
+                            <p className="text-xs text-paa-gray-text">by {b.authorName}</p>
+                         </div>
+                         <div className="flex items-center gap-3 shrink-0">
+                            <button onClick={() => handleNotifySingleBook(b.id || b.dbId, b.inventory || 0)} className="opacity-0 group-hover:opacity-100 p-1.5 bg-white text-gray-400 hover:text-amber-500 rounded-full shadow-sm transition-all" title="Notify Author">
+                               <Bell size={14} />
+                            </button>
+                            <div className="text-right">
+                               <span className="text-lg font-black text-red-600">{b.inventory || 0}</span>
+                               <p className="text-[10px] uppercase tracking-widest font-bold text-red-400">Left</p>
+                            </div>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             )}
+           </div>
+        </div>
+      </div>
+    </div>
+    );
+  };
+
+
+  const SalesReportTab = ({ refreshTrigger }: { refreshTrigger?: number }) => {
     const [reportPeriod, setReportPeriod] = useState('daily');
     const [isExporting, setIsExporting] = useState(false);
     const [salesChartData, setSalesChartData] = useState<any[]>([]);
@@ -971,13 +1385,13 @@ export function OperationsDashboardPage() {
 
     return (
     <div className="space-y-6">
-      {/* ── High Level KPIs ── */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ High Level KPIs Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
           { label: 'Total Authors', value: stats?.totalAuthors || 0, icon: Users, colorClass: 'blue' },
           { label: 'Books Published', value: stats?.totalBooks || 0, icon: BookOpen, colorClass: 'green' },
           { label: 'Event Participations', value: stats?.eventParticipations || 0, icon: CalendarIcon, colorClass: 'amber' },
-          { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },
+          { label: 'Total Revenue', value: `Ã¢â€šÂ¹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },
         ].map((kpi, i) => (
           <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
             <div className="flex items-start justify-between mb-4">
@@ -989,7 +1403,7 @@ export function OperationsDashboardPage() {
         ))}
       </div>
 
-      {/* ── Order Tracking KPIs ── */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Order Tracking KPIs Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
@@ -1020,74 +1434,740 @@ export function OperationsDashboardPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-         <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Sales & Revenue Reports Ã¢â€â‚¬Ã¢â€â‚¬ */}
+       <div className="bg-white p-4 md:p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl mt-8">
+          <div className="mb-6 border-b border-paa-navy/5 pb-4">
+             <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
+                <FileText className="w-5 h-5" /> Sales & Revenue Reports
+             </h3>
+             <p className="text-paa-gray-text text-sm">Generate comprehensive reports on books sold through all channels (Web & Live Events).</p>
+          </div>
+          
+          {salesChartData.length > 0 && (
+            <div className="mb-8 border border-paa-navy/5 p-4 rounded-xl overflow-x-auto">
+               <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Books Sold By Channel</h4>
+               <div className="h-64 min-w-[500px]">
+                 <ResponsiveContainer width="100%" height="100%">
+                   <AreaChart data={salesChartData}>
+                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                     <XAxis dataKey="name" fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                     <YAxis fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
+                     <RechartsTooltip contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                     <Area type="monotone" dataKey="Web" stackId="1" stroke="#3b82f6" fill="#bfdbfe" name="Online Orders (Web)" />
+                     <Area type="monotone" dataKey="POS" stackId="1" stroke="#10b981" fill="#a7f3d0" name="Event Sales (POS)" />
+                   </AreaChart>
+                 </ResponsiveContainer>
+               </div>
+            </div>
+          )}
+
+          <div className="flex flex-col md:flex-row gap-6 items-end">
+            <div className="flex-1 w-full">
+              <label className="dash-label">Report Grouping Period</label>
+              <select className="dash-input w-full" value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}>
+                <option value="daily">Daily (Group by Day)</option>
+                <option value="weekly">Weekly (Group by Week)</option>
+                <option value="monthly">Monthly (Group by Month)</option>
+                <option value="yearly">Yearly (Group by Year)</option>
+                <option value="lifelong">Lifelong (All Time)</option>
+              </select>
+            </div>
+            <button 
+              onClick={handleExportSalesReport}
+              disabled={isExporting}
+              className="dash-btn dash-btn-primary whitespace-nowrap h-12 px-8 w-full md:w-auto"
+            >
+              {isExporting ? 'Generating Report...' : 'Download CSV Report'}
+            </button>
+          </div>
+          <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm">
+             <div className="overflow-x-auto">
+               <table className="dash-table w-full text-left min-w-[600px]">
+                  <thead className="bg-[#f0f4f8]">
+                     <tr>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Period</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Channel</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Author</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Book Title</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Qty</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Revenue</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-paa-navy/5 bg-white">
+                     {isLoadingTable ? (
+                        <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text"><Loader2 className="w-5 h-5 animate-spin mx-auto text-paa-navy" /></td></tr>
+                     ) : salesTableData.length === 0 ? (
+                        <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text italic">No sales data found for this period.</td></tr>
+                     ) : salesTableData.map((row: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                           <td className="px-4 py-3 text-sm font-medium text-paa-navy">{row.Period}</td>
+                           <td className="px-4 py-3 text-sm text-paa-gray-text"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${row.Channel === 'Web' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>{row.Channel}</span></td>
+                           <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{row.Author}</td>
+                           <td className="px-4 py-3 text-sm text-paa-navy">{row.BookTitle}</td>
+                           <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{row.QuantitySold}</td>
+                           <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">Ã¢â€šÂ¹{row.Revenue}</td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+             </div>
+          </div>
+       </div>
+    </div>
+  );
+  };
+
+  const WebOrdersTab = ({ refreshTrigger }: { refreshTrigger?: number }) => {
+    const successfulOrders = orders.filter((o: any) => o.status === 'Completed').length;
+    const toApproveOrders = orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
+    const underDeliveryOrders = orders.filter((o: any) => o.status === 'Dispatched').length;
+
+    // Additional Insights
+    const authorSalesMap: Record<string, number> = {};
+    const bookSalesMap: Record<string, number> = {};
+    
+    orders.forEach((o: any) => {
+      if (o.status === 'Completed' || o.status === 'Dispatched') {
+        o.items?.forEach((it: any) => {
+          const aName = it.authorName || 'Unknown Author';
+          const bTitle = it.title || 'Unknown Book';
+          authorSalesMap[aName] = (authorSalesMap[aName] || 0) + (it.qty || 1);
+          bookSalesMap[bTitle] = (bookSalesMap[bTitle] || 0) + (it.qty || 1);
+        });
+      }
+    });
+
+    const topAuthorsData = Object.entries(authorSalesMap)
+      .map(([name, sales]) => ({ name, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 3);
+
+    const topBooksData = Object.entries(bookSalesMap)
+      .map(([name, sales]) => ({ name, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 3);
+
+    return (
+      <div className="space-y-6">
+        {/* ── Order Tracking KPIs ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+              <Check size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Successful Orders</p>
+              <h3 className="text-2xl font-bold text-paa-navy">{successfulOrders}</h3>
+            </div>
+          </div>
+          <div className="dash-kpi-card amber" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Verified</p>
+              <h3 className="text-2xl font-bold text-paa-navy">{toApproveOrders}</h3>
+            </div>
+          </div>
+          <div className="dash-kpi-card blue" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+              <Package size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Under Delivery</p>
+              <h3 className="text-2xl font-bold text-paa-navy">{underDeliveryOrders}</h3>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Order Insights Row ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+           <div className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm">
+             <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
+                <Users className="w-4 h-4 text-indigo-500" /> Top Selling Authors
+             </h3>
+             <div className="space-y-3">
+                {topAuthorsData.length > 0 ? topAuthorsData.map((a, idx) => (
+                   <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold shrink-0">#{idx + 1}</div>
+                         <p className="text-sm font-bold text-paa-navy line-clamp-1">{a.name}</p>
+                      </div>
+                      <div className="text-right shrink-0 ml-4">
+                         <span className="text-sm font-black text-indigo-600">{a.sales}</span>
+                         <span className="text-[10px] text-gray-500 ml-1">Sold</span>
+                      </div>
+                   </div>
+                )) : <p className="text-xs text-gray-400">No completed sales yet.</p>}
+             </div>
+           </div>
+
+           <div className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm">
+             <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-emerald-500" /> Highest Selling Books
+             </h3>
+             <div className="space-y-3">
+                {topBooksData.length > 0 ? topBooksData.map((b, idx) => (
+                   <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
+                      <div className="flex items-center gap-3 min-w-0 pr-4">
+                         <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold shrink-0">#{idx + 1}</div>
+                         <p className="text-sm font-bold text-paa-navy line-clamp-1">{b.name}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                         <span className="text-sm font-black text-emerald-600">{b.sales}</span>
+                         <span className="text-[10px] text-gray-500 ml-1">Sold</span>
+                      </div>
+                   </div>
+                )) : <p className="text-xs text-gray-400">No completed sales yet.</p>}
+             </div>
+           </div>
+        </div>
+
+
+        <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out flex flex-col">
+          <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
             <div className="flex items-center gap-2">
               <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Web Orders</h3>
             </div>
-            <div className="flex items-center gap-3">
-               <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                  <input type="text" placeholder="SEARCH ORDERS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
-               </div>
-               <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
-                 <ClipboardList className="w-4 h-4" /> Export CSV
-               </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                <input type="text" placeholder="SEARCH ORDERS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64" />
+              </div>
+              <button onClick={handleExportCSV} className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium rounded-full">
+                <ClipboardList className="w-4 h-4" /> Export CSV
+              </button>
             </div>
-         </div>
-         
-         <div className="overflow-x-auto">
-          <table className="dash-table">
-            <thead>
+          </div>
+          
+          <div className="hidden md:block overflow-x-auto">
+            <table className="dash-table w-full">
+              <thead>
+                <tr>
+                  <th>Order ID & Date</th>
+                  <th>Customer</th>
+                  <th>Items / Books</th>
+                  <th style={{textAlign: 'center'}}>Amount</th>
+                  <th style={{textAlign: 'center'}}>Status</th>
+                  <th style={{textAlign: 'center'}}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((ord: any) => (
+                  <tr key={ord.dbId}>
+                    <td>
+                      <p className="font-bold text-paa-navy mb-1">{ord.id}</p>
+                      <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3"/> {ord.date}</p>
+                    </td>
+                    <td className="font-bold text-paa-navy">{ord.customer}</td>
+                    <td>
+                      <ul className="text-xs text-paa-gray-text font-medium space-y-1">
+                        {ord.items.map((it: any, idx: number) => (
+                          <li key={idx} className="flex gap-2"><span className="text-paa-navy font-bold">{it.qty}x</span> <span>{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span></li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">₹{ord.total}</td>
+                    <td style={{textAlign: 'center'}}>
+                      <span className={`dash-badge ${ord.status === 'Completed' ? 'active' : ord.status === 'Payment Not Received' ? 'rejected' : 'pending'}`}>
+                        {ord.status === 'Completed' ? 'Payment Verified' : ord.status === 'Payment Not Received' ? 'Payment Failed' : 'Pending Verification'}
+                      </span>
+                    </td>
+                    <td style={{textAlign: 'center'}}>
+                      <button onClick={() => setSelectedOrder(ord)} className="dash-btn dash-btn-ghost">Details</button>
+                    </td>
+                  </tr>
+                ))}
+                {orders.length === 0 && <tr><td colSpan={6} className="text-center py-8">No orders yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="md:hidden flex flex-col gap-4 p-4 bg-gray-50">
+            {orders.map((ord: any) => (
+              <div key={ord.dbId} className="bg-white p-4 rounded-xl shadow-sm border border-paa-navy/10 flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-bold text-paa-navy text-sm">{ord.id}</p>
+                    <p className="text-[10px] text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3"/> {ord.date}</p>
+                  </div>
+                  <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-widest ${ord.status === 'Completed' ? 'bg-green-100 text-green-700' : ord.status === 'Payment Not Received' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {ord.status === 'Completed' ? 'Verified' : ord.status === 'Payment Not Received' ? 'Failed' : 'Pending'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-paa-gray-text font-bold uppercase tracking-widest mb-1">Customer</p>
+                  <p className="text-sm font-semibold text-paa-navy">{ord.customer}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-paa-gray-text font-bold uppercase tracking-widest mb-1">Items</p>
+                  <ul className="text-xs text-paa-gray-text font-medium space-y-1">
+                    {ord.items.map((it: any, idx: number) => (
+                      <li key={idx} className="flex gap-2"><span className="text-paa-navy font-bold">{it.qty}x</span> <span>{it.title}</span></li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-1">
+                  <div className="text-sm font-bold text-paa-navy">₹{ord.total}</div>
+                  <button onClick={() => setSelectedOrder(ord)} className="text-xs font-bold text-paa-gold hover:text-paa-navy uppercase tracking-widest">Details</button>
+                </div>
+              </div>
+            ))}
+            {orders.length === 0 && <div className="text-center py-8 text-sm text-gray-500">No orders yet.</div>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAuthorsTab = ({ refreshTrigger }: any) => {
+    if (selectedAuthor) {
+      return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;
+    }
+
+    return (
+    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+       <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
+          <div className="flex items-center gap-3">
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Authors Directory</h3>
+            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">{authors.length} Total</span>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2">
+                <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
+                  {['All', 'Pending', 'Active', 'Rejected'].map(status => (
+                    <button 
+                      key={status}
+                      onClick={() => setAuthorStatusFilter(status)}
+                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                  <input 
+                    type="text" 
+                    placeholder="SEARCH AUTHORS..." 
+                    className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+             </div>
+          </div>
+       </div>
+       
+       <div className="overflow-x-auto">
+         <table className="dash-table">
+           <thead>
               <tr>
-                <th>Order ID & Date</th>
-                <th>Customer</th>
-                <th>Items / Books</th>
-                <th style={{textAlign: 'center'}}>Amount</th>
+                <th>Author Details</th>
+                <th>Contact</th>
+                <th>Payment Info</th>
                 <th style={{textAlign: 'center'}}>Status</th>
+                <th style={{textAlign: 'center'}}>Books</th>
+                <th style={{textAlign: 'center'}}>Events</th>
                 <th style={{textAlign: 'center'}}>Actions</th>
               </tr>
-            </thead>
-            <tbody>
-             {orders.map((ord) => (
-                <tr key={ord.dbId}>
+           </thead>
+           <tbody>
+              {authors.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) && (authorStatusFilter === 'All' || a.status === authorStatusFilter)).sort((a, b) => {
+                if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+                if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+                return 0;
+              }).map((author) => (
+                <tr key={author.id}>
                   <td>
-                   <p className="font-bold text-paa-navy mb-1">{ord.id}</p>
-                   <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3"/> {ord.date}</p>
-                  </td>
-                  <td className="font-bold text-paa-navy">
-                     {ord.customer}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#f0f4f8] border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
+                        {author.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-paa-navy">{author.name}</p>
+                        <p className="text-xs text-paa-gray-text flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3"/> Joined {author.joined}</p>
+                      </div>
+                    </div>
                   </td>
                   <td>
-                     <ul className="text-xs text-paa-gray-text font-medium space-y-1">
-                       {ord.items.map((it: any, idx: number) => (
-                         <li key={idx} className="flex gap-2"><span className="text-paa-navy font-bold">{it.qty}x</span> <span>{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span></li>
-                       ))}
-                     </ul>
+                    <p className="text-paa-navy font-medium">{author.email}</p>
+                    <p className="text-paa-gray-text text-xs mt-0.5 font-medium">{author.phone}</p>
+                  </td>
+                  <td>
+                    {author.transactionId ? (
+                      <div>
+                        <p className="text-[10px] font-bold text-paa-navy uppercase bg-gray-100 inline-block px-1 mb-1">TXN: {author.transactionId}</p>
+                        <br />
+                        {author.paymentScreenshot ? (
+                           <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + author.paymentScreenshot : "http://localhost:3001" + author.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline font-medium mt-1 inline-block hover:text-blue-800">View Receipt</a>
+                        ) : (
+                           <span className="text-[10px] text-red-500 font-bold uppercase block mt-1">No Receipt</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-400 font-bold uppercase">No Payment Info</span>
+                    )}
+                  </td>
+                  <td style={{textAlign: 'center'}}>
+                    <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
+                      {author.status}
+                    </span>
                   </td>
                   <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
-                     ₹{ord.total}
+                    {author.totalBooks}
+                  </td>
+                  <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
+                    {author.eventsPart}
                   </td>
                   <td style={{textAlign: 'center'}}>
-                     <span className={`dash-badge ${ord.status === 'Completed' ? 'active' : ord.status === 'Payment Not Received' ? 'rejected' : 'pending'}`}>
-                       {ord.status === 'Completed' ? 'Payment Verified' : ord.status === 'Payment Not Received' ? 'Payment Failed' : 'Pending Verification'}
-                     </span>
-                  </td>
-                  <td style={{textAlign: 'center'}}>
-                     <button onClick={() => setSelectedOrder(ord)} className="dash-btn dash-btn-ghost">Details</button>
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                       {author.status === 'Pending' && (
+                         <>
+                           <button onClick={() => handleApproveAuthor(author.id)} className="dash-btn dash-btn-success" title="Approve">
+                             {loadingAction === 'approveAuthor_' + author.id ? '...' : <Check className="w-4 h-4" />} Approve
+                           </button>
+                           <button onClick={() => openRejectAuthorModal(author)} className="dash-btn dash-btn-danger" title="Reject">
+                             <X className="w-4 h-4" /> Reject
+                           </button>
+                         </>
+                       )}
+                       <button onClick={() => handleEditAuthorClick(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Profile">
+                         <Edit className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => setSelectedAuthor(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Details">
+                         <Eye className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => handleDeleteAuthor(author.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                    </div>
+                    {author.status === 'Rejected' && author.rejectionReason && (
+                      <div className="mt-2 text-[10px] text-red-600 font-medium max-w-[200px] mx-auto text-left leading-tight bg-red-50 p-2 rounded-lg">
+                        Reason: {author.rejectionReason}
+                      </div>
+                    )}
                   </td>
                 </tr>
              ))}
-             {orders.length === 0 && (
-               <tr><td colSpan={6} className="text-center py-8">No orders yet.</td></tr>
+             {authors.length === 0 && (
+               <tr>
+                 <td colSpan={7} className="text-center py-8 text-paa-gray-text bg-white">No authors found.</td>
+               </tr>
              )}
            </tbody>
          </table>
        </div>
     </div>
+    );
+  };
+
+  const BooksTab = () => {
+    if (selectedBookDetails) {
+      return (
+        <div className="bg-white border border-paa-navy/5 p-8 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
+          <button onClick={() => setSelectedBookDetails(null)} className="mb-6 p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded-full active:scale-95 transition-all duration-300 shadow-sm">
+             <ArrowLeft className="w-5 h-5 text-paa-navy" />
+          </button>
+          
+          <div className="space-y-6">
+             <div className="flex gap-6">
+               {selectedBookDetails.coverUrl && (
+                 <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-40 h-56 object-cover border border-paa-navy/20 shadow-md" />
+               )}
+               <div className="flex-1">
+                  <h3 className="text-3xl font-serif font-bold text-paa-navy mb-1">{selectedBookDetails.title}</h3>
+                  {selectedBookDetails.subtitle && <p className="text-lg font-medium text-paa-gray-text mb-2">{selectedBookDetails.subtitle}</p>}
+                  <p className="text-base font-medium mb-2">Author: <span className="font-bold text-paa-navy">{selectedBookDetails.authorName}</span></p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mt-2 bg-[#eef2f6] inline-block px-3 py-1">{selectedBookDetails.genre} {selectedBookDetails.subGenre && `> ${selectedBookDetails.subGenre}`}</p>
+               </div>
+             </div>
+             
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 border-t border-paa-navy/5 pt-6 mt-6">
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">MRP</span><span className="text-lg font-black text-green-700">Γé╣{selectedBookDetails.mrp}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Language</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pages</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.pages || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Publisher</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pub Date</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">ISBN</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Current Stock</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.stock}</span></div>
+               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Total Sales</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.sales}</span></div>
+             </div>
+             
+             <div className="border-t border-paa-navy/5 pt-6 mt-6">
+               <span className="text-sm font-bold uppercase tracking-widest text-paa-navy block mb-3">Synopsis</span>
+               <p className="text-sm text-paa-gray-text leading-relaxed whitespace-pre-wrap">{selectedBookDetails.synopsis || 'No synopsis provided.'}</p>
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
+       <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e6f2eb]">
+          <div className="flex items-center gap-2">
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Inventory Management</h3>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2">
+                <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
+                  {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
+                    <button 
+                      key={status}
+                      onClick={() => setBookStatusFilter(status)}
+                      className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${bookStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                  <input type="text" placeholder="SEARCH BOOKS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
+                </div>
+             </div>
+             {/* <button onClick={() => setIsBookModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
+               <Plus className="w-4 h-4" /> Add Book
+             </button> */}
+          </div>
+       </div>
+       
+       <div className="overflow-x-auto">
+         <table className="dash-table">
+            <thead>
+              <tr>
+                <th>Book Info</th>
+                <th>Author</th>
+                <th style={{textAlign: 'center'}}>Status</th>
+                <th style={{textAlign: 'center'}}>Price</th>
+                <th style={{textAlign: 'center'}}>Stock</th>
+                <th style={{textAlign: 'center'}}>Sales</th>
+                <th style={{textAlign: 'center'}}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+             {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter)).map((book) => (
+               <tr key={book.id}>
+                 <td>
+                   <p className="font-bold text-paa-navy mb-1">{book.title}</p>
+                   <div className="flex items-center gap-2 text-xs font-medium">
+                     <span className="text-[#5bc0de] font-bold uppercase">{book.genre}</span>
+                   </div>
+                 </td>
+                 <td>
+                    <p className="text-paa-navy font-bold">{book.authorName}</p>
+                 </td>
+                 <td style={{textAlign: 'center'}}>
+                    <span className={`dash-badge ${book.status === 'Approved' ? 'approved' : book.status === 'Rejected' ? 'rejected' : 'pending'}`}>
+                      {book.status}
+                    </span>
+                 </td>
+                 <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
+                    Γé╣{book.mrp}
+                 </td>
+                 <td style={{textAlign: 'center'}}>
+                    {book.stock >= 10 ? (
+                      <span className="dash-badge active">OK: {book.stock}</span>
+                    ) : book.stock > 0 ? (
+                      <span className="dash-badge pending"><AlertCircle className="w-3 h-3"/> {book.stock} LEFT</span>
+                    ) : (
+                      <span className="dash-badge rejected"><AlertCircle className="w-3 h-3"/> OUT OF STOCK</span>
+                    )}
+                 </td>
+                 <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
+                    {book.sales}
+                 </td>
+                 <td style={{textAlign: 'center'}}>
+                    <div className="flex items-center justify-center gap-2">
+                       {book.status === 'Pending' && (
+                         <button onClick={() => handleApproveBook(book.id)} className="dash-btn dash-btn-success dash-btn-icon" title="Approve">
+                           <Check className="w-4 h-4" />
+                         </button>
+                       )}
+                       {book.status !== 'Rejected' && (
+                         <button onClick={() => handleRejectBook(book.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Reject">
+                           <X className="w-4 h-4" />
+                         </button>
+                       )}
+                       <button onClick={() => setSelectedBookDetails(book)} className="dash-btn dash-btn-ghost dash-btn-icon" title="View Details">
+                         <Eye className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => handleEditBookClick(book)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Details">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDeleteBook(book.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                     </div>
+                 </td>
+               </tr>
+             ))}
+             {books.length === 0 && (
+               <tr>
+                 <td colSpan={7} className="text-center py-8 text-paa-gray-text bg-white">No books found.</td>
+               </tr>
+             )}
+           </tbody>
+         </table>
+       </div>
+    </div>
+    );
+  };
+
+  const EventsTab = () => (
+    <div className="space-y-6">
+       <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
+          <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Ecosystem</h3>
+          <button onClick={() => setIsEventModalOpen(true)} className="dash-btn dash-btn-primary">
+            <Plus className="w-4 h-4" /> Create Event
+          </button>
+       </div>
+
+       <div className="space-y-4">
+          <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2">Active / Upcoming Events</h4>
+       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {events.filter(e => e.status === 'Upcoming').map((evt) => (
+             <div key={evt.id} className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out hover:shadow-md flex flex-col relative overflow-hidden h-full">
+                <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative`}>
+                   <span>{evt.status}</span>
+                   <div className="flex gap-2 items-center">
+                     {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Authors Notified</span>}
+                     {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Public</span>}
+                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
+                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                   </div>
+                </div>
+                <div className="p-6 flex-1 flex flex-col">
+                  {evt.bannerUrl ? (
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 bg-gray-100">
+                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 flex items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100">
+                       <CalendarIcon className="w-8 h-8 text-gray-300" />
+                    </div>
+                  )}
+                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
+                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-paa-gray-text">
+                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50"/> {evt.date} &bull; {evt.duration}</p>
+                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-paa-navy/50"/> {evt.location}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                     <div className="bg-gray-50 p-2 text-center rounded-3xl-2xl border border-gray-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Authors</p>
+                        <p className="text-lg font-black text-paa-navy">{evt._count?.eventAuthors || 0}</p>
+                     </div>
+                     <div className="bg-gray-50 p-2 text-center rounded-3xl-2xl border border-gray-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Linked</p>
+                        <p className="text-lg font-black text-paa-navy">{evt._count?.eventBooks || 0}</p>
+                     </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-paa-navy/5 flex flex-col gap-2 mt-auto">
+                     <button onClick={() => fetchEventRegistrations(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800">
+                        View Author Registrations
+                     </button>
+                     <button onClick={() => fetchEventReport(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
+                        View Live Event Report
+                     </button>
+                  </div>
+                </div>
+             </div>
+          ))}
+          {events.filter(e => e.status === 'Upcoming').length === 0 && (
+             <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-3xl-2xl border border-dashed border-gray-200">
+                No upcoming events.
+             </div>
+          )}
+       </div>
+
+       <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2 mt-12">Past Events Archive</h4>
+       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {pastEventsData.map((evt: any) => (
+             <div key={'legacy_'+evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90">
+                <div className="bg-gray-800 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center">
+                   <span>Legacy Archive</span>
+                </div>
+                <div className="p-6 flex-1">
+                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
+                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-gray-500">
+                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-gray-400"/> {evt.date} &bull; {evt.duration}</p>
+                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400"/> {evt.address || evt.location}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
+                        <p className="text-lg font-black text-gray-700">{evt.authorsParticipated || 0}</p>
+                     </div>
+                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Sold</p>
+                        <p className="text-lg font-black text-gray-700">{evt.booksSold || 0}</p>
+                     </div>
+                  </div>
+                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2 mt-auto">
+                     <button onClick={() => fetchEventReport('legacy_' + evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
+                        View Legacy Settlement Report
+                     </button>
+                  </div>
+                </div>
+             </div>
+          ))}
+          {events.filter(e => e.status === 'Past').map((evt) => (
+             <div key={evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90 h-full">
+                <div className="bg-gray-500 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative">
+                   <span>{evt.status}</span>
+                   <div className="flex gap-2 items-center">
+                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
+                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                   </div>
+                </div>
+                <div className="p-6 flex-1 flex flex-col">
+                  {evt.bannerUrl ? (
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 bg-gray-100">
+                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center bg-gradient-to-r from-gray-100 to-gray-50">
+                       <CalendarIcon className="w-8 h-8 text-gray-300" />
+                    </div>
+                  )}
+                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
+                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-gray-500">
+                     <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-gray-400"/> {evt.date} &bull; {evt.duration}</p>
+                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400"/> {evt.location}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
+                        <p className="text-lg font-black text-gray-700">{evt._count?.eventAuthors || 0}</p>
+                     </div>
+                     <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Linked</p>
+                        <p className="text-lg font-black text-gray-700">{evt._count?.eventBooks || 0}</p>
+                     </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2 mt-auto">
+                     <button onClick={() => fetchEventReport(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
+                        View Sales & Settlement Report
+                     </button>
+                  </div>
+                </div>
+             </div>
+          ))}
+          {events.filter(e => e.status === 'Past').length === 0 && (
+             <div className="col-span-full py-8 text-center text-gray-400 bg-gray-50 rounded-3xl-2xl border border-dashed border-gray-200">
+                No past events archived yet.
+             </div>
+          )}
+       </div>
+       </div>
     </div>
   );
-  };
 
   const SettingsTab = () => {
 
@@ -1157,7 +2237,7 @@ export function OperationsDashboardPage() {
     const [showColumnsMenu, setShowColumnsMenu] = useState(false);
     
     // Get all unique extraData keys from all authors to form table columns
-    const dynamicKeys = Array.from(new Set(
+    const dynamicKeys = Array.from(new Set<string>(
       authors.reduce((acc: string[], author: any) => {
         if (author.extraData) {
           acc = acc.concat(Object.keys(author.extraData));
@@ -1557,7 +2637,8 @@ export function OperationsDashboardPage() {
 
         <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
            {[
-             { id: 'orders', label: 'Web Orders & Reports', icon: ShoppingCart, hasAlert: pendingAlerts.orders },
+             { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
+             { id: 'web_orders', label: 'Web Orders', icon: ShoppingCart, hasAlert: pendingAlerts.orders },
              { id: 'authors', label: 'Authors Menu', icon: Users, hasAlert: pendingAlerts.authors },
              { id: 'books', label: 'Inventory / Books', icon: BookOpen, hasAlert: pendingAlerts.books },
              { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
@@ -1658,7 +2739,7 @@ export function OperationsDashboardPage() {
                           </button>
                        )}
                        {!(pendingAlerts.orders || pendingAlerts.queries || pendingAlerts.authors || pendingAlerts.books) && (
-                          <div className="px-4 py-6 text-center text-paa-gray-text text-xs">All clear — no new notifications.</div>
+                          <div className="px-4 py-6 text-center text-paa-gray-text text-xs">All clear â€” no new notifications.</div>
                        )}
                     </div>
                  </div>
@@ -1672,12 +2753,14 @@ export function OperationsDashboardPage() {
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-auto p-4 sm:p-7">
-           {activeTab === 'orders' && <OrdersTab refreshTrigger={lastRefreshTime} />}
+           {activeTab === 'overview' && <OverviewTab refreshTrigger={lastRefreshTime} />}
+           {activeTab === 'web_orders' && <WebOrdersTab refreshTrigger={lastRefreshTime} />}
+           {activeTab === 'sales_report' && <SalesReportTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
-           {activeTab === 'books' && <BooksTab refreshTrigger={lastRefreshTime} />}
-           {activeTab === 'events' && <EventsTab refreshTrigger={lastRefreshTime} />}
+           {activeTab === 'books' && <BooksTab />}
+           {activeTab === 'events' && <EventsTab />}
            {activeTab === 'forms' && <FormsTab />}
-           {activeTab === 'gallery' && <GalleryTab refreshTrigger={lastRefreshTime} />}
+           {activeTab === 'gallery' && <GalleryTab />}
            {activeTab === 'author_data' && <AuthorDataTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'settings' && (
@@ -2141,7 +3224,7 @@ export function OperationsDashboardPage() {
                                           {author.name}
                                           {author.optInStatus === 'Awaiting Approval' && <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-[10px] rounded-full">Pending</span>}
                                        </p>
-                                       <p className="text-[10px] text-gray-500">{author.email} • {author.phone}</p>
+                                       <p className="text-[10px] text-gray-500">{author.email} â€¢ {author.phone}</p>
                                     </div>
                                     <div className="text-right flex gap-6">
                                        <div>
@@ -2370,7 +3453,7 @@ export function OperationsDashboardPage() {
               <option value="Literary Events">Literary Events</option>
               <option value="Book Fairs">Book Fairs</option>
               <option value="Flybraries">Flybraries</option>
-              <option value="Book Café">Book Café</option>
+              <option value="Book CafÃ©">Book CafÃ©</option>
             </select>
           </div>
           <div>
@@ -2841,3 +3924,4 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
 };
 
 export default OperationsDashboardPage;
+

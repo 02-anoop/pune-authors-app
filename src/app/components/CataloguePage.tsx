@@ -177,17 +177,20 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
       margin:       0,
       filename:     `PAA_${label.replace(/\s+/g, '_')}_Catalogue.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
-      jsPDF:        { unit: 'px', format: [800, 1131], orientation: 'portrait' }
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false,
+        windowWidth: 800,
+        width: 800
+      },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    document.body.appendChild(container);
-
+    // By passing the DOM element directly rather than innerHTML, the renderer
+    // respects the physical pixel dimensions of the wrapper, fixing Mac clipping.
     await html2pdf().set(opt).from(container.firstElementChild).save();
     
-    document.body.removeChild(container);
     setDownloading(false);
   } catch (err) {
     console.error("PDF Generation failed", err);
@@ -512,18 +515,20 @@ export function CataloguePage() {
               Clear Filters
             </button>
             <button
-                onClick={() => downloadCataloguePDF(activeCategory, filteredBooks)}
+                onClick={() => downloadCataloguePDF(activeCategory === "All" ? "Complete" : activeCategory, filteredBooks, setIsDownloadingPDF)}
+                disabled={isDownloadingPDF}
                 style={{
                   display: "flex", alignItems: "center", gap: "0.4rem",
                   padding: "0.6rem 1.1rem",
-                  background: activeCategory !== "All" ? getCategoryColor(activeCategory).color : "#1a1a2e",
+                  background: isDownloadingPDF ? "#475569" : (activeCategory !== "All" ? getCategoryColor(activeCategory).color : "#1a1a2e"),
                   color: "#fff", border: "none", borderRadius: 10,
-                  fontSize: 13, fontWeight: 700, cursor: "pointer",
+                  fontSize: 13, fontWeight: 700, cursor: isDownloadingPDF ? "not-allowed" : "pointer",
                   fontFamily: "var(--font-body)", whiteSpace: "nowrap",
-                  marginTop: "1rem",
+                  marginTop: "1rem", transition: "background 0.15s"
                 }}
               >
-              <Download size={14} /> Download {activeCategory === "All" ? "Complete" : activeCategory} Catalogue (PDF)
+              {isDownloadingPDF ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Download size={14} />} 
+              {isDownloadingPDF ? "Generating PDF..." : `Download ${activeCategory === "All" ? "Complete" : activeCategory} Catalogue (PDF)`}
             </button>
           </div>
         ) : (

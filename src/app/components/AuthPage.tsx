@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import axios from "axios";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export function AuthPage({ type }: { type: "login" | "signup" }) {
   const [searchParams] = useSearchParams();
@@ -10,6 +10,7 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -160,8 +161,11 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
                   <input required type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400" />
                 </div>
 
-                <div>
-                  <input required type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400" />
+                <div className="relative">
+                  <input required type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400 pr-10" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-0 bottom-3 flex items-center justify-center text-gray-400 hover:text-paa-navy transition-colors">
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
 
                 {signupError && (

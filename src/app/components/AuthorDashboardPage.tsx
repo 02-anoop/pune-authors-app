@@ -858,7 +858,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                 {/* Cover upload */}
                 <div>
                   <label className="dash-label">Cover Image *</label>
-                  <input required key={newBook.title + newBook.mrp} type="file" accept="image/*" className="dash-input text-xs" onChange={e => setCover(e.target.files?.[0] || null)} />
+                  <input required type="file" accept="image/*" className="dash-input text-xs" onChange={e => setCover(e.target.files?.[0] || null)} />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t mt-2">
@@ -892,7 +892,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                 <tr key={row.id}>
                   <td className="text-paa-gray-text text-xs">{idx + 1}</td>
                   <td>{authorBooks.find((b: any) => b.id === row.id)?.coverUrl
-                    ? <img src={authorBooks.find((b: any) => b.id === row.id)?.coverUrl?.startsWith('http') ? authorBooks.find((b: any) => b.id === row.id)?.coverUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-9 h-12 object-cover rounded-lg shadow-sm" />
+                    ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-9 h-12 object-cover rounded-lg shadow-sm" />
                     : <div className="w-9 h-12 bg-gray-100 rounded-lg border flex items-center justify-center text-[9px] text-gray-400">No cover</div>}
                   </td>
                   <td className="font-semibold text-paa-navy">{row.title}</td>

@@ -124,7 +124,7 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
             <div className="space-y-4">
               {authorProfile.books.length === 0 ? <p className="text-sm text-paa-gray-text">No books found.</p> : authorProfile.books.map((b: any, idx: number) => (
                 <div key={b.id} className="border border-paa-navy/5 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
-                  {b.coverUrl && <img src={b.coverUrl.startsWith('http') ? b.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${b.coverUrl}`} alt="Cover" className="w-20 h-28 object-cover border border-paa-navy/20" />}
+                  {b.coverUrl && <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + b.coverUrl : "http://localhost:3001" + b.coverUrl} alt="Cover" className="w-20 h-28 object-cover border border-paa-navy/20" />}
                   <div className="flex-1">
                     <h4 className="text-lg font-bold text-paa-navy">{b.title}</h4>
                     {b.subtitle && <p className="text-sm text-paa-gray-text font-medium mb-1">{b.subtitle}</p>}

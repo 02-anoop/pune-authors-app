@@ -149,7 +149,7 @@ export function BookDetailPage() {
             {/* Cover */}
             <div style={{ width: 220, height: 320, border: "1px solid #eaeaea", background: "#fff", padding: "0.5rem", flexShrink: 0 }}>
               {book.coverUrl
-                ? <img src={book.coverUrl.startsWith('http') ? book.coverUrl : `${API}${book.coverUrl}`} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ? <img src={book.coverUrl.startsWith('http') ? book.coverUrl : `${API}${book.coverUrl.startsWith('/') ? book.coverUrl : '/' + book.coverUrl}`} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f9f9f9" }}>
                     <BookOpen size={40} color="#ccc" />
                   </div>}

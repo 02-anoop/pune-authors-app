@@ -567,7 +567,7 @@ export function CataloguePage() {
                     onClick={() => window.location.href = `/book/${book.id}`}
                     style={{ position: "relative", height: 220, background: "#f7f7f9", overflow: "hidden", flexShrink: 0, cursor: "pointer" }}>
                     {book.coverUrl ? (
-                      <img src={book.coverUrl} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={book.coverUrl.startsWith('http') ? book.coverUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${book.coverUrl.startsWith('/') ? book.coverUrl : '/' + book.coverUrl}`} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: meta.bg }}>
                         <BookOpen size={48} color={meta.color} style={{ opacity: 0.3 }} />

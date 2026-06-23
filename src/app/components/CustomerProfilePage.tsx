@@ -244,10 +244,10 @@ export function CustomerProfilePage() {
       )}
 
 
-    <main style={{ fontFamily: "var(--font-body)", minHeight: "calc(100vh - 64px)", background: "#fafafa", padding: "4rem 1.5rem" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+    <main style={{ fontFamily: "var(--font-body)", minHeight: "calc(100vh - 64px)", background: "#fafafa" }} className="px-4 py-8 md:px-6 md:py-16">
+      <div style={{ maxWidth: 1100, margin: "0 auto", width: "100%" }}>
         
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#555", marginBottom: "0.8rem" }}>My Account</div>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.8rem, 3vw, 2.2rem)", fontWeight: 400, color: "#111", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
@@ -264,7 +264,7 @@ export function CustomerProfilePage() {
           </button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "2rem" }} className="profile-grid">
+        <div style={{ display: "grid", gridTemplateColumns: "280px minmax(0, 1fr)", gap: "2rem" }} className="profile-grid">
           
           <div>
             <div style={{ background: "#fff", border: "1px solid #eaeaea", padding: "2rem" }}>
@@ -345,69 +345,112 @@ export function CustomerProfilePage() {
                   </Link>
                 </div>
               ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#fafafa", borderBottom: "1px solid #eaeaea", textAlign: "left" }}>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Order ID</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Date</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Total</th>
-                        <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</th>
-                        <th style={{ padding: "1rem 1.5rem" }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((o) => {
-                        return (
-                          <tr key={o.id} style={{ background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
-                            <td style={{ padding: "1.2rem 1.5rem", fontFamily: "var(--font-mono)", fontSize: 13, color: "#111", fontWeight: 600 }}>
-                              #PAA-{o.id.toString().padStart(4, '0')}
-                            </td>
-                            <td style={{ padding: "1.2rem 1.5rem", fontSize: 12, color: "#555" }}>
-                              {new Date(o.createdAt).toLocaleDateString()}
-                            </td>
-                            <td style={{ padding: "1.2rem 1.5rem", fontSize: 13, fontWeight: 600, color: "#111" }}>
-                              ₹{o.amount}
-                            </td>
-                            <td style={{ padding: "1.2rem 1.5rem" }}>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                                {o.items?.map((item: any, idx: number) => (
-                                  <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.2rem", flexDirection: "column" }}>
-                                    <span style={{ fontSize: 13, color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 220 }} title={item.book?.title}>
-                                      {idx + 1}. {item.book?.title}
-                                    </span>
-                                    <span style={{ 
-                                      color: item.status.includes('Pending') ? '#b44d28' : item.status === 'Completed' ? '#2e7d32' : item.status === 'Rejected' ? '#c62828' : '#1565c0', 
-                                      fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em"
-                                    }}>
-                                      {item.status}
-                                    </span>
-                                    {item.status === 'Rejected' && item.rejectionReason && (
-                                      <div style={{ marginTop: "0.1rem", fontSize: 10, color: "#c62828", fontStyle: "italic" }}>Reason: {item.rejectionReason}</div>
-                                    )}
-                                  </div>
-                                ))}
+                <>
+                  <div className="hidden lg:block overflow-x-auto w-full">
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ background: "#fafafa", borderBottom: "1px solid #eaeaea", textAlign: "left" }}>
+                          <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Order ID</th>
+                          <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Date</th>
+                          <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Total</th>
+                          <th style={{ padding: "1rem 1.5rem", fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</th>
+                          <th style={{ padding: "1rem 1.5rem" }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.map((o) => {
+                          return (
+                            <tr key={o.id} style={{ background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
+                              <td style={{ padding: "1.2rem 1.5rem", fontFamily: "var(--font-mono)", fontSize: 13, color: "#111", fontWeight: 600 }}>
+                                #PAA-{o.id.toString().padStart(4, '0')}
+                              </td>
+                              <td style={{ padding: "1.2rem 1.5rem", fontSize: 12, color: "#555" }}>
+                                {new Date(o.createdAt).toLocaleDateString()}
+                              </td>
+                              <td style={{ padding: "1.2rem 1.5rem", fontSize: 13, fontWeight: 600, color: "#111" }}>
+                                ₹{o.amount}
+                              </td>
+                              <td style={{ padding: "1.2rem 1.5rem" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+                                  {o.items?.map((item: any, idx: number) => (
+                                    <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: "0.2rem", flexDirection: "column" }}>
+                                      <span style={{ fontSize: 13, color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 220 }} title={item.book?.title}>
+                                        {idx + 1}. {item.book?.title}
+                                      </span>
+                                      <span style={{ 
+                                        color: item.status.includes('Pending') ? '#b44d28' : item.status === 'Completed' ? '#2e7d32' : item.status === 'Rejected' ? '#c62828' : '#1565c0', 
+                                        fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em"
+                                      }}>
+                                        {item.status}
+                                      </span>
+                                      {item.status === 'Rejected' && item.rejectionReason && (
+                                        <div style={{ marginTop: "0.1rem", fontSize: 10, color: "#c62828", fontStyle: "italic" }}>Reason: {item.rejectionReason}</div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td style={{ padding: "1.2rem 1.5rem", verticalAlign: "middle", textAlign: "right" }}>
+                                <button onClick={() => setSelectedOrder(o)} style={{ background: "transparent", border: "1px solid #111", color: "#111", padding: "0.45rem 0.9rem", fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#111"; }}>View Details</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile View (Cards) */}
+                  <div className="lg:hidden flex flex-col gap-4 p-4 bg-gray-50/30">
+                    {orders.map((o) => (
+                      <div key={o.id} className="bg-white border border-gray-200 p-4 rounded flex flex-col gap-3 shadow-sm">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                          <div>
+                            <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Order ID</div>
+                            <div className="font-mono text-sm font-bold text-paa-navy">#PAA-{o.id.toString().padStart(4, '0')}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Date</div>
+                            <div className="text-sm font-bold text-paa-navy">{new Date(o.createdAt).toLocaleDateString()}</div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {o.items?.map((item: any, idx: number) => (
+                            <div key={item.id} className="flex justify-between items-start gap-2 bg-gray-50 p-3 rounded border border-gray-100">
+                              <span className="text-xs font-medium text-paa-navy leading-tight flex-1">
+                                {idx + 1}. {item.book?.title}
+                              </span>
+                              <div className="flex flex-col items-end">
+                                <span style={{ 
+                                  color: item.status.includes('Pending') ? '#b44d28' : item.status === 'Completed' ? '#2e7d32' : item.status === 'Rejected' ? '#c62828' : '#1565c0', 
+                                }} className="text-[10px] font-bold uppercase tracking-widest text-right">
+                                  {item.status}
+                                </span>
+                                {item.status === 'Rejected' && item.rejectionReason && (
+                                  <div className="text-[9px] text-red-600 italic text-right mt-1">Reason: {item.rejectionReason}</div>
+                                )}
                               </div>
-                            </td>
-                            <td style={{ padding: "1.2rem 1.5rem", verticalAlign: "middle", textAlign: "right" }}>
-                              <button onClick={() => setSelectedOrder(o)} style={{ background: "transparent", border: "1px solid #111", color: "#111", padding: "0.45rem 0.9rem", fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#111"; }}>View Details</button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between items-center mt-2 pt-3 border-t border-gray-100">
+                          <div className="text-sm font-bold text-paa-navy">Total: ₹{o.amount}</div>
+                          <button onClick={() => setSelectedOrder(o)} className="bg-transparent border border-paa-navy text-paa-navy px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-paa-navy hover:text-white">View Details</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>
         </div>
       </div>      {selectedOrder && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}>
-          <div style={{ background: "#fff", border: "1px solid #ddd", width: "100%", maxWidth: 700, padding: "2.5rem", maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", borderBottom: "1px solid #eaeaea", paddingBottom: "1rem" }}>
+          <div style={{ background: "#fff", border: "1px solid #ddd", width: "100%", maxWidth: 700, padding: "1.5rem md:2.5rem", maxHeight: "90vh", overflowY: "auto", margin: "0 auto" }} className="p-4 md:p-10">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", borderBottom: "1px solid #eaeaea", paddingBottom: "1rem" }}>
               <h2 style={{ fontSize: 20, fontWeight: 400, color: "#111", fontFamily: "var(--font-display)" }}>Order Details</h2>
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "1rem" }}>
                 {!selectedOrder.items?.some((i: any) => i.status === 'Dispatched' || i.status === 'Completed' || i.status === 'Cancelled') && (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                      <span style={{ fontSize: 10, color: "#777", fontStyle: "italic", maxWidth: 120, lineHeight: 1.2, textAlign: "right" }}>Cannot cancel once dispatched.</span>
@@ -445,7 +488,7 @@ export function CustomerProfilePage() {
  
                   <OrderFulfillmentTimeline currentStatus={item.status} trackingNumber={item.trackingNumber} />
  
-                  <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px dashed #ddd", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px dashed #ddd", display: "flex", flexWrap: "wrap", gap: "1rem", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 500, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.6rem" }}>Contact Author</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>

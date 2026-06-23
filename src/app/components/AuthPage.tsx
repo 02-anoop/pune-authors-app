@@ -164,7 +164,7 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
                 <div className="relative">
                   <input required type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400 pr-10" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-0 bottom-3 flex items-center justify-center text-gray-400 hover:text-paa-navy transition-colors">
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
                 </div>
 

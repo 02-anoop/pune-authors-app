@@ -2682,7 +2682,7 @@ export function OperationsDashboardPage() {
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative" style={{background:'#f5f5f3'}}>
         
         {/* Top Header */}
-        <header className="dash-header h-[68px] flex items-center justify-between px-6 md:px-8 shrink-0">
+        <header className="dash-header h-[68px] flex items-center justify-between px-6 md:px-8 shrink-0 relative z-50">
            <div className="flex items-center gap-2">
              <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
                <Menu className="w-5 h-5" />

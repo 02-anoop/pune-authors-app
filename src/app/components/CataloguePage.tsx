@@ -151,6 +151,11 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
     }).join("");
 
     const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    document.body.appendChild(container);
+
     container.innerHTML = `
       <div id="pdf-content-wrapper" style="width: 800px; background: #fff;">
         <style>
@@ -181,16 +186,15 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
         scale: 2, 
         useCORS: true, 
         logging: false,
-        windowWidth: 800,
-        width: 800
+        scrollY: 0,
+        scrollX: 0
       },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // By passing the DOM element directly rather than innerHTML, the renderer
-    // respects the physical pixel dimensions of the wrapper, fixing Mac clipping.
     await html2pdf().set(opt).from(container.firstElementChild).save();
     
+    document.body.removeChild(container);
     setDownloading(false);
   } catch (err) {
     console.error("PDF Generation failed", err);

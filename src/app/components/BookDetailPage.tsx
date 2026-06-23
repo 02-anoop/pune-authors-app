@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, Star, BookOpen, User, Tag, IndianRupee, Send, MessageSquare, Package } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API = (import.meta.env.VITE_API_URL || "http://localhost:3001").trim();
 
 interface Review {
   id: number;
@@ -192,7 +192,7 @@ export function BookDetailPage() {
                 
                 <div style={{ background: "transparent", border: `1px solid ${book.stock > 0 ? "#111" : "#eaeaea"}`, borderRadius: 20, padding: "0.3rem 0.8rem", fontSize: 11, fontWeight: 500, color: book.stock > 0 ? "#111" : "#888", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   <Package size={12} style={{ display: "inline", marginRight: 6, marginTop: -2 }} />
-                  {book.stock > 0 ? `${book.stock} in stock` : "Out of stock"}
+                  {book.stock > 0 ? `In stock` : "Out of stock"}
                 </div>
                 {book.stock > 0 && (
                   <button onClick={() => navigate("/checkout", { state: { cart: [book.id] } })} style={{ background: "#111", color: "#fff", border: "none", padding: "0.8rem 2rem", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", transition: "opacity 0.2s", marginLeft: "auto" }} onMouseEnter={e => e.currentTarget.style.opacity="0.8"} onMouseLeave={e => e.currentTarget.style.opacity="1"}>
@@ -330,7 +330,7 @@ export function BookDetailPage() {
                 { icon: <Tag size={14} />, label: "Genre", value: meta.label },
                 book.subGenre ? { icon: <Tag size={14} />, label: "Sub-Genre", value: book.subGenre } : null,
                 { icon: <IndianRupee size={14} />, label: "Price (MRP)", value: `₹${book.mrp}` },
-                { icon: <Package size={14} />, label: "Stock", value: book.stock > 0 ? `${book.stock} available` : "Out of stock" },
+                { icon: <Package size={14} />, label: "Stock", value: book.stock > 0 ? "In Stock" : "Out of stock" },
                 {
                   icon: <Star size={14} />,
                   label: "Rating",

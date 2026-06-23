@@ -91,7 +91,7 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
       const authorBooksHtml = author.books.map((b, bIdx) => `
         <div style="display: flex; gap: 30px; margin-bottom: 40px; padding-bottom: 40px; border-bottom: ${bIdx === author.books.length - 1 ? 'none' : '1px solid #e2e8f0'}; break-inside: avoid;">
           <div style="flex-shrink: 0; width: 180px;">
-            ${b.coverUrl ? `<img src="${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${b.coverUrl.startsWith('/') ? b.coverUrl : '/' + b.coverUrl}" crossorigin="anonymous" style="width: 100%; height: 270px; object-fit: cover; border-radius: 4px; box-shadow: 15px 15px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;" />` : `<div style="width: 100%; height: 270px; background: #f8fafc; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px dashed #cbd5e1;"><span style="color:#94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">No Cover</span></div>`}
+            ${b.coverUrl ? `<img src="${(import.meta.env.VITE_API_URL || 'http://localhost:3001').trim()}${b.coverUrl.startsWith('/') ? b.coverUrl : '/' + b.coverUrl}" crossorigin="anonymous" style="width: 100%; height: 270px; object-fit: cover; border-radius: 4px; box-shadow: 15px 15px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;" />` : `<div style="width: 100%; height: 270px; background: #f8fafc; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px dashed #cbd5e1;"><span style="color:#94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">No Cover</span></div>`}
           </div>
           <div style="flex: 1; display: flex; flex-direction: column;">
             <div style="margin-bottom: 15px;">
@@ -129,7 +129,7 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
           <div style="position: relative; background: #0f172a; color: #fff; padding: 60px 50px; display: flex; gap: 40px; align-items: center; overflow: hidden;">
             <div style="position: absolute; right: -50px; top: -50px; font-size: 300px; color: rgba(255,255,255,0.02); font-family: 'Playfair Display', serif; font-weight: 900; line-height: 1; pointer-events: none;">${author.name.charAt(0)}</div>
             <div style="flex-shrink: 0; width: 180px; height: 180px; border-radius: 50%; border: 4px solid #b44d28; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); background: #1e293b; position: relative; z-index: 2;">
-              ${author.photoUrl ? `<img src="${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${author.photoUrl.startsWith('/') ? author.photoUrl : '/' + author.photoUrl}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover;" />` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 60px; color: #94a3b8; font-family: serif;">${author.name.charAt(0)}</div>`}
+              ${author.photoUrl ? `<img src="${(import.meta.env.VITE_API_URL || 'http://localhost:3001').trim()}${author.photoUrl.startsWith('/') ? author.photoUrl : '/' + author.photoUrl}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover;" />` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 60px; color: #94a3b8; font-family: serif;">${author.name.charAt(0)}</div>`}
             </div>
             <div style="flex: 1; position: relative; z-index: 2;">
               <div style="display: inline-block; background: #b44d28; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 4px 10px; margin-bottom: 15px; font-weight: 800; font-family: system-ui, sans-serif;">Featured Author</div>
@@ -567,7 +567,7 @@ export function CataloguePage() {
                     onClick={() => window.location.href = `/book/${book.id}`}
                     style={{ position: "relative", height: 220, background: "#f7f7f9", overflow: "hidden", flexShrink: 0, cursor: "pointer" }}>
                     {book.coverUrl ? (
-                      <img src={book.coverUrl.startsWith('http') ? book.coverUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${book.coverUrl.startsWith('/') ? book.coverUrl : '/' + book.coverUrl}`} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={book.coverUrl.startsWith('http') ? book.coverUrl : `${(import.meta.env.VITE_API_URL || 'http://localhost:3001').trim()}${book.coverUrl.startsWith('/') ? book.coverUrl : '/' + book.coverUrl}`} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: meta.bg }}>
                         <BookOpen size={48} color={meta.color} style={{ opacity: 0.3 }} />

@@ -259,7 +259,7 @@ export function AuthorRegistrationPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
                     {/* Author photo upload */}
                     <div>
-                      <label className="dash-label">Author Photo</label>
+                      <label className="dash-label">Author Photo *</label>
                       <div
                         className="border border-dashed border-paa-navy/20 rounded-3xl-2xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex flex-col items-center justify-center min-h-[140px]"
                         onClick={() => document.getElementById("author-photo")?.click()}

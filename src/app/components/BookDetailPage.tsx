@@ -228,7 +228,7 @@ export function BookDetailPage() {
             <div style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", flexWrap: "wrap" }}>
               <div style={{ width: 56, height: 56, borderRadius: "50%", background: meta.bg, border: `2px solid ${meta.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22, fontWeight: 700, color: meta.color }}>
                 {book.author.photoUrl
-                  ? <img src={book.author.photoUrl} alt={book.author.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                  ? <img src={book.author.photoUrl.startsWith('http') ? book.author.photoUrl : `${API}${book.author.photoUrl.startsWith('/') ? book.author.photoUrl : '/' + book.author.photoUrl}`} alt={book.author.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
                   : book.author.name.charAt(0)}
               </div>
               <div style={{ flex: 1, minWidth: 200 }}>

@@ -679,3 +679,5 @@ table tr td *:hover,
   box-shadow: 0 8px 25px rgba(0,0,0,0.08);
   transform: translateY(-2px);
 }
+i n p u t [ t y p e = " p a s s w o r d " ] : : - m s - r e v e a l ,   i n p u t [ t y p e = " p a s s w o r d " ] : : - m s - c l e a r   {   d i s p l a y :   n o n e ;   }  
+ 

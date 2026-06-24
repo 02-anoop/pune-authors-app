@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -391,9 +391,11 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const [cover, setCover] = useState<File | null>(null);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
-  const [editBio, setEditBio] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editWhatsapp, setEditWhatsapp] = useState('');
+  const [editProfileForm, setEditProfileForm] = useState({
+    name: '', penName: '', city: '', state: '', instagram: '', facebook: '',
+    address: '', aadharNumber: '', qualification: '', age: '', experience: '', skills: '', hobbies: '',
+    bio: '', phone: '', whatsapp: ''
+  });
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [editCoverBookId, setEditCoverBookId] = useState<number | null>(null);
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
@@ -492,21 +494,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       
       if (addAnother) {
         setNewBook({
-          title: '',
-          subtitle: '',
-          genre: '',
-          subcategory: '',
-          subSubcategory: '',
-          synopsis: '',
-          pages: '',
-          mrp: '',
-          stock: '0',
-          language: '',
-          isbn: '',
-          publisher: '',
-          publicationDate: '',
-          edition: '',
-          format: ''
+          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '0', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: ''
         });
         setCover(null);
       } else {
@@ -520,9 +508,24 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   };
 
   const handleEditProfileOpen = () => {
-    setEditBio(authorProfile.bio || '');
-    setEditPhone(authorProfile.phone || '');
-    setEditWhatsapp(authorProfile.whatsapp || '');
+    setEditProfileForm({
+      name: authorProfile.name || '',
+      penName: authorProfile.penName || '',
+      city: authorProfile.city || '',
+      state: authorProfile.state || '',
+      instagram: authorProfile.instagram || '',
+      facebook: authorProfile.facebook || '',
+      address: authorProfile.address || '',
+      aadharNumber: authorProfile.aadharNumber || '',
+      qualification: authorProfile.qualification || '',
+      age: authorProfile.age || '',
+      experience: authorProfile.experience || '',
+      skills: authorProfile.skills || '',
+      hobbies: authorProfile.hobbies || '',
+      bio: authorProfile.bio || '',
+      phone: authorProfile.phone || '',
+      whatsapp: authorProfile.whatsapp || ''
+    });
     setEditPhoto(null);
     setShowEditProfile(true);
   };
@@ -531,15 +534,15 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     e.preventDefault();
     try {
       const formData = new FormData();
-      formData.append('bio', editBio);
-      formData.append('phone', editPhone);
-      formData.append('whatsapp', editWhatsapp);
+      Object.entries(editProfileForm).forEach(([key, val]) => {
+        formData.append(key, val);
+      });
       if (editPhoto) formData.append('photo', editPhoto);
       const token = localStorage.getItem('token');
       await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/bio`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Profile updated successfully!');
+      toast.success('Profile updated and submitted for admin review!');
       setShowEditProfile(false);
       onRefresh();
     } catch (err) {
@@ -575,12 +578,19 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     setEditingBook({
       id: book.id,
       title: book.title,
+      subtitle: book.subtitle || '',
       genre: book.genre,
       subGenre: book.subGenre || '',
       mrp: book.mrp,
       stock: book.stock,
       synopsis: book.synopsis || '',
-      pages: book.pages || ''
+      pages: book.pages || '',
+      language: book.language || '',
+      isbn: book.isbn || '',
+      publisher: book.publisher || '',
+      publicationDate: book.publicationDate || '',
+      edition: book.edition || '',
+      format: book.format || ''
     });
   };
 
@@ -594,15 +604,32 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
         title: editingBook.title,
         genre: editingBook.genre,
         subGenre: editingBook.subGenre,
+        subtitle: editingBook.subtitle,
         mrp: parseFloat(editingBook.mrp),
         stock: parseInt(editingBook.stock),
         synopsis: editingBook.synopsis,
-        pages: editingBook.pages
+        pages: editingBook.pages,
+        language: editingBook.language,
+        isbn: editingBook.isbn,
+        publisher: editingBook.publisher,
+        publicationDate: editingBook.publicationDate,
+        edition: editingBook.edition,
+        format: editingBook.format
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      if (newCoverFile) {
+        const formData = new FormData();
+        formData.append('cover', newCoverFile);
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/books/${editingBook.id}/cover`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
       toast.success('Book updated and submitted for review!');
       setEditingBook(null);
+      setNewCoverFile(null);
       onRefresh();
     } catch (err) {
       toast.error('Failed to update book');
@@ -694,35 +721,97 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       {/* ── Edit Profile Modal ── */}
       {showEditProfile && (
         <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowEditProfile(false)}>
-          <div className="dash-modal">
+          <div className="dash-modal !max-w-[95vw] !w-full">
             <div className="dash-modal-header">
               <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Edit My Profile</h3>
               <button onClick={() => setShowEditProfile(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">&#x2715;</button>
             </div>
             <div className="dash-modal-body">
             <h2 className="sr-only">Edit My Profile</h2>
-            <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio</label>
-                <textarea required className="border p-2 w-full text-sm" rows={5} value={editBio} onChange={e => setEditBio(e.target.value)} />
+            <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto px-1 pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Name</label>
+                  <input className="dash-input w-full" value={editProfileForm.name} onChange={e => setEditProfileForm({...editProfileForm, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pen Name</label>
+                  <input className="dash-input w-full" value={editProfileForm.penName} onChange={e => setEditProfileForm({...editProfileForm, penName: e.target.value})} />
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
-                  <input className="border p-2 w-full text-sm" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                  <input className="dash-input w-full" value={editProfileForm.phone} onChange={e => setEditProfileForm({...editProfileForm, phone: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
-                  <input className="border p-2 w-full text-sm" value={editWhatsapp} onChange={e => setEditWhatsapp(e.target.value)} />
+                  <input className="dash-input w-full" value={editProfileForm.whatsapp} onChange={e => setEditProfileForm({...editProfileForm, whatsapp: e.target.value})} />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Update Profile Photo</label>
-                <input type="file" accept="image/*" className="border p-2 text-xs w-full" onChange={e => setEditPhoto(e.target.files?.[0] || null)} />
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Address</label>
+                <input className="dash-input w-full" value={editProfileForm.address} onChange={e => setEditProfileForm({...editProfileForm, address: e.target.value})} />
               </div>
-              <div className="flex justify-end gap-2 mt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">City</label>
+                  <input className="dash-input w-full" value={editProfileForm.city} onChange={e => setEditProfileForm({...editProfileForm, city: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">State</label>
+                  <input className="dash-input w-full" value={editProfileForm.state} onChange={e => setEditProfileForm({...editProfileForm, state: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
+                  <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({...editProfileForm, aadharNumber: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Instagram</label>
+                  <input className="dash-input w-full" value={editProfileForm.instagram} onChange={e => setEditProfileForm({...editProfileForm, instagram: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Facebook</label>
+                  <input className="dash-input w-full" value={editProfileForm.facebook} onChange={e => setEditProfileForm({...editProfileForm, facebook: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Qualification</label>
+                  <input className="dash-input w-full" value={editProfileForm.qualification} onChange={e => setEditProfileForm({...editProfileForm, qualification: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Age</label>
+                  <input type="number" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({...editProfileForm, age: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>
+                  <input className="dash-input w-full" value={editProfileForm.experience} onChange={e => setEditProfileForm({...editProfileForm, experience: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Skills</label>
+                  <input className="dash-input w-full" value={editProfileForm.skills} onChange={e => setEditProfileForm({...editProfileForm, skills: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
+                  <input className="dash-input w-full" value={editProfileForm.hobbies} onChange={e => setEditProfileForm({...editProfileForm, hobbies: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (150 words)</label>
+                <textarea required className="dash-input w-full" rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({...editProfileForm, bio: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Update Profile Photo</label>
+                <input type="file" accept="image/*" className="border border-paa-navy/20 p-2 text-xs w-full rounded-lg" onChange={e => setEditPhoto(e.target.files?.[0] || null)} />
+              </div>
+              <div className="flex justify-end gap-2 mt-4 border-t pt-4 sticky bottom-0 bg-white">
                 <button type="button" onClick={() => setShowEditProfile(false)} className="dash-btn dash-btn-ghost">Cancel</button>
-                <button type="submit" disabled={buttonStates.editProfile} className="dash-btn dash-btn-primary disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save Changes'}</button>
+                <button type="submit" disabled={buttonStates.editProfile} className="dash-btn dash-btn-primary disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save & Submit for Review'}</button>
               </div>
             </form>
             </div>
@@ -883,7 +972,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           <table className="dash-table">
             <thead><tr>
               <th>#</th><th>Cover</th><th>Title</th><th>Status</th>
-              <th>Genre</th><th>MRP</th><th>Stock</th><th>Sold</th><th>Date</th><th>Cover</th>
+              <th>Genre</th><th>MRP</th><th>Stock</th><th>Sold</th><th>Date</th><th className="text-center">Actions</th>
             </tr></thead>
             <tbody>
               {filteredTitles.length === 0 ? (
@@ -900,16 +989,15 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     {row.status === 'Rejected' && row.rejectionReason && <div className="mt-1 text-[10px] text-red-600">{row.rejectionReason}</div>}
                   </td>
                   <td className="text-paa-gray-text text-xs">{row.genre}</td>
-                  <td className="font-semibold">₹{row.mrp}</td>
+                  <td className="font-semibold">{row.mrp}</td>
                   <td><span className={`font-bold ${row.stock < 10 ? 'text-red-500' : 'text-paa-navy'}`}>{row.stock}</span>{row.stock < 10 && <div className="text-[9px] text-red-400 font-bold">LOW</div>}</td>
                   <td className="font-semibold text-emerald-700">{row.sold}</td>
                   <td className="text-paa-gray-text text-xs whitespace-nowrap">{row.date}</td>
                   <td>
-                    <div className="flex flex-col gap-1">
-                      <button onClick={() => { setEditCoverBookId(row.id); setNewCoverFile(null); }} className="dash-btn dash-btn-ghost text-[10px] px-2 py-1">Change Cover</button>
-                      {row.status === 'Rejected' && (
-                        <button onClick={() => handleEditBookOpen(row.id)} className="dash-btn dash-btn-primary bg-paa-gold hover:bg-yellow-500 text-paa-navy text-[10px] px-2 py-1">Edit & Reapply</button>
-                      )}
+                    <div className="flex items-center justify-center">
+                      <button onClick={() => handleEditBookOpen(row.id)} className="p-2 text-paa-navy hover:text-paa-gold bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" title="Edit Details">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -954,7 +1042,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       {/* ── Edit Book Modal (Reapply) ── */}
       {editingBook && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
-          <div className="bg-white border border-paa-navy/5 shadow-xl w-full max-w-2xl rounded-2xl overflow-hidden">
+          <div className="bg-white border border-paa-navy/5 shadow-xl w-[95vw] max-w-none rounded-2xl overflow-hidden flex flex-col max-h-[95vh]">
             <div className="bg-paa-navy p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center text-white">
               Edit Book Details & Reapply
               <button type="button" onClick={() => setEditingBook(null)} className="hover:text-paa-gold">
@@ -964,9 +1052,24 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
             <div className="p-6 max-h-[80vh] overflow-y-auto">
               <form onSubmit={handleEditBookSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-between gap-4">
+                    <div>
+                      <label className="dash-label mb-1">Update Book Cover (Optional)</label>
+                      <p className="text-[10px] text-paa-gray-text">Upload a new image to replace the current cover.</p>
+                    </div>
+                    <input type="file" accept="image/*" className="dash-input bg-white w-64 text-xs" onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setNewCoverFile(e.target.files[0]);
+                      }
+                    }} />
+                  </div>
                   <div>
                     <label className="dash-label">Title</label>
                     <input required type="text" className="dash-input" value={editingBook.title} onChange={e => setEditingBook({...editingBook, title: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Subtitle (Optional)</label>
+                    <input type="text" className="dash-input" value={editingBook.subtitle} onChange={e => setEditingBook({...editingBook, subtitle: e.target.value})} />
                   </div>
                   <div>
                     <label className="dash-label">Genre</label>
@@ -994,6 +1097,30 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   <div>
                     <label className="dash-label">Initial Stock</label>
                     <input required type="number" className="dash-input" value={editingBook.stock} onChange={e => setEditingBook({...editingBook, stock: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Language</label>
+                    <input type="text" className="dash-input" value={editingBook.language} onChange={e => setEditingBook({...editingBook, language: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">ISBN</label>
+                    <input type="text" className="dash-input" value={editingBook.isbn} onChange={e => setEditingBook({...editingBook, isbn: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Publisher</label>
+                    <input type="text" className="dash-input" value={editingBook.publisher} onChange={e => setEditingBook({...editingBook, publisher: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Publication Date</label>
+                    <input type="date" className="dash-input" value={editingBook.publicationDate} onChange={e => setEditingBook({...editingBook, publicationDate: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Edition</label>
+                    <input type="text" className="dash-input" value={editingBook.edition} onChange={e => setEditingBook({...editingBook, edition: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="dash-label">Format</label>
+                    <input type="text" className="dash-input" value={editingBook.format} onChange={e => setEditingBook({...editingBook, format: e.target.value})} />
                   </div>
                 </div>
                 <div>

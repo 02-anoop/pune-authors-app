@@ -350,7 +350,7 @@ app.post('/api/books/:id/reviews', async (req, res) => {
 // 2. Author Registration (creates author, user login, and their first book)
 app.post('/api/authors/register', upload.any(), async (req, res) => {
   try {
-    const { name, email, phone, password, bio, whatsapp, penName, city, state, instagram, facebook, transactionId, extraData } = req.body;
+    const { name, email, phone, password, bio, whatsapp, penName, city, state, instagram, facebook, transactionId, extraData, qualification, age, experience, skills, hobbies, whyJoining, aadharNumber, address } = req.body;
     
     // Check if email already in use
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -404,7 +404,7 @@ app.post('/api/authors/register', upload.any(), async (req, res) => {
     // Create login user
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role: 'AUTHOR' }
+      data: { name, email, password: hashedPassword, role: 'AUTHOR', address }
     });
 
     let author;
@@ -425,6 +425,14 @@ app.post('/api/authors/register', upload.any(), async (req, res) => {
         qrCodeUrl,
         transactionId,
         paymentScreenshot: paymentScreenshotUrl,
+        qualification,
+        age,
+        experience,
+        skills,
+        hobbies,
+        whyJoining,
+        aadharNumber,
+        address,
         extraData: extraData ? JSON.parse(extraData) : null,
         books: {
           create: booksArray.map((b, idx) => ({
@@ -1022,7 +1030,7 @@ app.put('/api/author/inventory/:id', verifyToken, async (req, res) => {
 // Author: Update own bio / profile info
 app.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async (req, res) => {
   try {
-    const { bio, phone, whatsapp } = req.body;
+    const { bio, phone, whatsapp, name, penName, city, state, instagram, facebook, address, aadharNumber, qualification, age, experience, skills, hobbies } = req.body;
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(403).json({ error: 'Not an author' });
 
@@ -1030,9 +1038,36 @@ app.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async (r
       ...(bio !== undefined && { bio }),
       ...(phone !== undefined && { phone }),
       ...(whatsapp !== undefined && { whatsapp }),
+      ...(name !== undefined && { name }),
+      ...(penName !== undefined && { penName }),
+      ...(city !== undefined && { city }),
+      ...(state !== undefined && { state }),
+      ...(instagram !== undefined && { instagram }),
+      ...(facebook !== undefined && { facebook }),
+      ...(address !== undefined && { address }),
+      ...(aadharNumber !== undefined && { aadharNumber }),
+      ...(qualification !== undefined && { qualification }),
+      ...(age !== undefined && { age }),
+      ...(experience !== undefined && { experience }),
+      ...(skills !== undefined && { skills }),
+      ...(hobbies !== undefined && { hobbies }),
+      status: 'Pending', // Force re-approval by admin
+      rejectionReason: null // Clear previous rejection if any
     };
     if (req.file) {
       updateData.photoUrl = `/uploads/${req.file.filename}`;
+    }
+
+    // Also update User record name and address if they changed
+    if (name !== undefined || address !== undefined || phone !== undefined) {
+      await prisma.user.update({
+        where: { email: req.user.email },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(address !== undefined && { address }),
+          ...(phone !== undefined && { phone })
+        }
+      });
     }
 
     const updated = await prisma.author.update({
@@ -1050,7 +1085,7 @@ app.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async (r
 app.put('/api/author/books/:id', verifyToken, async (req, res) => {
   try {
     const bookId = parseInt(req.params.id);
-    const { title, genre, subGenre, mrp, stock, synopsis, pages } = req.body;
+    const { title, subtitle, genre, subGenre, mrp, stock, synopsis, pages, language, isbn, publisher, publicationDate, edition, format } = req.body;
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(403).json({ error: 'Not an author' });
 
@@ -1061,12 +1096,19 @@ app.put('/api/author/books/:id', verifyToken, async (req, res) => {
       where: { id: bookId },
       data: {
         ...(title !== undefined && { title }),
+        ...(subtitle !== undefined && { subtitle: subtitle || null }),
         ...(genre !== undefined && { genre }),
         ...(subGenre !== undefined && { subGenre: subGenre || null }),
         ...(mrp !== undefined && { mrp: parseFloat(mrp) }),
         ...(stock !== undefined && { stock: parseInt(stock) }),
         ...(synopsis !== undefined && { synopsis }),
         ...(pages !== undefined && { pages: parseInt(pages) || null }),
+        ...(language !== undefined && { language: language || null }),
+        ...(isbn !== undefined && { isbn: isbn || null }),
+        ...(publisher !== undefined && { publisher: publisher || null }),
+        ...(publicationDate !== undefined && { publicationDate: publicationDate || null }),
+        ...(edition !== undefined && { edition: edition || null }),
+        ...(format !== undefined && { format: format || null }),
         status: 'Pending', // Setting back to pending for re-evaluation
         rejectionReason: null
       }
@@ -2021,13 +2063,35 @@ app.delete('/api/admin/gallery/:id', verifyToken, isAdmin, async (req, res) => {
 
 app.post('/api/admin/gallery/:id/images', verifyToken, isAdmin, upload.single('photo'), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const eventId = parseInt(req.params.id);
     const { caption, dateTaken } = req.body;
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
     
+    let galleryEvent = await prisma.galleryEvent.findUnique({ where: { eventId } });
+    if (!galleryEvent) {
+      const evt = await prisma.event.findUnique({ where: { id: eventId } });
+      if (!evt) return res.status(404).json({ error: 'Event not found' });
+      
+      galleryEvent = await prisma.galleryEvent.create({
+        data: {
+          eventId,
+          location: evt.name,
+          place: evt.location,
+          city: '',
+          date: evt.date ? new Date(evt.date) : new Date(),
+          duration: evt.duration || '1 Day',
+          authors: 0,
+          booksSold: 0,
+          type: evt.eventType || 'Literary Event',
+          description: evt.description || evt.name,
+          photoUrl: evt.bannerUrl || ''
+        }
+      });
+    }
+
     const image = await prisma.galleryImage.create({
       data: {
-        galleryEventId: id,
+        galleryEventId: galleryEvent.id,
         url: `/uploads/${req.file.filename}`,
         caption: caption || null,
         dateTaken: dateTaken ? new Date(dateTaken) : null
@@ -2671,7 +2735,8 @@ app.get('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: {
          _count: { select: { eventAuthors: { where: { optInStatus: 'Opted-In' } }, eventBooks: true } },
-         eventBooks: { select: { listedStock: true } }
+         eventBooks: { select: { listedStock: true } },
+         galleryEvent: { include: { images: true } }
       }
     });
     res.json(events);

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import qrCode from "./data/qr_code.jpeg";
 import { bookCategories } from "../data/categories";
-import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus } from "lucide-react";
+import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff } from "lucide-react";
 
 const steps = [
   { title: "Author Profile", icon: <User size={18} />, desc: "Personal information and bio" },
@@ -33,6 +33,7 @@ export function AuthorRegistrationPage() {
   const [dynamicFields, setDynamicFields] = useState<any[]>([]);
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [books, setBooks] = useState<any[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Modals for guidelines
   const [showGuidelines, setShowGuidelines] = useState(false);
@@ -54,6 +55,14 @@ export function AuthorRegistrationPage() {
     password: "",
     phone: "",
     whatsapp: "",
+    address: "",
+    aadharNumber: "",
+    qualification: "",
+    age: "",
+    experience: "",
+    skills: "",
+    hobbies: "",
+    whyJoining: "",
     bio: "",
     penName: "",
     city: "",
@@ -79,7 +88,6 @@ export function AuthorRegistrationPage() {
     purposeOfWriting: "",
     isSelfPublished: "",
     conflictOfInterestSignature: "",
-    whyJoiningGroup: "",
     agreedToGuidelines: false,
     agreedToInfoDoc: false,
   });
@@ -92,6 +100,13 @@ export function AuthorRegistrationPage() {
     if (key === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value as string)) error = "Invalid email address.";
     if (key === "password" && (value as string).length < 6) error = "Password must be at least 6 characters.";
     if (key === "phone" && !/^\d{10}$/.test((value as string).replace(/\D/g, ''))) error = "Must be a 10-digit number.";
+    if (key === "address" && !value) error = "Full Address is required.";
+    if (key === "aadharNumber" && !value) error = "Aadhar Number is required.";
+    if (key === "qualification" && !value) error = "Qualification is required.";
+    if (key === "age" && !value) error = "Age is required.";
+    if (key === "experience" && !value) error = "Experience is required.";
+    if (key === "skills" && !value) error = "Skills are required.";
+    if (key === "hobbies" && !value) error = "Hobbies are required.";
     if (key === "bio" && !value) error = "Bio is required.";
     if (key === "city" && !value) error = "City is required.";
     if (key === "state" && !value) error = "State is required.";
@@ -108,6 +123,7 @@ export function AuthorRegistrationPage() {
     
     // Questionnaire
     if (key === "conflictOfInterestSignature" && !value) error = "Signature is required.";
+    if (key === "whyJoining" && !value) error = "This field is required.";
 
     // Payment
     if (key === "transactionId" && !value) error = "Transaction ID is required.";
@@ -189,10 +205,29 @@ export function AuthorRegistrationPage() {
                     </div>
                     <div>
                       <label className="dash-label">Password (For Login) *</label>
-                      <input type="password" value={form.password} onChange={(e) => update("password", e.target.value)} className={`dash-input w-full ${errors.password ? '!border-red-500' : ''}`} placeholder="Min 6 characters" />
+                      <div className="relative">
+                        <input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => update("password", e.target.value)} className={`dash-input w-full pr-10 ${errors.password ? '!border-red-500' : ''}`} placeholder="Min 6 characters" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-0 bottom-0 flex items-center justify-center text-gray-400 hover:text-paa-navy transition-colors">
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                       {errors.password && <div className="text-red-500 text-xs mt-1 font-medium">{errors.password}</div>}
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="dash-label">Full Address *</label>
+                      <input type="text" value={form.address} onChange={(e) => update("address", e.target.value)} className={`dash-input w-full ${errors.address ? '!border-red-500' : ''}`} placeholder="Street, Locality" />
+                      {errors.address && <div className="text-red-500 text-xs mt-1 font-medium">{errors.address}</div>}
+                    </div>
+                    <div>
+                      <label className="dash-label">Aadhar Number *</label>
+                      <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value)} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
+                      {errors.aadharNumber && <div className="text-red-500 text-xs mt-1 font-medium">{errors.aadharNumber}</div>}
+                    </div>
+                  </div>
+
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -218,8 +253,39 @@ export function AuthorRegistrationPage() {
                     </div>
                   </div>
                   
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="dash-label">Qualification *</label>
+                      <input type="text" value={form.qualification} onChange={(e) => update("qualification", e.target.value)} className={`dash-input w-full ${errors.qualification ? '!border-red-500' : ''}`} placeholder="e.g. MA English" />
+                      {errors.qualification && <div className="text-red-500 text-xs mt-1 font-medium">{errors.qualification}</div>}
+                    </div>
+                    <div>
+                      <label className="dash-label">Age *</label>
+                      <input type="number" value={form.age} onChange={(e) => update("age", e.target.value)} className={`dash-input w-full ${errors.age ? '!border-red-500' : ''}`} placeholder="e.g. 34" />
+                      {errors.age && <div className="text-red-500 text-xs mt-1 font-medium">{errors.age}</div>}
+                    </div>
+                    <div>
+                      <label className="dash-label">Years of Experience *</label>
+                      <input type="text" value={form.experience} onChange={(e) => update("experience", e.target.value)} className={`dash-input w-full ${errors.experience ? '!border-red-500' : ''}`} placeholder="e.g. 5 years" />
+                      {errors.experience && <div className="text-red-500 text-xs mt-1 font-medium">{errors.experience}</div>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="dash-label">Skills *</label>
+                      <input type="text" value={form.skills} onChange={(e) => update("skills", e.target.value)} className={`dash-input w-full ${errors.skills ? '!border-red-500' : ''}`} placeholder="e.g. Copywriting, Editing" />
+                      {errors.skills && <div className="text-red-500 text-xs mt-1 font-medium">{errors.skills}</div>}
+                    </div>
+                    <div>
+                      <label className="dash-label">Hobbies *</label>
+                      <input type="text" value={form.hobbies} onChange={(e) => update("hobbies", e.target.value)} className={`dash-input w-full ${errors.hobbies ? '!border-red-500' : ''}`} placeholder="e.g. Reading, Traveling" />
+                      {errors.hobbies && <div className="text-red-500 text-xs mt-1 font-medium">{errors.hobbies}</div>}
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="dash-label">Author Bio (100 words) *</label>
+                    <label className="dash-label">Author Bio (150 words) *</label>
                     <textarea
                       placeholder="Tell us a little bit about yourself, your background, and your journey as a writer..."
                       value={form.bio}
@@ -230,7 +296,7 @@ export function AuthorRegistrationPage() {
                     <div className="flex justify-between items-start mt-1">
                       {errors.bio ? <div className="text-red-500 text-xs font-medium">{errors.bio}</div> : <div></div>}
                       <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">
-                        {form.bio.split(/\s+/).filter(Boolean).length} / 100 words
+                        {form.bio.split(/\s+/).filter(Boolean).length} / 150 words
                       </div>
                     </div>
                   </div>
@@ -538,6 +604,12 @@ export function AuthorRegistrationPage() {
                 <p className="text-sm text-paa-gray-text mb-8">Please agree to the PAA guidelines and sign the conflict of interest declaration.</p>
 
                 <div className="space-y-8">
+                  <div>
+                    <label className="dash-label">If you are published by a publisher, why are you joining this group and what priority will you give to this group? *</label>
+                    <textarea value={form.whyJoining} onChange={(e) => update("whyJoining", e.target.value)} rows={3} className={`dash-input w-full resize-y ${errors.whyJoining ? '!border-red-500' : ''}`} placeholder="Please explain your reasons..." />
+                    {errors.whyJoining && <div className="text-red-500 text-xs mt-1 font-medium">{errors.whyJoining}</div>}
+                  </div>
+
                   <div className="p-5 bg-gray-50 border border-paa-navy/10 rounded-2xl space-y-4">
                     <h3 className="font-serif font-medium text-paa-navy">Declarations</h3>
                     

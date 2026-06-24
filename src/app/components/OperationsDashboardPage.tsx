@@ -115,7 +115,16 @@ const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => 
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Social Profiles</span>
                 <span className="text-sm text-paa-navy font-medium block">{authorProfile.instagram && <a href={authorProfile.instagram} target="_blank" className="text-blue-600 hover:underline">Instagram</a>} {authorProfile.facebook && <a href={authorProfile.facebook} target="_blank" className="text-blue-600 hover:underline ml-2">Facebook/LinkedIn</a>} {!authorProfile.instagram && !authorProfile.facebook && '-'}</span>
               </div>
+              <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Full Address</span><span className="text-sm text-paa-navy font-medium">{authorProfile.address || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Aadhar Number</span><span className="text-sm text-paa-navy font-medium">{authorProfile.aadharNumber || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Age</span><span className="text-sm text-paa-navy font-medium">{authorProfile.age || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Qualification</span><span className="text-sm text-paa-navy font-medium">{authorProfile.qualification || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Experience</span><span className="text-sm text-paa-navy font-medium">{authorProfile.experience || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Skills</span><span className="text-sm text-paa-navy font-medium">{authorProfile.skills || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Hobbies</span><span className="text-sm text-paa-navy font-medium">{authorProfile.hobbies || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Transaction ID</span><span className="text-sm text-paa-navy font-medium">{authorProfile.transactionId || '-'}</span></div>
               <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Bio</span><span className="text-sm text-paa-navy font-medium block whitespace-pre-wrap">{authorProfile.bio || '-'}</span></div>
+              <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Why Joining? (If traditionally published)</span><span className="text-sm text-paa-navy font-medium block whitespace-pre-wrap">{authorProfile.whyJoining || '-'}</span></div>
             </div>
           </div>
           
@@ -640,9 +649,9 @@ export function OperationsDashboardPage() {
     try {
       await axios.post(`${API}/api/admin/gallery/${selectedGalleryEvent.id}/images`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
       toast.success('Image added to gallery');
-      const updatedRes = await axios.get(`${API}/api/gallery`);
-      setGallery(updatedRes.data);
-      setSelectedGalleryEvent(updatedRes.data.find((g: any) => g.id === selectedGalleryEvent.id));
+      const updatedRes = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+      setEvents(updatedRes.data);
+      setSelectedGalleryEvent(updatedRes.data.find((e: any) => e.id === selectedGalleryEvent.id));
       target.reset();
     } catch (err) {
       toast.error('Failed to upload image');
@@ -654,9 +663,9 @@ export function OperationsDashboardPage() {
     try {
       await axios.delete(`${API}/api/admin/gallery/images/${imageId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
       toast.success('Image deleted');
-      const updatedRes = await axios.get(`${API}/api/gallery`);
-      setGallery(updatedRes.data);
-      setSelectedGalleryEvent(updatedRes.data.find((g: any) => g.id === selectedGalleryEvent.id));
+      const updatedRes = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+      setEvents(updatedRes.data);
+      setSelectedGalleryEvent(updatedRes.data.find((e: any) => e.id === selectedGalleryEvent.id));
     } catch(err) {
       toast.error('Failed to delete image');
     }
@@ -1379,62 +1388,55 @@ export function OperationsDashboardPage() {
         setIsExporting(false);
       }
     };
-    const successfulOrders = orders.filter((o: any) => o.status === 'Completed').length;
-    const toApproveOrders = orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
-    const underDeliveryOrders = orders.filter((o: any) => o.status === 'Dispatched').length;
+
+    const todayStr = new Date().toDateString();
+    const todaysOrders = orders.filter((o: any) => new Date(o.createdAt).toDateString() === todayStr);
+    const ordersArrivedToday = todaysOrders.length;
+    const ordersAcceptedToday = todaysOrders.filter((o: any) => ['Processing', 'Dispatched', 'Completed'].includes(o.status)).length;
+    const ordersUnderDeliveryToday = todaysOrders.filter((o: any) => o.status === 'Dispatched').length;
+    const revenueToday = todaysOrders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
 
     return (
     <div className="space-y-6">
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ High Level KPIs Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Daily Sales Stats ── */}
+      <h3 className="text-xl font-serif font-medium text-paa-navy flex items-center gap-2">
+        <Activity className="w-5 h-5 text-paa-gold" /> Today's Sales Activity
+      </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {[
-          { label: 'Total Authors', value: stats?.totalAuthors || 0, icon: Users, colorClass: 'blue' },
-          { label: 'Books Published', value: stats?.totalBooks || 0, icon: BookOpen, colorClass: 'green' },
-          { label: 'Event Participations', value: stats?.eventParticipations || 0, icon: CalendarIcon, colorClass: 'amber' },
-          { label: 'Total Revenue', value: `Ã¢â€šÂ¹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },
-        ].map((kpi, i) => (
-          <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
-            <div className="flex items-start justify-between mb-4">
-              <div className={`dash-kpi-icon ${kpi.colorClass}`}><kpi.icon className="w-5 h-5" /></div>
-            </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">{kpi.label}</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{kpi.value}</h3>
+        <div className="dash-kpi-card blue">
+          <div className="flex items-start justify-between mb-4">
+            <div className="dash-kpi-icon blue"><ShoppingCart className="w-5 h-5" /></div>
           </div>
-        ))}
-      </div>
+          <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Orders Arrived Today</p>
+          <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersArrivedToday}</h3>
+        </div>
+        
+        <div className="dash-kpi-card green">
+          <div className="flex items-start justify-between mb-4">
+            <div className="dash-kpi-icon green"><CheckCircle className="w-5 h-5" /></div>
+          </div>
+          <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Orders Accepted Today</p>
+          <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersAcceptedToday}</h3>
+        </div>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Order Tracking KPIs Ã¢â€â‚¬Ã¢â€â‚¬ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-            <Check size={20} />
+        <div className="dash-kpi-card amber">
+          <div className="flex items-start justify-between mb-4">
+            <div className="dash-kpi-icon amber"><Package className="w-5 h-5" /></div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Successful Orders</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{successfulOrders}</h3>
-          </div>
+          <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Made For Delivery Today</p>
+          <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersUnderDeliveryToday}</h3>
         </div>
-        <div className="dash-kpi-card amber" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
-            <AlertCircle size={20} />
+
+        <div className="dash-kpi-card emerald">
+          <div className="flex items-start justify-between mb-4">
+            <div className="dash-kpi-icon emerald"><TrendingUp className="w-5 h-5" /></div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Approved</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{toApproveOrders}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card blue" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <Package size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Under Delivery</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{underDeliveryOrders}</h3>
-          </div>
+          <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Today's Revenue</p>
+          <h3 className="text-3xl font-bold text-paa-navy tracking-tight">₹{revenueToday.toLocaleString()}</h3>
         </div>
       </div>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Sales & Revenue Reports Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Sales & Revenue Reports ── */}
        <div className="bg-white p-4 md:p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl mt-8">
           <div className="mb-6 border-b border-paa-navy/5 pb-4">
              <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
@@ -1721,6 +1723,47 @@ export function OperationsDashboardPage() {
   };
 
   const renderAuthorsTab = ({ refreshTrigger }: any) => {
+    const handleExportAuthorsCSV = () => {
+      const dynamicKeys = Array.from(new Set<string>(
+        authors.reduce((acc: string[], author: any) => {
+          if (author.extraData) acc = acc.concat(Object.keys(author.extraData));
+          return acc;
+        }, [])
+      ));
+      const baseFields = ['Status', 'Name', 'Pen Name', 'Email', 'Phone', 'WhatsApp', 'Address', 'City', 'State', 'Aadhar Number', 'Qualification', 'Age', 'Experience', 'Skills', 'Hobbies', 'Why Joining', 'Transaction ID', 'Joined Date'];
+      let csv = baseFields.join(',');
+      dynamicKeys.forEach(col => csv += `,${col}`);
+      csv += '\n';
+
+      authors.forEach(author => {
+        const safe = (val: any) => `"${String(val || '').replace(/"/g, '""')}"`;
+        const joinedDate = author.createdAt ? new Date(author.createdAt).toLocaleDateString() : '';
+        const baseVals = [
+          author.status, author.name, author.penName, author.email, author.phone, author.whatsapp, 
+          author.address, author.city, author.state, author.aadharNumber, author.qualification, 
+          author.age, author.experience, author.skills, author.hobbies, author.whyJoining, 
+          author.transactionId, joinedDate
+        ].map(safe);
+        
+        csv += baseVals.join(',');
+        dynamicKeys.forEach(col => {
+          const val = author.extraData && author.extraData[col] ? String(author.extraData[col]).replace(/"/g, '""') : '';
+          csv += `,"${val}"`;
+        });
+        csv += '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'master_authors_directory.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
     if (selectedAuthor) {
       return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;
     }
@@ -1733,6 +1776,9 @@ export function OperationsDashboardPage() {
             <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">{authors.length} Total</span>
           </div>
           <div className="flex items-center gap-3">
+             <button onClick={handleExportAuthorsCSV} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
+               <Download className="w-4 h-4" /> Export CSV
+             </button>
              <div className="flex items-center gap-2">
                 <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
                   {['All', 'Pending', 'Active', 'Rejected'].map(status => (
@@ -2016,13 +2062,51 @@ export function OperationsDashboardPage() {
     );
   };
 
-  const EventsTab = () => (
+  const EventsTab = () => {
+    const handleExportEventRegistrations = () => {
+      let csv = 'S.No,Author Name,City,Date Registered,Included in the Catalogue,Included in the Database,Donating Books to the Airport,Participating in Website,';
+      events.forEach(e => csv += `Participated in ${e.name.replace(/,/g, '')},`);
+      csv += 'No of Literary Events participated in,No of Literary Events Organised,No of Book Fair Stall Organised,Authors Offering Publishing Services\n';
+
+      authors.forEach((author, idx) => {
+        const city = author.address ? author.address.split(',').pop()?.trim() || '' : '';
+        const registeredDate = new Date(author.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: '2-digit'});
+        
+        csv += `"${idx + 1}","${author.name}","${city}","${registeredDate}","Yes","Yes","NA","Yes",`;
+        
+        const registeredEventIds = author.eventRegistrations ? author.eventRegistrations.map((r:any) => r.eventId) : [];
+        let numEventsParticipated = registeredEventIds.length;
+        
+        events.forEach(e => {
+          csv += registeredEventIds.includes(e.id) ? '"Yes",' : '"No",';
+        });
+        
+        csv += `"${numEventsParticipated}","","",""\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'author_event_registrations.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    return (
     <div className="space-y-6">
        <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
           <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Ecosystem</h3>
-          <button onClick={() => setIsEventModalOpen(true)} className="dash-btn dash-btn-primary">
-            <Plus className="w-4 h-4" /> Create Event
-          </button>
+          <div className="flex gap-3">
+             <button onClick={handleExportEventRegistrations} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
+               <Download className="w-4 h-4" /> Export Authors/Events CSV
+             </button>
+             <button onClick={() => setIsEventModalOpen(true)} className="dash-btn dash-btn-primary">
+               <Plus className="w-4 h-4" /> Create Event
+             </button>
+          </div>
        </div>
 
        <div className="space-y-4">
@@ -2168,6 +2252,7 @@ export function OperationsDashboardPage() {
        </div>
     </div>
   );
+  };
 
   const SettingsTab = () => {
 
@@ -2276,12 +2361,22 @@ export function OperationsDashboardPage() {
     };
 
     const handleExportCSV = () => {
-      let csv = 'Author Name,Email';
+      const baseFields = ['Status', 'Name', 'Pen Name', 'Email', 'Phone', 'WhatsApp', 'Address', 'City', 'State', 'Aadhar Number', 'Qualification', 'Age', 'Experience', 'Skills', 'Hobbies', 'Why Joining', 'Transaction ID', 'Joined Date'];
+      let csv = baseFields.join(',');
       selectedColumns.forEach(col => csv += `,${col}`);
       csv += '\n';
 
       authors.forEach(author => {
-        csv += `"${author.name}","${author.email}"`;
+        const safe = (val: any) => `"${String(val || '').replace(/"/g, '""')}"`;
+        const joinedDate = author.createdAt ? new Date(author.createdAt).toLocaleDateString() : '';
+        const baseVals = [
+          author.status, author.name, author.penName, author.email, author.phone, author.whatsapp, 
+          author.address, author.city, author.state, author.aadharNumber, author.qualification, 
+          author.age, author.experience, author.skills, author.hobbies, author.whyJoining, 
+          author.transactionId, joinedDate
+        ].map(safe);
+        
+        csv += baseVals.join(',');
         selectedColumns.forEach(col => {
           const val = author.extraData && author.extraData[col] ? String(author.extraData[col]).replace(/"/g, '""') : '';
           csv += `,"${val}"`;
@@ -2529,66 +2624,53 @@ export function OperationsDashboardPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight border-l-4 border-paa-navy pl-2">Gallery Management</h3>
-        <button 
-          onClick={() => setIsGalleryModalOpen(true)}
-          className="px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase transition hover:bg-paa-gold"
-        >
-          Add Gallery Event
-        </button>
+        <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
+          Auto-synced with Past Events
+        </span>
       </div>
 
       <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
         <table className="dash-table">
           <thead>
             <tr>
-              <th>Photo</th>
+              <th>Event Info</th>
               <th>Location</th>
-              <th>City</th>
-              <th>Type</th>
               <th>Date</th>
-              <th style={{textAlign: 'right'}}>Actions</th>
+              <th>Type</th>
+              <th style={{textAlign: 'right'}}>Gallery Images</th>
             </tr>
           </thead>
           <tbody>
-            {gallery.map((g: any) => (
-              <tr key={g.id}>
+            {events.filter(e => e.status === 'Past').map((evt: any) => (
+              <tr key={evt.id}>
                 <td>
-                  <img src={g.photoUrl ? (g.photoUrl.startsWith('http') ? g.photoUrl : `${API}${g.photoUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded-3xl-2xl" />
+                  <div className="flex items-center gap-3">
+                    <img src={evt.bannerUrl ? (evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded-xl" />
+                    <div>
+                      <p className="font-bold text-paa-navy">{evt.name}</p>
+                      <p className="text-xs text-paa-gray-text">{evt.duration}</p>
+                    </div>
+                  </div>
                 </td>
-                <td className="font-bold text-paa-navy">{g.location}</td>
-                <td>{g.city}</td>
-                <td>{g.type}</td>
-                <td>{new Date(g.date).toLocaleDateString()}</td>
+                <td className="font-semibold text-paa-navy">{evt.location}</td>
+                <td>{evt.date ? new Date(evt.date).toLocaleDateString() : 'N/A'}</td>
+                <td><span className="px-2 py-1 bg-gray-100 text-[10px] font-bold uppercase tracking-widest rounded text-paa-navy">{evt.eventType || 'Literary Event'}</span></td>
                 <td style={{textAlign: 'right'}}>
                   <button 
-                    onClick={() => setSelectedGalleryEvent(g)}
-                    className="dash-btn dash-btn-ghost mr-2"
+                    onClick={() => setSelectedGalleryEvent(evt)}
+                    className="dash-btn dash-btn-primary flex items-center gap-2 ml-auto"
                   >
-                    Images ({g.images?.length || 0})
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setEditingGalleryEvent(g);
-                      setIsEditGalleryModalOpen(true);
-                    }}
-                    className="dash-btn dash-btn-ghost mr-2"
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if (window.confirm("Delete this gallery event?")) {
-                        axios.delete(`${API}/api/admin/gallery/${g.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }})
-                          .then(() => fetchGallery());
-                      }
-                    }}
-                    className="dash-btn dash-btn-danger"
-                  >
-                    Delete
+                    <ImageIcon className="w-4 h-4" /> 
+                    Manage Images ({evt.galleryEvent?.images?.length || 0})
                   </button>
                 </td>
               </tr>
             ))}
+            {events.filter(e => e.status === 'Past').length === 0 && (
+              <tr>
+                <td colSpan={5} className="text-center py-8 text-paa-gray-text">No past events available for gallery management.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -2639,6 +2721,7 @@ export function OperationsDashboardPage() {
            {[
              { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
              { id: 'web_orders', label: 'Web Orders', icon: ShoppingCart, hasAlert: pendingAlerts.orders },
+             { id: 'sales_report', label: 'Sales Reports', icon: FileText },
              { id: 'authors', label: 'Authors Menu', icon: Users, hasAlert: pendingAlerts.authors },
              { id: 'books', label: 'Inventory / Books', icon: BookOpen, hasAlert: pendingAlerts.books },
              { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
@@ -2717,13 +2800,13 @@ export function OperationsDashboardPage() {
                        {pendingAlerts.authors && (
                           <button onClick={() => { setActiveTab('authors'); localStorage.setItem('adminActiveTab', 'authors'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
                              <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                             <div><p className="text-sm font-semibold text-paa-navy">Authors Pending</p><p className="text-xs text-paa-gray-text mt-0.5">Authors waiting for approval</p></div>
+                             <div><p className="text-sm font-semibold text-paa-navy">Authors Pending</p><p className="text-xs text-paa-gray-text mt-0.5">Authors waiting for approval or profile update review</p></div>
                           </button>
                        )}
                        {pendingAlerts.books && (
                           <button onClick={() => { setActiveTab('books'); localStorage.setItem('adminActiveTab', 'books'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
                              <div className="w-2 h-2 rounded-full bg-violet-500 mt-1.5 shrink-0"></div>
-                             <div><p className="text-sm font-semibold text-paa-navy">Books Pending</p><p className="text-xs text-paa-gray-text mt-0.5">New books listed for review</p></div>
+                             <div><p className="text-sm font-semibold text-paa-navy">Books Pending</p><p className="text-xs text-paa-gray-text mt-0.5">New books or book updates listed for review</p></div>
                           </button>
                        )}
                        {pendingAlerts.orders && (
@@ -3063,7 +3146,7 @@ export function OperationsDashboardPage() {
       </Modal>
 
       {/* Gallery Images Management Modal */}
-      <Modal isOpen={!!selectedGalleryEvent} onClose={() => setSelectedGalleryEvent(null)} title={`Manage Images: ${selectedGalleryEvent?.location}`}>
+      <Modal isOpen={!!selectedGalleryEvent} onClose={() => setSelectedGalleryEvent(null)} title={`Manage Images: ${selectedGalleryEvent?.name}`}>
         {selectedGalleryEvent && (
           <div className="space-y-6">
             <form onSubmit={handleUploadGalleryImage} className="space-y-4 bg-gray-50 p-4 border border-paa-navy/5 rounded-3xl-2xl">
@@ -3081,12 +3164,12 @@ export function OperationsDashboardPage() {
             </form>
 
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Uploaded Images ({selectedGalleryEvent.images?.length || 0})</h4>
-              {(!selectedGalleryEvent.images || selectedGalleryEvent.images.length === 0) ? (
+              <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Uploaded Images ({selectedGalleryEvent.galleryEvent?.images?.length || 0})</h4>
+              {(!selectedGalleryEvent.galleryEvent?.images || selectedGalleryEvent.galleryEvent.images.length === 0) ? (
                 <div className="text-center py-8 text-paa-gray-text text-sm">No additional images uploaded for this event.</div>
               ) : (
                 <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
-                  {selectedGalleryEvent.images.map((img: any) => (
+                  {selectedGalleryEvent.galleryEvent.images.map((img: any) => (
                     <div key={img.id} className="relative group rounded-3xl-2xl overflow-hidden border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out bg-white">
                       <img src={img.url.startsWith('http') ? img.url : `${API}${img.url}`} alt={img.caption || 'Event Image'} className="w-full h-32 object-cover" />
                       <button 
@@ -3500,6 +3583,30 @@ export function OperationsDashboardPage() {
             alert("Error adding gallery event");
           } finally { setLoadingAction(null); }
         }}>
+          <div className="mb-4 bg-gray-50 p-4 border border-paa-navy/10 rounded-xl">
+             <label className="dash-label text-paa-navy font-bold">Auto-fill from Past Event (Optional)</label>
+             <select className="dash-input" onChange={(e) => {
+                if (!e.target.value) return;
+                const evt = events.find((ev:any) => ev.id.toString() === e.target.value);
+                if (evt) {
+                   const form = e.target.closest('form');
+                   if (form) {
+                      if (form.loc) form.loc.value = evt.name || '';
+                      if (form.place) form.place.value = evt.location || '';
+                      if (form.description) form.description.value = evt.description || evt.name || '';
+                      if (form.duration) form.duration.value = evt.duration || '';
+                      if (evt.date && form.date) {
+                         try { form.date.value = new Date(evt.date).toISOString().split('T')[0]; } catch(e){}
+                      }
+                   }
+                }
+             }}>
+                <option value="">-- Select a Past Event --</option>
+                {events.filter((ev:any) => ev.status === 'Past').map((ev:any) => (
+                   <option key={ev.id} value={ev.id}>{ev.name} ({ev.date})</option>
+                ))}
+             </select>
+          </div>
           <div>
             <label className="dash-label">Event Title / Location</label>
             <input name="loc" required className="dash-input" />

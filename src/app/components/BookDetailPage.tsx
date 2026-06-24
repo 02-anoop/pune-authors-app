@@ -28,6 +28,11 @@ interface BookDetail {
     bio: string;
     photoUrl: string | null;
     email: string;
+    qualification?: string;
+    age?: string;
+    experience?: string;
+    skills?: string;
+    hobbies?: string;
     extraData?: any;
   };
   reviews: Review[];
@@ -233,6 +238,12 @@ export function BookDetailPage() {
               </div>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <p style={{ fontWeight: 700, color: "#1a1a2e", margin: "0 0 0.5rem", fontSize: 16 }}>{book.author.name}</p>
+                {book.author.qualification && (
+                  <p style={{ margin: "0 0 0.75rem", fontSize: 11, lineHeight: 1.6, color: "#94a3b8", fontFamily: "system-ui, sans-serif", textTransform: "uppercase", letterSpacing: "1px" }}>
+                    <strong>Qual:</strong> {book.author.qualification} &nbsp;|&nbsp; <strong>Age:</strong> {book.author.age || '—'} &nbsp;|&nbsp; <strong>Exp:</strong> {book.author.experience || '—'}
+                    <br/><strong>Skills:</strong> {book.author.skills || '—'} &nbsp;|&nbsp; <strong>Hobbies:</strong> {book.author.hobbies || '—'}
+                  </p>
+                )}
                 <p style={{ color: "#6b7280", lineHeight: 1.75, fontSize: 14, margin: 0 }}>{book.author.bio || "No bio available."}</p>
                 {book.author.extraData && Object.keys(book.author.extraData).length > 0 && (
                   <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f0f0f5' }}>

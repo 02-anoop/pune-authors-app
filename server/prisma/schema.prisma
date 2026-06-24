@@ -40,6 +40,14 @@ model Author {
   facebook           String?
   extraData          Json?
   qrCodeUrl          String?
+  qualification      String?
+  age                String?
+  experience         String?
+  skills             String?
+  hobbies            String?
+  whyJoining         String?
+  aadharNumber       String?
+  address            String?
   books              Book[]
   eventRegistrations EventRegistration[]
   formResponses      FormResponse[]
@@ -145,6 +153,8 @@ model GalleryEvent {
   type        String
   description String
   photoUrl    String
+  eventId     Int?     @unique
+  event       Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   images      GalleryImage[]
 }
@@ -237,6 +247,7 @@ model Event {
   eventAuthors    EventAuthor[]
   eventBooks      EventBook[]
   posOrders       PosOrder[]
+  galleryEvent    GalleryEvent?
 }
 
 model EventAuthor {

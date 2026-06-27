@@ -310,7 +310,7 @@ export function LivePosDashboard() {
                     <>
                       <p className="text-xs md:text-sm text-gray-500 mb-4 font-medium px-4">Ask customer to scan this QR code to pay directly to you.</p>
                       <div className="p-2 md:p-3 bg-white border-2 border-gray-100 rounded-2xl shadow-premium">
-                        <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${author.qrCodeUrl}`} alt="QR Code" className="w-full max-w-[200px] md:max-w-[240px] aspect-square object-contain rounded-xl" />
+                        <img src={author.qrCodeUrl.startsWith('http') ? author.qrCodeUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${author.qrCodeUrl}`} alt="QR Code" className="w-full max-w-[200px] md:max-w-[240px] aspect-square object-contain rounded-xl" />
                       </div>
                     </>
                   ) : (

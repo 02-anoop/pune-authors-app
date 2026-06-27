@@ -830,7 +830,6 @@ router.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async
       ...(experience !== undefined && { experience }),
       ...(skills !== undefined && { skills }),
       ...(hobbies !== undefined && { hobbies }),
-      status: 'Pending', // Force re-approval by admin
       rejectionReason: null // Clear previous rejection if any
     };
     if (req.file) {

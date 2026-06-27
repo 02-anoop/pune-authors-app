@@ -200,7 +200,7 @@ export function AuthorRegistrationPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Phone Number *</label>
-                      <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''}`} placeholder="10-digit mobile number" />
+                      <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''}`} placeholder="10-digit mobile number" />
                       {errors.phone && <div className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</div>}
                     </div>
                     <div>
@@ -223,7 +223,7 @@ export function AuthorRegistrationPage() {
                     </div>
                     <div>
                       <label className="dash-label">Aadhar Number *</label>
-                      <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value)} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
+                      <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
                       {errors.aadharNumber && <div className="text-red-500 text-xs mt-1 font-medium">{errors.aadharNumber}</div>}
                     </div>
                   </div>

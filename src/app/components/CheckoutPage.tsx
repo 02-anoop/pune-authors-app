@@ -6,7 +6,16 @@ import { CheckCircle, Circle, Package, MessageSquare, Truck, CheckSquare, BarCha
 export function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const cartIds: number[] = useMemo(() => (location.state?.cart || [1]).map(Number), [location.state?.cart]); // Fallback to book 1 if directly navigated
+  const cartIds: number[] = useMemo(() => {
+    let ids = location.state?.cart;
+    if (ids) {
+      localStorage.setItem('checkout_cart', JSON.stringify(ids));
+    } else {
+      const saved = localStorage.getItem('checkout_cart');
+      ids = saved ? JSON.parse(saved) : [];
+    }
+    return ids.map(Number);
+  }, [location.state?.cart]);
 
   const [books, setBooks] = useState<any[]>([]);
   const [quantities, setQuantities] = useState<Record<number, number>>(
@@ -46,13 +55,24 @@ export function CheckoutPage() {
     axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/books`)
       .then(res => {
         const cartBooks = res.data.filter((b: any) => cartIds.includes(b.id));
-        setBooks(cartBooks.length > 0 ? cartBooks : res.data.slice(0, 1));
+        setBooks(cartBooks);
       })
       .catch(console.error);
   }, [navigate, cartIds]);
 
   const updateQty = (id: number, delta: number) => {
-    setQuantities(prev => ({ ...prev, [id]: Math.max(1, (prev[id] || 1) + delta) }));
+    setQuantities(prev => {
+      const newQty = (prev[id] || 1) + delta;
+      if (newQty <= 0) {
+        setBooks(curr => curr.filter(b => b.id !== id));
+        const newCartIds = cartIds.filter(cId => cId !== id);
+        localStorage.setItem('checkout_cart', JSON.stringify(newCartIds));
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: newQty };
+    });
   };
 
   const handlePay = async () => {
@@ -141,7 +161,7 @@ export function CheckoutPage() {
                       <div style={{ textAlign: "center", background: "#f8f8fc", borderRadius: 10, padding: "1rem", border: "1px solid rgba(0,0,0,0.06)" }}>
                         <p style={{ fontSize: 12, fontWeight: 600, color: "#6b6b80", marginBottom: "0.5rem" }}>Scan to Pay {author.name}</p>
                         <img
-                          src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${author.qrCodeUrl}`}
+                          src={author.qrCodeUrl.startsWith('http') ? author.qrCodeUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${author.qrCodeUrl}`}
                           alt={`${author.name} Payment QR`}
                           style={{ width: 130, height: 130, objectFit: "contain", margin: "0 auto", display: "block", borderRadius: 8 }}
                         />
@@ -252,7 +272,7 @@ export function CheckoutPage() {
                     <p style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e", marginBottom: "0.75rem" }}>Scan Author's QR to Pay ₹{totalAmount}</p>
                     {books.length > 0 && books[0].author?.qrCodeUrl ? (
                       <img
-                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${books[0].author.qrCodeUrl}`}
+                        src={books[0].author.qrCodeUrl.startsWith('http') ? books[0].author.qrCodeUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${books[0].author.qrCodeUrl}`}
                         alt="Author Payment QR"
                         style={{ width: 160, height: 160, objectFit: "contain", margin: "0 auto", display: "block", borderRadius: 10, border: "2px solid rgba(0,0,0,0.08)" }}
                       />

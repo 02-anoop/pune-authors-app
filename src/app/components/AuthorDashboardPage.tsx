@@ -759,11 +759,11 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
-                  <input className="dash-input w-full" value={editProfileForm.phone} onChange={e => setEditProfileForm({...editProfileForm, phone: e.target.value})} />
+                  <input className="dash-input w-full" value={editProfileForm.phone} onChange={e => setEditProfileForm({...editProfileForm, phone: e.target.value.replace(/\D/g, '')})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
-                  <input className="dash-input w-full" value={editProfileForm.whatsapp} onChange={e => setEditProfileForm({...editProfileForm, whatsapp: e.target.value})} />
+                  <input className="dash-input w-full" value={editProfileForm.whatsapp} onChange={e => setEditProfileForm({...editProfileForm, whatsapp: e.target.value.replace(/\D/g, '')})} />
                 </div>
               </div>
               <div>
@@ -781,7 +781,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
-                  <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({...editProfileForm, aadharNumber: e.target.value})} />
+                  <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({...editProfileForm, aadharNumber: e.target.value.replace(/\D/g, '')})} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1801,8 +1801,7 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
       });
       toast.success('Order Approved â€” Stock reserved!');
       onRefresh();
-      // Auto-open invoice after approval
-      setTimeout(() => generateAndPrintInvoice(id), 800);
+      
     } catch (e) {
       toast.error('Failed to approve order');
     } finally {
@@ -1829,6 +1828,30 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
       onRefresh();
     } catch (e) {
       toast.error('Failed to reject order');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  
+  const handleStatusChange = async (id: number, newStatus: string) => {
+    setLoadingAction(id);
+    try {
+      const token = localStorage.getItem('token');
+      if (newStatus === 'Dispatched') {
+         const trackingNumber = prompt("Enter tracking number for dispatch (optional):");
+         await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/dispatch`, { trackingNumber: trackingNumber || 'N/A' }, {
+           headers: { Authorization: `Bearer ${token}` }
+         });
+      } else {
+         await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/status`, { status: newStatus }, {
+           headers: { Authorization: `Bearer ${token}` }
+         });
+      }
+      toast.success('Order status updated to ' + newStatus);
+      onRefresh();
+    } catch (e) {
+      toast.error('Failed to update status');
     } finally {
       setLoadingAction(null);
     }
@@ -2014,25 +2037,19 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
                            </button>
                         </div>
                       ) : null}
-                      {/* Invoice button for all approved/dispatched orders */}
-                      {(ord.status === 'Accepted' || ord.status === 'Dispatched' || ord.status === 'Completed') && (
+                      {/* Status Dropdown for approved orders */
+                      (ord.status === 'Accepted' || ord.status === 'Dispatched' || ord.status === 'Delivered' || ord.status === 'Completed') && (
                         <div className="flex flex-col gap-2 items-center">
-                          {ord.status === 'Accepted' && (
-                            <button
-                              onClick={() => handleDispatch(ord.id)}
-                              disabled={loadingAction === ord.id}
-                              className="dash-btn-primary bg-[#4a90e2] hover:bg-[#357abd] py-1 px-3 w-20 disabled:opacity-50"
-                            >
-                              DISPATCH
-                            </button>
-                          )}
-                          <button
-                            onClick={() => generateAndPrintInvoice(ord.id)}
-                            className="text-[10px] font-bold text-paa-navy hover:text-paa-gold uppercase tracking-widest transition-colors w-20"
-                            title="Download printable delivery invoice"
+                          <select 
+                            className="dash-input text-[10px] py-1 px-2 uppercase font-bold" 
+                            value={ord.status === 'Completed' ? 'Delivered' : ord.status} 
+                            disabled={loadingAction === ord.id}
+                            onChange={(e) => handleStatusChange(ord.id, e.target.value)}
                           >
-                            📄 INVOICE
-                          </button>
+                            <option value="Accepted">Accepted</option>
+                            <option value="Dispatched">Dispatched</option>
+                            <option value="Delivered">Delivered</option>
+                          </select>
                         </div>
                       )}
                     </td>
@@ -2443,7 +2460,7 @@ function EventsDashboard({ registrations }: any) {
                              View Participants Catalogue
                           </button>
                           
-                          {(isOptedIn || isAwaitingApproval) && evt.status !== 'Past' && (
+                          {isOptedIn && evt.status !== 'Past' && (
                              <button onClick={() => navigate(`/dashboard/pos/${evt.id}`)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800 mt-2">
                                 Launch Live POS
                              </button>
@@ -2612,7 +2629,7 @@ function EventsDashboard({ registrations }: any) {
       )}
 
       {catalogueEventData && (
-        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
           <div className="bg-white rounded-3xl-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
             <div className="p-8 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
               <h2 className="text-2xl font-serif text-paa-navy">Event Participants Catalogue</h2>
@@ -2685,15 +2702,35 @@ function AuthorSalesReport({ data }: { data: any }) {
   const [reportPeriod, setReportPeriod] = useState('today');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const [customMonth, setCustomMonth] = useState(new Date().getMonth().toString());
+  const [customYear, setCustomYear] = useState(new Date().getFullYear().toString());
+
+  const getStartOfWeek = (d: Date) => {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    date.setDate(diff);
+    date.setHours(0,0,0,0);
+    return date;
+  };
 
   const filterByDate = (date: Date) => {
     const now = new Date();
     if (reportPeriod === 'today') return date.toDateString() === now.toDateString();
-    if (reportPeriod === 'week') return date >= new Date(now.setDate(now.getDate() - 7));
-    if (reportPeriod === 'month') return date >= new Date(now.setDate(now.getDate() - 30));
+    if (reportPeriod === 'week') {
+      const startOfWeek = getStartOfWeek(now);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+      return date >= startOfWeek && date <= endOfWeek;
+    }
+    if (reportPeriod === 'month') {
+      return date.getMonth() === parseInt(customMonth) && date.getFullYear() === parseInt(customYear);
+    }
     if (reportPeriod === 'custom') {
       if (!customStartDate || !customEndDate) return true;
       const s = new Date(customStartDate);
+      s.setHours(0, 0, 0, 0);
       const e = new Date(customEndDate);
       e.setHours(23, 59, 59, 999);
       return date >= s && date <= e;
@@ -2706,6 +2743,37 @@ function AuthorSalesReport({ data }: { data: any }) {
 
   // Daily Aggregation
   const salesByDate: Record<string, { date: string, webSales: number, posSales: number, totalRevenue: number, totalBooks: number }> = {};
+
+  const now = new Date();
+  let rangeStart: Date | null = null;
+  let rangeEnd: Date | null = null;
+
+  if (reportPeriod === 'today') {
+     rangeStart = new Date(now);
+     rangeEnd = new Date(now);
+  } else if (reportPeriod === 'week') {
+     rangeStart = getStartOfWeek(now);
+     rangeEnd = new Date(rangeStart);
+     rangeEnd.setDate(rangeStart.getDate() + 6);
+  } else if (reportPeriod === 'month') {
+     rangeStart = new Date(parseInt(customYear), parseInt(customMonth), 1);
+     rangeEnd = new Date(parseInt(customYear), parseInt(customMonth) + 1, 0);
+  } else if (reportPeriod === 'custom' && customStartDate && customEndDate) {
+     rangeStart = new Date(customStartDate);
+     rangeEnd = new Date(customEndDate);
+  }
+
+  if (rangeStart && rangeEnd) {
+     const curr = new Date(rangeStart);
+     curr.setHours(0,0,0,0);
+     const end = new Date(rangeEnd);
+     end.setHours(23,59,59,999);
+     while (curr <= end) {
+        const d = curr.toLocaleDateString('en-GB');
+        salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
+        curr.setDate(curr.getDate() + 1);
+     }
+  }
 
   webOrders.forEach((o: any) => {
     const d = new Date(o.createdAt).toLocaleDateString('en-GB');
@@ -2723,9 +2791,7 @@ function AuthorSalesReport({ data }: { data: any }) {
     
     const qty = o.items.reduce((acc: number, item: any) => acc + item.quantity, 0);
     salesByDate[d].totalBooks += qty;
-  });
-
-  const chartData = Object.values(salesByDate).sort((a, b) => {
+  });const chartData = Object.values(salesByDate).sort((a, b) => {
     const [d1, m1, y1] = a.date.split('/');
     const [d2, m2, y2] = b.date.split('/');
     return new Date(`${y1}-${m1}-${d1}`).getTime() - new Date(`${y2}-${m2}-${d2}`).getTime();
@@ -2814,14 +2880,37 @@ function AuthorSalesReport({ data }: { data: any }) {
           </button>
         ))}
         
-        {reportPeriod === 'custom' && (
+                {reportPeriod === 'custom' && (
           <div className="flex items-center gap-2 px-2 border-l border-gray-300 ml-2">
             <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
             <span className="text-gray-400">to</span>
             <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} />
           </div>
         )}
-      </div>
+
+        {reportPeriod === 'month' && (
+          <div className="flex items-center gap-2 px-2 border-l border-gray-300 ml-2">
+            <select className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customMonth} onChange={e => setCustomMonth(e.target.value)}>
+              <option value="0">January</option>
+              <option value="1">February</option>
+              <option value="2">March</option>
+              <option value="3">April</option>
+              <option value="4">May</option>
+              <option value="5">June</option>
+              <option value="6">July</option>
+              <option value="7">August</option>
+              <option value="8">September</option>
+              <option value="9">October</option>
+              <option value="10">November</option>
+              <option value="11">December</option>
+            </select>
+            <select className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customYear} onChange={e => setCustomYear(e.target.value)}>
+              <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
+              <option value={new Date().getFullYear() - 1}>{new Date().getFullYear() - 1}</option>
+              <option value={new Date().getFullYear() - 2}>{new Date().getFullYear() - 2}</option>
+            </select>
+          </div>
+        )}</div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between">
@@ -2943,3 +3032,146 @@ function AuthorSalesReport({ data }: { data: any }) {
   );
 }
 
+
+
+export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }: { data: any, onRefresh: () => void, buttonStates: any, setButtonStates: any }) {
+  const authorProfile = data.authorProfile;
+  const [editProfileForm, setEditProfileForm] = useState({
+    name: authorProfile.name || '',
+    penName: authorProfile.penName || '',
+    city: authorProfile.city || '',
+    state: authorProfile.state || '',
+    instagram: authorProfile.instagram || '',
+    facebook: authorProfile.facebook || '',
+    address: authorProfile.address || '',
+    aadharNumber: authorProfile.aadharNumber || '',
+    qualification: authorProfile.qualification || '',
+    age: authorProfile.age || '',
+    experience: authorProfile.experience || '',
+    skills: authorProfile.skills || '',
+    hobbies: authorProfile.hobbies || '',
+    bio: authorProfile.bio || '',
+    phone: authorProfile.phone || '',
+    whatsapp: authorProfile.whatsapp || ''
+  });
+  const [editPhoto, setEditPhoto] = useState<File | null>(null);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setButtonStates(prev => ({...prev, editProfile: true}));
+      const formData = new FormData();
+      Object.entries(editProfileForm).forEach(([key, val]) => {
+        formData.append(key, val as string);
+      });
+      if (editPhoto) formData.append('photo', editPhoto);
+      const token = localStorage.getItem('token');
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/bio`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Profile updated and submitted for admin review!');
+      onRefresh();
+    } catch (err) {
+      toast.error('Failed to update profile');
+    } finally {
+      setButtonStates(prev => ({...prev, editProfile: false}));
+    }
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+        <div>
+          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Edit My Profile</h2>
+          <p className="text-sm text-paa-gray-text mt-1">Keep your author bio and details up to date.</p>
+        </div>
+      </div>
+      
+      <form onSubmit={handleSaveProfile} className="flex flex-col gap-6 max-w-4xl bg-white p-6 rounded-xl border border-paa-navy/5 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Name</label>
+            <input className="dash-input w-full" value={editProfileForm.name} onChange={e => setEditProfileForm({...editProfileForm, name: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pen Name</label>
+            <input className="dash-input w-full" value={editProfileForm.penName} onChange={e => setEditProfileForm({...editProfileForm, penName: e.target.value})} />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
+            <input className="dash-input w-full" value={editProfileForm.phone} onChange={e => setEditProfileForm({...editProfileForm, phone: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
+            <input className="dash-input w-full" value={editProfileForm.whatsapp} onChange={e => setEditProfileForm({...editProfileForm, whatsapp: e.target.value})} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Address</label>
+          <input className="dash-input w-full" value={editProfileForm.address} onChange={e => setEditProfileForm({...editProfileForm, address: e.target.value})} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">City</label>
+            <input className="dash-input w-full" value={editProfileForm.city} onChange={e => setEditProfileForm({...editProfileForm, city: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">State</label>
+            <input className="dash-input w-full" value={editProfileForm.state} onChange={e => setEditProfileForm({...editProfileForm, state: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
+            <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({...editProfileForm, aadharNumber: e.target.value})} />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Instagram</label>
+            <input className="dash-input w-full" value={editProfileForm.instagram} onChange={e => setEditProfileForm({...editProfileForm, instagram: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Facebook</label>
+            <input className="dash-input w-full" value={editProfileForm.facebook} onChange={e => setEditProfileForm({...editProfileForm, facebook: e.target.value})} />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Qualification</label>
+            <input className="dash-input w-full" value={editProfileForm.qualification} onChange={e => setEditProfileForm({...editProfileForm, qualification: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Age</label>
+            <input type="number" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({...editProfileForm, age: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>
+            <input className="dash-input w-full" value={editProfileForm.experience} onChange={e => setEditProfileForm({...editProfileForm, experience: e.target.value})} />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Skills</label>
+            <input className="dash-input w-full" value={editProfileForm.skills} onChange={e => setEditProfileForm({...editProfileForm, skills: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
+            <input className="dash-input w-full" value={editProfileForm.hobbies} onChange={e => setEditProfileForm({...editProfileForm, hobbies: e.target.value})} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (150 words)</label>
+          <textarea required className="dash-input w-full" rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({...editProfileForm, bio: e.target.value})} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Update Profile Photo</label>
+          <input type="file" accept="image/*" className="border border-paa-navy/20 p-2 text-xs w-full rounded-lg" onChange={e => setEditPhoto(e.target.files?.[0] || null)} />
+        </div>
+        <div className="flex justify-end gap-3 mt-6 border-t pt-6">
+          <button type="submit" disabled={buttonStates.editProfile} className="dash-btn dash-btn-primary px-8 disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save & Submit for Review'}</button>
+        </div>
+      </form>
+    </div>
+  );
+}

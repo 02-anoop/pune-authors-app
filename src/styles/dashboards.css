@@ -425,7 +425,7 @@ table tr td *:hover,
   background: rgba(10,10,15,0.7);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  z-index: 50;
+  z-index: 5000;
   display: flex;
   align-items: center;
   justify-content: center;

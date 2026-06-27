@@ -40,279 +40,29 @@ axios.interceptors.response.use(
   }
 );
 
-const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack: () => void }) => {
-  const [activeProfileTab, setActiveProfileTab] = useState<'profile' | 'inventory' | 'orders' | 'events' | 'distribution' | 'forms'>('profile');
-  const [profileData, setProfileData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { AuthorFullProfileView } from './AuthorFullProfileView';
 
-  
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await axios.get(`${API}/api/admin/authors/${author.id}/dashboard-data`);
-        setProfileData(res.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, [author.id]);
-
-  if (loading) return (
-    <div className="p-8 bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out space-y-6">
-       <div className="flex gap-4 items-center">
-          <div className="w-14 h-14 bg-gray-200 animate-pulse rounded-3xl-2xl"></div>
-          <div className="h-8 w-48 bg-gray-200 animate-pulse rounded-3xl-2xl"></div>
-       </div>
-       <div className="h-64 bg-gray-200 animate-pulse rounded-3xl-2xl w-full"></div>
-    </div>
-  );
-  if (!profileData) return <div className="p-8 text-center text-red-500 font-bold bg-white border border-red-200">Error loading author details.</div>;
-
-  const { authorProfile, authorOrders } = profileData;
-
-  return (
-    <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-      <div className="p-8 border-b border-paa-navy/5 bg-[#f0f4f8] flex items-start justify-between">
-         <div className="flex gap-4 items-center">
-            <button onClick={onBack} className="p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
-               <ArrowLeft className="w-5 h-5 text-paa-navy" />
+const Modal = ({ isOpen, onClose, title, children }: any) => {
+    if (!isOpen) return null;
+    return (
+      <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="dash-modal">
+          <div className="dash-modal-header">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">{title}</h3>
+            <button type="button" onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text hover:text-paa-navy transition-colors">
+              <X className="w-4 h-4" />
             </button>
-            <div className="w-14 h-14 bg-white border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-3xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-              {authorProfile.name.charAt(0)}
-            </div>
-            <div>
-               <h2 className="text-2xl font-bold text-paa-navy uppercase tracking-widest">{authorProfile.name}</h2>
-               <p className="text-sm font-medium text-paa-gray-text">{authorProfile.email} | {authorProfile.phone}</p>
-               <p className="text-xs text-paa-navy mt-1 uppercase tracking-widest font-bold bg-[#eef2f6] inline-block px-2 py-0.5">Joined: {new Date(authorProfile.createdAt).toLocaleDateString()}</p>
-            </div>
-         </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row flex-1">
-        <div className="author-profile-sidebar w-full md:w-[220px] p-4 flex flex-col gap-2 md:sticky md:top-0 h-fit">
-           <button onClick={() => setActiveProfileTab('profile')} className={`author-profile-nav-btn ${activeProfileTab === 'profile' ? 'active' : ''}`}>Registration Profile</button>
-           <button onClick={() => setActiveProfileTab('inventory')} className={`author-profile-nav-btn ${activeProfileTab === 'inventory' ? 'active' : ''}`}>Inventory</button>
-           <button onClick={() => setActiveProfileTab('orders')} className={`author-profile-nav-btn ${activeProfileTab === 'orders' ? 'active' : ''}`}>Web Orders</button>
-           <button onClick={() => setActiveProfileTab('events')} className={`author-profile-nav-btn ${activeProfileTab === 'events' ? 'active' : ''}`}>Events</button>
-           <button onClick={() => setActiveProfileTab('distribution')} className={`author-profile-nav-btn ${activeProfileTab === 'distribution' ? 'active' : ''}`}>Distribution</button>
-        </div>
-        
-        <div className="flex-1 p-6 bg-gray-50/50 min-h-[500px]">
-        {activeProfileTab === 'profile' && (
-        <div id="profile" className="space-y-6">
-          <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Author Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Full Name</span><span className="text-sm text-paa-navy font-medium">{authorProfile.name}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Pen Name</span><span className="text-sm text-paa-navy font-medium">{authorProfile.penName || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Email</span><span className="text-sm text-paa-navy font-medium">{authorProfile.email}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Phone / WhatsApp</span><span className="text-sm text-paa-navy font-medium">{authorProfile.phone} {authorProfile.whatsapp ? `/ ${authorProfile.whatsapp}` : ''}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Location</span><span className="text-sm text-paa-navy font-medium">{authorProfile.city ? `${authorProfile.city}, ${authorProfile.state}` : '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Social Profiles</span>
-                <span className="text-sm text-paa-navy font-medium block">{authorProfile.instagram && <a href={authorProfile.instagram} target="_blank" className="text-blue-600 hover:underline">Instagram</a>} {authorProfile.facebook && <a href={authorProfile.facebook} target="_blank" className="text-blue-600 hover:underline ml-2">Facebook/LinkedIn</a>} {!authorProfile.instagram && !authorProfile.facebook && '-'}</span>
-              </div>
-              <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Full Address</span><span className="text-sm text-paa-navy font-medium">{authorProfile.address || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Aadhar Number</span><span className="text-sm text-paa-navy font-medium">{authorProfile.aadharNumber || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Age</span><span className="text-sm text-paa-navy font-medium">{authorProfile.age || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Qualification</span><span className="text-sm text-paa-navy font-medium">{authorProfile.qualification || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Experience</span><span className="text-sm text-paa-navy font-medium">{authorProfile.experience || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Skills</span><span className="text-sm text-paa-navy font-medium">{authorProfile.skills || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Hobbies</span><span className="text-sm text-paa-navy font-medium">{authorProfile.hobbies || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Transaction ID</span><span className="text-sm text-paa-navy font-medium">{authorProfile.transactionId || '-'}</span></div>
-              <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Bio</span><span className="text-sm text-paa-navy font-medium block whitespace-pre-wrap">{authorProfile.bio || '-'}</span></div>
-              <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Why Joining? (If traditionally published)</span><span className="text-sm text-paa-navy font-medium block whitespace-pre-wrap">{authorProfile.whyJoining || '-'}</span></div>
-            </div>
           </div>
-          
-          <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>
-            <div className="space-y-4">
-              {authorProfile.books.length === 0 ? <p className="text-sm text-paa-gray-text">No books found.</p> : authorProfile.books.map((b: any, idx: number) => (
-                <div key={b.id} className="border border-paa-navy/5 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
-                  {b.coverUrl && <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + b.coverUrl : "http://localhost:3001" + b.coverUrl} alt="Cover" className="w-20 h-28 object-cover border border-paa-navy/20" />}
-                  <div className="flex-1">
-                    <h4 className="text-lg font-bold text-paa-navy">{b.title}</h4>
-                    {b.subtitle && <p className="text-sm text-paa-gray-text font-medium mb-1">{b.subtitle}</p>}
-                    <p className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2 bg-[#f0f4f8] inline-block px-2 py-0.5">{b.genre} {b.subGenre && `> ${b.subGenre}`}</p>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                      <div><span className="text-[10px] uppercase text-paa-gray-text block">MRP</span><span className="text-sm font-bold text-green-700">₹{b.mrp}</span></div>
-                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Language</span><span className="text-sm font-bold text-paa-navy">{b.language || '-'}</span></div>
-                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Format</span><span className="text-sm font-bold text-paa-navy">{b.format || '-'}</span></div>
-                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Pages</span><span className="text-sm font-bold text-paa-navy">{b.pages || '-'}</span></div>
-                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Publisher</span><span className="text-sm font-bold text-paa-navy">{b.publisher || '-'}</span></div>
-                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Pub Date</span><span className="text-sm font-bold text-paa-navy">{b.publicationDate || '-'}</span></div>
-                      <div><span className="text-[10px] uppercase text-paa-gray-text block">ISBN</span><span className="text-sm font-bold text-paa-navy">{b.isbn || '-'}</span></div>
-                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Initial Stock</span><span className="text-sm font-bold text-paa-navy">{b.stock}</span></div>
-                    </div>
-                    
-                    <div className="mt-4"><span className="text-[10px] uppercase text-paa-gray-text block mb-1">Synopsis</span><p className="text-sm text-paa-navy font-medium whitespace-pre-wrap leading-relaxed">{b.synopsis}</p></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="dash-modal-body space-y-4">
+            {children}
           </div>
-          
-          <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Payment Details</h3>
-            <div className="flex gap-8 items-start">
-               <div>
-                  <span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Transaction ID</span>
-                  <span className="text-sm text-paa-navy font-bold bg-gray-100 px-2 py-1">{authorProfile.transactionId || '-'}</span>
-               </div>
-               {authorProfile.paymentScreenshot && (
-                 <div>
-                    <span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Receipt</span>
-                    <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + authorProfile.paymentScreenshot : "http://localhost:3001" + authorProfile.paymentScreenshot} target="_blank" className="text-sm text-blue-600 underline font-bold">View Screenshot</a>
-                 </div>
-               )}
-            </div>
-          </div>
-        </div>
-        )}
-
-        {activeProfileTab === 'inventory' && (
-        <div id="inventory">
-          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Books & Inventory</h3>
-          <div className="overflow-x-auto">
-            <table className="dash-table">
-               <thead>
-                 <tr>
-                   <th>Title</th>
-                   <th style={{textAlign: 'center'}}>MRP</th>
-                   <th style={{textAlign: 'center'}}>Stock</th>
-                   <th style={{textAlign: 'center'}}>Status</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {authorProfile.books.length === 0 ? <tr><td colSpan={4} className="text-center py-4 text-paa-gray-text">No books published.</td></tr> : authorProfile.books.map((b: any) => (
-                   <tr key={b.id}>
-                     <td className="font-bold text-paa-navy">{b.title} <span className="text-xs text-gray-500 font-medium block">{b.genre}</span></td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">₹{b.mrp}</td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">{b.stock}</td>
-                     <td style={{textAlign: 'center'}}>
-                        <span className={`dash-badge ${b.status === 'Approved' ? 'approved' : 'pending'}`}>
-                          {b.status}
-                        </span>
-                     </td>
-                   </tr>
-                 ))}
-               </tbody>
-            </table>
-          </div>
-        </div>
-        )}
-
-        {activeProfileTab === 'orders' && (
-        <div id="orders">
-          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Web Orders</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            <table className="dash-table">
-               <thead>
-                 <tr>
-                   <th>Order ID</th>
-                   <th>Customer</th>
-                   <th>Book</th>
-                   <th style={{textAlign: 'center'}}>Qty / Amt</th>
-                   <th style={{textAlign: 'center'}}>Status</th>
-                   <th style={{textAlign: 'center'}}>Payment</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {authorOrders.length === 0 ? <tr><td colSpan={6} className="text-center py-4 text-paa-gray-text">No web orders yet.</td></tr> : authorOrders.map((o: any) => (
-                   <tr key={o.id}>
-                     <td className="font-bold text-paa-navy">ORD-{o.orderId}<span className="text-[10px] block text-gray-500">{o.date}</span></td>
-                     <td className="font-medium text-paa-navy">{o.customerName}</td>
-                     <td className="font-medium text-paa-navy">{o.bookTitle}</td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">{o.quantity} <span className="text-gray-400 font-medium px-1">/</span> ₹{o.amount}</td>
-                     <td style={{textAlign: 'center'}}>
-                        <span className={`dash-badge ${o.status === 'Completed' ? 'approved' : 'pending'}`}>
-                          {o.status}
-                        </span>
-                     </td>
-                     <td style={{textAlign: 'center'}}>
-                        {o.paymentVerified ? <span className="dash-badge approved"><Check size={10}/> Verified</span> : o.paymentFailed ? <span className="dash-badge rejected"><XCircle size={10}/> Failed</span> : <span className="dash-badge pending">Pending</span>}
-                     </td>
-                   </tr>
-                 ))}
-               </tbody>
-            </table>
-          </div>
-        </div>
-        )}
-
-        {activeProfileTab === 'events' && (
-        <div id="events">
-          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Event Participations</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            <table className="dash-table">
-               <thead>
-                 <tr>
-                   <th>Event Name</th>
-                   <th>City</th>
-                   <th style={{textAlign: 'center'}}>Amount Paid</th>
-                   <th style={{textAlign: 'center'}}>Date</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {authorProfile.eventRegistrations.length === 0 ? <tr><td colSpan={4} className="text-center py-4 text-paa-gray-text">No events attended.</td></tr> : authorProfile.eventRegistrations.map((e: any) => (
-                   <tr key={e.id}>
-                     <td className="font-bold text-paa-navy">{e.activity?.name}</td>
-                     <td className="font-medium text-paa-navy">{e.activity?.city}</td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-green-700">₹{e.amount}</td>
-                     <td style={{textAlign: 'center'}} className="font-medium text-paa-gray-text">{e.activity?.date}</td>
-                   </tr>
-                 ))}
-               </tbody>
-            </table>
-          </div>
-        </div>
-        )}
-
-        {activeProfileTab === 'distribution' && (
-        <div id="distribution">
-          <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Books Distribution Record</h3>
-          <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            <table className="dash-table">
-               <thead>
-                 <tr>
-                   <th>Title</th>
-                   <th style={{textAlign: 'center'}}>Qty Sold</th>
-                   <th style={{textAlign: 'center'}}>Airport Stock</th>
-                   <th style={{textAlign: 'center'}}>Fair Stock</th>
-                   <th style={{textAlign: 'center'}}>In Stock</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {authorProfile.books.length === 0 ? <tr><td colSpan={5} className="text-center py-4 text-paa-gray-text">No distribution records.</td></tr> : authorProfile.books.map((b: any) => {
-                   const qtySold = authorOrders.filter((o: any) => o.bookTitle === b.title && (o.status === 'Completed' || o.status === 'Dispatched')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
-                   return (
-                   <tr key={b.id}>
-                     <td className="font-bold text-paa-navy">{b.title}</td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-green-700">{qtySold}</td>
-                     <td style={{textAlign: 'center'}}>{b.airportStock || 0}</td>
-                     <td style={{textAlign: 'center'}}>{b.fairStock || 0}</td>
-                     <td style={{textAlign: 'center'}} className="font-bold">{b.stock}</td>
-                   </tr>
-                 )})}
-               </tbody>
-            </table>
-          </div>
-        </div>
-        )}
-
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 export function OperationsDashboardPage() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
@@ -345,10 +95,22 @@ export function OperationsDashboardPage() {
   const navigate = useNavigate();
   
   // State for data
-  const [stats, setStats] = useState<any>({ totalAuthors: 0, totalBooks: 0, eventParticipations: 0, totalRevenue: 0, revenueData: [], recentActivities: [], salesByAuthor: [], salesByGenre: [], topSellingBooks: [], topCustomers: [], lowStockAlerts: [] });
-  const [authors, setAuthors] = useState<any[]>([]);
-  const [books, setBooks] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(() => {
+    const cached = sessionStorage.getItem('adminStats');
+    return cached ? JSON.parse(cached) : { totalAuthors: 0, totalBooks: 0, eventParticipations: 0, totalRevenue: 0, revenueData: [], recentActivities: [], salesByAuthor: [], salesByGenre: [], topSellingBooks: [], topCustomers: [], lowStockAlerts: [] };
+  });
+  const [authors, setAuthors] = useState<any[]>(() => {
+    const cached = sessionStorage.getItem('adminAuthors');
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [books, setBooks] = useState<any[]>(() => {
+    const cached = sessionStorage.getItem('adminBooks');
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [events, setEvents] = useState<any[]>(() => {
+    const cached = sessionStorage.getItem('adminEvents');
+    return cached ? JSON.parse(cached) : [];
+  });
   const [orders, setOrders] = useState<any[]>([]);
 
   // Modals state
@@ -436,7 +198,7 @@ export function OperationsDashboardPage() {
     setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/dashboard-stats`);
-      setStats(res.data);
+      setStats(res.data); sessionStorage.setItem('adminStats', JSON.stringify(res.data));
     } catch(err) {} finally { setIsRefreshing(false); }
   };
 
@@ -444,7 +206,7 @@ export function OperationsDashboardPage() {
     setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/authors`);
-      setAuthors(res.data);
+      setAuthors(res.data); sessionStorage.setItem('adminAuthors', JSON.stringify(res.data));
       const c = res.data.filter((a: any) => a.status === 'Pending').length; if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true })); prevCountsRef.current.authors = c;
     } catch(err) {} finally { setIsRefreshing(false); }
   };
@@ -453,7 +215,7 @@ export function OperationsDashboardPage() {
     setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/books`);
-      setBooks(res.data);
+      setBooks(res.data); sessionStorage.setItem('adminBooks', JSON.stringify(res.data));
       const c = res.data.filter((b: any) => b.status === 'Pending').length; if (c > prevCountsRef.current.books) setPendingAlerts(prev => ({ ...prev, books: true })); prevCountsRef.current.books = c;
     } catch(err) {} finally { setIsRefreshing(false); }
   };
@@ -462,7 +224,7 @@ export function OperationsDashboardPage() {
     setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      setEvents(res.data);
+      setEvents(res.data); sessionStorage.setItem('adminEvents', JSON.stringify(res.data));
     } catch(err) {} finally { setIsRefreshing(false); }
   };
 
@@ -488,8 +250,8 @@ export function OperationsDashboardPage() {
       // Only show existing data for legacy events
       setEventReportData([{
          isLegacySummary: true,
-         authorsParticipated: legacyEvt.authorsParticipated || 0,
-         booksSold: legacyEvt.booksSold || 0
+         authorsParticipated: legacyEvt.authorsParticipated,
+         booksSold: legacyEvt.booksSold
       }]);
       setReportEventId(Number(eventId));
       return;
@@ -675,16 +437,29 @@ export function OperationsDashboardPage() {
     const fetchCurrentTabData = async () => {
       setIsRefreshing(true);
       try {
-        await Promise.all([
-          fetchOverview(),
-          fetchAuthors(),
-          fetchBooks(),
-          fetchEvents(),
-          fetchOrders(true),
-          fetchForms(),
-          fetchGallery(),
-          fetchQueriesAlert(true)
-        ]);
+        // Optimized data fetching: Only fetch what is necessary for the active tab
+        const promises = [];
+        if (activeTab === 'overview') {
+            promises.push(fetchOverview());
+        } else if (activeTab === 'authors' || activeTab === 'author_data') {
+            promises.push(fetchAuthors());
+        } else if (activeTab === 'books') {
+            promises.push(fetchBooks());
+        } else if (activeTab === 'events') {
+            promises.push(fetchEvents());
+        } else if (activeTab === 'orders' || activeTab === 'web_orders') {
+            promises.push(fetchOrders(true));
+        } else if (activeTab === 'forms') {
+            promises.push(fetchForms());
+        } else if (activeTab === 'gallery') {
+            promises.push(fetchGallery());
+        } else if (activeTab === 'helpdesk') {
+            promises.push(fetchQueriesAlert(true));
+        }
+        // Always fetch lightweight alerts
+        promises.push(fetchQueriesAlert(true));
+        
+        await Promise.all(promises);
         setLastRefreshTime(Date.now());
       } finally {
         setTimeout(() => setIsRefreshing(false), 800);
@@ -1205,7 +980,7 @@ export function OperationsDashboardPage() {
         <div className="space-y-6">
            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
              <h3 className="text-lg font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-500" /> Pending Actions
+                <AlertCircle className="w-5 h-5 text-amber-500 animate-pulse" /> Pending Actions
              </h3>
              <div className="space-y-3">
                 {!localDismissed.includes('authors') && pendingAuthors > 0 && (
@@ -2119,8 +1894,8 @@ export function OperationsDashboardPage() {
                    <div className="flex gap-2 items-center">
                      {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Authors Notified</span>}
                      {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Public</span>}
-                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
-                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                     {!evt.isLegacy && <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>}
+                     {!evt.isLegacy && <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>}
                    </div>
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
@@ -2199,13 +1974,13 @@ export function OperationsDashboardPage() {
                 </div>
              </div>
           ))}
-          {events.filter(e => e.status === 'Past').map((evt) => (
+          {[...pastEventsData.map((evt: any) => ({...evt, id: 'legacy_'+evt.id, isLegacy: true, status: 'Legacy Archive', _count: { eventAuthors: evt.authorsParticipated, eventBooks: evt.booksSold }})), ...events.filter(e => e.status === 'Past')].map((evt: any) => (
              <div key={evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90 h-full">
                 <div className="bg-gray-500 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative">
                    <span>{evt.status}</span>
                    <div className="flex gap-2 items-center">
-                     <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>
-                     <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>
+                     {!evt.isLegacy && <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>}
+                     {!evt.isLegacy && <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>}
                    </div>
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
@@ -2221,17 +1996,17 @@ export function OperationsDashboardPage() {
                   <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
                   <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-gray-500">
                      <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-gray-400"/> {evt.date} &bull; {evt.duration}</p>
-                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400"/> {evt.location}</p>
+                     <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400"/> {evt.location || evt.address}</p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 mb-6">
                      <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
-                        <p className="text-lg font-black text-gray-700">{evt._count?.eventAuthors || 0}</p>
+                        <p className="text-lg font-black text-gray-700">{evt._count?.eventAuthors || (evt.isLegacy ? "NA" : 0)}</p>
                      </div>
                      <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Linked</p>
-                        <p className="text-lg font-black text-gray-700">{evt._count?.eventBooks || 0}</p>
+                        <p className="text-lg font-black text-gray-700">{evt._count?.eventBooks || (evt.isLegacy ? "NA" : 0)}</p>
                      </div>
                   </div>
 
@@ -2297,24 +2072,7 @@ export function OperationsDashboardPage() {
     );
   };
 
-  const Modal = ({ isOpen, onClose, title, children }: any) => {
-    if (!isOpen) return null;
-    return (
-      <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <div className="dash-modal">
-          <div className="dash-modal-header">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">{title}</h3>
-            <button type="button" onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text hover:text-paa-navy transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="dash-modal-body space-y-4">
-            {children}
-          </div>
-        </div>
-      </div>
-    );
-  };
+  
 
   const AuthorDataTab = ({ refreshTrigger }: any) => {
     const [fields, setFields] = useState<any[]>([]);
@@ -3249,11 +3007,11 @@ export function OperationsDashboardPage() {
                      <div className="flex justify-center gap-12">
                         <div className="bg-white p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out border border-gray-100 rounded-3xl-2xl min-w-[150px]">
                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Total Authors</p>
-                           <p className="text-4xl font-black text-paa-navy">{eventReportData[0].authorsParticipated}</p>
+                           <p className="text-4xl font-black text-paa-navy">{eventReportData[0].authorsParticipated || "NA"}</p>
                         </div>
                         <div className="bg-white p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out border border-gray-100 rounded-3xl-2xl min-w-[150px]">
                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Books Sold</p>
-                           <p className="text-4xl font-black text-paa-navy">{eventReportData[0].booksSold}</p>
+                           <p className="text-4xl font-black text-paa-navy">{eventReportData[0].booksSold || "NA"}</p>
                         </div>
                      </div>
                   </div>

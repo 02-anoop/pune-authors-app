@@ -345,17 +345,19 @@ export function AuthorDashboardPage() {
       </div>
 
       <div className="max-w-[1600px] mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-6 relative">
-        <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-20 md:z-0 ${isMobileMenuOpen ? 'flex absolute top-4 left-4 right-4 md:static shadow-2xl' : 'hidden md:flex'}`}>
+        <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-[500] ${isMobileMenuOpen ? 'flex fixed inset-0 top-[80px] z-[500] bg-white md:static md:shadow-premium' : 'hidden md:flex'}`}>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname === '/dashboard' ? 'active' : ''}`}><BarChart3 className="w-4 h-4"/> Overview</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/orders" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/orders') ? 'active' : ''}`}><ShoppingCart className="w-4 h-4"/> Web Orders</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/sales" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/sales') ? 'active' : ''}`}><TrendingUp className="w-4 h-4"/> Sales Report</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/inventory" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/inventory') ? 'active' : ''}`}><BookOpen className="w-4 h-4"/> Inventory & Distribution</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/events" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/events') ? 'active' : ''}`}><CalendarIcon className="w-4 h-4"/> Events Ecosystem</Link>
         </div>
 
-        <div className="flex-1 bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out p-6 md:p-8">
+        <div className="flex-1 bg-white border border-paa-navy/5 shadow-premium p-6 md:p-8 min-h-[calc(100vh-160px)] relative">
           <Routes>
             <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
             <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} />} />
+            <Route path="/sales" element={<AuthorSalesReport data={dashboardData} />} />
             <Route path="/forms/*" element={<FormsWrapper />} />
             <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
@@ -407,7 +409,9 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const authorOrders = data.authorOrders;
 
   const titlesData = authorBooks.map((b: any, index: number) => {
-    const sold = authorOrders.filter((o: any) => o.bookTitle === b.title && (o.status === 'Completed' || o.status === 'Dispatched')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
+    const webSales = authorOrders.filter((o: any) => o.bookTitle === b.title && (o.status === 'Completed' || o.status === 'Dispatched')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
+    const eventSales = (data.listedBooks || []).filter((lb: any) => lb.bookId === b.id).reduce((acc: number, curr: any) => acc + (curr.soldStock || 0), 0);
+    const totalSold = webSales + eventSales;
     return {
       sno: index + 1,
       id: b.id,
@@ -417,7 +421,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       overpriced: b.overpriced ? 'Yes' : 'No',
       pub: 'Self-Published',
       genre: b.genre,
-      sold: sold,
+      sold: { total: totalSold, web: webSales, events: eventSales },
       status: b.status,
       rejectionReason: b.rejectionReason,
       stock: b.stock
@@ -426,7 +430,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
   const filteredTitles = filter === 'all' ? titlesData : titlesData.filter((t: any) => t.genre === filter);
 
-  const chartData = titlesData.map((t: any) => ({ name: t.title.substring(0, 15) + '...', sold: t.sold }));
+  const chartData = titlesData.map((t: any) => ({ name: t.title.substring(0, 15) + '...', sold: t.sold.total }));
 
   const activityData = [
     { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Opted-In').length || 0 },
@@ -436,11 +440,24 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
   const completedOrders = authorOrders.filter((o: any) => o.status === 'Completed');
   const grossSales = completedOrders.reduce((acc: number, curr: any) => acc + curr.amount, 0);
-  const netEarnings = grossSales * 0.7;
+  
 
   const successfulOrders = completedOrders.length;
   const toApproveOrders = authorOrders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
   const underDeliveryOrders = authorOrders.filter((o: any) => o.status === 'Dispatched').length;
+
+    const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Opted-In').reduce((acc: number, inv: any) => {
+    const evt = inv.event;
+    if (!evt) return acc;
+    if (evt.feeType === 'Flat Fee' || evt.feeType === 'Per Author') {
+      return acc + (evt.registrationFee || 0);
+    } else if (evt.feeType === 'Per Title') {
+      const titlesCount = (data.listedBooks || []).filter((lb: any) => lb.eventId === evt.id).length;
+      return acc + ((evt.registrationFee || 0) * titlesCount);
+    }
+    return acc;
+  }, 0);
+  const totalFeesPaid = 1000 + totalEventFees;
 
   const actionItems: any[] = [];
   
@@ -666,7 +683,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           { label: 'Total Titles', value: authorBooks.length, colorClass: 'blue' },
           { label: 'Total Stock', value: authorBooks.reduce((a: number, b: any) => a + b.stock, 0), colorClass: 'green' },
           { label: 'Gross Sales', value: '\u20b9' + grossSales.toFixed(0), colorClass: 'amber' },
-          { label: 'Net Earnings 70%', value: '\u20b9' + netEarnings.toFixed(0), colorClass: 'red' },
+          { label: 'Total Fees Paid', value: '\u20b9' + totalFeesPaid, colorClass: 'red' },
         ].map((kpi, i) => (
           <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
             <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
@@ -972,7 +989,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           <table className="dash-table">
             <thead><tr>
               <th>#</th><th>Cover</th><th>Title</th><th>Status</th>
-              <th>Genre</th><th>MRP</th><th>Stock</th><th>Sold</th><th>Date</th><th className="text-center">Actions</th>
+              <th>Genre</th><th>MRP</th><th>Current Stock</th><th>Sold Details</th><th>Listing Date</th><th className="text-center">Actions</th>
             </tr></thead>
             <tbody>
               {filteredTitles.length === 0 ? (
@@ -991,7 +1008,12 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   <td className="text-paa-gray-text text-xs">{row.genre}</td>
                   <td className="font-semibold">{row.mrp}</td>
                   <td><span className={`font-bold ${row.stock < 10 ? 'text-red-500' : 'text-paa-navy'}`}>{row.stock}</span>{row.stock < 10 && <div className="text-[9px] text-red-400 font-bold">LOW</div>}</td>
-                  <td className="font-semibold text-emerald-700">{row.sold}</td>
+                  <td>
+                    <div className="flex flex-col">
+                       <span className="font-semibold text-emerald-700 text-sm">{row.sold.total} Total</span>
+                       <span className="text-[10px] text-paa-gray-text font-bold uppercase tracking-widest">{row.sold.events} Events | {row.sold.web} Web</span>
+                    </div>
+                  </td>
                   <td className="text-paa-gray-text text-xs whitespace-nowrap">{row.date}</td>
                   <td>
                     <div className="flex items-center justify-center">
@@ -2421,8 +2443,8 @@ function EventsDashboard({ registrations }: any) {
                              View Participants Catalogue
                           </button>
                           
-                          {isOptedIn && evt.status !== 'Past' && (
-                             <button onClick={() => navigate(`/dashboard/pos/${evt.id}`)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800">
+                          {(isOptedIn || isAwaitingApproval) && evt.status !== 'Past' && (
+                             <button onClick={() => navigate(`/dashboard/pos/${evt.id}`)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800 mt-2">
                                 Launch Live POS
                              </button>
                           )}
@@ -2529,6 +2551,10 @@ function EventsDashboard({ registrations }: any) {
                                          {buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}
                                       </button>
                                    </div>
+                               </div>
+                             ) : isAwaitingApproval ? (
+                               <div className="bg-orange-50 text-orange-800 text-sm p-3 rounded-lg text-center font-medium border border-orange-200">
+                                  Approval Pending
                                </div>
                              ) : (
                                <button onClick={() => { setOptInEventId(evt.id); setSelectedBooksToLink([]); setPaymentScreenshotBlob(null); }} className="dash-btn dash-btn-primary w-full justify-center">
@@ -2652,4 +2678,268 @@ function EventsDashboard({ registrations }: any) {
 
 
 
+
+
+
+function AuthorSalesReport({ data }: { data: any }) {
+  const [reportPeriod, setReportPeriod] = useState('today');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+
+  const filterByDate = (date: Date) => {
+    const now = new Date();
+    if (reportPeriod === 'today') return date.toDateString() === now.toDateString();
+    if (reportPeriod === 'week') return date >= new Date(now.setDate(now.getDate() - 7));
+    if (reportPeriod === 'month') return date >= new Date(now.setDate(now.getDate() - 30));
+    if (reportPeriod === 'custom') {
+      if (!customStartDate || !customEndDate) return true;
+      const s = new Date(customStartDate);
+      const e = new Date(customEndDate);
+      e.setHours(23, 59, 59, 999);
+      return date >= s && date <= e;
+    }
+    return true; // lifetime
+  };
+
+  const webOrders = (data.authorOrders || []).filter((o: any) => (o.status === 'Completed' || o.status === 'Dispatched') && filterByDate(new Date(o.createdAt)));
+  const posOrders = (data.posOrders || []).filter((o: any) => o.paymentStatus === 'CONFIRMED' && filterByDate(new Date(o.createdAt)));
+
+  // Daily Aggregation
+  const salesByDate: Record<string, { date: string, webSales: number, posSales: number, totalRevenue: number, totalBooks: number }> = {};
+
+  webOrders.forEach((o: any) => {
+    const d = new Date(o.createdAt).toLocaleDateString('en-GB');
+    if (!salesByDate[d]) salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
+    salesByDate[d].webSales += o.amount;
+    salesByDate[d].totalRevenue += o.amount;
+    salesByDate[d].totalBooks += o.quantity;
+  });
+
+  posOrders.forEach((o: any) => {
+    const d = new Date(o.createdAt).toLocaleDateString('en-GB');
+    if (!salesByDate[d]) salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
+    salesByDate[d].posSales += o.totalAmount;
+    salesByDate[d].totalRevenue += o.totalAmount;
+    
+    const qty = o.items.reduce((acc: number, item: any) => acc + item.quantity, 0);
+    salesByDate[d].totalBooks += qty;
+  });
+
+  const chartData = Object.values(salesByDate).sort((a, b) => {
+    const [d1, m1, y1] = a.date.split('/');
+    const [d2, m2, y2] = b.date.split('/');
+    return new Date(`${y1}-${m1}-${d1}`).getTime() - new Date(`${y2}-${m2}-${d2}`).getTime();
+  });
+
+  const totalWebRevenue = webOrders.reduce((acc: number, o: any) => acc + o.amount, 0);
+  const totalPosRevenue = posOrders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
+  const totalBooksSold = chartData.reduce((acc, curr) => acc + curr.totalBooks, 0);
+  const totalRevenue = totalWebRevenue + totalPosRevenue;
+  
+  const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Opted-In').reduce((acc: number, inv: any) => {
+    const evt = inv.event;
+    if (!evt) return acc;
+    if (evt.feeType === 'Flat Fee' || evt.feeType === 'Per Author') {
+      return acc + (evt.registrationFee || 0);
+    } else if (evt.feeType === 'Per Title') {
+      const titlesCount = (data.listedBooks || []).filter((lb: any) => lb.eventId === evt.id).length;
+      return acc + ((evt.registrationFee || 0) * titlesCount);
+    }
+    return acc;
+  }, 0);
+  const platformFeePaid = 1000;
+  const totalFeesPaid = platformFeePaid + totalEventFees;
+
+  const allTransactions = [
+    ...webOrders.map((o: any) => ({
+       rawDate: new Date(o.createdAt).getTime(),
+       type: 'Web',
+       date: new Date(o.createdAt).toLocaleString('en-GB'),
+       id: `WEB-${o.orderId}`,
+       customer: o.customerName || 'N/A',
+       email: o.customerEmail || 'N/A',
+       phone: o.customerPhone || 'N/A',
+       address: (o.address || 'N/A').replace(/,/g, ' '),
+       items: `${o.bookTitle} (x${o.quantity})`,
+       quantity: o.quantity,
+       amount: o.amount,
+       status: o.status
+    })),
+    ...posOrders.map((o: any) => ({
+       rawDate: new Date(o.createdAt).getTime(),
+       type: 'POS',
+       date: new Date(o.createdAt).toLocaleString('en-GB'),
+       id: `POS-${o.id}`,
+       customer: 'Walk-in',
+       email: 'N/A',
+       phone: 'N/A',
+       address: 'N/A',
+       items: o.items.map((i: any) => `${i.book.title} (x${i.quantity})`).join('; '),
+       quantity: o.items.reduce((acc: number, i: any) => acc + i.quantity, 0),
+       amount: o.totalAmount,
+       status: o.paymentMethod
+    }))
+  ].sort((a, b) => b.rawDate - a.rawDate);
+
+  const exportCSV = () => {
+    let csv = 'Transaction Date,Order Type,Order ID,Customer Name,Email,Phone,Delivery Address,Books Included,Total Quantity,Total Amount,Status/Payment Method\n';
+    allTransactions.forEach(tx => {
+      csv += `"${tx.date}","${tx.type}","${tx.id}","${tx.customer}","${tx.email}","${tx.phone}","${tx.address}","${tx.items}","${tx.quantity}","₹${tx.amount}","${tx.status}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `detailed_sales_report_${reportPeriod}.csv`;
+    a.click();
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+           <h2 className="text-2xl font-serif text-paa-navy font-bold tracking-tight">Sales & Revenue Report</h2>
+           <p className="text-xs text-paa-gray-text font-bold uppercase tracking-widest mt-1">Track your earnings across platforms</p>
+        </div>
+        <button onClick={exportCSV} className="dash-btn dash-btn-primary flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 mb-6 bg-gray-50 p-2 rounded-xl border border-gray-200 inline-flex flex-wrap">
+        {['today', 'week', 'month', 'lifetime', 'custom'].map(p => (
+          <button key={p} onClick={() => setReportPeriod(p)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${reportPeriod === p ? 'bg-white shadow-sm text-paa-navy border border-gray-200' : 'text-gray-500 hover:text-paa-navy'}`}>
+            {p === 'today' ? 'Today' : p === 'week' ? 'Week' : p === 'month' ? 'Month' : p === 'lifetime' ? 'Lifetime' : 'Custom'}
+          </button>
+        ))}
+        
+        {reportPeriod === 'custom' && (
+          <div className="flex items-center gap-2 px-2 border-l border-gray-300 ml-2">
+            <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
+            <span className="text-gray-400">to</span>
+            <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} />
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between">
+           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Revenue</p>
+           <div className="text-2xl font-bold text-paa-navy">₹{totalRevenue}</div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between relative group">
+           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Fees Paid</p>
+           <div className="text-2xl font-bold text-red-600">₹{totalFeesPaid}</div>
+           <div className="hidden group-hover:block absolute bottom-full left-0 mb-2 w-max bg-gray-900 text-white text-xs p-2 rounded shadow-lg z-50">
+             Platform Fee: ₹{platformFeePaid}<br/>
+             Event Fees: ₹{totalEventFees}
+           </div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border shadow-sm">
+           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Web Sales</p>
+           <div className="text-2xl font-bold text-blue-600">₹{totalWebRevenue}</div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border shadow-sm">
+           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">POS Sales</p>
+           <div className="text-2xl font-bold text-purple-600">₹{totalPosRevenue}</div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border shadow-sm">
+           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Sold</p>
+           <div className="text-2xl font-bold text-paa-navy">{totalBooksSold}</div>
+        </div>
+      </div>
+
+      <div className="bg-white border rounded-xl shadow-sm p-6 mb-8">
+         <h3 className="font-serif font-bold text-lg mb-6">Revenue Trend</h3>
+         <div className="h-[300px] w-full">
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                 <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                    <XAxis dataKey="date" tick={{fontSize: 10}} tickLine={false} axisLine={false} />
+                    <YAxis tick={{fontSize: 10}} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
+                    <Tooltip cursor={{fill: '#f8f9fa'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+                    <Bar dataKey="webSales" name="Web Sales" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
+                    <Bar dataKey="posSales" name="POS Sales" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                 </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400 text-sm">No sales data for this period.</div>
+            )}
+         </div>
+      </div>
+      
+      <div className="bg-white border rounded-xl shadow-sm overflow-hidden mb-8">
+         <div className="px-6 py-4 border-b">
+            <h3 className="font-serif font-bold text-lg">Daily Breakdown</h3>
+         </div>
+         <div className="overflow-x-auto">
+            <table className="dash-table">
+               <thead>
+                  <tr>
+                     <th>Date</th>
+                     <th>Web Sales</th>
+                     <th>POS Sales</th>
+                     <th>Total Revenue</th>
+                     <th>Books Sold</th>
+                  </tr>
+               </thead>
+               <tbody>
+                  {chartData.length === 0 && (
+                     <tr><td colSpan={5} className="text-center py-6 text-gray-400">No data available</td></tr>
+                  )}
+                  {chartData.reverse().map((row, i) => (
+                     <tr key={i}>
+                        <td className="font-semibold">{row.date}</td>
+                        <td className="text-blue-600 font-semibold">₹{row.webSales}</td>
+                        <td className="text-purple-600 font-semibold">₹{row.posSales}</td>
+                        <td className="font-bold text-paa-navy">₹{row.totalRevenue}</td>
+                        <td>{row.totalBooks}</td>
+                     </tr>
+                  ))}
+               </tbody>
+            </table>
+         </div>
+      </div>
+
+      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+         <div className="px-6 py-4 border-b">
+            <h3 className="font-serif font-bold text-lg">Detailed Transactions</h3>
+         </div>
+         <div className="overflow-x-auto">
+            <table className="dash-table">
+               <thead>
+                  <tr>
+                     <th>Date</th>
+                     <th>Type</th>
+                     <th>Order ID</th>
+                     <th>Customer</th>
+                     <th>Books Included</th>
+                     <th>Amount</th>
+                     <th>Status / Mode</th>
+                  </tr>
+               </thead>
+               <tbody>
+                  {allTransactions.length === 0 && (
+                     <tr><td colSpan={7} className="text-center py-6 text-gray-400">No transactions found</td></tr>
+                  )}
+                  {allTransactions.map((tx, i) => (
+                     <tr key={i}>
+                        <td className="text-xs text-gray-500 whitespace-nowrap">{tx.date}</td>
+                        <td><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${tx.type === 'Web' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{tx.type}</span></td>
+                        <td className="font-mono text-xs">{tx.id}</td>
+                        <td className="font-semibold text-paa-navy">{tx.customer}</td>
+                        <td className="text-sm max-w-xs truncate" title={tx.items}>{tx.items}</td>
+                        <td className="font-bold text-emerald-600 whitespace-nowrap">₹{tx.amount}</td>
+                        <td><span className="text-xs text-gray-500 font-bold uppercase tracking-widest bg-gray-100 px-2 py-1 rounded">{tx.status}</span></td>
+                     </tr>
+                  ))}
+               </tbody>
+            </table>
+         </div>
+      </div>
+    </div>
+  );
+}
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router';
-import { ShoppingCart, Plus, Minus, ArrowLeft, CheckCircle, QrCode } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, ArrowLeft, CheckCircle, QrCode, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function LivePosDashboard() {
@@ -14,8 +14,33 @@ export function LivePosDashboard() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
+  const [addStockBook, setAddStockBook] = useState<any>(null);
+  const [addStockQty, setAddStockQty] = useState('1');
+  const [isAddingStock, setIsAddingStock] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [salesSummary, setSalesSummary] = useState<any>(null);
+
+
+  const handleAddStock = async () => {
+    if(!addStockBook) return;
+    setIsAddingStock(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/add-stock`, {
+        bookId: addStockBook.id,
+        quantity: parseInt(addStockQty)
+      }, { headers: { Authorization: `Bearer ${token}` }});
+      toast.success('Stock added successfully!');
+      setShowAddStockModal(false);
+      setAddStockQty('1');
+      fetchInventory();
+    } catch(err: any) {
+      toast.error(err.response?.data?.error || 'Failed to add stock');
+    } finally {
+      setIsAddingStock(false);
+    }
+  };
 
   const fetchInventory = async () => {
     try {
@@ -100,22 +125,52 @@ export function LivePosDashboard() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen bg-gray-50 overflow-hidden font-sans fixed inset-0 z-[200]">
-        <div className="bg-paa-navy h-16 shrink-0 w-full animate-pulse"></div>
-        <div className="flex flex-1 overflow-hidden flex-col md:flex-row p-4 gap-4">
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="flex flex-col bg-gray-50 overflow-hidden rounded-2xl border border-paa-navy/5 shadow-sm h-[calc(100vh-140px)] w-full relative">
+        <div className="bg-white border-b border-paa-navy/5 px-6 py-4 flex items-center justify-between shrink-0 h-[72px]">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full dash-skeleton"></div>
+            <div>
+              <div className="w-48 h-6 dash-skeleton rounded mb-2"></div>
+              <div className="w-32 h-4 dash-skeleton rounded"></div>
+            </div>
+          </div>
+          <div className="w-32 h-10 dash-skeleton rounded-lg"></div>
+        </div>
+        <div className="flex flex-1 p-4 gap-4 flex-col md:flex-row overflow-hidden">
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-hidden">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-[280px] bg-white rounded animate-pulse border border-gray-200"></div>
+              <div key={i} className="h-[300px] bg-white rounded-xl border border-paa-navy/5 p-4 flex flex-col shadow-sm">
+                 <div className="h-36 dash-skeleton rounded-lg w-full mb-4 shrink-0"></div>
+                 <div className="h-4 dash-skeleton rounded w-3/4 mb-2"></div>
+                 <div className="h-4 dash-skeleton rounded w-1/2 mb-4"></div>
+                 <div className="mt-auto h-10 dash-skeleton rounded-full w-full"></div>
+              </div>
             ))}
           </div>
-          <div className="w-full md:w-[350px] lg:w-[400px] h-[45%] md:h-full bg-white rounded animate-pulse border border-gray-200"></div>
+          <div className="hidden md:flex w-[350px] lg:w-[400px] bg-white rounded-xl border border-paa-navy/5 p-6 shrink-0 h-full flex-col shadow-sm">
+             <div className="flex gap-3 items-center mb-8 shrink-0">
+                <div className="w-6 h-6 dash-skeleton rounded-full"></div>
+                <div className="h-6 dash-skeleton rounded w-1/2"></div>
+             </div>
+             <div className="space-y-6 flex-1 overflow-hidden">
+                 {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex gap-4 items-center">
+                        <div className="flex-1">
+                           <div className="h-4 dash-skeleton rounded w-full mb-2"></div>
+                           <div className="h-3 dash-skeleton rounded w-1/3"></div>
+                        </div>
+                        <div className="w-24 h-8 dash-skeleton rounded-full shrink-0"></div>
+                    </div>
+                 ))}
+             </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden font-sans fixed inset-0 z-[200]">
+    <div className="flex flex-col bg-gray-50 overflow-hidden rounded-2xl border shadow-sm h-[calc(100vh-140px)] w-full relative">
       {/* Header */}
       <div className="bg-white border-b border-paa-navy/5 px-6 py-4 flex justify-between items-center shrink-0 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] relative z-10">
         <div className="flex items-center gap-4">
@@ -159,7 +214,10 @@ export function LivePosDashboard() {
                   <div className="flex justify-between items-center mt-auto pt-3 border-t border-paa-navy/5">
                     <div>
                        <div className="text-paa-navy font-black text-xl leading-none">₹{eb.book.mrp}</div>
-                       <div className="text-[10px] text-paa-gray-text font-bold uppercase tracking-widest mt-1">{available} left</div>
+                       <div className="text-[10px] text-paa-gray-text font-bold uppercase tracking-widest mt-1 flex items-center gap-2">
+  {available} left
+  <button onClick={(e) => { e.stopPropagation(); setAddStockBook(eb.book); setShowAddStockModal(true); }} className="text-paa-navy hover:text-paa-gold underline text-[9px] cursor-pointer">ADD</button>
+</div>
                     </div>
                     <button 
                       onClick={() => addToCart(eb.book, available)}
@@ -233,16 +291,15 @@ export function LivePosDashboard() {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm md:max-w-md w-full overflow-hidden flex flex-col max-h-[95vh] animate-fade-in-up">
-            <div className="bg-paa-navy text-white p-4 md:p-5 flex justify-between items-center shrink-0">
-              <h2 className="font-bold uppercase tracking-widest text-sm md:text-base">Complete Payment</h2>
-              <button onClick={() => setShowPaymentModal(false)} className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-full"><ArrowLeft size={18} /></button>
+        <div className="fixed inset-0 bg-gray-50 z-[300] flex flex-col h-[100dvh] w-full animate-fade-in-up">
+            <div className="bg-paa-navy text-white p-5 md:p-6 flex justify-between items-center shrink-0 shadow-md">
+              <h2 className="font-serif font-bold text-2xl tracking-tight leading-tight">Complete Payment</h2>
+              <button onClick={() => setShowPaymentModal(false)} className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-2 rounded-full"><X size={24} /></button>
             </div>
-            <div className="p-5 md:p-8 flex-1 overflow-y-auto text-center space-y-6 md:space-y-8">
+            <div className="p-6 md:p-10 flex-1 overflow-y-auto text-center flex flex-col items-center justify-center space-y-8 max-w-2xl mx-auto w-full">
               <div className="text-5xl md:text-6xl font-serif font-bold text-paa-navy drop-shadow-sm">₹{totalAmount}</div>
               
-              <div className="flex gap-3 justify-center border-b pb-6">
+              <div className="flex gap-3 justify-center border-b pb-6 w-full max-w-sm">
                  <button onClick={() => setPaymentMethod('UPI')} className={`flex-1 py-3 border-2 font-bold uppercase tracking-widest text-xs rounded-xl transition-all duration-300 ${paymentMethod === 'UPI' ? 'bg-[#e4ebf5] border-paa-navy text-paa-navy shadow-inner' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>UPI QR</button>
                  <button onClick={() => setPaymentMethod('Cash')} className={`flex-1 py-3 border-2 font-bold uppercase tracking-widest text-xs rounded-xl transition-all duration-300 ${paymentMethod === 'Cash' ? 'bg-[#e4ebf5] border-paa-navy text-paa-navy shadow-inner' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cash</button>
               </div>
@@ -274,32 +331,62 @@ export function LivePosDashboard() {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="flex gap-3 pt-8 border-t w-full max-w-md mt-auto">
                 <button 
                   onClick={() => setShowPaymentModal(false)}
-                  className="w-1/3 py-4 bg-gray-200 text-gray-700 font-bold uppercase tracking-widest rounded hover:bg-gray-300 transition-colors shadow-sm"
+                  className="dash-btn dash-btn-ghost w-1/3 justify-center border-gray-300 text-gray-700 hover:bg-gray-200"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleCheckout}
                   disabled={isProcessing}
-                  className="flex-1 bg-paa-navy text-paa-cream py-4 rounded font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 shadow-sm"
+                  className="dash-btn dash-btn-primary flex-1 justify-center disabled:opacity-50"
                 >
-                  {isProcessing ? 'Processing...' : <><CheckCircle size={18} /> Payment Received</>}
+                  {isProcessing ? 'Processing...' : <><CheckCircle size={14} /> Payment Received</>}
                 </button>
               </div>
+            </div>
+        </div>
+      )}
+
+      
+      {/* Add Stock Modal */}
+      {showAddStockModal && addStockBook && (
+        <div className="fixed inset-0 bg-black/60 z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden flex flex-col p-6 animate-fade-in-up">
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="font-serif font-bold text-xl text-paa-navy">Add Event Stock</h3>
+               <button onClick={() => setShowAddStockModal(false)} className="text-gray-400 hover:text-paa-navy"><X size={20}/></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">How many copies of <span className="font-bold text-paa-navy">"{addStockBook.title}"</span> would you like to add to this event? (Will be deducted from main inventory).</p>
+            <div className="mb-6">
+              <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Quantity</label>
+              <input 
+                 type="number" 
+                 className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-paa-navy transition-colors text-center font-bold text-lg" 
+                 value={addStockQty} 
+                 onChange={e => setAddStockQty(e.target.value)} 
+                 min="1"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowAddStockModal(false)} className="flex-1 py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50">Cancel</button>
+              <button onClick={handleAddStock} disabled={isAddingStock} className="flex-1 py-3 bg-paa-navy text-paa-cream rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50">
+                 {isAddingStock ? 'Adding...' : 'Add Stock'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Summary Modal */}
+
       {showSummary && (
         <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]">
             <div className="bg-paa-navy text-white p-4 flex justify-between items-center shrink-0">
-              <h2 className="font-bold uppercase tracking-widest">Day Summary</h2>
+              <h2 className="font-serif font-bold text-xl tracking-tight">Day Summary</h2>
               <button onClick={() => setShowSummary(false)} className="text-white/80 hover:text-white transition-colors"><ArrowLeft size={20} /></button>
             </div>
             <div className="p-6 flex-1 overflow-y-auto">

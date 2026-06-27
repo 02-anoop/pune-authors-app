@@ -111,7 +111,10 @@ export function OperationsDashboardPage() {
     const cached = sessionStorage.getItem('adminEvents');
     return cached ? JSON.parse(cached) : [];
   });
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>(() => {
+    const cached = sessionStorage.getItem('adminOrders');
+    return cached ? JSON.parse(cached) : [];
+  });
 
   // Modals state
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
@@ -367,7 +370,7 @@ export function OperationsDashboardPage() {
       }
       prevOrderCountRef.current = newCount;
       w.__apiCache.adminOrders = res.data;
-      
+      sessionStorage.setItem('adminOrders', JSON.stringify(res.data));
       setOrders(res.data);
       const c = res.data.filter((o: any) => o.status === 'Pending').length; if (c > prevCountsRef.current.orders) setPendingAlerts(prev => ({ ...prev, orders: true })); prevCountsRef.current.orders = c;
     } catch(err) {} finally { if (!background) setIsRefreshing(false); }
@@ -441,6 +444,9 @@ export function OperationsDashboardPage() {
         const promises = [];
         if (activeTab === 'overview') {
             promises.push(fetchOverview());
+            promises.push(fetchOrders(true));
+            promises.push(fetchAuthors(true));
+            promises.push(fetchBooks(true));
         } else if (activeTab === 'authors' || activeTab === 'author_data') {
             promises.push(fetchAuthors());
         } else if (activeTab === 'books') {
@@ -1240,14 +1246,22 @@ export function OperationsDashboardPage() {
 
           <div className="flex flex-col md:flex-row gap-6 items-end">
             <div className="flex-1 w-full">
-              <label className="dash-label">Report Grouping Period</label>
-              <select className="dash-input w-full" value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}>
-                <option value="daily">Daily (Group by Day)</option>
-                <option value="weekly">Weekly (Group by Week)</option>
-                <option value="monthly">Monthly (Group by Month)</option>
-                <option value="yearly">Yearly (Group by Year)</option>
-                <option value="lifelong">Lifelong (All Time)</option>
-              </select>
+              <label className="dash-label mb-3 block">Report Grouping Period</label>
+              <div className="flex flex-wrap gap-2">
+                {['daily', 'weekly', 'monthly', 'yearly', 'lifelong'].map(period => (
+                  <button
+                    key={period}
+                    onClick={() => setReportPeriod(period)}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-full transition-all border ${
+                      reportPeriod === period
+                        ? 'bg-paa-navy text-white border-paa-navy shadow-md'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-paa-navy/30'
+                    }`}
+                  >
+                    {period === 'lifelong' ? 'Lifetime' : period}
+                  </button>
+                ))}
+              </div>
             </div>
             <button 
               onClick={handleExportSalesReport}

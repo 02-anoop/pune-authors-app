@@ -3,10 +3,12 @@ const { eventSchema } = require('../validators');
 const express = require('express');
 const router = express.Router();
 const prisma = require('../config/db');
+const bcrypt = require('bcrypt');
 const { getCache, setCache, invalidateCache } = require('../utils/cache');
 const { isAdmin, verifyToken } = require('../middleware/auth');
 const { sendNotificationEmail, emailWrap } = require('../utils/email');
 const { upload } = require('../config/upload');
+const { inr } = require('../utils/helpers');
 const path = require('path');
 const fs = require('fs');
 

@@ -58,7 +58,7 @@ export function AuthorRegistrationPage() {
     address: "",
     aadharNumber: "",
     qualification: "",
-    age: "",
+    dob: "",
     experience: "",
     skills: "",
     hobbies: "",
@@ -69,6 +69,8 @@ export function AuthorRegistrationPage() {
     state: "",
     instagram: "",
     facebook: "",
+    linkedin: "",
+    youtube: "",
     title: "",
     subtitle: "",
     genre: "",
@@ -104,7 +106,7 @@ export function AuthorRegistrationPage() {
     if (key === "address" && !value) error = "Full Address is required.";
     if (key === "aadharNumber" && !value) error = "Aadhar Number is required.";
     if (key === "qualification" && !value) error = "Qualification is required.";
-    if (key === "age" && !value) error = "Age is required.";
+    if (key === "dob" && !value) error = "Date of Birth is required.";
     if (key === "experience" && !value) error = "Experience is required.";
     if (key === "skills" && !value) error = "Skills are required.";
     if (key === "hobbies" && !value) error = "Hobbies are required.";
@@ -248,11 +250,22 @@ export function AuthorRegistrationPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Instagram Profile</label>
-                      <input type="text" value={form.instagram} onChange={(e) => update("instagram", e.target.value)} className="dash-input w-full" placeholder="@username" />
+                      <input type="text" value={form.instagram} onChange={(e) => update("instagram", e.target.value)} className="dash-input w-full" placeholder="Instagram URL or @username" />
                     </div>
                     <div>
-                      <label className="dash-label">Facebook / LinkedIn Profile</label>
-                      <input type="text" value={form.facebook} onChange={(e) => update("facebook", e.target.value)} className="dash-input w-full" placeholder="Profile URL" />
+                      <label className="dash-label">Facebook Profile</label>
+                      <input type="text" value={form.facebook} onChange={(e) => update("facebook", e.target.value)} className="dash-input w-full" placeholder="Facebook Profile URL" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="dash-label">LinkedIn Profile</label>
+                      <input type="text" value={form.linkedin} onChange={(e) => update("linkedin", e.target.value)} className="dash-input w-full" placeholder="LinkedIn Profile URL" />
+                    </div>
+                    <div>
+                      <label className="dash-label">YouTube Channel</label>
+                      <input type="text" value={form.youtube} onChange={(e) => update("youtube", e.target.value)} className="dash-input w-full" placeholder="YouTube Channel URL" />
                     </div>
                   </div>
 
@@ -263,9 +276,9 @@ export function AuthorRegistrationPage() {
                       {errors.qualification && <div className="text-red-500 text-xs mt-1 font-medium">{errors.qualification}</div>}
                     </div>
                     <div>
-                      <label className="dash-label">Age *</label>
-                      <input type="number" value={form.age} onChange={(e) => update("age", e.target.value)} className={`dash-input w-full ${errors.age ? '!border-red-500' : ''}`} placeholder="e.g. 34" />
-                      {errors.age && <div className="text-red-500 text-xs mt-1 font-medium">{errors.age}</div>}
+                      <label className="dash-label">Date of Birth *</label>
+                      <input type="date" value={form.dob} onChange={(e) => update("dob", e.target.value)} className={`dash-input w-full ${errors.dob ? '!border-red-500' : ''}`} />
+                      {errors.dob && <div className="text-red-500 text-xs mt-1 font-medium">{errors.dob}</div>}
                     </div>
                     <div>
                       <label className="dash-label">Years of Experience *</label>
@@ -812,6 +825,7 @@ export function AuthorRegistrationPage() {
                         }
                       });
 
+
                       const finalBooks = [...books];
                       if (form.title && form.genre && form.mrp) {
                         finalBooks.push({ ...form, coverBlob });
@@ -842,6 +856,7 @@ export function AuthorRegistrationPage() {
                       finalBooks.forEach((b, idx) => {
                         if (b.coverBlob) formData.append(`cover_${idx}`, b.coverBlob);
                       });
+
                       if (paymentBlob) formData.append("paymentScreenshot", paymentBlob);
                       if (qrCodeBlob) formData.append("qrCode", qrCodeBlob);
                       if (Object.keys(extraDataState).length > 0) {

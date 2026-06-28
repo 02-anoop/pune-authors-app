@@ -149,7 +149,7 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
               <div style="display: inline-block; background: #b44d28; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 4px 10px; margin-bottom: 15px; font-weight: 800; font-family: system-ui, sans-serif;">Featured Author</div>
               <h2 style="margin: 0 0 15px; font-size: 42px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">${author.name}</h2>
               ${author.qualification ? `<p style="margin: 0 0 10px; font-size: 11px; line-height: 1.6; color: #94a3b8; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 1px;">
-                <strong>Qual:</strong> ${author.qualification} &nbsp;|&nbsp; <strong>Age:</strong> ${author.age || '—'} &nbsp;|&nbsp; <strong>Exp:</strong> ${author.experience || '—'}<br/>
+                <strong>Qual:</strong> ${author.qualification} &nbsp;|&nbsp; <strong>DOB:</strong> ${author.age || '—'} &nbsp;|&nbsp; <strong>Exp:</strong> ${author.experience || '—'}<br/>
                 <strong>Skills:</strong> ${author.skills || '—'} &nbsp;|&nbsp; <strong>Hobbies:</strong> ${author.hobbies || '—'}
               </p>` : ''}
               <p style="margin: 0; font-size: 14px; line-height: 1.8; color: #cbd5e1; text-align: justify; font-style: italic;">${author.bio}</p>

@@ -135,7 +135,10 @@ router.post('/api/books/:id/reviews', async (req, res) => {
 // 2. Author Registration (creates author, user login, and their first book)
 router.post('/api/authors/register', upload.any(), async (req, res) => {
   try {
-    const { name, email, phone, password, bio, whatsapp, penName, city, state, instagram, facebook, transactionId, extraData, qualification, age, experience, skills, hobbies, whyJoining, aadharNumber, address } = req.body;
+    const { 
+      name, email, phone, whatsapp, password, bio, penName, city, state, instagram, facebook, linkedin, youtube, 
+      qualification, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, extraData, transactionId
+    } = req.body;
     
     // Check if email already in use
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -211,14 +214,19 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
         transactionId,
         paymentScreenshot: paymentScreenshotUrl,
         qualification,
-        age,
+        age: dob,
         experience,
         skills,
         hobbies,
         whyJoining,
         aadharNumber,
         address,
-        extraData: extraData ? JSON.parse(extraData) : null,
+        extraData: (() => {
+          let parsed = extraData ? JSON.parse(extraData) : {};
+          if (linkedin) parsed.linkedin = linkedin;
+          if (youtube) parsed.youtube = youtube;
+          return parsed;
+        })(),
         books: {
           create: booksArray.map((b, idx) => ({
             title: b.title,

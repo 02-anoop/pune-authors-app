@@ -296,7 +296,7 @@ export function BookDetailPage() {
                 <p style={{ fontWeight: 700, color: "#1a1a2e", margin: "0 0 0.5rem", fontSize: 16 }}>{book.author.name}</p>
                 {book.author.qualification && (
                   <p style={{ margin: "0 0 0.75rem", fontSize: 11, lineHeight: 1.6, color: "#94a3b8", fontFamily: "system-ui, sans-serif", textTransform: "uppercase", letterSpacing: "1px" }}>
-                    <strong>Qual:</strong> {book.author.qualification} &nbsp;|&nbsp; <strong>Age:</strong> {book.author.age || '—'} &nbsp;|&nbsp; <strong>Exp:</strong> {book.author.experience || '—'}
+                    <strong>Qual:</strong> {book.author.qualification} &nbsp;|&nbsp; <strong>DOB:</strong> {book.author.age || '—'} &nbsp;|&nbsp; <strong>Exp:</strong> {book.author.experience || '—'}
                     <br/><strong>Skills:</strong> {book.author.skills || '—'} &nbsp;|&nbsp; <strong>Hobbies:</strong> {book.author.hobbies || '—'}
                   </p>
                 )}

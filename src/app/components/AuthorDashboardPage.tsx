@@ -9,6 +9,7 @@ import qrCode from './data/qr_code.jpeg';
 import { LivePosDashboard } from './LivePosDashboard';
 import fictionData from './data/fiction_catalogue.json';
 import nonFictionData from './data/non_fiction_catalogue.json';
+import { AuthorRegistrationPage } from './AuthorRegistrationPage';
 
 
 export function AuthorDashboardPage() {
@@ -138,8 +139,22 @@ export function AuthorDashboardPage() {
         ...prev,
         name: dashboardData.authorProfile.name || '',
         phone: dashboardData.authorProfile.phone || '',
-        bio: dashboardData.authorProfile.bio || '',
         whatsapp: dashboardData.authorProfile.whatsapp || '',
+        bio: dashboardData.authorProfile.bio || '',
+        penName: dashboardData.authorProfile.penName || '',
+        city: dashboardData.authorProfile.city || '',
+        state: dashboardData.authorProfile.state || '',
+        address: dashboardData.authorProfile.address || '',
+        aadharNumber: dashboardData.authorProfile.aadharNumber || '',
+        qualification: dashboardData.authorProfile.qualification || '',
+        institution: dashboardData.authorProfile.institution || '',
+        subject: dashboardData.authorProfile.subject || '',
+        age: dashboardData.authorProfile.age || '',
+        experience: dashboardData.authorProfile.experience || '',
+        skills: dashboardData.authorProfile.skills || '',
+        hobbies: dashboardData.authorProfile.hobbies || '',
+        instagram: dashboardData.authorProfile.instagram || '',
+        facebook: dashboardData.authorProfile.facebook || '',
         transactionId: dashboardData.authorProfile.transactionId || ''
       }));
     }
@@ -213,168 +228,60 @@ export function AuthorDashboardPage() {
   }
 
   if (status === 'Pending' || status === 'Rejected') {
+    if (showReapply) {
+      return (
+        <AuthorRegistrationPage 
+          initialData={dashboardData?.authorProfile} 
+          isReapply={true} 
+          onReapplySuccess={() => {
+            setShowReapply(false);
+            fetchDashboardData(true);
+          }} 
+        />
+      );
+    }
+
     return (
       <div className="min-h-screen bg-paa-cream animate-fade-in-up font-sans flex items-center justify-center p-6">
-        <div className="bg-white max-w-2xl w-full p-8 rounded-xl shadow border border-paa-navy/5">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-serif text-paa-navy">Author Application Status</h1>
-            <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold uppercase rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out"><LogOut size={16}/> Logout</button>
+        <div className="bg-white max-w-lg w-full p-8 rounded-3xl-2xl shadow-premium border border-paa-navy/5 text-center">
+          <div className="flex justify-end mb-4">
+            <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold uppercase tracking-widest rounded-full transition-colors"><LogOut size={16}/> Logout</button>
           </div>
           
-          <div className={`p-4 mb-8 rounded-3xl-2xl border ${status === 'Pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-            <h2 className="text-xl font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-              {status === 'Pending' ? <AlertCircle size={20} /> : <AlertCircle size={20} />}
-              Status: {status}
-            </h2>
+          <div className="mb-6 flex justify-center">
             {status === 'Pending' ? (
-              <p className="text-sm">Your author application has been submitted and is currently pending review by the admin team. You will be notified via email once approved. Check back here for updates.</p>
+              <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center border border-yellow-200">
+                <AlertCircle className="w-10 h-10 text-yellow-500" />
+              </div>
             ) : (
-              <div>
-                <p className="text-sm mb-2">Unfortunately, your author application has been rejected.</p>
-                {rejectionReason && <div className="text-base font-bold bg-red-100 p-4 rounded-xl border-l-4 border-red-600 text-red-900 shadow-sm my-4"><strong className="uppercase tracking-widest text-xs block mb-1">Rejection Reason:</strong> {rejectionReason}</div>}
-                {!showReapply && (
-                  <button onClick={() => setShowReapply(true)} className="mt-4 bg-paa-navy text-white px-4 py-2 rounded-3xl-2xl text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">
-                    Reapply with Correct Details
-                  </button>
-                )}
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center border border-red-200">
+                <AlertCircle className="w-10 h-10 text-red-500" />
               </div>
             )}
           </div>
 
-          {showReapply ? (
-            <div className="mb-8 p-4 border border-paa-navy/20 rounded-3xl-2xl bg-gray-50">
-              <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Update Your Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Name</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.name} onChange={e => setReapplyForm({...reapplyForm, name: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pen Name</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.penName} onChange={e => setReapplyForm({...reapplyForm, penName: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.phone} onChange={e => setReapplyForm({...reapplyForm, phone: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.whatsapp} onChange={e => setReapplyForm({...reapplyForm, whatsapp: e.target.value})} />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Address</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.address} onChange={e => setReapplyForm({...reapplyForm, address: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">City</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.city} onChange={e => setReapplyForm({...reapplyForm, city: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">State</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.state} onChange={e => setReapplyForm({...reapplyForm, state: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.aadharNumber} onChange={e => setReapplyForm({...reapplyForm, aadharNumber: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Transaction ID</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.transactionId} onChange={e => setReapplyForm({...reapplyForm, transactionId: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Qualification</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.qualification} onChange={e => setReapplyForm({...reapplyForm, qualification: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Age</label>
-                  <input type="number" className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.age} onChange={e => setReapplyForm({...reapplyForm, age: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.experience} onChange={e => setReapplyForm({...reapplyForm, experience: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Skills</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.skills} onChange={e => setReapplyForm({...reapplyForm, skills: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.hobbies} onChange={e => setReapplyForm({...reapplyForm, hobbies: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Instagram</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.instagram} onChange={e => setReapplyForm({...reapplyForm, instagram: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Facebook</label>
-                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.facebook} onChange={e => setReapplyForm({...reapplyForm, facebook: e.target.value})} />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Bio (150 words)</label>
-                  <textarea rows={5} required className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.bio} onChange={e => setReapplyForm({...reapplyForm, bio: e.target.value})} />
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setShowReapply(false)} className="px-4 py-2 text-gray-500 text-sm">Cancel</button>
-                <button 
-                  disabled={isSubmittingReapply}
-                  onClick={async () => {
-                    setIsSubmittingReapply(true);
-                    try {
-                      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/reapply`, reapplyForm, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
-                      toast.success('Application updated and resubmitted!');
-                      setShowReapply(false);
-                      fetchDashboardData(true);
-                    } catch(err) {
-                      toast.error('Failed to reapply');
-                    } finally {
-                      setIsSubmittingReapply(false);
-                    }
-                  }} 
-                  className="bg-paa-navy text-white px-4 py-2 rounded-3xl-2xl text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50"
-                >
-                  {isSubmittingReapply ? 'Submitting...' : 'Submit Reapplication'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Submitted Details</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm mb-6">
-                <div><span className="text-gray-500 block text-xs uppercase font-bold">Name</span> {name}</div>
-                <div><span className="text-gray-500 block text-xs uppercase font-bold">Email</span> {email}</div>
-                <div><span className="text-gray-500 block text-xs uppercase font-bold">Phone</span> {phone}</div>
-                <div><span className="text-gray-500 block text-xs uppercase font-bold">Transaction ID</span> {transactionId || 'N/A'}</div>
-              </div>
-              
-              <div className="mb-4">
-                <span className="text-gray-500 block text-xs uppercase font-bold mb-1">Bio</span>
-                <p className="text-sm bg-gray-50 p-3 rounded-3xl-2xl">{bio}</p>
-              </div>
-              {extraData && Object.keys(extraData).length > 0 && (
-                <div className="mt-4">
-                   <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy border-b pb-1 mb-3">Additional Details</h4>
-                   <div className="grid grid-cols-2 gap-4 text-sm">
-                     {Object.entries(extraData).map(([key, val]) => (
-                        <div key={key}><span className="text-gray-500 block text-xs uppercase font-bold">{key}</span> {String(val)}</div>
-                     ))}
-                   </div>
-                </div>
-              )}
-            </>
-          )}
+          <h1 className="text-3xl font-serif text-paa-navy mb-4">
+            {status === 'Pending' ? 'Application Under Review' : 'Application Rejected'}
+          </h1>
 
-          <div className="grid grid-cols-2 gap-4 mt-6">
-            {photoUrl && (
+          <div className="mx-auto max-w-sm">
+            {status === 'Pending' ? (
+              <p className="text-sm text-gray-600 leading-relaxed">Your author application has been submitted and is currently pending review by the admin team. You will be notified via email once approved. Check back here for updates.</p>
+            ) : (
               <div>
-                <span className="text-gray-500 block text-xs uppercase font-bold mb-2">Profile Photo</span>
-                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${photoUrl}`} alt="Profile" className="w-24 h-24 object-cover rounded-3xl-2xl shadow" />
-              </div>
-            )}
-            {paymentScreenshot && (
-              <div>
-                <span className="text-gray-500 block text-xs uppercase font-bold mb-2">Payment Screenshot</span>
-                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${paymentScreenshot}`} alt="Payment" className="w-full max-w-xs object-contain border rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out" />
+                <p className="text-sm text-gray-600 mb-6 leading-relaxed">Unfortunately, your author application has been rejected.</p>
+                {rejectionReason && (
+                  <div className="bg-red-50 p-4 rounded-2xl border border-red-100 text-red-800 text-sm text-left mb-8 shadow-sm">
+                    <strong className="uppercase tracking-widest text-[10px] block mb-1 opacity-80">Reason for Rejection</strong>
+                    {rejectionReason}
+                  </div>
+                )}
+                <button 
+                  onClick={() => setShowReapply(true)} 
+                  className="bg-paa-navy text-white px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy shadow-premium hover:-translate-y-0.5 transition-all duration-300 w-full"
+                >
+                  Edit & Reapply Details
+                </button>
               </div>
             )}
           </div>
@@ -628,12 +535,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const [cover, setCover] = useState<File | null>(null);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
-
-  const [editProfileForm, setEditProfileForm] = useState({
-    name: '', penName: '', city: '', state: '', instagram: '', facebook: '',
-    address: '', aadharNumber: '', qualification: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '',
-    bio: '', phone: '', whatsapp: ''
-  });
+  const [reapplyForm, setReapplyForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', instagram: '', facebook: '', transactionId: '', extraData: {} });
+  const [editProfileForm, setEditProfileForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', instagram: '', facebook: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '' });
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [editCoverBookId, setEditCoverBookId] = useState<number | null>(null);
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
@@ -757,6 +660,14 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       toast.error('Print format is mandatory.');
       return;
     }
+    if (!newBook.isbn) {
+      toast.error('ISBN number is mandatory.');
+      return;
+    }
+    if (newBook.synopsis.split(/\s+/).filter(Boolean).length > 100) {
+      toast.error('Synopsis cannot exceed 100 words.');
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append('title', newBook.title);
@@ -847,6 +758,26 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: string[] = [];
+    if (!editProfileForm.name?.trim()) errors.push('Name is required');
+    if (!editProfileForm.phone?.trim()) errors.push('Phone is required');
+    if (editProfileForm.phone && !/^\d{10}$/.test(editProfileForm.phone.replace(/\D/g, ''))) errors.push('Phone must be 10 digits');
+    const bioWordCount = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
+    if (bioWordCount < 100 || bioWordCount > 150) errors.push(`Bio must be 100-150 words (currently ${bioWordCount})`);
+    // Validate qualifications
+    try {
+      const qArr = JSON.parse(editProfileForm.qualification || '[]');
+      if (Array.isArray(qArr)) {
+        qArr.forEach((q: any, i: number) => {
+          if (!q.qualification?.trim()) errors.push(`Qualification ${i + 1}: Degree/Title is required`);
+          if (!q.institution?.trim()) errors.push(`Qualification ${i + 1}: Institution is required`);
+        });
+      }
+    } catch(e) {}
+    if (errors.length > 0) {
+      toast.error(`Please fix: ${errors.join(', ')}`);
+      return;
+    }
     try {
       const formData = new FormData();
       Object.entries(editProfileForm).forEach(([key, val]) => {
@@ -913,12 +844,25 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const handleEditBookSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBook) return;
+    if (!editingBook.title?.trim()) { toast.error('Book title is required.'); return; }
+    if (!editingBook.genre?.trim()) { toast.error('Genre is required.'); return; }
     if (!editingBook.pages || parseInt(editingBook.pages) <= 0) {
       toast.error('Number of pages is mandatory and must be greater than 0.');
       return;
     }
+    if (!editingBook.mrp || parseFloat(editingBook.mrp) <= 0) { toast.error('MRP is required.'); return; }
+    if (!editingBook.language?.trim()) { toast.error('Language is required.'); return; }
+    if (!editingBook.format?.trim()) { toast.error('Format is required.'); return; }
     if (!editingBook.printFormat) {
       toast.error('Print format is mandatory.');
+      return;
+    }
+    if (!editingBook.isbn) {
+      toast.error('ISBN number is mandatory.');
+      return;
+    }
+    if (editingBook.synopsis.split(/\s+/).filter(Boolean).length > 100) {
+      toast.error('Synopsis cannot exceed 100 words.');
       return;
     }
     setButtonStates(prev => ({...prev, updateBook: true}));
@@ -1129,14 +1073,57 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   <input className="dash-input w-full" value={editProfileForm.facebook} onChange={e => setEditProfileForm({...editProfileForm, facebook: e.target.value})} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="mb-3">
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Qualifications</label>
+                {(() => {
+                  let qArr: any[] = [];
+                  try { qArr = JSON.parse(editProfileForm.qualification || '[]'); } catch(e) {}
+                  if (!Array.isArray(qArr)) qArr = [{ qualification: editProfileForm.qualification || '', institution: '', subject: '' }];
+                  return (
+                    <>
+                      {qArr.map((q: any, i: number) => (
+                        <div key={i} className="grid grid-cols-3 gap-2 mb-2 bg-gray-50 p-3 rounded-lg border border-gray-100 relative group">
+                          {qArr.length > 1 && (
+                            <button type="button" onClick={() => {
+                              const newQ = qArr.filter((_: any, idx: number) => idx !== i);
+                              setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                            }} className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full border border-red-200 w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs">✕</button>
+                          )}
+                          <div>
+                            <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Degree / Title</span>
+                            <input type="text" className="dash-input w-full text-xs" value={q.qualification || ''} onChange={ev => {
+                              const newQ = [...qArr]; newQ[i] = {...newQ[i], qualification: ev.target.value};
+                              setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                            }} />
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Institution</span>
+                            <input type="text" className="dash-input w-full text-xs" value={q.institution || ''} onChange={ev => {
+                              const newQ = [...qArr]; newQ[i] = {...newQ[i], institution: ev.target.value};
+                              setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                            }} />
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Subject</span>
+                            <input type="text" className="dash-input w-full text-xs" value={q.subject || ''} onChange={ev => {
+                              const newQ = [...qArr]; newQ[i] = {...newQ[i], subject: ev.target.value};
+                              setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                            }} />
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => {
+                        const newQ = [...qArr, { qualification: '', institution: '', subject: '' }];
+                        setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                      }} className="text-[10px] font-bold text-paa-navy uppercase tracking-widest hover:text-paa-gold mt-1">+ Add Qualification</button>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Qualification</label>
-                  <input className="dash-input w-full" value={editProfileForm.qualification} onChange={e => setEditProfileForm({...editProfileForm, qualification: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Age</label>
-                  <input type="number" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({...editProfileForm, age: e.target.value})} />
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Date of Birth</label>
+                  <input type="date" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({...editProfileForm, age: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>
@@ -1158,8 +1145,20 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                 <textarea className="dash-input w-full resize-y" rows={2} value={editProfileForm.whyJoining} onChange={e => setEditProfileForm({...editProfileForm, whyJoining: e.target.value})} />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (150 words)</label>
-                <textarea required className="dash-input w-full" rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({...editProfileForm, bio: e.target.value})} />
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (100-150 words)</label>
+                <textarea required className={`dash-input w-full ${(() => {
+                   const c = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
+                   return (c > 0 && (c < 100 || c > 150)) ? '!border-red-500' : '';
+                })()}`} rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({...editProfileForm, bio: e.target.value})} />
+                {(() => {
+                  const count = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
+                  if (count > 0 && count < 100) return <div className="text-red-500 text-xs mt-1 font-medium">Bio must be at least 100 words.</div>;
+                  if (count > 150) return <div className="text-red-500 text-xs mt-1 font-medium">Bio cannot exceed 150 words.</div>;
+                  return null;
+                })()}
+                <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
+                  {editProfileForm.bio.split(/\s+/).filter(Boolean).length} / 150 words (min 100)
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Update Profile Photo</label>
@@ -1246,8 +1245,14 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
                 {/* Synopsis */}
                 <div>
-                  <label className="dash-label">Synopsis *</label>
-                  <textarea required className="dash-input" rows={3} placeholder="Brief description of the book" value={newBook.synopsis} onChange={e => setNewBook({...newBook, synopsis: e.target.value})} />
+                  <label className="dash-label">Synopsis (Max 100 words) *</label>
+                  <textarea required className={`dash-input ${newBook.synopsis.split(/\s+/).filter(Boolean).length > 100 ? '!border-red-500' : ''}`} rows={3} placeholder="Brief description of the book" value={newBook.synopsis} onChange={e => setNewBook({...newBook, synopsis: e.target.value})} />
+                  {newBook.synopsis.split(/\s+/).filter(Boolean).length > 100 && (
+                    <div className="text-red-500 text-xs mt-1 font-medium">Synopsis cannot exceed 100 words.</div>
+                  )}
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
+                    {newBook.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
+                  </div>
                 </div>
 
                 {/* Language, Publisher, Publication Date */}
@@ -1269,8 +1274,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                 {/* ISBN, Edition, Format */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="dash-label">ISBN</label>
-                    <input className="dash-input" placeholder="e.g. 978..." value={newBook.isbn} onChange={e => setNewBook({...newBook, isbn: e.target.value})} />
+                    <label className="dash-label">ISBN *</label>
+                    <input required className="dash-input" placeholder="e.g. 978..." value={newBook.isbn} onChange={e => setNewBook({...newBook, isbn: e.target.value})} />
                   </div>
                   <div>
                     <label className="dash-label">Edition</label>
@@ -1504,12 +1509,17 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     <input required type="number" className="dash-input" value={editingBook.stock} onChange={e => setEditingBook({...editingBook, stock: e.target.value})} />
                   </div>
                   <div>
-                    <label className="dash-label">Language</label>
-                    <input type="text" className="dash-input" value={editingBook.language} onChange={e => setEditingBook({...editingBook, language: e.target.value})} />
+                    <label className="dash-label">Language *</label>
+                    <select required className="dash-input" value={editingBook.language} onChange={e => setEditingBook({...editingBook, language: e.target.value})}>
+                      <option value="">Select Language</option>
+                      <option value="ENG">ENG</option>
+                      <option value="MAR">MAR</option>
+                      <option value="HIN">HIN</option>
+                    </select>
                   </div>
                   <div>
-                    <label className="dash-label">ISBN</label>
-                    <input type="text" className="dash-input" value={editingBook.isbn} onChange={e => setEditingBook({...editingBook, isbn: e.target.value})} />
+                    <label className="dash-label">ISBN *</label>
+                    <input required type="text" className="dash-input" value={editingBook.isbn} onChange={e => setEditingBook({...editingBook, isbn: e.target.value})} />
                   </div>
                   <div>
                     <label className="dash-label">Publisher</label>
@@ -1524,8 +1534,13 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     <input type="text" className="dash-input" value={editingBook.edition} onChange={e => setEditingBook({...editingBook, edition: e.target.value})} />
                   </div>
                   <div>
-                    <label className="dash-label">Format</label>
-                    <input type="text" className="dash-input" value={editingBook.format} onChange={e => setEditingBook({...editingBook, format: e.target.value})} />
+                    <label className="dash-label">Format *</label>
+                    <select required className="dash-input" value={editingBook.format} onChange={e => setEditingBook({...editingBook, format: e.target.value})}>
+                      <option value="">Select Format</option>
+                      <option value="Paperback">Paperback</option>
+                      <option value="Hardcover">Hardcover</option>
+                      <option value="Ebook">Ebook</option>
+                    </select>
                   </div>
                   <div>
                     <label className="dash-label">Print Format *</label>
@@ -1537,8 +1552,14 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   </div>
                 </div>
                 <div>
-                  <label className="dash-label">Synopsis</label>
-                  <textarea required className="dash-input" rows={4} value={editingBook.synopsis} onChange={e => setEditingBook({...editingBook, synopsis: e.target.value})}></textarea>
+                  <label className="dash-label">Synopsis (Max 100 words) *</label>
+                  <textarea required className={`dash-input ${editingBook.synopsis.split(/\s+/).filter(Boolean).length > 100 ? '!border-red-500' : ''}`} rows={4} value={editingBook.synopsis} onChange={e => setEditingBook({...editingBook, synopsis: e.target.value})}></textarea>
+                  {editingBook.synopsis.split(/\s+/).filter(Boolean).length > 100 && (
+                    <div className="text-red-500 text-xs mt-1 font-medium">Synopsis cannot exceed 100 words.</div>
+                  )}
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
+                    {editingBook.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
+                  </div>
                 </div>
                 {(() => {
                    const pages = Number(editingBook.pages);
@@ -3752,6 +3773,13 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: string[] = [];
+    if (!editProfileForm.name?.trim()) errors.push('Name is required');
+    if (!editProfileForm.phone?.trim()) errors.push('Phone is required');
+    if (editProfileForm.phone && !/^\d{10}$/.test(editProfileForm.phone.replace(/\D/g, ''))) errors.push('Phone must be 10 digits');
+    const bioWc = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
+    if (bioWc < 100 || bioWc > 150) errors.push(`Bio must be 100-150 words (currently ${bioWc})`);
+    if (errors.length > 0) { toast.error(`Please fix: ${errors.join(', ')}`); return; }
     try {
       setButtonStates(prev => ({...prev, editProfile: true}));
       const formData = new FormData();
@@ -3833,12 +3861,55 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Qualification</label>
-            <input className="dash-input w-full" value={editProfileForm.qualification} onChange={e => setEditProfileForm({...editProfileForm, qualification: e.target.value})} />
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Qualifications</label>
+            {(() => {
+              let qArr: any[] = [];
+              try { qArr = JSON.parse(editProfileForm.qualification || '[]'); } catch(e) {}
+              if (!Array.isArray(qArr)) qArr = [{ qualification: editProfileForm.qualification || '', institution: '', subject: '' }];
+              return (
+                <>
+                  {qArr.map((q: any, i: number) => (
+                    <div key={i} className="grid grid-cols-3 gap-2 mb-2 bg-gray-50 p-3 rounded-lg border border-gray-100 relative group">
+                      {qArr.length > 1 && (
+                        <button type="button" onClick={() => {
+                          const newQ = qArr.filter((_: any, idx: number) => idx !== i);
+                          setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                        }} className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full border border-red-200 w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs">✕</button>
+                      )}
+                      <div>
+                        <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Degree / Title</span>
+                        <input type="text" className="dash-input w-full text-xs" value={q.qualification || ''} onChange={ev => {
+                          const newQ = [...qArr]; newQ[i] = {...newQ[i], qualification: ev.target.value};
+                          setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                        }} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Institution</span>
+                        <input type="text" className="dash-input w-full text-xs" value={q.institution || ''} onChange={ev => {
+                          const newQ = [...qArr]; newQ[i] = {...newQ[i], institution: ev.target.value};
+                          setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                        }} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Subject</span>
+                        <input type="text" className="dash-input w-full text-xs" value={q.subject || ''} onChange={ev => {
+                          const newQ = [...qArr]; newQ[i] = {...newQ[i], subject: ev.target.value};
+                          setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                        }} />
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => {
+                    const newQ = [...qArr, { qualification: '', institution: '', subject: '' }];
+                    setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
+                  }} className="text-[10px] font-bold text-paa-navy uppercase tracking-widest hover:text-paa-gold mt-1">+ Add Qualification</button>
+                </>
+              );
+            })()}
           </div>
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Age</label>
-            <input type="number" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({...editProfileForm, age: e.target.value})} />
+            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Date of Birth</label>
+            <input type="date" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({...editProfileForm, age: e.target.value})} />
           </div>
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>

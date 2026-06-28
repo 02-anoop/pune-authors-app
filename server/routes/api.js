@@ -137,7 +137,7 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
   try {
     const { 
       name, email, phone, whatsapp, password, bio, penName, city, state, instagram, facebook, linkedin, youtube, 
-      qualification, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, extraData, transactionId
+      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, extraData, transactionId
     } = req.body;
     
     // Check if email already in use
@@ -169,20 +169,40 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
        });
     }
 
-    let photoUrl = null, paymentScreenshotUrl = null, qrCodeUrl = null;
+    let qualificationsArray = [];
+    if (qualifications) {
+       try { qualificationsArray = JSON.parse(qualifications); } catch(e) {}
+    } else if (qualification) {
+       qualificationsArray.push({ qualification, institution, subject });
+    }
+
+    let photoUrl = null, paymentScreenshotUrl = null, qrCodeUrl = null, certificateUrl = null;
     let covers = {};
     if (Array.isArray(req.files)) {
        for (const file of req.files) {
           if (file.fieldname === 'photo') photoUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'paymentScreenshot') paymentScreenshotUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'qrCode') qrCodeUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'certificate') certificateUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'cover') covers[0] = `/uploads/${file.filename}`;
           if (file.fieldname.startsWith('cover_')) {
              const idx = file.fieldname.split('_')[1];
              covers[idx] = `/uploads/${file.filename}`;
           }
+          if (file.fieldname.startsWith('certificate_')) {
+             const id = file.fieldname.split('_')[1];
+             const q = qualificationsArray.find(q => q.id == id);
+             if (q) q.certificateUrl = `/uploads/${file.filename}`;
+          }
        }
     }
+    
+    // Fallback logic for backward compatibility
+    if (certificateUrl && qualificationsArray.length > 0 && !qualificationsArray[0].certificateUrl) {
+       qualificationsArray[0].certificateUrl = certificateUrl;
+    }
+    
+    const finalQualificationString = JSON.stringify(qualificationsArray);
     
     // Explicitly validate payment requirements
     if (!paymentScreenshotUrl || !transactionId) {
@@ -213,7 +233,10 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
         qrCodeUrl,
         transactionId,
         paymentScreenshot: paymentScreenshotUrl,
-        qualification,
+        qualification: finalQualificationString,
+        institution: null,
+        subject: null,
+        certificateUrl: null,
         age: dob,
         experience,
         skills,
@@ -262,6 +285,110 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
     console.error(error);
     require('fs').writeFileSync('last_error.log', error.stack || error.toString());
     res.status(500).json({ error: 'Registration failed', details: error.message });
+  }
+});
+
+// Full re-application endpoint
+router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, res) => {
+  try {
+    const author = await prisma.author.findUnique({ where: { email: req.user.email }, include: { books: true } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+
+    const { 
+      name, phone, whatsapp, bio, penName, city, state, instagram, facebook, linkedin, youtube, 
+      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, extraData, transactionId
+    } = req.body;
+
+    let booksArray = [];
+    if (req.body.books) {
+      try { booksArray = JSON.parse(req.body.books); } catch(e) {}
+    }
+    if (booksArray.length === 0 && req.body.title) {
+       booksArray.push({
+         title: req.body.title, subtitle: req.body.subtitle, genre: req.body.genre, subGenre: req.body.subGenre,
+         synopsis: req.body.synopsis, pages: req.body.pages, mrp: req.body.mrp, stock: req.body.stock,
+         language: req.body.language, isbn: req.body.isbn, publisher: req.body.publisher,
+         publicationDate: req.body.publicationDate, edition: req.body.edition, format: req.body.format
+       });
+    }
+
+    let qualificationsArray = [];
+    if (qualifications) {
+       try { qualificationsArray = JSON.parse(qualifications); } catch(e) {}
+    } else if (qualification) {
+       qualificationsArray.push({ qualification, institution, subject });
+    }
+
+    let photoUrl = author.photoUrl, paymentScreenshotUrl = author.paymentScreenshot, qrCodeUrl = author.qrCodeUrl;
+    let covers = {};
+    
+    // Copy existing certificates
+    let existingQuals = [];
+    try { existingQuals = JSON.parse(author.qualification || '[]'); } catch(e) {}
+    qualificationsArray.forEach(q => {
+       const eq = existingQuals.find(ex => ex.id === q.id);
+       if (eq && eq.certificateUrl) q.certificateUrl = eq.certificateUrl;
+    });
+
+    if (Array.isArray(req.files)) {
+       for (const file of req.files) {
+          if (file.fieldname === 'photo') photoUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'paymentScreenshot') paymentScreenshotUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'qrCode') qrCodeUrl = `/uploads/${file.filename}`;
+          if (file.fieldname.startsWith('cover_')) {
+             const idx = file.fieldname.split('_')[1];
+             covers[idx] = `/uploads/${file.filename}`;
+          }
+          if (file.fieldname.startsWith('certificate_')) {
+             const id = file.fieldname.split('_')[1];
+             const q = qualificationsArray.find(q => q.id == id);
+             if (q) q.certificateUrl = `/uploads/${file.filename}`;
+          }
+       }
+    }
+    
+    const finalQualificationString = JSON.stringify(qualificationsArray);
+
+    await prisma.author.update({
+      where: { id: author.id },
+      data: {
+        name, phone, whatsapp, bio, penName, city, state, instagram, facebook,
+        photoUrl, qrCodeUrl, transactionId, paymentScreenshot: paymentScreenshotUrl,
+        qualification: finalQualificationString,
+        age: dob, experience, skills, hobbies, whyJoining, aadharNumber, address, status: 'Pending',
+        extraData: (() => {
+          let parsed = extraData ? JSON.parse(extraData) : (author.extraData || {});
+          if (linkedin) parsed.linkedin = linkedin;
+          if (youtube) parsed.youtube = youtube;
+          return parsed;
+        })()
+      }
+    });
+
+    // Update existing books instead of deleting
+    for (let i = 0; i < booksArray.length; i++) {
+       const b = booksArray[i];
+       const existingBook = author.books[i];
+       const bookData = {
+         title: b.title, subtitle: b.subtitle, genre: b.genre, subGenre: b.subGenre,
+         synopsis: b.synopsis, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
+         stock: parseInt(b.stock) || 0, language: b.language, isbn: b.isbn,
+         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format
+       };
+       if (covers[i] || (i === 0 && covers[0])) {
+          bookData.coverUrl = covers[i] || covers[0];
+       }
+       if (existingBook) {
+          await prisma.book.update({ where: { id: existingBook.id }, data: bookData });
+       } else {
+          await prisma.book.create({ data: { ...bookData, authorId: author.id, status: 'Pending' } });
+       }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Reapplication failed', details: error.message });
   }
 });
 
@@ -380,11 +507,56 @@ router.post('/api/admin/authors/:id/reject', verifyToken, isAdmin, async (req, r
   }
 });
 
-// Admin: Edit author profile (bio, name, phone, whatsapp)
+// Admin: Reject author edits (revert)
+router.post('/api/admin/authors/:id/reject-edits', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const existingAuthor = await prisma.author.findUnique({ where: { id } });
+    if (!existingAuthor) return res.status(404).json({ error: 'Not found' });
+
+    let currentExtraData = existingAuthor.extraData || {};
+    if (typeof currentExtraData === 'string') {
+        try { currentExtraData = JSON.parse(currentExtraData); } catch(e) { currentExtraData = {}; }
+    }
+    
+    let updateData = {};
+    if (currentExtraData.originalProfileData) {
+       updateData = { ...currentExtraData.originalProfileData };
+    }
+    
+    currentExtraData.hasPendingEdits = false;
+    currentExtraData.editedProfileFields = [];
+    currentExtraData.originalProfileData = {};
+
+    const author = await prisma.author.update({
+      where: { id },
+      data: {
+        ...updateData,
+        extraData: currentExtraData
+      }
+    });
+
+    res.json(author);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reject edits' });
+  }
+});
+
+
+// Admin: Edit author profile (bio, name, phone, whatsapp, etc. and books)
 router.put('/api/admin/authors/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, bio, phone, whatsapp } = req.body;
+    const { name, bio, phone, whatsapp, penName, city, state, address, aadharNumber, qualification, age, experience, skills, hobbies, instagram, facebook, whyJoining, books } = req.body;
+    const existingAuthor = await prisma.author.findUnique({ where: { id } });
+    let currentExtraData = existingAuthor.extraData || {};
+    if (typeof currentExtraData === 'string') {
+        try { currentExtraData = JSON.parse(currentExtraData); } catch(e) { currentExtraData = {}; }
+    }
+    currentExtraData.hasPendingEdits = false;
+    currentExtraData.editedProfileFields = [];
+
     const author = await prisma.author.update({
       where: { id },
       data: {
@@ -392,8 +564,49 @@ router.put('/api/admin/authors/:id', verifyToken, isAdmin, async (req, res) => {
         ...(bio !== undefined && { bio }),
         ...(phone !== undefined && { phone }),
         ...(whatsapp !== undefined && { whatsapp }),
+        ...(penName !== undefined && { penName }),
+        ...(city !== undefined && { city }),
+        ...(state !== undefined && { state }),
+        ...(address !== undefined && { address }),
+        ...(aadharNumber !== undefined && { aadharNumber }),
+        ...(qualification !== undefined && { qualification }),
+        ...(age !== undefined && { age }),
+        ...(experience !== undefined && { experience }),
+        ...(skills !== undefined && { skills }),
+        ...(hobbies !== undefined && { hobbies }),
+        ...(instagram !== undefined && { instagram }),
+        ...(facebook !== undefined && { facebook }),
+        ...(whyJoining !== undefined && { whyJoining }),
+        extraData: currentExtraData
       }
     });
+
+    if (books && Array.isArray(books)) {
+      for (const b of books) {
+        if (b.id) {
+          await prisma.book.update({
+            where: { id: parseInt(b.id) },
+            data: {
+              title: b.title,
+              subtitle: b.subtitle,
+              genre: b.genre,
+              subGenre: b.subGenre,
+              mrp: b.mrp ? parseFloat(b.mrp) : undefined,
+              language: b.language,
+              format: b.format,
+              printFormat: b.printFormat,
+              pages: b.pages ? parseInt(b.pages) : undefined,
+              publisher: b.publisher,
+              isbn: b.isbn,
+              publicationDate: b.publicationDate,
+              synopsis: b.synopsis,
+              stock: b.stock ? parseInt(b.stock) : undefined
+            }
+          });
+        }
+      }
+    }
+
     res.json(author);
   } catch (err) {
     console.error(err);
@@ -740,15 +953,27 @@ router.get('/api/admin/authors/:id/dashboard-data', verifyToken, isAdmin, async 
 
 router.post('/api/author/reapply', verifyToken, async (req, res) => {
   try {
-    const { name, phone, bio, whatsapp, transactionId, extraData } = req.body;
+    const { name, phone, bio, whatsapp, penName, city, state, address, aadharNumber, qualification, institution, subject, age, experience, skills, hobbies, transactionId, extraData } = req.body;
     let updateData = { status: 'Pending', rejectionReason: null };
     
-    if (name) updateData.name = name;
-    if (phone) updateData.phone = phone;
-    if (bio) updateData.bio = bio;
-    if (whatsapp) updateData.whatsapp = whatsapp;
-    if (transactionId) updateData.transactionId = transactionId;
-    if (extraData) updateData.extraData = extraData;
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+    if (bio !== undefined) updateData.bio = bio;
+    if (whatsapp !== undefined) updateData.whatsapp = whatsapp;
+    if (penName !== undefined) updateData.penName = penName;
+    if (city !== undefined) updateData.city = city;
+    if (state !== undefined) updateData.state = state;
+    if (address !== undefined) updateData.address = address;
+    if (aadharNumber !== undefined) updateData.aadharNumber = aadharNumber;
+    if (qualification !== undefined) updateData.qualification = qualification;
+    if (institution !== undefined) updateData.institution = institution;
+    if (subject !== undefined) updateData.subject = subject;
+    if (age !== undefined) updateData.age = age;
+    if (experience !== undefined) updateData.experience = experience;
+    if (skills !== undefined) updateData.skills = skills;
+    if (hobbies !== undefined) updateData.hobbies = hobbies;
+    if (transactionId !== undefined) updateData.transactionId = transactionId;
+    if (extraData !== undefined) updateData.extraData = extraData;
 
     const author = await prisma.author.update({
       where: { email: req.user.email },
@@ -869,7 +1094,7 @@ router.put('/api/author/inventory/:id', verifyToken, async (req, res) => {
 // Author: Update own bio / profile info
 router.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async (req, res) => {
   try {
-    const { bio, phone, whatsapp, name, penName, city, state, instagram, facebook, address, aadharNumber, qualification, age, experience, skills, hobbies, whyJoining } = req.body;
+    const { bio, phone, whatsapp, name, penName, city, state, instagram, facebook, address, aadharNumber, qualification, institution, subject, age, experience, skills, hobbies, whyJoining } = req.body;
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(403).json({ error: 'Not an author' });
 
@@ -886,6 +1111,8 @@ router.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async
       ...(address !== undefined && { address }),
       ...(aadharNumber !== undefined && { aadharNumber }),
       ...(qualification !== undefined && { qualification }),
+      ...(institution !== undefined && { institution }),
+      ...(subject !== undefined && { subject }),
       ...(age !== undefined && { age }),
       ...(experience !== undefined && { experience }),
       ...(skills !== undefined && { skills }),
@@ -893,8 +1120,37 @@ router.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async
       ...(whyJoining !== undefined && { whyJoining }),
       rejectionReason: null // Clear previous rejection if any
     };
+
+    let currentExtraData = author.extraData || {};
+    if (typeof currentExtraData === 'string') {
+        try { currentExtraData = JSON.parse(currentExtraData); } catch(e) { currentExtraData = {}; }
+    }
+    let editedFields = currentExtraData.editedProfileFields || [];
+    let originalData = currentExtraData.originalProfileData || {};
+
+    for (const key of Object.keys(updateData)) {
+      if (key === 'rejectionReason') continue;
+      if (updateData[key] !== author[key] && !editedFields.includes(key)) {
+        editedFields.push(key);
+        if (!(key in originalData)) {
+            originalData[key] = author[key];
+        }
+      }
+    }
+
     if (req.file) {
       updateData.photoUrl = `/uploads/${req.file.filename}`;
+      if (!editedFields.includes('photoUrl')) {
+          editedFields.push('photoUrl');
+          if (!('photoUrl' in originalData)) originalData['photoUrl'] = author.photoUrl;
+      }
+    }
+
+    if (editedFields.length > 0) {
+      currentExtraData.hasPendingEdits = true;
+      currentExtraData.editedProfileFields = editedFields;
+      currentExtraData.originalProfileData = originalData;
+      updateData.extraData = currentExtraData;
     }
 
     // Also update User record name and address if they changed

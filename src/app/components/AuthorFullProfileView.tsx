@@ -6,8 +6,6 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
   const [activeProfileTab, setActiveProfileTab] = useState<'profile' | 'inventory' | 'orders' | 'events' | 'distribution' | 'forms'>('profile');
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [fineAmount, setFineAmount] = useState('');
-  const [isChargingFine, setIsChargingFine] = useState(false);
   const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
   
@@ -37,33 +35,6 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
   if (!profileData) return <div className="p-8 text-center text-red-500 font-bold bg-white border border-red-200">Error loading author details.</div>;
 
   const { authorProfile, authorOrders } = profileData;
-
-  const lateDeliveryCount = authorOrders.filter((o: any) => o.dispatchedAt && (new Date(o.dispatchedAt).getTime() - new Date(o.createdAt).getTime() > 24 * 60 * 60 * 1000)).length;
-  const lateFines = authorProfile.extraData?.lateFines || 0;
-
-  const handleChargeFine = async () => {
-    if (!fineAmount || isNaN(Number(fineAmount))) {
-      alert("Please enter a valid fine amount.");
-      return;
-    }
-    const confirmCharge = window.confirm(`Are you sure you want to charge ₹${fineAmount} to this author?`);
-    if (!confirmCharge) return;
-    setIsChargingFine(true);
-    try {
-      await axios.post(`${API}/api/admin/authors/${author.id}/fine`, { amount: Number(fineAmount) }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      alert('Fine applied successfully.');
-      setFineAmount('');
-      const res = await axios.get(`${API}/api/admin/authors/${author.id}/dashboard-data`);
-      setProfileData(res.data);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to apply fine.');
-    } finally {
-      setIsChargingFine(false);
-    }
-  };
 
   return (
     <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
@@ -104,34 +75,45 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Phone / WhatsApp</span><span className="text-sm text-paa-navy font-medium">{authorProfile.phone} {authorProfile.whatsapp ? `/ ${authorProfile.whatsapp}` : ''}</span></div>
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Location</span><span className="text-sm text-paa-navy font-medium">{authorProfile.city ? `${authorProfile.city}, ${authorProfile.state}` : '-'}</span></div>
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Social Profiles</span>
-                <span className="text-sm text-paa-navy font-medium block">{authorProfile.instagram && <a href={authorProfile.instagram} target="_blank" className="text-blue-600 hover:underline">Instagram</a>} {authorProfile.facebook && <a href={authorProfile.facebook} target="_blank" className="text-blue-600 hover:underline ml-2">Facebook/LinkedIn</a>} {!authorProfile.instagram && !authorProfile.facebook && '-'}</span>
+                <span className="text-sm text-paa-navy font-medium flex gap-3 flex-wrap">
+                   {authorProfile.instagram && <a href={authorProfile.instagram} target="_blank" className="text-blue-600 hover:underline">Instagram</a>} 
+                   {authorProfile.facebook && <a href={authorProfile.facebook} target="_blank" className="text-blue-600 hover:underline">Facebook</a>}
+                   {authorProfile.extraData?.linkedin && <a href={authorProfile.extraData.linkedin} target="_blank" className="text-blue-600 hover:underline">LinkedIn</a>}
+                   {authorProfile.extraData?.youtube && <a href={authorProfile.extraData.youtube} target="_blank" className="text-blue-600 hover:underline">YouTube</a>}
+                   {!authorProfile.instagram && !authorProfile.facebook && !authorProfile.extraData?.linkedin && !authorProfile.extraData?.youtube && '-'}
+                </span>
               </div>
               <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Full Address</span><span className="text-sm text-paa-navy font-medium">{authorProfile.address || '-'}</span></div>
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Aadhar Number</span><span className="text-sm text-paa-navy font-medium">{authorProfile.aadharNumber || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Age</span><span className="text-sm text-paa-navy font-medium">{authorProfile.age || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Qualification</span><span className="text-sm text-paa-navy font-medium">{authorProfile.qualification || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">DOB</span><span className="text-sm text-paa-navy font-medium">{authorProfile.age || '-'}</span></div>
+              <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Qualifications</span>
+                {(() => {
+                   let qText = authorProfile.qualification || '-';
+                   try {
+                     const qArr = JSON.parse(authorProfile.qualification);
+                     if (Array.isArray(qArr)) {
+                        return (
+                          <div className="space-y-2 mt-1">
+                            {qArr.map((q: any, i: number) => (
+                               <div key={i} className="bg-gray-50 p-2 border border-gray-100 rounded text-sm text-paa-navy">
+                                 <strong>{q.qualification}</strong> at {q.institution} ({q.subject}) {q.certificateUrl && <a href={API + q.certificateUrl} target="_blank" className="text-blue-600 ml-2 hover:underline font-bold text-xs">View Certificate</a>}
+                               </div>
+                            ))}
+                          </div>
+                        );
+                     }
+                   } catch(e) {}
+                   return <span className="text-sm text-paa-navy font-medium block whitespace-pre-wrap">{qText}</span>;
+                })()}
+              </div>
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Experience</span><span className="text-sm text-paa-navy font-medium">{authorProfile.experience || '-'}</span></div>
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Skills</span><span className="text-sm text-paa-navy font-medium">{authorProfile.skills || '-'}</span></div>
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Hobbies</span><span className="text-sm text-paa-navy font-medium">{authorProfile.hobbies || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Transaction ID</span><span className="text-sm text-paa-navy font-medium">{authorProfile.transactionId || '-'}</span></div>
               <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Bio</span><span className="text-sm text-paa-navy font-medium block whitespace-pre-wrap">{authorProfile.bio || '-'}</span></div>
               <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Why Joining? (If traditionally published)</span><span className="text-sm text-paa-navy font-medium block whitespace-pre-wrap">{authorProfile.whyJoining || '-'}</span></div>
             </div>
           </div>
-          
-          <div className="bg-white border border-red-500/20 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out mt-6">
-            <h3 className="text-2xl font-serif font-semibold text-red-600 tracking-tight mb-4 border-l-4 border-red-500 pl-2">Delivery Performance</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
-              <div><span className="text-xs font-bold text-red-500 uppercase block mb-1">Late Deliveries (&gt;24 Hrs)</span><span className="text-xl text-red-600 font-bold">{lateDeliveryCount}</span></div>
-              <div><span className="text-xs font-bold text-red-500 uppercase block mb-1">Total Late Fines</span><span className="text-xl text-red-600 font-bold">₹{lateFines}</span></div>
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <input type="number" placeholder="Enter Amount (₹)" value={fineAmount} onChange={e => setFineAmount(e.target.value)} className="dash-input w-48 text-sm" />
-              <button onClick={handleChargeFine} disabled={isChargingFine} className="px-6 py-2 bg-red-600 text-white text-xs font-bold tracking-widest uppercase hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50">
-                 {isChargingFine ? 'Charging...' : 'Charge Fine'}
-              </button>
-            </div>
-          </div>
+
           
           <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>

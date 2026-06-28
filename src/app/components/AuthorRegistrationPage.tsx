@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import qrCode from "./data/qr_code.jpeg";
 import { bookCategories } from "../data/categories";
-import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff } from "lucide-react";
+import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X } from "lucide-react";
 
 const steps = [
   { title: "Author Profile", icon: <User size={18} />, desc: "Personal information and bio" },
@@ -18,7 +18,7 @@ const genreOptions = [
   { code: "C", label: "Children's", color: "#16a34a" },
 ];
 
-export function AuthorRegistrationPage() {
+export function AuthorRegistrationPage({ initialData, isReapply = false, onReapplySuccess }: any = {}) {
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +30,7 @@ export function AuthorRegistrationPage() {
   const [paymentBlob, setPaymentBlob] = useState<File | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [qrCodeBlob, setQrCodeBlob] = useState<File | null>(null);
+  const [qualifications, setQualifications] = useState<any[]>([{ id: Date.now(), qualification: "", institution: "", subject: "", certificateUrl: "", certificateBlob: null }]);
   const [dynamicFields, setDynamicFields] = useState<any[]>([]);
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [books, setBooks] = useState<any[]>([]);
@@ -38,6 +39,7 @@ export function AuthorRegistrationPage() {
   // Modals for guidelines
   const [showGuidelines, setShowGuidelines] = useState(false);
   const [showInfoDoc, setShowInfoDoc] = useState(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author-fields`)
@@ -46,7 +48,94 @@ export function AuthorRegistrationPage() {
         setDynamicFields(requiredFields);
       })
       .catch(console.error);
-  }, []);
+      
+    if (isReapply && initialData && !hasInitialized.current) {
+       hasInitialized.current = true;
+       let parsedQuals = [];
+       try { parsedQuals = JSON.parse(initialData.qualification); } catch(e) {}
+       if (!Array.isArray(parsedQuals) || parsedQuals.length === 0) parsedQuals = [{ id: Date.now(), qualification: "", institution: "", subject: "", certificateUrl: "", certificateBlob: null }];
+       setQualifications(parsedQuals);
+       
+       if (initialData.books && initialData.books.length > 0) {
+          const firstBook = initialData.books[0];
+          setForm(prev => ({
+             ...prev,
+             name: initialData.name || "",
+             email: initialData.email || "",
+             phone: initialData.phone || "",
+             whatsapp: initialData.whatsapp || "",
+             address: initialData.address || "",
+             aadharNumber: initialData.aadharNumber || "",
+             dob: initialData.age || "",
+             experience: initialData.experience || "",
+             skills: initialData.skills || "",
+             hobbies: initialData.hobbies || "",
+             whyJoining: initialData.whyJoining || "",
+             bio: initialData.bio || "",
+             penName: initialData.penName || "",
+             city: initialData.city || "",
+             state: initialData.state || "",
+             instagram: initialData.instagram || "",
+             facebook: initialData.facebook || "",
+             transactionId: initialData.transactionId || "",
+             
+             // book 1 prefill
+             title: firstBook.title || "",
+             subtitle: firstBook.subtitle || "",
+             genre: firstBook.genre || "",
+             subcategory: firstBook.subGenre ? firstBook.subGenre.split(' > ')[0] : "",
+             subSubcategory: firstBook.subGenre && firstBook.subGenre.includes(' > ') ? firstBook.subGenre.split(' > ')[1] : "",
+             synopsis: firstBook.synopsis || "",
+             pages: firstBook.pages || "",
+             mrp: firstBook.mrp || "",
+             stock: firstBook.stock || "0",
+             language: firstBook.language || "",
+             isbn: firstBook.isbn || "",
+             publisher: firstBook.publisher || "",
+             publicationDate: firstBook.publicationDate || "",
+             edition: firstBook.edition || "",
+             format: firstBook.format || "",
+             printFormat: firstBook.printFormat || ""
+          }));
+          if (initialData.books.length > 1) {
+             setBooks(initialData.books.slice(1).map((b: any) => ({
+                ...b,
+                subcategory: b.subGenre ? b.subGenre.split(' > ')[0] : "",
+                subSubcategory: b.subGenre && b.subGenre.includes(' > ') ? b.subGenre.split(' > ')[1] : ""
+             })));
+          }
+          if (firstBook.coverUrl) setCoverFileUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${firstBook.coverUrl}`);
+       } else {
+          setForm(prev => ({
+             ...prev,
+             name: initialData.name || "",
+             email: initialData.email || "",
+             phone: initialData.phone || "",
+             whatsapp: initialData.whatsapp || "",
+             address: initialData.address || "",
+             aadharNumber: initialData.aadharNumber || "",
+             dob: initialData.age || "",
+             experience: initialData.experience || "",
+             skills: initialData.skills || "",
+             hobbies: initialData.hobbies || "",
+             whyJoining: initialData.whyJoining || "",
+             bio: initialData.bio || "",
+             penName: initialData.penName || "",
+             city: initialData.city || "",
+             state: initialData.state || "",
+             instagram: initialData.instagram || "",
+             facebook: initialData.facebook || "",
+             transactionId: initialData.transactionId || ""
+          }));
+       }
+       if (initialData.extraData) {
+          setExtraDataState(initialData.extraData);
+       }
+       if (initialData.photoUrl) setAuthorPhotoUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.photoUrl}`);
+       if (initialData.paymentScreenshot) setPaymentScreenshotUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.paymentScreenshot}`);
+       if (initialData.qrCodeUrl) setQrCodeUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.qrCodeUrl}`);
+    }
+  }, [isReapply, initialData]);
 
 
   const [form, setForm] = useState({
@@ -57,7 +146,6 @@ export function AuthorRegistrationPage() {
     whatsapp: "",
     address: "",
     aadharNumber: "",
-    qualification: "",
     dob: "",
     experience: "",
     skills: "",
@@ -101,30 +189,41 @@ export function AuthorRegistrationPage() {
     let error = "";
     if (key === "name" && !value) error = "Name is required.";
     if (key === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value as string)) error = "Invalid email address.";
-    if (key === "password" && (value as string).length < 6) error = "Password must be at least 6 characters.";
+    if (!isReapply && key === "password" && (value as string).length < 6) error = "Password must be at least 6 characters.";
     if (key === "phone" && !/^\d{10}$/.test((value as string).replace(/\D/g, ''))) error = "Must be a 10-digit number.";
     if (key === "address" && !value) error = "Full Address is required.";
     if (key === "aadharNumber" && !value) error = "Aadhar Number is required.";
-    if (key === "qualification" && !value) error = "Qualification is required.";
     if (key === "dob" && !value) error = "Date of Birth is required.";
     if (key === "experience" && !value) error = "Experience is required.";
     if (key === "skills" && !value) error = "Skills are required.";
     if (key === "hobbies" && !value) error = "Hobbies are required.";
-    if (key === "bio" && !value) error = "Bio is required.";
+    if (key === "bio") {
+      if (!value) error = "Bio is required.";
+      else {
+        const wordCount = String(value).split(/\s+/).filter(Boolean).length;
+        if (wordCount < 100) error = "Bio must be at least 100 words.";
+        if (wordCount > 150) error = "Bio cannot exceed 150 words.";
+      }
+    }
     if (key === "city" && !value) error = "City is required.";
     if (key === "state" && !value) error = "State is required.";
 
     // For book details
     if (key === "title" && !value) error = "Title is required.";
     if (key === "genre" && !value) error = "Category is required.";
-    if (key === "synopsis" && !value) error = "Synopsis is required.";
+    if (key === "synopsis") {
+      if (!value) error = "Synopsis is required.";
+      else if (String(value).split(/\s+/).filter(Boolean).length > 100) error = "Synopsis cannot exceed 100 words.";
+    }
     if (key === "mrp" && (!value || Number(value) <= 0)) error = "Valid MRP is required.";
     if (key === "pages" && (!value || Number(value) <= 0)) error = "Number of Pages is required.";
     if (key === "language" && !value) error = "Language is required.";
+    if (key === "isbn" && !value) error = "ISBN is required.";
     if (key === "publisher" && !value) error = "Publisher is required.";
     if (key === "publicationDate" && !value) error = "Publication Date is required.";
     if (key === "format" && !value) error = "Book Format is required.";
     if (key === "printFormat" && !value) error = "Print Format is required.";
+    if (key === "purposeOfWriting" && !value) error = "Purpose of Writing is required.";
 
     // Questionnaire
     if (key === "conflictOfInterestSignature" && !value) error = "Signature is required.";
@@ -208,16 +307,25 @@ export function AuthorRegistrationPage() {
                       <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''}`} placeholder="10-digit mobile number" />
                       {errors.phone && <div className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</div>}
                     </div>
-                    <div>
-                      <label className="dash-label">Password (For Login) *</label>
-                      <div className="relative">
-                        <input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => update("password", e.target.value)} className={`dash-input w-full pr-10 ${errors.password ? '!border-red-500' : ''}`} placeholder="Min 6 characters" />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-0 bottom-0 flex items-center justify-center text-gray-400 hover:text-paa-navy transition-colors">
-                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
+                    {/* Password field only shown if NOT reapplying */}
+                    {!isReapply && (
+                      <div>
+                        <label className="dash-label">Password (For Login) *</label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            value={form.password}
+                            onChange={(e) => update("password", e.target.value)}
+                            className={`dash-input w-full pr-10 ${errors.password ? '!border-red-500' : ''}`}
+                            placeholder="Min 6 characters"
+                          />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-0 bottom-0 flex items-center justify-center text-gray-400 hover:text-paa-navy transition-colors">
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        {errors.password && <div className="text-red-500 text-xs mt-1 font-medium">{errors.password}</div>}
                       </div>
-                      {errors.password && <div className="text-red-500 text-xs mt-1 font-medium">{errors.password}</div>}
-                    </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -269,12 +377,50 @@ export function AuthorRegistrationPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <label className="dash-label">Qualification *</label>
-                      <input type="text" value={form.qualification} onChange={(e) => update("qualification", e.target.value)} className={`dash-input w-full ${errors.qualification ? '!border-red-500' : ''}`} placeholder="e.g. MA English" />
-                      {errors.qualification && <div className="text-red-500 text-xs mt-1 font-medium">{errors.qualification}</div>}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="dash-label mb-0 text-lg font-serif">Qualifications</label>
+                      <button type="button" onClick={() => setQualifications([...qualifications, { id: Date.now(), qualification: "", institution: "", subject: "", certificateUrl: "", certificateBlob: null }])} className="text-xs font-bold uppercase tracking-widest text-paa-navy hover:text-paa-gold flex items-center gap-1"><Plus size={14}/> Add Another</button>
                     </div>
+                    {qualifications.map((q, idx) => (
+                      <div key={q.id} className="p-4 border border-paa-navy/10 rounded-2xl bg-white shadow-sm space-y-4 relative">
+                        {qualifications.length > 1 && (
+                          <button type="button" onClick={() => setQualifications(qualifications.filter((_, i) => i !== idx))} className="absolute top-4 right-4 text-red-500 hover:text-red-700 flex items-center gap-1">
+                            <span className="text-[10px] font-bold">REMOVE</span>
+                          </button>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div>
+                            <label className="dash-label">Qualification *</label>
+                            <input type="text" value={q.qualification} onChange={(e) => { const n = [...qualifications]; n[idx].qualification = e.target.value; setQualifications(n); }} className={`dash-input w-full ${!q.qualification ? '!border-red-500' : ''}`} placeholder="e.g. BE, MA" />
+                          </div>
+                          <div>
+                            <label className="dash-label">Institution *</label>
+                            <input type="text" value={q.institution} onChange={(e) => { const n = [...qualifications]; n[idx].institution = e.target.value; setQualifications(n); }} className={`dash-input w-full ${!q.institution ? '!border-red-500' : ''}`} placeholder="e.g. Pune University" />
+                          </div>
+                          <div>
+                            <label className="dash-label">Subject *</label>
+                            <input type="text" value={q.subject} onChange={(e) => { const n = [...qualifications]; n[idx].subject = e.target.value; setQualifications(n); }} className={`dash-input w-full ${!q.subject ? '!border-red-500' : ''}`} placeholder="e.g. Computer Science" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="dash-label">Upload Certificate (Optional)</label>
+                          <input type="file" accept="image/*,application/pdf" onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const n = [...qualifications];
+                              n[idx].certificateBlob = file;
+                              n[idx].certificateUrl = URL.createObjectURL(file);
+                              setQualifications(n);
+                            }
+                          }} className="text-xs w-full block"/>
+                          {q.certificateUrl && <span className="text-[10px] text-emerald-600 block mt-2 font-bold uppercase tracking-widest">Certificate Selected</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Date of Birth *</label>
                       <input type="date" value={form.dob} onChange={(e) => update("dob", e.target.value)} className={`dash-input w-full ${errors.dob ? '!border-red-500' : ''}`} />
@@ -301,7 +447,7 @@ export function AuthorRegistrationPage() {
                   </div>
 
                   <div>
-                    <label className="dash-label">Author Bio (150 words) *</label>
+                    <label className="dash-label">Author Bio (100-150 words) *</label>
                     <textarea
                       placeholder="Tell us a little bit about yourself, your background, and your journey as a writer..."
                       value={form.bio}
@@ -312,7 +458,7 @@ export function AuthorRegistrationPage() {
                     <div className="flex justify-between items-start mt-1">
                       {errors.bio ? <div className="text-red-500 text-xs font-medium">{errors.bio}</div> : <div></div>}
                       <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">
-                        {form.bio.split(/\s+/).filter(Boolean).length} / 150 words
+                        {form.bio.split(/\s+/).filter(Boolean).length} / 150 words (min 100)
                       </div>
                     </div>
                   </div>
@@ -338,7 +484,7 @@ export function AuthorRegistrationPage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6">
                     {/* Author photo upload */}
                     <div>
                       <label className="dash-label">Author Photo *</label>
@@ -408,9 +554,10 @@ export function AuthorRegistrationPage() {
                         }}
                       />
                     </div>
-                  </div>
+
                 </div>
               </div>
+            </div>
             )}
 
             {/* Step 1: Book Details */}
@@ -423,12 +570,15 @@ export function AuthorRegistrationPage() {
                   <div className="mb-8 flex flex-col gap-3">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Added Books ({books.length})</h3>
                     {books.map((b, idx) => (
-                      <div key={idx} className="bg-gray-50 p-4 rounded-2xl border border-paa-navy/10 flex justify-between items-center shadow-sm">
-                        <div>
-                          <div className="font-bold text-paa-navy text-sm mb-0.5">{b.title}</div>
+                      <div key={idx} className="bg-gray-50 p-4 rounded-2xl border border-paa-navy/10 flex items-center gap-3 shadow-sm">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-paa-navy text-sm mb-0.5 truncate">{b.title}</div>
                           <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">{b.genre} {b.subcategory && `> ${b.subcategory}`}</div>
                         </div>
-                        {b.coverFileUrl && <img src={b.coverFileUrl} alt="cover" className="h-12 w-9 object-cover rounded shadow-sm border border-paa-navy/10" />}
+                        {(b.coverFileUrl || b.coverUrl) && <img src={b.coverFileUrl || `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${b.coverUrl}`} alt="cover" className="h-12 w-9 object-cover rounded shadow-sm border border-paa-navy/10 flex-shrink-0" />}
+                        <button type="button" onClick={() => setBooks(books.filter((_, i2) => i2 !== idx))} className="flex-shrink-0 w-7 h-7 rounded-full bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-600 flex items-center justify-center transition-colors" title="Remove book">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -521,8 +671,9 @@ export function AuthorRegistrationPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
-                      <label className="dash-label">ISBN Number</label>
-                      <input type="text" placeholder="e.g. 978-3-16-148410-0" value={form.isbn} onChange={(e) => update("isbn", e.target.value)} className="dash-input w-full" />
+                      <label className="dash-label">ISBN Number *</label>
+                      <input type="text" placeholder="e.g. 978-3-16-148410-0" value={form.isbn} onChange={(e) => update("isbn", e.target.value)} className={`dash-input w-full ${errors.isbn ? '!border-red-500' : ''}`} />
+                      {errors.isbn && <div className="text-red-500 text-xs mt-1 font-medium">{errors.isbn}</div>}
                     </div>
                     <div>
                       <label className="dash-label">Edition</label>
@@ -614,12 +765,43 @@ export function AuthorRegistrationPage() {
                     />
                   </div>
 
-                  <div className="flex justify-end mt-4">
+                  <div className="flex justify-end mt-4 gap-3">
+                    {books.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "" });
+                          setCoverBlob(null);
+                          setCoverFileUrl(null);
+                          setStep(2);
+                        }}
+                        className="px-4 py-2 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                      >
+                        <X className="w-3 h-3" /> Cancel & Continue
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
-                        if (!form.title || !form.genre || !form.synopsis || !form.mrp || !form.language || !form.publisher || !form.publicationDate || !form.format || !form.printFormat || !form.pages || !coverBlob) {
-                          alert("Please fill all compulsory fields and upload a cover to add this book.");
+                        const missingBookFields = [];
+                        if (!form.title) missingBookFields.push('Title');
+                        if (!form.genre) missingBookFields.push('Category');
+                        if (!form.synopsis) missingBookFields.push('Synopsis');
+                        if (!form.mrp) missingBookFields.push('MRP');
+                        if (!form.language) missingBookFields.push('Language');
+                        if (!form.publisher) missingBookFields.push('Publisher');
+                        if (!form.publicationDate) missingBookFields.push('Publication Date');
+                        if (!form.format) missingBookFields.push('Format');
+                        if (!form.printFormat) missingBookFields.push('Print Format');
+                        if (!form.pages) missingBookFields.push('Pages');
+                        if (!form.isbn) missingBookFields.push('ISBN');
+                        if (!coverBlob && !coverFileUrl) missingBookFields.push('Cover Image');
+                        if (missingBookFields.length > 0) {
+                          alert(`Please fill these missing fields: ${missingBookFields.join(', ')}`);
+                          return;
+                        }
+                        if (form.synopsis.split(/\s+/).filter(Boolean).length > 100) {
+                          alert("Synopsis cannot exceed 100 words.");
                           return;
                         }
                         setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
@@ -753,11 +935,38 @@ export function AuthorRegistrationPage() {
               {step < steps.length - 1 ? (
                 <button
                   onClick={() => {
-                    if (step === 1 && form.title && form.genre && form.mrp) {
-                      setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
-                      setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "" });
-                      setCoverBlob(null);
-                      setCoverFileUrl(null);
+                    if (step === 1) {
+                      const hasPartialBook = form.title || form.genre || form.synopsis || form.mrp || form.pages || form.isbn;
+                      if (hasPartialBook) {
+                        const missingContinueFields = [];
+                        if (!form.title) missingContinueFields.push('Title');
+                        if (!form.genre) missingContinueFields.push('Category');
+                        if (!form.synopsis) missingContinueFields.push('Synopsis');
+                        if (!form.mrp) missingContinueFields.push('MRP');
+                        if (!form.language) missingContinueFields.push('Language');
+                        if (!form.publisher) missingContinueFields.push('Publisher');
+                        if (!form.publicationDate) missingContinueFields.push('Publication Date');
+                        if (!form.format) missingContinueFields.push('Format');
+                        if (!form.printFormat) missingContinueFields.push('Print Format');
+                        if (!form.pages) missingContinueFields.push('Pages');
+                        if (!form.isbn) missingContinueFields.push('ISBN');
+                        if (!coverBlob && !coverFileUrl) missingContinueFields.push('Cover Image');
+                        if (missingContinueFields.length > 0) {
+                          alert(`Please fill these missing fields: ${missingContinueFields.join(', ')}`);
+                          return;
+                        }
+                        if (form.synopsis.split(/\s+/).filter(Boolean).length > 100) {
+                          alert("Synopsis cannot exceed 100 words.");
+                          return;
+                        }
+                        setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
+                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "" });
+                        setCoverBlob(null);
+                        setCoverFileUrl(null);
+                      } else if (books.length === 0) {
+                        alert("Please fill all compulsory fields for at least one book.");
+                        return;
+                      }
                     }
                     setStep((s) => Math.min(steps.length - 1, s + 1));
                   }}
@@ -771,11 +980,26 @@ export function AuthorRegistrationPage() {
                   onClick={async () => {
 
                     // Step 0 Validations
-                    if (!form.name || !form.email || !form.phone || !form.password || !form.bio || !authorBlob) {
+                    const bioWordCount = form.bio.split(/\s+/).filter(Boolean).length;
+                    const missingProfileFields = [];
+                    if (!form.name) missingProfileFields.push('Name');
+                    if (!form.email) missingProfileFields.push('Email');
+                    if (!form.phone) missingProfileFields.push('Phone');
+                    if (!isReapply && !form.password) missingProfileFields.push('Password');
+                    if (!form.bio) missingProfileFields.push('Bio');
+                    if (form.bio && (bioWordCount < 100 || bioWordCount > 150)) missingProfileFields.push(`Bio word count (currently ${bioWordCount}, needs 100-150)`);
+                    if (!authorBlob && !authorPhotoUrl) missingProfileFields.push('Author Photo');
+                    if (missingProfileFields.length > 0) {
                       setStep(0);
-                      alert("Please fill all compulsory fields in the Author Profile step and upload an author photo."); return;
+                      alert(`Author Profile: Please fix these fields — ${missingProfileFields.join(', ')}`); return;
                     }
-                    if (!qrCodeBlob) {
+                    for (const q of qualifications) {
+                      if (!q.qualification || !q.institution || !q.subject) {
+                        setStep(0);
+                        alert("Please fill all qualification fields (Qualification, Institution, Subject) correctly."); return;
+                      }
+                    }
+                    if (!qrCodeBlob && !qrCodeUrl) {
                       setStep(0);
                       alert("Please upload your Payment QR Code."); return;
                     }
@@ -797,10 +1021,11 @@ export function AuthorRegistrationPage() {
                     }
 
                     // Step 1 Validations
-                    const hasBook = books.length > 0 || (form.title && form.genre && form.mrp && coverBlob && form.purposeOfWriting);
+                    const hasFirstBook = form.title && form.genre && form.mrp && (coverBlob || coverFileUrl) && form.purposeOfWriting && form.pages && form.isbn && form.synopsis.split(/\s+/).filter(Boolean).length <= 100;
+                    const hasBook = books.length > 0 || hasFirstBook;
                     if (!hasBook) {
                       setStep(1);
-                      alert("Please fill all compulsory fields for at least one book (including the purpose of writing) and upload a cover."); return;
+                      alert("Please fill all compulsory fields for at least one book (including ISBN, Pages, and purpose of writing) and upload a cover."); return;
                     }
 
                     // Step 2 Validations
@@ -810,8 +1035,11 @@ export function AuthorRegistrationPage() {
                     }
 
                     // Step 3 Validations
-                    if (!form.transactionId || !paymentBlob) {
-                      alert("Please provide the transaction ID and upload the payment screenshot.");
+                    const missingPaymentFields = [];
+                    if (!form.transactionId) missingPaymentFields.push('Transaction ID');
+                    if (!paymentBlob && !paymentScreenshotUrl) missingPaymentFields.push('Payment Screenshot');
+                    if (missingPaymentFields.length > 0) {
+                      alert(`Payment: Please provide — ${missingPaymentFields.join(', ')}`);
                       return;
                     }
 
@@ -859,13 +1087,32 @@ export function AuthorRegistrationPage() {
 
                       if (paymentBlob) formData.append("paymentScreenshot", paymentBlob);
                       if (qrCodeBlob) formData.append("qrCode", qrCodeBlob);
+                      
+                      formData.append("qualifications", JSON.stringify(qualifications.map(q => ({
+                        id: q.id,
+                        qualification: q.qualification,
+                        institution: q.institution,
+                        subject: q.subject
+                      }))));
+                      qualifications.forEach(q => {
+                        if (q.certificateBlob) formData.append(`certificate_${q.id}`, q.certificateBlob);
+                      });
+
                       if (Object.keys(extraDataState).length > 0) {
                         formData.append("extraData", JSON.stringify(extraDataState));
                       }
 
-
-                      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/authors/register`, formData);
+                      let res;
+                      if (isReapply) {
+                        res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author/reapply-full`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+                      } else {
+                        res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/authors/register`, formData);
+                      }
+                      
                       setSubmitted(true);
+                      if (isReapply && onReapplySuccess) {
+                        onReapplySuccess();
+                      }
                     } catch (e: any) {
                       const msg = e.response?.data?.error || e.message || "Unknown error";
                       const details = e.response?.data?.details || "";
@@ -888,9 +1135,13 @@ export function AuthorRegistrationPage() {
             <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
               <CheckCircle className="w-10 h-10 text-emerald-500" />
             </div>
-            <h2 className="font-serif text-3xl font-medium text-paa-navy mb-3">Application Submitted!</h2>
+            <h2 className="font-serif text-3xl font-medium text-paa-navy mb-3">{isReapply ? "Application Resubmitted!" : "Application Submitted!"}</h2>
             <p className="text-sm text-paa-gray-text leading-relaxed max-w-md mx-auto mb-8">
-              Thank you, <strong className="text-paa-navy font-bold">{form.name || "Author"}</strong>! Your application for <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em> has been received. <br /><br />
+              Thank you, <strong className="text-paa-navy font-bold">{form.name || "Author"}</strong>! 
+              {` Your ${isReapply ? "updated " : ""}application for `}
+              <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em>
+              {` has been received. `}
+              <br /><br />
               <strong className="text-paa-gold">Approval Pending:</strong> You must wait for the Admin to approve your account. Once approved, you will be able to log in to your Author Dashboard.
             </p>
 

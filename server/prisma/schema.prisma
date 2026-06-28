@@ -41,6 +41,9 @@ model Author {
   extraData          Json?
   qrCodeUrl          String?
   qualification      String?
+  institution        String?
+  subject            String?
+  certificateUrl     String?
   age                String?
   experience         String?
   skills             String?

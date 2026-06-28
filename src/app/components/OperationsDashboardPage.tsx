@@ -31,7 +31,7 @@ axios.interceptors.request.use((config) => {
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
       localStorage.removeItem('token');
       localStorage.removeItem('userRole');
       window.location.href = '/login';
@@ -563,21 +563,58 @@ export function OperationsDashboardPage() {
   };
 
   const handleEditAuthorClick = (author: any) => {
-    setEditingAuthor({ id: author.id, name: author.name, bio: author.bio || '', phone: author.phone || '', whatsapp: author.whatsapp || '' });
+    setEditingAuthor({ 
+      id: author.id, 
+      name: author.name, 
+      bio: author.bio || '', 
+      phone: author.phone || '', 
+      whatsapp: author.whatsapp || '',
+      penName: author.penName || '',
+      city: author.city || '',
+      state: author.state || '',
+      address: author.address || '',
+      aadharNumber: author.aadharNumber || '',
+      qualification: author.qualification || '',
+      age: author.age || '',
+      experience: author.experience || '',
+      skills: author.skills || '',
+      hobbies: author.hobbies || '',
+      instagram: author.instagram || '',
+      facebook: author.facebook || '',
+      whyJoining: author.whyJoining || '',
+      books: author.books || []
+    });
     setIsEditAuthorModalOpen(true);
   };
 
-  const handleUpdateAuthor = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpdateAuthor = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!editingAuthor) return;
+
+    // Validation
+    const errors: string[] = [];
+    if (!editingAuthor.name?.trim()) errors.push('Name is required');
+    if (!editingAuthor.phone?.trim()) errors.push('Phone is required');
+    if (editingAuthor.phone && !/^\d{10}$/.test(editingAuthor.phone.replace(/\D/g, ''))) errors.push('Phone must be 10 digits');
+    if (editingAuthor.email && !/^\S+@\S+\.\S+$/.test(editingAuthor.email)) errors.push('Invalid email format');
+    const bioWords = editingAuthor.bio?.split(/\s+/).filter(Boolean).length || 0;
+    if (editingAuthor.bio && (bioWords < 100 || bioWords > 150)) errors.push(`Bio must be 100-150 words (currently ${bioWords})`);
+    if (editingAuthor.books && editingAuthor.books.length > 0) {
+      editingAuthor.books.forEach((b: any, i: number) => {
+        if (!b.title?.trim()) errors.push(`Book ${i + 1}: Title is required`);
+        if (!b.genre?.trim()) errors.push(`Book ${i + 1}: Genre is required`);
+        if (!b.mrp) errors.push(`Book ${i + 1}: MRP is required`);
+        if (!b.pages) errors.push(`Book ${i + 1}: Pages is required`);
+      });
+    }
+    if (errors.length > 0) {
+      alert(`Please fix the following:\n\n${errors.join('\n')}`);
+      return;
+    }
+
     setLoadingAction('updateAuthor');
     try {
-      await axios.put(`${API}/api/admin/authors/${editingAuthor.id}`, {
-        name: editingAuthor.name,
-        bio: editingAuthor.bio,
-        phone: editingAuthor.phone,
-        whatsapp: editingAuthor.whatsapp,
-      });
+      await axios.put(`${API}/api/admin/authors/${editingAuthor.id}`, editingAuthor);
       setIsEditAuthorModalOpen(false);
       setEditingAuthor(null);
       fetchAuthors();
@@ -843,6 +880,34 @@ export function OperationsDashboardPage() {
            await axios.post(`${API}/api/admin/authors/${b.authorId}/notify-low-stock`, { bookId: b.id || b.dbId, title: b.title }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
          } catch(e) {}
        }
+    };
+
+    const handleRejectEdits = async () => {
+      if (!editingAuthor) return;
+      setLoadingAction('rejectEdits');
+      try {
+        await axios.post(`${API}/api/admin/authors/${editingAuthor.id}/reject-edits`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+        toast.success('Author edits rejected (reverted)');
+        setIsEditAuthorModalOpen(false);
+        fetchDashboardData();
+      } catch (err) {
+        toast.error('Failed to reject edits');
+      } finally {
+        setLoadingAction(null);
+      }
+    };
+
+    const handleRejectEditsDirect = async (id: number) => {
+      setLoadingAction('rejectEdits_' + id);
+      try {
+        await axios.post(`${API}/api/admin/authors/${id}/reject-edits`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+        toast.success('Author edits rejected (reverted)');
+        fetchDashboardData();
+      } catch (err) {
+        toast.error('Failed to reject edits');
+      } finally {
+        setLoadingAction(null);
+      }
     };
 
     const handleNotifySingleBook = async (b: any) => {
@@ -2160,7 +2225,18 @@ export function OperationsDashboardPage() {
                         {author.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-bold text-paa-navy">{author.name}</p>
+                        <p className="font-bold text-paa-navy flex items-center">
+                          {author.name}
+                          {(() => {
+                            let ed = author.extraData;
+                            if (typeof ed === 'string') {
+                              try { ed = JSON.parse(ed); } catch(e) {}
+                            }
+                            return ed?.hasPendingEdits && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[9px] uppercase tracking-wider font-bold rounded-full">Edited</span>
+                            );
+                          })()}
+                        </p>
                         <p className="text-xs text-paa-gray-text flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3"/> Joined {author.joined}</p>
                       </div>
                     </div>
@@ -2197,16 +2273,38 @@ export function OperationsDashboardPage() {
                   </td>
                   <td style={{textAlign: 'center'}}>
                     <div className="flex items-center justify-center gap-2 flex-wrap">
-                       {author.status === 'Pending' && (
-                         <>
-                           <button onClick={() => handleApproveAuthor(author.id)} className="dash-btn dash-btn-success" title="Approve">
-                             {loadingAction === 'approveAuthor_' + author.id ? '...' : <Check className="w-4 h-4" />} Approve
-                           </button>
-                           <button onClick={() => openRejectAuthorModal(author)} className="dash-btn dash-btn-danger" title="Reject">
-                             <X className="w-4 h-4" /> Reject
-                           </button>
-                         </>
-                       )}
+                       {(() => {
+                          let ed = author.extraData;
+                          if (typeof ed === 'string') {
+                              try { ed = JSON.parse(ed); } catch(e) {}
+                          }
+                          const hasPending = ed?.hasPendingEdits;
+                          if (author.status === 'Pending') {
+                              return (
+                                <>
+                                  <button onClick={() => handleApproveAuthor(author.id)} className="dash-btn dash-btn-success" title="Approve">
+                                    {loadingAction === 'approveAuthor_' + author.id ? '...' : <Check className="w-4 h-4" />} Approve
+                                  </button>
+                                  <button onClick={() => openRejectAuthorModal(author)} className="dash-btn dash-btn-danger" title="Reject">
+                                    <X className="w-4 h-4" /> Reject
+                                  </button>
+                                </>
+                              );
+                          }
+                          if (hasPending) {
+                              return (
+                                <>
+                                  <button onClick={() => handleEditAuthorClick(author)} className="dash-btn dash-btn-success" title="Review Edits">
+                                    Review
+                                  </button>
+                                  <button onClick={() => handleRejectEditsDirect(author.id)} className="dash-btn dash-btn-danger" title="Reject Edits">
+                                    {loadingAction === 'rejectEdits_' + author.id ? '...' : 'Reject'}
+                                  </button>
+                                </>
+                              );
+                          }
+                          return null;
+                       })()}
                        <button onClick={() => handleEditAuthorClick(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Profile">
                          <Edit className="w-4 h-4" />
                        </button>
@@ -2844,7 +2942,18 @@ export function OperationsDashboardPage() {
                     <tr><td colSpan={selectedColumns.length + 2} className="px-6 py-8 text-center text-gray-500 italic">No authors found.</td></tr>
                   ) : authors.map(author => (
                     <tr key={author.id}>
-                      <td className="font-medium text-paa-navy">{author.name}</td>
+                      <td className="font-medium text-paa-navy flex items-center">
+                        {author.name}
+                        {(() => {
+                          let ed = author.extraData;
+                          if (typeof ed === 'string') {
+                            try { ed = JSON.parse(ed); } catch(e) {}
+                          }
+                          return ed?.hasPendingEdits && (
+                            <span className="ml-2 px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[9px] uppercase tracking-wider font-bold rounded-full">Edited</span>
+                          );
+                        })()}
+                      </td>
                       <td className="text-gray-500">{author.email}</td>
                       {dynamicKeys.filter(k => selectedColumns.includes(k)).map(key => (
                         <td key={key} className="text-gray-700">
@@ -4279,33 +4388,268 @@ export function OperationsDashboardPage() {
       )}
 
       {/* Edit Author Modal */}
-      <Modal isOpen={isEditAuthorModalOpen} onClose={() => { setIsEditAuthorModalOpen(false); setEditingAuthor(null); }} title="Edit Author Profile">
-        {editingAuthor && (
-          <form className="space-y-4" onSubmit={handleUpdateAuthor}>
-            <div>
-              <label className="dash-label">Full Name</label>
-              <input required type="text" value={editingAuthor.name} onChange={(e) => setEditingAuthor({ ...editingAuthor, name: e.target.value })} className="dash-input" />
+      {(() => {
+        const isFieldEdited = (fieldName: string) => {
+          if (!editingAuthor) return false;
+          let ed = editingAuthor.extraData;
+          if (typeof ed === 'string') {
+            try { ed = JSON.parse(ed); } catch(e) { ed = {}; }
+          }
+          return ed && Array.isArray(ed.editedProfileFields) && ed.editedProfileFields.includes(fieldName);
+        };
+        const getFieldClass = (fieldName: string, baseClass: string = 'dash-input') => {
+          return isFieldEdited(fieldName) ? `${baseClass} !border-orange-400 !bg-orange-50` : baseClass;
+        };
+        const renderOriginalValue = (fieldName: string) => {
+          if (!isFieldEdited(fieldName)) return null;
+          let ed = editingAuthor.extraData;
+          if (typeof ed === 'string') { try { ed = JSON.parse(ed); } catch(e) { ed = {}; } }
+          let orig = ed?.originalProfileData?.[fieldName];
+          if (orig === undefined || orig === null) return null;
+          if (typeof orig === 'object') orig = JSON.stringify(orig);
+          return <p className="text-[10px] text-red-500 font-bold mt-1">Previous: {String(orig)}</p>;
+        };
+
+        return isEditAuthorModalOpen && editingAuthor && (
+        <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setIsEditAuthorModalOpen(false)}>
+          <div className="dash-modal !max-w-6xl !w-[95vw] h-[90vh] flex flex-col p-0">
+            <div className="dash-modal-header flex-none px-6 py-4 border-b border-gray-100 bg-white">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Edit Author Profile</h3>
+              <button type="button" onClick={() => setIsEditAuthorModalOpen(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text hover:text-paa-navy transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="dash-modal-body flex-1 overflow-hidden p-0 flex flex-col md:flex-row bg-white">
+              <div className="w-full md:w-1/2 p-6 overflow-y-auto border-r border-gray-100">
+                <form className="space-y-4" onSubmit={handleUpdateAuthor}>
+                  <div>
+                    <label className="dash-label">Full Name</label>
+              <input required type="text" value={editingAuthor.name} onChange={(e) => setEditingAuthor({ ...editingAuthor, name: e.target.value })} className={getFieldClass('name')} /> {renderOriginalValue('name')}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="dash-label">Phone</label>
-                <input type="text" value={editingAuthor.phone} onChange={(e) => setEditingAuthor({ ...editingAuthor, phone: e.target.value })} className="dash-input" />
+                <input type="text" value={editingAuthor.phone} onChange={(e) => setEditingAuthor({ ...editingAuthor, phone: e.target.value })} className={getFieldClass('phone')} /> {renderOriginalValue('phone')}
               </div>
               <div>
                 <label className="dash-label">WhatsApp</label>
-                <input type="text" value={editingAuthor.whatsapp} onChange={(e) => setEditingAuthor({ ...editingAuthor, whatsapp: e.target.value })} className="dash-input" />
+                <input type="text" value={editingAuthor.whatsapp} onChange={(e) => setEditingAuthor({ ...editingAuthor, whatsapp: e.target.value })} className={getFieldClass('whatsapp')} /> {renderOriginalValue('whatsapp')}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="dash-label">Pen Name</label>
+                <input type="text" value={editingAuthor.penName} onChange={(e) => setEditingAuthor({ ...editingAuthor, penName: e.target.value })} className={getFieldClass('penName')} /> {renderOriginalValue('penName')}
+              </div>
+              <div>
+                <label className="dash-label">Aadhar Number</label>
+                <input type="text" value={editingAuthor.aadharNumber} onChange={(e) => setEditingAuthor({ ...editingAuthor, aadharNumber: e.target.value })} className={getFieldClass('aadharNumber')} /> {renderOriginalValue('aadharNumber')}
+              </div>
+              <div>
+                <label className="dash-label">City</label>
+                <input type="text" value={editingAuthor.city} onChange={(e) => setEditingAuthor({ ...editingAuthor, city: e.target.value })} className={getFieldClass('city')} /> {renderOriginalValue('city')}
+              </div>
+              <div>
+                <label className="dash-label">State</label>
+                <input type="text" value={editingAuthor.state} onChange={(e) => setEditingAuthor({ ...editingAuthor, state: e.target.value })} className={getFieldClass('state')} /> {renderOriginalValue('state')}
+              </div>
+              <div>
+                <label className="dash-label">Instagram</label>
+                <input type="text" value={editingAuthor.instagram} onChange={(e) => setEditingAuthor({ ...editingAuthor, instagram: e.target.value })} className={getFieldClass('instagram')} /> {renderOriginalValue('instagram')}
+              </div>
+              <div>
+                <label className="dash-label">Facebook</label>
+                <input type="text" value={editingAuthor.facebook} onChange={(e) => setEditingAuthor({ ...editingAuthor, facebook: e.target.value })} className={getFieldClass('facebook')} /> {renderOriginalValue('facebook')}
               </div>
             </div>
             <div>
-              <label className="dash-label">Author Bio</label>
-              <textarea required value={editingAuthor.bio} onChange={(e) => setEditingAuthor({ ...editingAuthor, bio: e.target.value })} className="dash-input" rows={5} />
+              <label className="dash-label">Address</label>
+              <textarea value={editingAuthor.address} onChange={(e) => setEditingAuthor({ ...editingAuthor, address: e.target.value })} className={getFieldClass('address')} rows={2} />
             </div>
-            <button type="submit" disabled={loadingAction === 'updateAuthor'} className="dash-btn dash-btn-primary w-full justify-center py-3">
-              {loadingAction === 'updateAuthor' ? 'Updating...' : 'Save Author Profile'}
-            </button>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="dash-label">Date of Birth</label>
+                <input type="date" value={editingAuthor.age} onChange={(e) => setEditingAuthor({ ...editingAuthor, age: e.target.value })} className={getFieldClass('age')} /> {renderOriginalValue('age')}
+              </div>
+              <div>
+                <label className="dash-label">Experience</label>
+                <input type="text" value={editingAuthor.experience} onChange={(e) => setEditingAuthor({ ...editingAuthor, experience: e.target.value })} className={getFieldClass('experience')} /> {renderOriginalValue('experience')}
+              </div>
+              <div>
+                <label className="dash-label">Skills</label>
+                <input type="text" value={editingAuthor.skills} onChange={(e) => setEditingAuthor({ ...editingAuthor, skills: e.target.value })} className={getFieldClass('skills')} /> {renderOriginalValue('skills')}
+              </div>
+              <div>
+                <label className="dash-label">Hobbies</label>
+                <input type="text" value={editingAuthor.hobbies} onChange={(e) => setEditingAuthor({ ...editingAuthor, hobbies: e.target.value })} className={getFieldClass('hobbies')} /> {renderOriginalValue('hobbies')}
+              </div>
+            </div>
+            <div>
+              <label className="dash-label">Qualifications</label>
+              {(() => {
+                let qArr = [];
+                try { qArr = JSON.parse(editingAuthor.qualification || '[]'); } catch(e) {}
+                if (!Array.isArray(qArr)) qArr = [{ qualification: editingAuthor.qualification }];
+                
+                return qArr.map((q: any, i: number) => (
+                  <div key={i} className="grid grid-cols-3 gap-2 mb-2 bg-gray-50 p-2 rounded border border-gray-100 relative group">
+                    <button type="button" onClick={() => {
+                        const newQ = qArr.filter((_, idx) => idx !== i);
+                        setEditingAuthor({ ...editingAuthor, qualification: JSON.stringify(newQ) });
+                    }} className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full border border-red-200 w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3"/></button>
+                    <div>
+                      <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Qualification</span>
+                      <input type="text" value={q.qualification || ''} onChange={(e) => {
+                         const newQ = [...qArr];
+                         newQ[i].qualification = e.target.value;
+                         setEditingAuthor({ ...editingAuthor, qualification: JSON.stringify(newQ) });
+                      }} className={getFieldClass('qualification', 'dash-input w-full text-xs')} /> {renderOriginalValue('qualification')}
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Institution</span>
+                      <input type="text" value={q.institution || ''} onChange={(e) => {
+                         const newQ = [...qArr];
+                         newQ[i].institution = e.target.value;
+                         setEditingAuthor({ ...editingAuthor, qualification: JSON.stringify(newQ) });
+                      }} className={getFieldClass('qualification', 'dash-input w-full text-xs')} /> {renderOriginalValue('qualification')}
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Subject</span>
+                      <input type="text" value={q.subject || ''} onChange={(e) => {
+                         const newQ = [...qArr];
+                         newQ[i].subject = e.target.value;
+                         setEditingAuthor({ ...editingAuthor, qualification: JSON.stringify(newQ) });
+                      }} className={getFieldClass('qualification', 'dash-input w-full text-xs')} /> {renderOriginalValue('qualification')}
+                    </div>
+                  </div>
+                ));
+              })()}
+              <button type="button" onClick={() => {
+                 let qArr = [];
+                 try { qArr = JSON.parse(editingAuthor.qualification || '[]'); } catch(e) {}
+                 if (!Array.isArray(qArr)) qArr = [];
+                 qArr.push({ id: Date.now(), qualification: '', institution: '', subject: '' });
+                 setEditingAuthor({ ...editingAuthor, qualification: JSON.stringify(qArr) });
+              }} className="text-[10px] font-bold text-paa-navy mt-1 uppercase tracking-widest hover:text-paa-gold">+ Add Qualification</button>
+            </div>
+            <div>
+              <label className="dash-label">Why Joining? (If traditionally published)</label>
+              <textarea value={editingAuthor.whyJoining || ''} onChange={(e) => setEditingAuthor({ ...editingAuthor, whyJoining: e.target.value })} className="dash-input" rows={2} />
+            </div>
+            <div>
+              <label className="dash-label">Author Bio</label>
+              <textarea required value={editingAuthor.bio} onChange={(e) => setEditingAuthor({ ...editingAuthor, bio: e.target.value })} className={getFieldClass('bio')} rows={5} /> {renderOriginalValue('bio')}
+            </div>
           </form>
-        )}
-      </Modal>
+          </div>
+          <div className="w-full md:w-1/2 p-6 overflow-y-auto bg-gray-50">
+             <h4 className="text-lg font-serif font-bold text-paa-navy mb-4 border-l-4 border-paa-navy pl-2">Submitted Books Details</h4>
+             {(!editingAuthor.books || editingAuthor.books.length === 0) ? (
+                 <p className="text-sm text-gray-500 italic">No books registered by this author.</p>
+             ) : (
+                 <div className="space-y-4">
+                     {editingAuthor.books.map((b: any, bIdx: number) => {
+                         const updateBookField = (field: string, value: any) => {
+                             const newBooks = [...editingAuthor.books];
+                             newBooks[bIdx] = { ...newBooks[bIdx], [field]: value };
+                             setEditingAuthor({ ...editingAuthor, books: newBooks });
+                         };
+                         return (
+                         <div key={b.id || bIdx} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-4">
+                             <div className="flex gap-4">
+                               {b.coverUrl && <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + b.coverUrl : "http://localhost:3001" + b.coverUrl} className="w-16 h-24 object-cover border border-gray-200" alt="Cover"/>}
+                               <div className="flex-1 space-y-2">
+                                   <div>
+                                       <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Title</label>
+                                       <input className="dash-input py-1 text-sm w-full" value={b.title || ''} onChange={(e) => updateBookField('title', e.target.value)} />
+                                   </div>
+                                   <div>
+                                       <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Subtitle</label>
+                                       <input className="dash-input py-1 text-sm w-full" value={b.subtitle || ''} onChange={(e) => updateBookField('subtitle', e.target.value)} />
+                                   </div>
+                               </div>
+                             </div>
+                             <div className="grid grid-cols-2 gap-y-3 gap-x-4 mt-1">
+                                 <div>
+                                   <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Genre</label>
+                                   <select className="dash-input py-1 text-xs w-full" value={b.genre || ''} onChange={(e) => updateBookField('genre', e.target.value)}>
+                                     <option value="">Select Genre</option>
+                                     <option value="Non-Fiction">Non-Fiction</option>
+                                     <option value="Fiction">Fiction</option>
+                                     <option value="Poetry">Poetry</option>
+                                     <option value="Children's">Children's</option>
+                                   </select>
+                                 </div>
+                                 <div><label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Sub Genre</label><input className="dash-input py-1 text-xs w-full" value={b.subGenre || ''} onChange={(e) => updateBookField('subGenre', e.target.value)} /></div>
+                                 <div><label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">MRP</label><input type="number" className="dash-input py-1 text-xs w-full" value={b.mrp || ''} onChange={(e) => updateBookField('mrp', e.target.value)} /></div>
+                                 <div>
+                                   <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Language</label>
+                                   <select className="dash-input py-1 text-xs w-full" value={b.language || ''} onChange={(e) => updateBookField('language', e.target.value)}>
+                                     <option value="">Select Language</option>
+                                     <option value="ENG">ENG</option>
+                                     <option value="MAR">MAR</option>
+                                     <option value="HIN">HIN</option>
+                                   </select>
+                                 </div>
+                                 <div>
+                                   <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Format</label>
+                                   <select className="dash-input py-1 text-xs w-full" value={b.format || ''} onChange={(e) => updateBookField('format', e.target.value)}>
+                                     <option value="">Select Format</option>
+                                     <option value="Paperback">Paperback</option>
+                                     <option value="Hardcover">Hardcover</option>
+                                     <option value="Ebook">Ebook</option>
+                                   </select>
+                                 </div>
+                                 <div>
+                                   <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Print Format</label>
+                                   <select className="dash-input py-1 text-xs w-full" value={b.printFormat || ''} onChange={(e) => updateBookField('printFormat', e.target.value)}>
+                                     <option value="">Select Print Format</option>
+                                     <option value="Black & White">Black & White</option>
+                                     <option value="Colored">Colored</option>
+                                   </select>
+                                 </div>
+                                 <div><label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Pages</label><input type="number" className="dash-input py-1 text-xs w-full" value={b.pages || ''} onChange={(e) => updateBookField('pages', e.target.value)} /></div>
+                                 <div><label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Publisher</label><input className="dash-input py-1 text-xs w-full" value={b.publisher || ''} onChange={(e) => updateBookField('publisher', e.target.value)} /></div>
+                                 <div><label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">ISBN</label><input className="dash-input py-1 text-xs w-full" value={b.isbn || ''} onChange={(e) => updateBookField('isbn', e.target.value)} /></div>
+                                 <div><label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Pub Date</label><input type="date" className="dash-input py-1 text-xs w-full" value={b.publicationDate || ''} onChange={(e) => updateBookField('publicationDate', e.target.value)} /></div>
+                                 <div><label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Initial Stock</label><input type="number" className="dash-input py-1 text-xs w-full" value={b.stock || ''} onChange={(e) => updateBookField('stock', e.target.value)} /></div>
+                             </div>
+                             <div className="mt-1">
+                                 <label className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Synopsis</label>
+                                 <textarea className="dash-input py-1 text-xs w-full" rows={3} value={b.synopsis || ''} onChange={(e) => updateBookField('synopsis', e.target.value)} />
+                             </div>
+                         </div>
+                     )})}
+                 </div>
+             )}
+          </div>
+         </div>
+         <div className="flex-none px-6 py-4 border-t border-gray-200 bg-white rounded-b-2xl flex items-center justify-between gap-4">
+           <p className="text-xs text-gray-400">Changes apply to both author profile and book details</p>
+           <div className="flex gap-2">
+             {(() => {
+                let ed = editingAuthor.extraData;
+                if (typeof ed === 'string') {
+                    try { ed = JSON.parse(ed); } catch(e) { ed = {}; }
+                }
+                if (ed?.hasPendingEdits) {
+                   return (
+                     <button type="button" onClick={() => handleRejectEdits()} disabled={loadingAction === 'rejectEdits'} className="dash-btn px-8 py-2.5 flex-shrink-0 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-bold uppercase tracking-widest rounded-full text-[10px]">
+                       {loadingAction === 'rejectEdits' ? 'Rejecting...' : 'Reject Edits'}
+                     </button>
+                   );
+                }
+                return null;
+             })()}
+             <button type="button" onClick={() => handleUpdateAuthor()} disabled={loadingAction === 'updateAuthor'} className="dash-btn dash-btn-primary px-8 py-2.5 flex-shrink-0">
+               {loadingAction === 'updateAuthor' ? 'Updating...' : 'Save All Changes'}
+             </button>
+           </div>
+         </div>
+        </div>
+       </div>
+      );
+      })()}
 
     </div>
   );

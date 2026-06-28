@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import axios from "axios";
 import { ArrowRight, Book, Megaphone, Store, Mic, GraduationCap, Building2, Mail, Phone, MapPin } from "lucide-react";
+import { toast } from "sonner";
 
 // --- ANIMATED COUNTER HOOK ---
 function CountUp({ end, suffix = "", duration = 2000 }: { end: number, suffix?: string, duration?: number }) {
@@ -104,21 +105,24 @@ export function LandingPage() {
       {/* ── HERO SECTION ── */}
       <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem 6rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }} className="hero-grid">
         <FadeIn>
-          <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#333", marginBottom: "2rem" }}>
-            Pune Authors' Association
+          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "1rem" }}>
+             <img src="/logo.png" alt="PAA Logo" style={{ height: "1.75rem", width: "auto" }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 400, color: "#111", letterSpacing: "-0.01em" }}>
+              Pune Authors' Association
+             </div>
           </div>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.5rem, 4vw, 3.2rem)", fontWeight: 400, color: "#111", lineHeight: 1.15, marginBottom: "1.5rem", letterSpacing: "-0.01em" }}>
-            Elevating the <br/><span style={{ fontStyle: "italic", color: "#b44d28" }}>independent</span> voice.
+            Helping indie <br/><span style={{ fontStyle: "italic", color: "#b44d28" }}>authors</span> publish, promote and sell.
           </h1>
           <p style={{ fontSize: 15, color: "#333", lineHeight: 1.8, marginBottom: "3rem", maxWidth: 420, fontWeight: 400 }}>
             We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels.
           </p>
           <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
             <Link to="/register" className="link-underline" style={{ color: "#111", fontSize: 13, fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
-              Join the Association <ArrowRight size={14} />
+              New Authors — Click here to JOIN <ArrowRight size={14} />
             </Link>
             <Link to="/catalogue" className="link-underline-subtle" style={{ color: "#333", fontSize: 13, fontWeight: 400, textDecoration: "none" }}>
-              Explore Portfolio
+              Explore Gallery
             </Link>
           </div>
         </FadeIn>
@@ -167,12 +171,12 @@ export function LandingPage() {
         
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "3rem" }}>
           {[
-            { icon: <Book size={18} strokeWidth={1.5} />, title: "Publishing", desc: "Professional manuscript formatting, structural editing, and tailored cover design." },
-            { icon: <Megaphone size={18} strokeWidth={1.5} />, title: "Promotion", desc: "Targeted digital marketing, press distributions, and author branding." },
-            { icon: <Store size={18} strokeWidth={1.5} />, title: "Distribution", desc: "Strategic shelf placements in independent bookstores and premium lounges." },
-            { icon: <Mic size={18} strokeWidth={1.5} />, title: "Events", desc: "Curated launch events, intimate readings, and community panel discussions." },
-            { icon: <GraduationCap size={18} strokeWidth={1.5} />, title: "Outreach", desc: "Engaging educational programs and interactive storytelling workshops." },
-            { icon: <Building2 size={18} strokeWidth={1.5} />, title: "Exhibitions", desc: "Dedicated pavilions at prominent national and international book fairs." },
+            { icon: <Book size={18} strokeWidth={1.5} />, title: "Publishing Services", desc: "Comprehensive support including professional formatting, structural editing, cover design, and printing." },
+            { icon: <Megaphone size={18} strokeWidth={1.5} />, title: "Promotional Services", desc: "Strategically sending and placing books in Airport Libraries and select premium institutional libraries." },
+            { icon: <Store size={18} strokeWidth={1.5} />, title: "Reaching Out to Readers", desc: "Organising dynamic literary events in large housing societies and leading educational institutions." },
+            { icon: <GraduationCap size={18} strokeWidth={1.5} />, title: "Reviving Book Reading", desc: "Curating highly engaging literary activities tailored specifically for school children." },
+            { icon: <Building2 size={18} strokeWidth={1.5} />, title: "Participating in Book Fairs", desc: "Establishing a strong presence through dedicated pavilions at prominent regional and national book fairs." },
+            { icon: <Mic size={18} strokeWidth={1.5} />, title: "The Book Shop, Café & Library", desc: "Creating a vibrant, tangible community space for literary enthusiasts to connect and explore." },
           ].map((card, i) => (
             <FadeIn key={i} delay={i * 50}>
               <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
@@ -229,10 +233,10 @@ export function LandingPage() {
           
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "4rem" }}>
             {[
-              { num: "I.", title: "Publish", desc: "Elevating manuscript production to exact industrial standards." },
-              { num: "II.", title: "Promote", desc: "Strategically positioning literature before discerning audiences." },
-              { num: "III.", title: "Sell", desc: "Securing reliable revenue through vetted distribution networks." },
-              { num: "IV.", title: "Revive", desc: "Combating digital fatigue via tangible community reading spaces." },
+              { num: "I.", title: "Publish", desc: "Providing formatting, editing, cover design, and high-quality printing services." },
+              { num: "II.", title: "Promote", desc: "Placing literature in airport libraries, educational institutions, and exclusive venues." },
+              { num: "III.", title: "Sell", desc: "Connecting authors directly with readers through strategic book fairs and exhibitions." },
+              { num: "IV.", title: "Revive", desc: "Reviving book reading by organising engaging literary activities for children and communities." },
             ].map((p, i) => (
               <FadeIn key={i} delay={i * 50}>
                 <div style={{ borderTop: "1px solid #111", paddingTop: "1.5rem" }}>
@@ -247,10 +251,10 @@ export function LandingPage() {
       </section>
 
       {/* ── BOOKS PORTFOLIO (REFINED CARDS) ── */}
-      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem" }}>
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem" }} id="buy-books">
         <FadeIn>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem", flexWrap: "wrap", gap: "1.5rem" }}>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", margin: 0 }}>Selected Works</h2>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", margin: 0 }}>Browse & Buy Books</h2>
             <Link to="/catalogue" className="link-underline-subtle" style={{ fontSize: 13, fontWeight: 400, color: "#333", textDecoration: "none" }}>
               View Complete Portfolio →
             </Link>
@@ -341,11 +345,11 @@ export function LandingPage() {
                   await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/contact`, {
                     name: contactName, email: contactEmail, message: contactMessage
                   });
-                  alert("Thank you! Your message has been received.");
+                  toast.success("Thank you! Your message has been received.");
                   setContactName(""); setContactEmail(""); setContactMessage("");
                 } catch (err) {
                   console.error(err);
-                  alert("Message sent successfully!"); // Fallback if no backend
+                  toast.error("Failed to send message. Please try again.");
                 } finally {
                   setIsSubmitting(false);
                 }

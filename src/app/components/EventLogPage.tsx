@@ -1,6 +1,7 @@
-import { Calendar, MapPin, Clock, Users, BookOpen, Filter } from "lucide-react";
+import { Calendar, MapPin, Clock, Users, BookOpen, Filter, ImageIcon, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { CustomerGallery } from "./CustomerGallery";
 
 interface EventRecord {
   id: number;
@@ -58,6 +59,7 @@ export function EventLogPage() {
   const [filter, setFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"timeline" | "grid">("grid");
   const [events, setEvents] = useState<EventRecord[]>([]);
+  const [selectedEventForGallery, setSelectedEventForGallery] = useState<EventRecord | null>(null);
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/gallery`)
@@ -175,17 +177,23 @@ export function EventLogPage() {
                         <MapPin size={12} /> {event.city}
                       </div>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1rem", marginTop: "1rem" }}>
-                      <div>
-                        <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Authors</div>
-                        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#111" }}>{event.authors}</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1rem", marginTop: "1rem" }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Authors</div>
+                          <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#111" }}>{event.authors}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Books Sold</div>
+                          <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#111" }}>{event.booksSold}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Books Sold</div>
-                        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#111" }}>{event.booksSold}</div>
-                      </div>
+                      <button 
+                        onClick={() => setSelectedEventForGallery(event)}
+                        style={{ marginTop: "1.5rem", width: "100%", padding: "0.75rem", background: "#1a1a2e", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
+                      >
+                        <ImageIcon size={14} /> View Gallery
+                      </button>
                     </div>
-                  </div>
                 </FadeIn>
               ))}
             </div>
@@ -215,6 +223,12 @@ export function EventLogPage() {
                           <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event.booksSold}</div>
                         </div>
                       </div>
+                      <button 
+                        onClick={() => setSelectedEventForGallery(event)}
+                        style={{ marginTop: "2rem", padding: "0.75rem 1.5rem", background: "#1a1a2e", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
+                      >
+                        <ImageIcon size={16} /> View Gallery
+                      </button>
                     </div>
                   </div>
                 </FadeIn>
@@ -223,6 +237,26 @@ export function EventLogPage() {
           )}
         </div>
       </section>
+
+      {/* GALLERY MODAL */}
+      {selectedEventForGallery && (
+        <div className="fixed inset-0 z-[5000] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedEventForGallery(null)}>
+          <div className="bg-white w-full max-w-6xl h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
+              <div>
+                <h3 className="font-serif text-2xl text-paa-navy font-bold">{selectedEventForGallery.location} Gallery</h3>
+                <p className="text-sm text-gray-500 font-bold uppercase tracking-widest mt-1">{selectedEventForGallery.city} • {new Date(selectedEventForGallery.date).toLocaleDateString()}</p>
+              </div>
+              <button onClick={() => setSelectedEventForGallery(null)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors bg-gray-100 text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-white">
+              <CustomerGallery eventId={selectedEventForGallery.id.toString()} />
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .filter-btn:hover { background: #fafafa !important; border-color: #ccc !important; color: #111 !important; }

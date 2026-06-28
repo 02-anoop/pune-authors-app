@@ -1,16 +1,14 @@
-with open('src/app/components/OperationsDashboardPage.tsx', 'r', encoding='utf-8') as f:
-    content = f.read()
+import os
 
-# 1. Update Recharts imports to include RechartsPieChart and Pie
-content = content.replace(
-    "AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell",
-    "AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie"
-)
+author_path = "src/app/components/AuthorDashboardPage.tsx"
+with open(author_path, "r", encoding="utf-8") as f:
+    author_content = f.read()
 
-# 2. Update the PieChart component to RechartsPieChart
-content = content.replace("<PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>", "<RechartsPieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>")
-content = content.replace("</PieChart>", "</RechartsPieChart>")
+import_target = "Image as ImageIcon } from 'lucide-react';"
+import_replace = "Image as ImageIcon, Star } from 'lucide-react';"
+if "Star" not in import_target and "Star" not in author_content.split("from 'lucide-react';")[0]:
+    author_content = author_content.replace(import_target, import_replace)
 
-with open('src/app/components/OperationsDashboardPage.tsx', 'w', encoding='utf-8') as f:
-    f.write(content)
-print("Imports fixed")
+with open(author_path, "w", encoding="utf-8") as f:
+    f.write(author_content)
+print("Added Star import to AuthorDashboardPage")

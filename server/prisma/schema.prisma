@@ -97,6 +97,7 @@ model Book {
   publicationDate String?
   edition         String?
   format          String?
+  printFormat     String?
   author          Author      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   orderItems      OrderItem[]
   reviews         BookReview[]
@@ -125,10 +126,14 @@ model OrderItem {
   quantity       Int      @default(1)
   status         String   @default("Pending Verification")
   createdAt      DateTime @default(now())
+  acceptedAt     DateTime?
   dispatchedAt   DateTime?
   deliveredAt    DateTime?
   trackingNumber  String?
   rejectionReason String?
+  feedbackCondition String?
+  feedbackRating    Int?
+  feedbackComments  String?
   book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
@@ -166,6 +171,7 @@ model GalleryImage {
   caption         String?
   dateTaken       DateTime?
   createdAt       DateTime @default(now())
+  status          String   @default("Pending")
   
   galleryEvent    GalleryEvent @relation(fields: [galleryEventId], references: [id], onDelete: Cascade)
 }
@@ -243,6 +249,7 @@ model Event {
   eventType         String        @default("Book Fair") // Book Fair, Literature Festival, Book Launch, Workshop, Online Event, Other
   registrationFee   Float         @default(0)
   feeType           String        @default("Per Author") // Per Author, Per Title
+  livePosEnabled    Boolean       @default(true)
   
   eventAuthors    EventAuthor[]
   eventBooks      EventBook[]
@@ -302,4 +309,11 @@ model PosOrderItem {
   
   posOrder    PosOrder  @relation(fields: [posOrderId], references: [id], onDelete: Cascade)
   book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  message   String
+  target    String   @default("ALL")
+  createdAt DateTime @default(now())
 }

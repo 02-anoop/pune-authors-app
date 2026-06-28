@@ -24,6 +24,11 @@ export function CustomerProfilePage() {
   const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
   const navigate = useNavigate();
 
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState<{ itemId: number, title: string } | null>(null);
+  const [feedbackCondition, setFeedbackCondition] = useState("Excellent");
+  const [feedbackRating, setFeedbackRating] = useState<number>(5);
+  const [feedbackComments, setFeedbackComments] = useState("");
+
   const fetchProfile = () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -162,13 +167,25 @@ export function CustomerProfilePage() {
     setIsQueryModalOpen(true);
   };
 
-  const handleAcknowledge = async (itemId: number) => {
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackModalOpen) return;
+    const itemId = feedbackModalOpen.itemId;
     setAcknowledging(itemId);
+    
     try {
       const token = localStorage.getItem("token");
-      await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/order-items/${itemId}/acknowledge`, {}, {
+      await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/order-items/${itemId}/acknowledge`, {
+        condition: feedbackCondition,
+        rating: feedbackRating,
+        comments: feedbackComments
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      setFeedbackModalOpen(null);
+      setFeedbackCondition("Excellent");
+      setFeedbackRating(5);
+      setFeedbackComments("");
       fetchProfile();
     } catch (err) {
       alert("Failed to acknowledge order");
@@ -237,6 +254,47 @@ export function CustomerProfilePage() {
               <div className="flex gap-2 pt-4">
                 <button type="button" onClick={() => setIsQueryModalOpen(false)} className="flex-1 py-2 bg-gray-200 text-xs font-bold uppercase">Cancel</button>
                 <button type="submit" disabled={isSubmittingQuery} className="flex-1 py-2 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy">{isSubmittingQuery ? 'Submitting...' : 'Submit'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackModalOpen && (
+        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white max-w-lg w-full p-6 shadow-2xl">
+            <h2 className="text-xl font-serif text-paa-navy mb-2">Order Feedback</h2>
+            <p className="text-sm text-gray-600 mb-6">How was your delivery experience for <span className="font-bold">"{feedbackModalOpen.title}"</span>?</p>
+            <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Book Condition *</label>
+                <select required value={feedbackCondition} onChange={e => setFeedbackCondition(e.target.value)} className="w-full border p-2 text-sm outline-none">
+                  <option value="Excellent">Excellent - Mint condition</option>
+                  <option value="Good">Good - Minor wear</option>
+                  <option value="Average">Average - Noticeable wear</option>
+                  <option value="Damaged">Damaged - Creased, torn, or wet</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Delivery Speed Rating *</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button type="button" key={star} onClick={() => setFeedbackRating(star)} className={`text-2xl ${feedbackRating >= star ? 'text-yellow-400' : 'text-gray-200'}`}>
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Comments (Optional)</label>
+                <textarea rows={3} value={feedbackComments} onChange={e => setFeedbackComments(e.target.value)} className="w-full border p-2 text-sm outline-none resize-y" placeholder="Tell us about the packaging, delivery time, etc." />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button type="button" onClick={() => setFeedbackModalOpen(null)} className="flex-1 py-2 bg-gray-200 text-xs font-bold uppercase">Cancel</button>
+                <button type="submit" disabled={acknowledging === feedbackModalOpen.itemId} className="flex-1 py-2 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy">
+                  {acknowledging === feedbackModalOpen.itemId ? 'Submitting...' : 'Submit & Acknowledge'}
+                </button>
               </div>
             </form>
           </div>
@@ -512,7 +570,7 @@ export function CustomerProfilePage() {
  
                     {item.status === 'Dispatched' && (
                       <button 
-                        onClick={() => handleAcknowledge(item.id)}
+                        onClick={() => setFeedbackModalOpen({ itemId: item.id, title: item.book?.title })}
                         disabled={acknowledging === item.id}
                         style={{ display: "flex", alignItems: "center", gap: "0.4rem", background: "#2e7d32", color: "#fff", border: "none", padding: "0.6rem 1.2rem", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", opacity: acknowledging === item.id ? 0.7 : 1 }}
                       >

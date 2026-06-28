@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { ArrowLeft, Star, BookOpen, User, Tag, IndianRupee, Send, MessageSquare, Package } from "lucide-react";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:3001").trim();
@@ -118,10 +119,21 @@ export function BookDetailPage() {
   };
 
   if (loading) return (
-    <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ textAlign: "center", color: "#6b6b80" }}>
-        <BookOpen size={40} style={{ margin: "0 auto 1rem", opacity: 0.3, display: "block" }} />
-        <p>Loading book details…</p>
+    <div style={{ background: "#fafafa", minHeight: "100vh", fontFamily: "var(--font-body)", color: "#111" }}>
+      <div style={{ background: "#fff", borderBottom: "1px solid #eaeaea", padding: "4rem 1.5rem" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", gap: "3rem", alignItems: "flex-start", opacity: 0.6, pointerEvents: "none" }}>
+          <div style={{ width: 260, height: 380, background: "#f0f0f4", borderRadius: 4, flexShrink: 0, border: "1px solid #eaeaea", position: "relative", overflow: "hidden" }} className="animate-pulse"></div>
+          <div style={{ flex: 1, paddingRight: "2rem" }}>
+            <div style={{ width: 80, height: 20, background: "#f0f0f4", borderRadius: 4, marginBottom: 20 }} className="animate-pulse"></div>
+            <div style={{ width: "80%", height: 40, background: "#f0f0f4", borderRadius: 4, marginBottom: 16 }} className="animate-pulse"></div>
+            <div style={{ width: "40%", height: 20, background: "#f0f0f4", borderRadius: 4, marginBottom: 30 }} className="animate-pulse"></div>
+            <div style={{ width: 120, height: 20, background: "#f0f0f4", borderRadius: 4, marginBottom: 30 }} className="animate-pulse"></div>
+            <div style={{ display: "flex", gap: 20 }}>
+              <div style={{ width: 150, height: 40, background: "#f0f0f4", borderRadius: 4 }} className="animate-pulse"></div>
+              <div style={{ width: 150, height: 40, background: "#f0f0f4", borderRadius: 4 }} className="animate-pulse"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -178,6 +190,25 @@ export function BookDetailPage() {
               <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400, color: "#111", lineHeight: 1.1, margin: "0 0 1rem", letterSpacing: "-0.01em" }}>
                 {book.title}
               </h1>
+              {(() => {
+                 const rules = book.author.extraData?.bundleRules?.filter((r: any) => r.enabled) || [];
+                 if (rules.length > 0) {
+                    rules.sort((a: any,b: any) => b.buyCount - a.buyCount);
+                    const r = rules[0];
+                    return (
+                      <div style={{ background: "#fef3c7", border: "1px solid #fde68a", color: "#d97706", padding: "0.5rem 1rem", borderRadius: "8px", display: "inline-block", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
+                        ✨ Bundle Offer: Buy {r.buyCount}+ Books by this Author, Get ₹{r.discount} Off!
+                      </div>
+                    );
+                 } else if (book.author.extraData?.bundleRule?.enabled) {
+                    return (
+                      <div style={{ background: "#fef3c7", border: "1px solid #fde68a", color: "#d97706", padding: "0.5rem 1rem", borderRadius: "8px", display: "inline-block", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
+                        ✨ Bundle Offer: Buy {book.author.extraData.bundleRule.buyCount}+ Books by this Author, Get ₹{book.author.extraData.bundleRule.discount} Off!
+                      </div>
+                    );
+                 }
+                 return null;
+              })()}
               <p style={{ color: "#333", fontSize: 15, margin: "0 0 1.5rem", fontWeight: 400 }}>by <span style={{ color: "#111", fontWeight: 400 }}>{book.author.name}</span></p>
 
               {/* Rating summary */}
@@ -200,9 +231,34 @@ export function BookDetailPage() {
                   {book.stock > 0 ? `In stock` : "Out of stock"}
                 </div>
                 {book.stock > 0 && (
-                  <button onClick={() => navigate("/checkout", { state: { cart: [book.id] } })} style={{ background: "#111", color: "#fff", border: "none", padding: "0.8rem 2rem", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", transition: "opacity 0.2s", marginLeft: "auto" }} onMouseEnter={e => e.currentTarget.style.opacity="0.8"} onMouseLeave={e => e.currentTarget.style.opacity="1"}>
-                    Purchase Book
-                  </button>
+                  <div style={{ marginLeft: "auto", display: "flex", gap: "1rem" }}>
+                    <button onClick={() => {
+                        const saved = localStorage.getItem('checkout_cart');
+                        const cart = saved ? JSON.parse(saved).map(String) : [];
+                        if (!cart.includes(String(book.id))) {
+                           cart.push(String(book.id));
+                           localStorage.setItem('checkout_cart', JSON.stringify(cart));
+                           window.dispatchEvent(new Event('cart_updated'));
+                           toast.success('Added to cart');
+                        } else {
+                           toast.info('Already in cart');
+                        }
+                    }} style={{ background: "transparent", color: "#111", border: "1px solid #111", padding: "0.8rem 2rem", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => { e.currentTarget.style.background="#111"; e.currentTarget.style.color="#fff"; }} onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#111"; }}>
+                      Add to Cart
+                    </button>
+                    <button onClick={() => {
+                        const saved = localStorage.getItem('checkout_cart');
+                        const cart = saved ? JSON.parse(saved).map(String) : [];
+                        if (!cart.includes(String(book.id))) {
+                           cart.push(String(book.id));
+                           localStorage.setItem('checkout_cart', JSON.stringify(cart));
+                           window.dispatchEvent(new Event('cart_updated'));
+                        }
+                        navigate("/checkout");
+                    }} style={{ background: "#111", color: "#fff", border: "1px solid #111", padding: "0.8rem 2rem", fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity="0.8"} onMouseLeave={e => e.currentTarget.style.opacity="1"}>
+                      Buy Now
+                    </button>
+                  </div>
                 )}
 
               </div>
@@ -249,7 +305,7 @@ export function BookDetailPage() {
                   <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f0f0f5' }}>
                     <p style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Additional Information</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
-                      {Object.entries(book.author.extraData).map(([k, v]) => (
+                      {Object.entries(book.author.extraData).filter(([k, v]) => typeof v !== 'object' && v !== null && k !== 'bundleRules' && k !== 'lowStockAlerts' && k !== 'lateFines' && k !== 'isPublishedByPublisher' && k !== 'whyJoining').map(([k, v]) => (
                         <div key={k}>
                           <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>{k}</span>
                           <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{String(v)}</span>

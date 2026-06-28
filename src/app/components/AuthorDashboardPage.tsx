@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, Image as ImageIcon } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -13,22 +13,46 @@ import nonFictionData from './data/non_fiction_catalogue.json';
 
 export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const location = useLocation();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [hasNewQueries, setHasNewQueries] = useState(false);
   const [showReapply, setShowReapply] = useState(false);
-  const [reapplyForm, setReapplyForm] = useState({ name: '', phone: '', bio: '', whatsapp: '', transactionId: '' });
+  const [reapplyForm, setReapplyForm] = useState({
+    name: '',
+    penName: '',
+    phone: '',
+    whatsapp: '',
+    bio: '',
+    transactionId: '',
+    city: '',
+    state: '',
+    address: '',
+    aadharNumber: '',
+    qualification: '',
+    age: '',
+    experience: '',
+    skills: '',
+    hobbies: '',
+    instagram: '',
+    facebook: ''
+  });
   const [isSubmittingReapply, setIsSubmittingReapply] = useState(false);
   const [buttonStates, setButtonStates] = useState<{[key: string]: boolean}>({});
   const [showNotifications, setShowNotifications] = useState(false);
+  const [dismissedToastId, setDismissedToastId] = useState<string | null>(() => localStorage.getItem('paa_dismissed_toast'));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [fineScreenshot, setFineScreenshot] = useState<File | null>(null);
+  const [isSubmittingFine, setIsSubmittingFine] = useState(false);
+  const [showFineModal, setShowFineModal] = useState(false);
   const prevQueryAnsCountRef = useRef(0);
   const navigate = useNavigate();
-  const location = useLocation();
 
   const unreadEventInvites = dashboardData?.eventInvites?.filter((inv: any) => inv.optInStatus === 'Pending') || [];
-  const hasUnreadInvites = unreadEventInvites.length > 0;
+  const notifications = dashboardData?.notifications || [];
+  const hasUnread = unreadEventInvites.length > 0 || notifications.length > 0;
 
 
   const fetchQueriesAlert = async () => {
@@ -65,22 +89,59 @@ export function AuthorDashboardPage() {
     }
   };
 
+  const handlePayFine = async () => {
+    if (!fineScreenshot) return toast.error('Please upload a screenshot of your payment');
+    setIsSubmittingFine(true);
+    try {
+      const formData = new FormData();
+      formData.append('paymentScreenshot', fineScreenshot);
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/fine/pay`, formData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Payment submitted for review!');
+      setFineScreenshot(null);
+      await fetchDashboardData(true);
+    } catch (err) {
+      toast.error('Failed to submit payment');
+    } finally {
+      setIsSubmittingFine(false);
+    }
+  };
+
+
+  // Auto-refresh mechanism
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    const fetchCurrentTabData = async () => {
+      setIsRefreshing(true);
+      try {
+        await fetchDashboardData();
+      } finally {
+        setTimeout(() => setIsRefreshing(false), 800);
+      }
+    };
+
+    // Refresh immediately when route/tab changes
+    fetchCurrentTabData();
+
+    // Set up auto-refresh every 30 seconds
+    const interval = setInterval(fetchCurrentTabData, 30000);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
+
 
   useEffect(() => {
     if (dashboardData?.authorProfile) {
       if (dashboardData.authorProfile.extraData) {
         setExtraDataState(dashboardData.authorProfile.extraData);
       }
-      setReapplyForm({
+      setReapplyForm(prev => ({
+        ...prev,
         name: dashboardData.authorProfile.name || '',
         phone: dashboardData.authorProfile.phone || '',
         bio: dashboardData.authorProfile.bio || '',
         whatsapp: dashboardData.authorProfile.whatsapp || '',
         transactionId: dashboardData.authorProfile.transactionId || ''
-      });
+      }));
     }
   }, [dashboardData]);
 
@@ -170,7 +231,7 @@ export function AuthorDashboardPage() {
             ) : (
               <div>
                 <p className="text-sm mb-2">Unfortunately, your author application has been rejected.</p>
-                {rejectionReason && <p className="text-sm font-bold bg-white p-3 rounded-3xl-2xl border border-red-100">Reason: {rejectionReason}</p>}
+                {rejectionReason && <div className="text-base font-bold bg-red-100 p-4 rounded-xl border-l-4 border-red-600 text-red-900 shadow-sm my-4"><strong className="uppercase tracking-widest text-xs block mb-1">Rejection Reason:</strong> {rejectionReason}</div>}
                 {!showReapply && (
                   <button onClick={() => setShowReapply(true)} className="mt-4 bg-paa-navy text-white px-4 py-2 rounded-3xl-2xl text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors">
                     Reapply with Correct Details
@@ -183,10 +244,14 @@ export function AuthorDashboardPage() {
           {showReapply ? (
             <div className="mb-8 p-4 border border-paa-navy/20 rounded-3xl-2xl bg-gray-50">
               <h3 className="text-lg font-bold text-paa-navy border-b pb-2 mb-4 uppercase tracking-widest">Update Your Details</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Name</label>
                   <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.name} onChange={e => setReapplyForm({...reapplyForm, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pen Name</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.penName} onChange={e => setReapplyForm({...reapplyForm, penName: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
@@ -196,13 +261,57 @@ export function AuthorDashboardPage() {
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
                   <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.whatsapp} onChange={e => setReapplyForm({...reapplyForm, whatsapp: e.target.value})} />
                 </div>
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Address</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.address} onChange={e => setReapplyForm({...reapplyForm, address: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">City</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.city} onChange={e => setReapplyForm({...reapplyForm, city: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">State</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.state} onChange={e => setReapplyForm({...reapplyForm, state: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.aadharNumber} onChange={e => setReapplyForm({...reapplyForm, aadharNumber: e.target.value})} />
+                </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Transaction ID</label>
                   <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.transactionId} onChange={e => setReapplyForm({...reapplyForm, transactionId: e.target.value})} />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Bio</label>
-                  <textarea rows={3} className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.bio} onChange={e => setReapplyForm({...reapplyForm, bio: e.target.value})} />
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Qualification</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.qualification} onChange={e => setReapplyForm({...reapplyForm, qualification: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Age</label>
+                  <input type="number" className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.age} onChange={e => setReapplyForm({...reapplyForm, age: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.experience} onChange={e => setReapplyForm({...reapplyForm, experience: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Skills</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.skills} onChange={e => setReapplyForm({...reapplyForm, skills: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.hobbies} onChange={e => setReapplyForm({...reapplyForm, hobbies: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Instagram</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.instagram} onChange={e => setReapplyForm({...reapplyForm, instagram: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Facebook</label>
+                  <input className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.facebook} onChange={e => setReapplyForm({...reapplyForm, facebook: e.target.value})} />
+                </div>
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Bio (150 words)</label>
+                  <textarea rows={5} required className="w-full border p-2 rounded-3xl-2xl" value={reapplyForm.bio} onChange={e => setReapplyForm({...reapplyForm, bio: e.target.value})} />
                 </div>
               </div>
               <div className="flex gap-2 justify-end">
@@ -274,8 +383,62 @@ export function AuthorDashboardPage() {
     );
   }
 
+  const fineDateStr = dashboardData?.authorProfile?.extraData?.fineDate;
+  const fineAmount = dashboardData?.authorProfile?.extraData?.lateFines || 0;
+  let isFineOverdue = false;
+  if (fineDateStr && fineAmount > 0) {
+     const diffDays = (new Date().getTime() - new Date(fineDateStr).getTime()) / (1000 * 3600 * 24);
+     if (diffDays > 3) isFineOverdue = true;
+  }
+
+  let hasLateOrders = false;
+  if (dashboardData?.authorOrders) {
+     dashboardData.authorOrders.forEach((o: any) => {
+        if ((o.status === 'Pending Verification' || o.status === 'Pending' || o.status === 'Accepted') && o.createdAt) {
+           const hours = (new Date().getTime() - new Date(o.createdAt).getTime()) / (1000 * 3600);
+           if (hours > 24) hasLateOrders = true;
+        }
+     });
+  }
+
   return (
     <>
+      {/* Late Delivery Fine Overlay */}
+      {(isFineOverdue || showFineModal) && fineAmount > 0 && (
+         <div className="fixed inset-0 bg-[#1a1a2e]/90 backdrop-blur-md z-[9999] flex items-center justify-center p-4 pointer-events-auto">
+           <div className="bg-white p-8 rounded-3xl-2xl shadow-premium max-w-md w-full border border-red-100 text-center relative overflow-hidden animate-fade-in-up">
+             {!isFineOverdue && (
+                <button onClick={() => setShowFineModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                  <X size={16} />
+                </button>
+             )}
+             <div className="absolute top-0 left-0 w-full h-2 bg-red-600"></div>
+             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+             <h2 className="text-2xl font-serif text-paa-navy mb-2">{isFineOverdue ? 'Account Restricted' : 'Pay Late Fine'}</h2>
+             <p className="text-sm text-gray-600 mb-6">You have an outstanding late delivery fine of <strong className="text-red-600">₹{dashboardData.authorProfile.extraData.lateFines}</strong>. {isFineOverdue ? 'Your dashboard access has been temporarily suspended until the fine is cleared.' : 'Please pay it to avoid dashboard suspension.'}</p>
+             
+             <div className="bg-orange-50 p-6 rounded-xl border border-orange-200 mb-6 relative">
+                <img src={qrCode} alt="Payment QR" className="w-40 h-40 mx-auto rounded-xl shadow-sm mb-3 border border-orange-300" />
+                <p className="text-xs font-bold text-orange-900 uppercase tracking-widest">Scan to pay ₹{dashboardData.authorProfile.extraData.lateFines}</p>
+             </div>
+
+             <div className="text-left mb-6">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-paa-navy mb-2 block">Upload Payment Screenshot *</label>
+                <input type="file" accept="image/*" className="w-full border border-gray-300 rounded-lg p-2 text-xs outline-none focus:border-paa-navy bg-white" onChange={(e) => {
+                   if (e.target.files && e.target.files[0]) {
+                      setFineScreenshot(e.target.files[0]);
+                   } else {
+                      setFineScreenshot(null);
+                   }
+                }} />
+             </div>
+             
+             <button onClick={handlePayFine} disabled={isSubmittingFine || !fineScreenshot} className="w-full dash-btn dash-btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white border-none py-3">
+               {isSubmittingFine ? 'Submitting...' : 'Submit Payment Screenshot'}
+             </button>
+           </div>
+         </div>
+      )}
 
       {/* Mandatory Settlement Overlay Blackout */}
       {dashboardData?.eventInvites?.some((inv: any) => inv.optInStatus === 'Opted-In' && inv.event.status === 'Past' && dashboardData?.listedBooks?.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) && location.pathname !== '/dashboard/events' && (
@@ -312,27 +475,51 @@ export function AuthorDashboardPage() {
 
           {/* Right items */}
           <div className="flex items-center gap-2 relative shrink-0">
-             <button onClick={() => setShowNotifications(!showNotifications)} className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 text-paa-gray-text hover:text-paa-navy transition-colors">
+             <button onClick={() => { setShowNotifications(!showNotifications); }} className={`relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 text-paa-gray-text hover:text-paa-navy transition-colors ${hasUnread && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') ? 'animate-pulse' : ''}`}>
                 <Bell size={16} />
-                {hasUnreadInvites && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
+                {hasUnread && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
              </button>
-             {showNotifications && (
-                <div className="dash-notification-panel">
-                   <div className="px-4 py-3 border-b border-black/6 bg-gray-50 flex justify-between items-center">
-                     <p className="text-xs font-bold uppercase tracking-widest text-paa-navy">Notifications</p>
-                     <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-paa-navy"><X size={14}/></button>
+             {/* Auto-open Blinking Toast */}
+             {hasUnread && !showNotifications && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') && (
+                <div className="animate-pulse" style={{ position: 'absolute', top: '100%', right: '100%', marginRight: 12, marginTop: -8, width: 280, background: '#1a1a2e', borderRadius: 12, padding: '12px 16px', color: '#fff', zIndex: 9999, display: 'flex', gap: 12, alignItems: 'flex-start', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
+                   <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => { setShowNotifications(true); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }}>
+                      <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: 2 }}>New Message</p>
+                      <p style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.4 }}>{notifications[0]?.message || (unreadEventInvites.length > 0 ? `New Event: ${unreadEventInvites[0].event.name}` : 'You have unread notifications.')}</p>
                    </div>
-                   <div className="max-h-64 overflow-y-auto">
-                      {hasUnreadInvites ? unreadEventInvites.map((inv: any) => (
-                         <button key={inv.id} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} className="w-full text-left px-4 py-3 hover:bg-black/3 border-b flex items-start gap-3 transition-colors">
-                            <div className="w-2 h-2 rounded-full bg-violet-500 mt-1.5 shrink-0"></div>
-                            <div>
-                               <p className="text-sm font-semibold text-paa-navy">New Event: {inv.event.name}</p>
-                               <p className="text-xs text-paa-gray-text">You are invited to participate!</p>
-                            </div>
-                         </button>
-                      )) : (
-                         <div className="px-4 py-6 text-center text-paa-gray-text text-xs">No new notifications.</div>
+                   <button onClick={(e) => { e.stopPropagation(); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14}/></button>
+                   <div style={{ position: 'absolute', top: 12, right: -6, width: 0, height: 0, borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '6px solid #1a1a2e' }}></div>
+                </div>
+             )}
+             {showNotifications && (
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 12, width: 340, background: '#fff', borderRadius: 16, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', zIndex: 9999, overflow: 'hidden', transformOrigin: 'top right', animation: 'scaleIn 0.2s ease-out' }}>
+                   <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                     <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>Notifications</p>
+                     <button onClick={() => setShowNotifications(false)} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14}/></button>
+                   </div>
+                   <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                      {hasUnread ? (
+                         <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            {unreadEventInvites.map((inv: any) => (
+                               <button key={`inv-${inv.id}`} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6', marginTop: 6, flexShrink: 0 }}></div>
+                                  <div>
+                                     <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>New Event: {inv.event.name}</p>
+                                     <p style={{ fontSize: 12, color: '#6b6b80', lineHeight: 1.4 }}>You are invited to participate!</p>
+                                  </div>
+                               </button>
+                            ))}
+                            {notifications.map((notif: any) => (
+                               <div key={`notif-${notif.id}`} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', marginTop: 6, flexShrink: 0 }}></div>
+                                  <div>
+                                     <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', lineHeight: 1.4 }}>{notif.message}</p>
+                                     <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 4 }}>{new Date(notif.createdAt).toLocaleString()}</p>
+                                  </div>
+                               </div>
+                            ))}
+                         </div>
+                      ) : (
+                         <div style={{ padding: '32px 20px', textAlign: 'center', color: '#6b6b80', fontSize: 12 }}>No new notifications.</div>
                       )}
                    </div>
                 </div>
@@ -344,24 +531,71 @@ export function AuthorDashboardPage() {
         </div>
       </div>
 
+      {/* GLOBAL 3-DAY WARNING BANNER */}
+      {(() => {
+         const notifyDateStr = dashboardData?.authorProfile?.extraData?.lateNotificationDate;
+         const fineAmt = dashboardData?.authorProfile?.extraData?.lateFines || 0;
+         
+         if (fineAmt === 0 && notifyDateStr && hasLateOrders) {
+           const diffDays = (new Date().getTime() - new Date(notifyDateStr).getTime()) / (1000 * 3600 * 24);
+           if (diffDays >= 0 && diffDays <= 3) {
+             const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
+             return (
+               <div className="bg-[#b44d28] text-white px-6 py-2.5 flex items-center justify-center gap-2 shadow-sm relative z-[100] border-b border-[#963c1e]">
+                 <AlertCircle size={14} className="text-white/90" />
+                 <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/90">
+                   Action Required: You have unaccepted late orders. {daysLeft} day(s) remaining to dispatch before catalogue suspension.
+                 </span>
+               </div>
+             );
+           }
+         } else if (fineAmt > 0 && dashboardData?.authorProfile?.extraData?.fineDate) {
+           const diffDays = (new Date().getTime() - new Date(dashboardData.authorProfile.extraData.fineDate).getTime()) / (1000 * 3600 * 24);
+           if (diffDays >= 0 && diffDays <= 3) {
+             const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
+             return (
+               <div className="bg-[#1a1a2e] text-white px-6 py-2 flex items-center justify-between shadow-sm relative z-[100] border-b border-[#0f0f1c]">
+                 <div className="flex items-center gap-2">
+                   <AlertCircle size={14} className="text-red-400" />
+                   <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-100">
+                     Urgent: Outstanding late fine of ₹{fineAmt}. {daysLeft} day(s) remaining before account suspension.
+                   </span>
+                 </div>
+                 <button onClick={() => setShowFineModal(true)} className="bg-red-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 transition-colors shrink-0">
+                   Pay Fine Now
+                 </button>
+               </div>
+             );
+           }
+         }
+         return null;
+      })()}
+
       <div className="max-w-[1600px] mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-6 relative">
-        <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-[500] ${isMobileMenuOpen ? 'flex fixed inset-0 top-[80px] z-[500] bg-white md:static md:shadow-premium' : 'hidden md:flex'}`}>
+        <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-30 ${isMobileMenuOpen ? 'flex fixed inset-0 top-[80px] z-[500] bg-white md:static md:shadow-premium' : 'hidden md:flex'}`}>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname === '/dashboard' ? 'active' : ''}`}><BarChart3 className="w-4 h-4"/> Overview</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/orders" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/orders') ? 'active' : ''}`}><ShoppingCart className="w-4 h-4"/> Web Orders</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/sales" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/sales') ? 'active' : ''}`}><TrendingUp className="w-4 h-4"/> Sales Report</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/inventory" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/inventory') ? 'active' : ''}`}><BookOpen className="w-4 h-4"/> Inventory & Distribution</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/events" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/events') ? 'active' : ''}`}><CalendarIcon className="w-4 h-4"/> Events Ecosystem</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/reviews" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/reviews') ? 'active' : ''}`}><Star className="w-4 h-4"/> Reviews & Ratings</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/gallery" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/gallery') ? 'active' : ''}`}><ImageIcon className="w-4 h-4"/> Event Gallery</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/profile" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/profile') ? 'active' : ''}`}><User className="w-4 h-4"/> Profile Settings</Link>
         </div>
 
         <div className="flex-1 bg-white border border-paa-navy/5 shadow-premium p-6 md:p-8 min-h-[calc(100vh-160px)] relative">
           <Routes>
             <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
-            <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} />} />
+            <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/sales" element={<AuthorSalesReport data={dashboardData} />} />
             <Route path="/forms/*" element={<FormsWrapper />} />
             <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
+            <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
+            <Route path="/gallery" element={<AuthorGallery />} />
+            <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
             <Route path="/pos/:eventId" element={<LivePosDashboard />} />
+            <Route path="/bundle-offers" element={<BundleOffersTab data={dashboardData} />} />
           </Routes>
         </div>
       </div>
@@ -388,20 +622,30 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     publisher: '',
     publicationDate: '',
     edition: '',
-    format: ''
+    format: '',
+    printFormat: ''
   });
   const [cover, setCover] = useState<File | null>(null);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
+
   const [editProfileForm, setEditProfileForm] = useState({
     name: '', penName: '', city: '', state: '', instagram: '', facebook: '',
-    address: '', aadharNumber: '', qualification: '', age: '', experience: '', skills: '', hobbies: '',
+    address: '', aadharNumber: '', qualification: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '',
     bio: '', phone: '', whatsapp: ''
   });
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [editCoverBookId, setEditCoverBookId] = useState<number | null>(null);
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
-  const [dismissedActions, setDismissedActions] = useState<string[]>([]);
+  const [dismissedActions, setDismissedActions] = useState<string[]>(() => {
+    const saved = localStorage.getItem('paa_author_dismissed');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedGalleryEvent, setSelectedGalleryEvent] = useState<any>(null);
+  const [galleryUploadFile, setGalleryUploadFile] = useState<File | null>(null);
+  const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [showFineNotification, setShowFineNotification] = useState(true);
   const navigate = useNavigate();
 
   const authorProfile = data.authorProfile;
@@ -409,7 +653,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const authorOrders = data.authorOrders;
 
   const titlesData = authorBooks.map((b: any, index: number) => {
-    const webSales = authorOrders.filter((o: any) => o.bookTitle === b.title && (o.status === 'Completed' || o.status === 'Dispatched')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
+    const webSales = authorOrders.filter((o: any) => o.bookTitle === b.title && o.paymentVerified).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
     const eventSales = (data.listedBooks || []).filter((lb: any) => lb.bookId === b.id).reduce((acc: number, curr: any) => acc + (curr.soldStock || 0), 0);
     const totalSold = webSales + eventSales;
     return {
@@ -431,6 +675,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const filteredTitles = filter === 'all' ? titlesData : titlesData.filter((t: any) => t.genre === filter);
 
   const chartData = titlesData.map((t: any) => ({ name: t.title.substring(0, 15) + '...', sold: t.sold.total }));
+  const webOrdersPieData = titlesData.filter((t: any) => t.sold.web > 0).map((t: any) => ({ name: t.title.substring(0, 15) + '...', value: t.sold.web }));
 
   const activityData = [
     { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Opted-In').length || 0 },
@@ -438,11 +683,27 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     { name: 'Completed Orders', count: authorOrders.filter((o: any) => o.status === 'Completed').length || 0 },
   ];
 
-  const completedOrders = authorOrders.filter((o: any) => o.status === 'Completed');
-  const grossSales = completedOrders.reduce((acc: number, curr: any) => acc + curr.amount, 0);
+  const completedOrders = authorOrders.filter((o: any) => o.paymentVerified);
+  const webSalesAmount = completedOrders.reduce((acc: number, curr: any) => acc + curr.amount, 0);
+  const posSalesAmount = (data.posOrders || []).reduce((acc: number, o: any) => acc + (o.totalAmount || 0), 0);
+  const grossSales = webSalesAmount + posSalesAmount;
+  
+  const lowStockCount = authorBooks.filter((b: any) => b.stock < 5).length;
   
 
   const successfulOrders = completedOrders.length;
+  const avgOrderValue = completedOrders.length > 0 ? (webSalesAmount / completedOrders.length).toFixed(0) : '0';
+  let totalDeliveryTime = 0;
+  let deliveredCount = 0;
+  authorOrders.forEach((o: any) => {
+    if (o.status === 'Delivered' && o.dispatchedAt && o.deliveredAt) {
+      const time = new Date(o.deliveredAt).getTime() - new Date(o.dispatchedAt).getTime();
+      totalDeliveryTime += time;
+      deliveredCount++;
+    }
+  });
+  const avgDeliveryDays = deliveredCount > 0 ? (totalDeliveryTime / deliveredCount / (1000 * 3600 * 24)).toFixed(1) : 0;
+
   const toApproveOrders = authorOrders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
   const underDeliveryOrders = authorOrders.filter((o: any) => o.status === 'Dispatched').length;
 
@@ -476,12 +737,26 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     actionItems.push({ id: 'act-settle', text: `Settle your inventory for ${unsettledEvents.length} past event${unsettledEvents.length > 1 ? 's' : ''}`, icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-100', link: '/dashboard/events' });
   }
 
+  const lowStockAlerts = authorProfile.extraData?.lowStockAlerts || [];
+  const activeAlerts = lowStockAlerts.filter((a: any) => !a.read && (Date.now() - a.timestamp < 24 * 60 * 60 * 1000));
+  if (activeAlerts.length > 0 && !dismissedActions.includes('act-lowstock')) {
+     actionItems.push({ id: 'act-lowstock', text: `Admin Notification: ${activeAlerts.length} of your books have critically low stock!`, icon: Package, color: 'text-red-600', bg: 'bg-red-100', link: '/dashboard/inventory' });
+  }
+
   if (actionItems.length === 0) {
     actionItems.push({ id: 'act-none', text: 'All caught up! No pending actions.', icon: Check, color: 'text-gray-600', bg: 'bg-gray-100', link: '' });
   }
 
   const handleAddBook = async (e: React.FormEvent | null, addAnother: boolean = false) => {
     if (e) e.preventDefault();
+    if (!newBook.pages || parseInt(newBook.pages) <= 0) {
+      toast.error('Number of pages is mandatory and must be greater than 0.');
+      return;
+    }
+    if (!newBook.printFormat) {
+      toast.error('Print format is mandatory.');
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append('title', newBook.title);
@@ -497,6 +772,17 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       formData.append('isbn', newBook.isbn);
       formData.append('publisher', newBook.publisher);
       formData.append('publicationDate', newBook.publicationDate);
+      formData.append('printFormat', newBook.printFormat || '');
+      
+      let maxFairPrice = 0;
+      if (newBook.pages && newBook.printFormat) {
+        const pages = parseInt(newBook.pages, 10);
+        if (!isNaN(pages)) {
+          if (newBook.printFormat === 'Black & White') { maxFairPrice = (pages * 0.50) + 250; }
+          else if (newBook.printFormat === 'Colored') { maxFairPrice = (pages * 2.40) + 250; }
+        }
+      }
+      formData.append('isOverpriced', (maxFairPrice > 0 && parseFloat(newBook.mrp) > maxFairPrice) ? 'true' : 'false');
       formData.append('edition', newBook.edition);
       formData.append('format', newBook.format);
       formData.append('pages', newBook.pages);
@@ -511,7 +797,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       
       if (addAnother) {
         setNewBook({
-          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '0', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: ''
+          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '0', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: '', printFormat: ''
         });
         setCover(null);
       } else {
@@ -525,26 +811,38 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   };
 
   const handleEditProfileOpen = () => {
-    setEditProfileForm({
-      name: authorProfile.name || '',
-      penName: authorProfile.penName || '',
-      city: authorProfile.city || '',
-      state: authorProfile.state || '',
-      instagram: authorProfile.instagram || '',
-      facebook: authorProfile.facebook || '',
-      address: authorProfile.address || '',
-      aadharNumber: authorProfile.aadharNumber || '',
-      qualification: authorProfile.qualification || '',
-      age: authorProfile.age || '',
-      experience: authorProfile.experience || '',
-      skills: authorProfile.skills || '',
-      hobbies: authorProfile.hobbies || '',
-      bio: authorProfile.bio || '',
-      phone: authorProfile.phone || '',
-      whatsapp: authorProfile.whatsapp || ''
-    });
-    setEditPhoto(null);
-    setShowEditProfile(true);
+    navigate('/dashboard/profile');
+  };
+
+  
+  const handleUploadGalleryImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGalleryEvent || !galleryUploadFile) return;
+    try {
+      setIsUploadingGallery(true);
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('photo', galleryUploadFile);
+      formData.append('caption', galleryUploadCaption);
+      
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/${selectedGalleryEvent.id}/images`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (res.ok) {
+        alert('Image uploaded successfully! It will appear in the gallery.');
+        setGalleryUploadFile(null);
+        setGalleryUploadCaption('');
+        setSelectedGalleryEvent(null);
+      } else {
+        alert('Failed to upload image.');
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setIsUploadingGallery(false);
+    }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -607,13 +905,22 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       publisher: book.publisher || '',
       publicationDate: book.publicationDate || '',
       edition: book.edition || '',
-      format: book.format || ''
+      format: book.format || '',
+      printFormat: book.printFormat || ''
     });
   };
 
   const handleEditBookSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBook) return;
+    if (!editingBook.pages || parseInt(editingBook.pages) <= 0) {
+      toast.error('Number of pages is mandatory and must be greater than 0.');
+      return;
+    }
+    if (!editingBook.printFormat) {
+      toast.error('Print format is mandatory.');
+      return;
+    }
     setButtonStates(prev => ({...prev, updateBook: true}));
     try {
       const token = localStorage.getItem('token');
@@ -631,7 +938,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
         publisher: editingBook.publisher,
         publicationDate: editingBook.publicationDate,
         edition: editingBook.edition,
-        format: editingBook.format
+        format: editingBook.format,
+        printFormat: editingBook.printFormat
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -662,14 +970,30 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     <div>
       {/* ── Page Header ── */}
       <div className="flex justify-between items-start mb-7 flex-wrap gap-3">
-        <div>
-          <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-paa-gray-text mb-1">Author Portal</p>
-          <h1 className="text-3xl font-serif font-bold text-paa-navy tracking-tight">My Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-white shadow-sm shrink-0">
+             {authorProfile.photoUrl ? (
+                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorProfile.photoUrl}`} alt="Profile" className="w-full h-full object-cover" />
+             ) : (
+                <User size={24} className="text-gray-400" />
+             )}
+          </div>
+          <div>
+            <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-paa-gray-text mb-1">Author Portal &middot; Dashboard</p>
+            <h1 className="text-3xl font-serif font-bold text-paa-navy tracking-tight mb-1">{authorProfile.name || 'My Dashboard'}</h1>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 font-medium">
+              <span className="flex items-center gap-1.5"><Mail size={12}/> {authorProfile.email}</span>
+              <span className="flex items-center gap-1.5"><Phone size={12}/> {authorProfile.phone}</span>
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
           <button onClick={handleEditProfileOpen} className="dash-btn dash-btn-ghost">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{display:'inline',marginRight:5}}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Edit Profile
+          </button>
+          <button onClick={() => navigate('/dashboard/bundle-offers')} className="dash-btn dash-btn-primary bg-indigo-600 hover:bg-indigo-700 !border-indigo-600">
+            Bundle Offers
           </button>
           <button onClick={() => setShowAddBook(true)} className="dash-btn dash-btn-primary">
             + Add New Book
@@ -678,12 +1002,18 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         {[
           { label: 'Total Titles', value: authorBooks.length, colorClass: 'blue' },
           { label: 'Total Stock', value: authorBooks.reduce((a: number, b: any) => a + b.stock, 0), colorClass: 'green' },
           { label: 'Gross Sales', value: '\u20b9' + grossSales.toFixed(0), colorClass: 'amber' },
           { label: 'Total Fees Paid', value: '\u20b9' + totalFeesPaid, colorClass: 'red' },
+          { label: 'Web Sales', value: '\u20b9' + webSalesAmount.toFixed(0), colorClass: 'blue' },
+          { label: 'POS/Event Sales', value: '\u20b9' + posSalesAmount.toFixed(0), colorClass: 'amber' },
+          { label: 'Avg Order Value', value: '\u20b9' + avgOrderValue, colorClass: 'blue' },
+          { label: 'Avg Delivery', value: avgDeliveryDays > 0 ? `${avgDeliveryDays} Days` : 'N/A', colorClass: 'teal' },
+          { label: 'Pending Web Orders', value: toApproveOrders, colorClass: 'amber' },
+          { label: 'Low Stock Titles', value: lowStockCount, colorClass: 'red' },
         ].map((kpi, i) => (
           <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
             <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
@@ -716,7 +1046,12 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                 )}
               </div>
               {action.id !== 'act-none' && (
-                <button onClick={(e) => { e.stopPropagation(); setDismissedActions([...dismissedActions, action.id]); }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Dismiss">
+                <button onClick={(e) => { 
+                   e.stopPropagation(); 
+                   const next = [...dismissedActions, action.id];
+                   setDismissedActions(next);
+                   localStorage.setItem('paa_author_dismissed', JSON.stringify(next)); 
+                }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Dismiss">
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -819,6 +1154,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                 </div>
               </div>
               <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Why did you join the group? (Published Authors)</label>
+                <textarea className="dash-input w-full resize-y" rows={2} value={editProfileForm.whyJoining} onChange={e => setEditProfileForm({...editProfileForm, whyJoining: e.target.value})} />
+              </div>
+              <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (150 words)</label>
                 <textarea required className="dash-input w-full" rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({...editProfileForm, bio: e.target.value})} />
               </div>
@@ -837,7 +1176,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       )}
 
       {editCoverBookId !== null && (
-        <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setEditCoverBookId(null)}>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setEditCoverBookId(null)}>
           <div className="dash-modal" style={{maxWidth:400}}>
             <div className="dash-modal-header">
               <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Update Book Cover</h3>
@@ -856,14 +1195,17 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       )}
       
       {showAddBook && (
-        <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowAddBook(false)}>
-          <div className="dash-modal max-w-lg">
-            <div className="dash-modal-header">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Add New Title</h3>
-              <button onClick={() => setShowAddBook(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">&#x2715;</button>
+        <div className="absolute inset-0 z-50 bg-white p-6 md:p-8 overflow-y-auto animate-fade-in-up">
+          <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+            <div>
+              <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Add New Title</h2>
+              <p className="text-sm text-paa-gray-text mt-1">Register a new book to the platform.</p>
             </div>
-            <div className="dash-modal-body max-h-[75vh] overflow-y-auto">
-              <form onSubmit={handleAddBook} className="flex flex-col gap-4">
+            <button type="button" onClick={() => setShowAddBook(false)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-paa-gray-text hover:text-paa-navy transition-colors">
+              <X className="w-4 h-4" /> Cancel
+            </button>
+          </div>
+          <form onSubmit={handleAddBook} className="flex flex-col gap-6 max-w-4xl">
                 
                 {/* Book Title & Subtitle */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -925,7 +1267,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                 </div>
 
                 {/* ISBN, Edition, Format */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div>
                     <label className="dash-label">ISBN</label>
                     <input className="dash-input" placeholder="e.g. 978..." value={newBook.isbn} onChange={e => setNewBook({...newBook, isbn: e.target.value})} />
@@ -943,21 +1285,29 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                       <option value="Ebook">Ebook</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="dash-label">Print Format *</label>
+                    <select required className="dash-input" value={(newBook as any).printFormat || ''} onChange={e => setNewBook({...newBook, printFormat: e.target.value})}>
+                      <option value="">Select Print Format</option>
+                      <option value="Black & White">Black & White</option>
+                      <option value="Colored">Colored</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Pages, MRP, Initial Stock */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="dash-label">Pages</label>
-                    <input type="number" className="dash-input" placeholder="250" value={newBook.pages} onChange={e => setNewBook({...newBook, pages: e.target.value})} />
+                    <label className="dash-label">Pages *</label>
+                    <input required type="number" className="dash-input" placeholder="250" value={newBook.pages} onChange={e => setNewBook({...newBook, pages: e.target.value})} />
                   </div>
                   <div>
                     <label className="dash-label">MRP (₹) *</label>
                     <input required type="number" className="dash-input" placeholder="Price" value={newBook.mrp} onChange={e => setNewBook({...newBook, mrp: e.target.value})} />
                   </div>
                   <div>
-                    <label className="dash-label">Initial Stock</label>
-                    <input type="number" className="dash-input" placeholder="Qty" value={newBook.stock} onChange={e => setNewBook({...newBook, stock: e.target.value})} />
+                    <label className="dash-label">Initial Stock *</label>
+                    <input required type="number" className="dash-input" placeholder="Qty" value={newBook.stock} onChange={e => setNewBook({...newBook, stock: e.target.value})} />
                   </div>
                 </div>
 
@@ -967,14 +1317,25 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   <input required type="file" accept="image/*" className="dash-input text-xs" onChange={e => setCover(e.target.files?.[0] || null)} />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t mt-2">
+                {(() => {
+                   const pages = Number(newBook.pages);
+                   const mrp = Number(newBook.mrp);
+                   if (pages > 0 && newBook.printFormat && mrp > 0) {
+                      const rate = newBook.printFormat === 'Colored' ? 2.40 : 0.50;
+                      const maxPrice = (pages * rate) + 250;
+                      if (mrp > maxPrice) {
+                         return <div className="text-yellow-700 text-xs font-bold bg-yellow-50 p-2 rounded border border-yellow-200 mt-3 mb-2">Warning: Your MRP (₹{mrp}) exceeds the recommended max price of ₹{maxPrice} based on your pages and format.</div>;
+                      }
+                   }
+                   return null;
+                })()}
+
+                <div className="flex justify-end gap-2 pt-6 border-t mt-4">
                   <button type="button" onClick={() => setShowAddBook(false)} className="dash-btn dash-btn-ghost">Cancel</button>
                   <button type="button" onClick={(e) => { const f = e.currentTarget.closest('form'); if (f && f.checkValidity()) { handleAddBook(null, true); } else if (f) { f.reportValidity(); } }} className="dash-btn dash-btn-ghost">Save &amp; Add Another</button>
-                  <button type="submit" disabled={buttonStates.addBook} className="dash-btn dash-btn-primary disabled:opacity-50">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
+                  <button type="submit" disabled={buttonStates.addBook} className="dash-btn dash-btn-primary disabled:opacity-50 px-8">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
                 </div>
               </form>
-            </div>
-          </div>
         </div>
       )}
 
@@ -1030,7 +1391,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       </div>
 
       {/* ── Charts ── */}
-      <div className="grid lg:grid-cols-2 gap-5 mb-6">
+      <div className="grid lg:grid-cols-3 gap-5 mb-6">
         <div className="dash-panel">
           <div className="dash-panel-header"><h3 className="dash-panel-title">Books Sold per Title</h3></div>
           <div className="h-[250px] p-5">
@@ -1045,6 +1406,27 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
             </ResponsiveContainer>
           </div>
         </div>
+
+        <div className="dash-panel">
+          <div className="dash-panel-header"><h3 className="dash-panel-title">Web Orders Distribution</h3></div>
+          <div className="h-[250px] p-5">
+            <ResponsiveContainer width="100%" height="100%">
+              {webOrdersPieData.length > 0 ? (
+                <PieChart>
+                  <Pie data={webOrdersPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                     {webOrdersPieData.map((entry: any, index: number) => (
+                       <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][index % 5]} />
+                     ))}
+                  </Pie>
+                  <Tooltip wrapperClassName="shadow-premium border-none rounded-lg" />
+                </PieChart>
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs text-gray-400">No web orders yet.</div>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         <div className="dash-panel">
           <div className="dash-panel-header"><h3 className="dash-panel-title">Activity Participation</h3></div>
           <div className="h-[250px] p-5">
@@ -1063,16 +1445,17 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
       {/* ── Edit Book Modal (Reapply) ── */}
       {editingBook && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-paa-navy/60 p-4 backdrop-blur-sm">
-          <div className="bg-white border border-paa-navy/5 shadow-xl w-[95vw] max-w-none rounded-2xl overflow-hidden flex flex-col max-h-[95vh]">
-            <div className="bg-paa-navy p-4 font-bold text-xs tracking-widest uppercase flex justify-between items-center text-white">
-              Edit Book Details & Reapply
-              <button type="button" onClick={() => setEditingBook(null)} className="hover:text-paa-gold">
-                <X className="w-5 h-5" />
-              </button>
+        <div className="absolute inset-0 z-50 bg-white p-6 md:p-8 overflow-y-auto animate-fade-in-up">
+          <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+            <div>
+              <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Edit Book Details & Reapply</h2>
+              <p className="text-sm text-paa-gray-text mt-1">Update your book information below.</p>
             </div>
-            <div className="p-6 max-h-[80vh] overflow-y-auto">
-              <form onSubmit={handleEditBookSubmit} className="space-y-4">
+            <button type="button" onClick={() => setEditingBook(null)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-paa-gray-text hover:text-paa-navy transition-colors">
+              <X className="w-4 h-4" /> Cancel
+            </button>
+          </div>
+          <form onSubmit={handleEditBookSubmit} className="space-y-6 max-w-4xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-between gap-4">
                     <div>
@@ -1109,8 +1492,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     <input type="text" className="dash-input" value={editingBook.subGenre} onChange={e => setEditingBook({...editingBook, subGenre: e.target.value})} />
                   </div>
                   <div>
-                    <label className="dash-label">Pages</label>
-                    <input type="number" className="dash-input" value={editingBook.pages} onChange={e => setEditingBook({...editingBook, pages: e.target.value})} />
+                    <label className="dash-label">Pages *</label>
+                    <input required type="number" className="dash-input" value={editingBook.pages} onChange={e => setEditingBook({...editingBook, pages: e.target.value})} />
                   </div>
                   <div>
                     <label className="dash-label">MRP (₹)</label>
@@ -1144,20 +1527,37 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     <label className="dash-label">Format</label>
                     <input type="text" className="dash-input" value={editingBook.format} onChange={e => setEditingBook({...editingBook, format: e.target.value})} />
                   </div>
+                  <div>
+                    <label className="dash-label">Print Format *</label>
+                    <select required className="dash-input" value={editingBook.printFormat || ''} onChange={e => setEditingBook({...editingBook, printFormat: e.target.value})}>
+                      <option value="">Select Format</option>
+                      <option value="Black & White">Black & White (₹1/page)</option>
+                      <option value="Colored">Colored (₹3/page)</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="dash-label">Synopsis</label>
                   <textarea required className="dash-input" rows={4} value={editingBook.synopsis} onChange={e => setEditingBook({...editingBook, synopsis: e.target.value})}></textarea>
                 </div>
-                <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+                {(() => {
+                   const pages = Number(editingBook.pages);
+                   const mrp = Number(editingBook.mrp);
+                   const isColored = editingBook.printFormat === 'Colored';
+                   const rate = isColored ? 2.40 : 0.50;
+                   const maxPrice = (pages * rate) + 250;
+                   if (pages > 0 && mrp > maxPrice) {
+                     return <div className="text-yellow-700 text-xs font-bold bg-yellow-50 p-2 rounded border border-yellow-200 mt-3">Warning: Your MRP (₹{mrp}) exceeds the recommended max price of ₹{maxPrice} based on your pages and format.</div>;
+                   }
+                   return null;
+                })()}
+                <div className="flex justify-end gap-3 pt-6 border-t mt-6">
                   <button type="button" onClick={() => setEditingBook(null)} className="dash-btn dash-btn-ghost">Cancel</button>
-                  <button type="submit" disabled={buttonStates.updateBook} className="dash-btn dash-btn-primary bg-paa-gold hover:bg-yellow-500 text-paa-navy disabled:opacity-50">
+                  <button type="submit" disabled={buttonStates.updateBook} className="dash-btn dash-btn-primary bg-paa-gold hover:bg-yellow-500 text-paa-navy px-8 disabled:opacity-50">
                     {buttonStates.updateBook ? 'Submitting...' : 'Submit & Reapply'}
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
         </div>
       )}
     </div>
@@ -1552,11 +1952,15 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
 }
 
 // Author Orders
-function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => void }) {
-  const [loadingAction, setLoadingAction] = useState<number | null>(null);
-  const [rejectItemId, setRejectItemId] = useState<number | null>(null);
+function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onRefresh: () => void, dashboardData: any }) {
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [rejectItemId, setRejectItemId] = useState<number[] | null>(null);
   const [rejectReasons, setRejectReasons] = useState<string[]>(['Item out of stock']);
   const [otherRejectReason, setOtherRejectReason] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [viewBuyerInfoOrder, setViewBuyerInfoOrder] = useState<any | null>(null);
+  const [editingStatusOrderId, setEditingStatusOrderId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const ORDER_REJECTION_REASONS = [
     'Item out of stock',
@@ -1792,16 +2196,15 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
     }
   };
 
-  const handleApprove = async (id: number) => {
-    setLoadingAction(id);
+  const handleApprove = async (itemIds: number[]) => {
+    setLoadingAction(String(itemIds[0]));
     try {
       const token = localStorage.getItem('token');
-      const { data } = await axios.put(`${API}/api/order-items/${id}/author-approve`, {}, {
+      await Promise.all(itemIds.map(id => axios.put(`${API}/api/order-items/${id}/author-approve`, {}, {
         headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Order Approved â€” Stock reserved!');
+      })));
+      toast.success('Order Approved — Stock reserved!');
       onRefresh();
-      
     } catch (e) {
       toast.error('Failed to approve order');
     } finally {
@@ -1816,12 +2219,13 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
     if (reasons.length === 0) { alert('Please select or enter at least one reason.'); return; }
     
     const finalReason = reasons.join('; ');
-    setLoadingAction(rejectItemId);
+    const itemIds = Array.isArray(rejectItemId) ? rejectItemId : [rejectItemId];
+    setLoadingAction(String(itemIds[0]));
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${rejectItemId}/author-reject`, { reason: finalReason }, {
+      await Promise.all(itemIds.map(id => axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/author-reject`, { reason: finalReason }, {
         headers: { Authorization: `Bearer ${token}` }
-      });
+      })));
       setRejectItemId(null);
       setRejectReasons(['Item out of stock']);
       setOtherRejectReason('');
@@ -1834,19 +2238,19 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
   };
 
   
-  const handleStatusChange = async (id: number, newStatus: string) => {
-    setLoadingAction(id);
+  const handleStatusChange = async (itemIds: number[], newStatus: string) => {
+    setLoadingAction(String(itemIds[0]));
     try {
       const token = localStorage.getItem('token');
       if (newStatus === 'Dispatched') {
          const trackingNumber = prompt("Enter tracking number for dispatch (optional):");
-         await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/dispatch`, { trackingNumber: trackingNumber || 'N/A' }, {
+         await Promise.all(itemIds.map(id => axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/dispatch`, { trackingNumber: trackingNumber || 'N/A' }, {
            headers: { Authorization: `Bearer ${token}` }
-         });
+         })));
       } else {
-         await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/status`, { status: newStatus }, {
+         await Promise.all(itemIds.map(id => axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/status`, { status: newStatus }, {
            headers: { Authorization: `Bearer ${token}` }
-         });
+         })));
       }
       toast.success('Order status updated to ' + newStatus);
       onRefresh();
@@ -1861,7 +2265,7 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
     const trackingNumber = prompt("Enter tracking number for dispatch:");
     if (!trackingNumber) return;
 
-    setLoadingAction(id);
+    setLoadingAction(String(id));
     try {
       const token = localStorage.getItem('token');
       await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/dispatch`, { trackingNumber }, {
@@ -1876,8 +2280,129 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
     }
   };
 
+  const filteredOrders = (filterStatus === 'All' 
+    ? orders 
+    : filterStatus === 'Pending' 
+      ? orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Pending' || o.status === 'Processing') 
+      : orders.filter((o: any) => o.status === filterStatus)).filter((o: any) => {
+         if (!searchQuery) return true;
+         const q = searchQuery.toLowerCase();
+         return o.customerName?.toLowerCase().includes(q) || 
+                o.customerEmail?.toLowerCase().includes(q) || 
+                String(o.orderId).includes(q) || 
+                o.bookTitle?.toLowerCase().includes(q) || 
+                o.title?.toLowerCase().includes(q);
+      });
+
+  const groupedOrdersObj: Record<string, any> = {};
+  filteredOrders.forEach((o: any) => {
+    if (!groupedOrdersObj[o.orderId]) {
+      groupedOrdersObj[o.orderId] = {
+        ...o,
+        itemIds: [o.id],
+        books: [{ title: o.bookTitle || o.title, quantity: o.quantity, amount: o.amount }],
+        totalQuantity: o.quantity,
+        totalAmount: o.amount,
+      };
+    } else {
+      groupedOrdersObj[o.orderId].itemIds.push(o.id);
+      groupedOrdersObj[o.orderId].books.push({ title: o.bookTitle || o.title, quantity: o.quantity, amount: o.amount });
+      groupedOrdersObj[o.orderId].totalQuantity += o.quantity;
+      groupedOrdersObj[o.orderId].totalAmount += o.amount;
+    }
+  });
+  const groupedOrdersList = Object.values(groupedOrdersObj).sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+
   return (
     <div>
+      {/* Buyer Info Modal */}
+      {viewBuyerInfoOrder !== null && (
+        <div className="fixed inset-0 bg-paa-navy/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-8 max-w-md w-full shadow-xl relative rounded-xl border border-paa-navy/5">
+            <button onClick={() => setViewBuyerInfoOrder(null)} className="absolute top-4 right-4 text-gray-400 hover:text-paa-navy">
+              <X size={20} />
+            </button>
+            <h2 className="text-2xl font-serif text-paa-navy mb-1">Buyer Details</h2>
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-6 border-b border-paa-navy/10 pb-4">ORD-{viewBuyerInfoOrder.orderId}</p>
+            <div className="space-y-4 text-sm">
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Name</p>
+                <p className="font-bold text-paa-navy">{viewBuyerInfoOrder.customerName}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Phone</p>
+                <p className="font-bold text-[#4a90e2]">{viewBuyerInfoOrder.customerPhone || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Delivery Address</p>
+                <p className="text-gray-700 leading-relaxed">{viewBuyerInfoOrder.address}</p>
+              </div>
+            </div>
+            <div className="mt-6 border-t border-paa-navy/10 pt-4">
+              <p className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-3">Order Timeline</p>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                   <span className="text-gray-500">Placed On</span>
+                   <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).toLocaleString('en-IN')}</span>
+                </div>
+                {viewBuyerInfoOrder.acceptedAt && (
+                  <div className="flex justify-between items-center text-xs">
+                     <span className="text-gray-500">Accepted</span>
+                     <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.acceptedAt).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {viewBuyerInfoOrder.dispatchedAt && (
+                  <div className="flex justify-between items-center text-xs">
+                     <span className="text-gray-500">Dispatched</span>
+                     <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.dispatchedAt).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {(viewBuyerInfoOrder.deliveredAt || viewBuyerInfoOrder.status === 'Completed' || viewBuyerInfoOrder.status === 'Delivered') && (
+                  <div className="flex justify-between items-center text-xs">
+                     <span className="text-gray-500">Delivered</span>
+                     <span className="font-medium text-green-600">{viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).toLocaleString('en-IN') : 'Delivered'}</span>
+                  </div>
+                )}
+                {(viewBuyerInfoOrder.deliveredAt || viewBuyerInfoOrder.status === 'Completed' || viewBuyerInfoOrder.status === 'Delivered') && (
+                  <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-center font-bold text-green-600 bg-green-50 py-1.5 rounded">
+                     Took {Math.max(1, Math.ceil(((viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).getTime() : new Date().getTime()) - new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).getTime()) / (1000 * 3600 * 24)))} Days to Deliver
+                  </div>
+                )}
+              </div>
+            </div>
+            {(viewBuyerInfoOrder.feedbackCondition || viewBuyerInfoOrder.feedbackRating) && (
+              <div className="mt-6 border-t border-paa-navy/10 pt-4">
+                <p className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-3">Customer Feedback</p>
+                <div className="space-y-3 bg-gray-50 p-3 rounded border border-gray-200 text-sm">
+                  <div className="flex justify-between items-center text-xs">
+                     <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Condition</span>
+                     <span className={`font-medium ${viewBuyerInfoOrder.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-paa-navy'}`}>{viewBuyerInfoOrder.feedbackCondition}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                     <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Delivery Rating</span>
+                     <span className="font-medium text-yellow-500">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                           <span key={i}>{i < (viewBuyerInfoOrder.feedbackRating || 0) ? '★' : '☆'}</span>
+                        ))}
+                     </span>
+                  </div>
+                  {viewBuyerInfoOrder.feedbackComments && (
+                    <div className="text-xs italic text-gray-600 border-t border-gray-200 mt-2 pt-2">
+                      "{viewBuyerInfoOrder.feedbackComments}"
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="mt-6 text-center">
+              <button onClick={() => setViewBuyerInfoOrder(null)} className="px-6 py-2 bg-gray-100 text-gray-600 font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors w-full rounded">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reject Reason Modal */}
       {rejectItemId !== null && (
         <div className="fixed inset-0 bg-paa-navy/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -1918,22 +2443,47 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-paa-navy/5 pb-4">
         <div>
           <h2 className="text-2xl font-serif text-paa-navy tracking-tight">My Web Orders</h2>
           <p className="text-sm text-paa-gray-text mt-1">Manage pending orders and track dispatched shipments.</p>
         </div>
+        <button onClick={() => {
+           const headers = ['Order ID', 'Date', 'Book', 'Customer Name', 'Customer Email', 'Customer Phone', 'Address', 'Status', 'Quantity', 'Amount'];
+           const rows = filteredOrders.map((o: any) => [
+             o.orderId,
+             `"${o.date}"`,
+             `"${o.title}"`,
+             `"${o.customerName}"`,
+             o.customerEmail,
+             o.customerPhone,
+             `"${o.address?.replace(/\n/g, ' ')}"`,
+             o.status,
+             o.quantity,
+             o.total
+           ]);
+           const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+           const encodedUri = encodeURI(csvContent);
+           const link = document.createElement('a');
+           link.setAttribute('href', encodedUri);
+           link.setAttribute('download', 'author_orders_export.csv');
+           document.body.appendChild(link);
+           link.click();
+           document.body.removeChild(link);
+        }} className="flex items-center gap-2 bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest shadow transition-colors shrink-0">
+           <Download size={14} /> Export CSV
+        </button>
       </div>
 
       {/* ── Order Tracking KPIs ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
         <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
             <Check size={20} />
           </div>
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Successful Orders</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Completed').length}</h3>
+            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Completed' || o.status === 'Delivered').length}</h3>
           </div>
         </div>
         <div className="dash-kpi-card amber" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -1945,120 +2495,224 @@ function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => v
             <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length}</h3>
           </div>
         </div>
+        <div className="dash-kpi-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+            <Package size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Dispatched</p>
+            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Accepted').length}</h3>
+          </div>
+        </div>
         <div className="dash-kpi-card blue" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <Package size={20} />
+            <MapPin size={20} />
           </div>
           <div>
             <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Under Delivery</p>
             <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Dispatched').length}</h3>
           </div>
         </div>
+        <div className="dash-kpi-card border border-red-500/20" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#fef2f2' }}>
+          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+            <AlertCircle size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-red-500 mb-1">Late Deliveries</p>
+            <h3 className="text-2xl font-bold text-red-600">{orders.filter((o: any) => o.dispatchedAt && (new Date(o.dispatchedAt).getTime() - new Date(o.createdAt).getTime() > 24 * 60 * 60 * 1000)).length}</h3>
+          </div>
+        </div>
+        <div className="dash-kpi-card border border-red-500/20" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#fef2f2' }}>
+          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+            <TrendingDown size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-red-500 mb-1">Late Fines</p>
+            <h3 className="text-2xl font-bold text-red-600">₹{dashboardData?.authorProfile?.extraData?.lateFines || 0}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar max-w-full">
+          {['All', 'Pending', 'Accepted', 'Dispatched', 'Delivered', 'Completed', 'Rejected'].map(status => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-colors ${
+                filterStatus === status ? 'bg-paa-navy text-paa-cream' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+        <div className="relative w-full sm:w-64 shrink-0">
+          <input 
+            type="text" 
+            placeholder="Search Orders..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-white border border-paa-navy/10 rounded-full text-sm outline-none focus:border-paa-navy transition-colors"
+          />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
       </div>
 
       <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden mb-12">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-             <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
+          <table className="w-full text-left text-xs whitespace-nowrap">
+             <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-[10px] border-b border-paa-navy/5">
                 <tr>
-                   <th className="px-4 py-3 font-bold">Order Details</th>
-                   <th className="px-4 py-3 font-bold">Buyer Information</th>
-                   <th className="px-4 py-3 font-bold">Book Title</th>
-                   <th className="px-4 py-3 font-bold text-center">Qty</th>
-                   <th className="px-4 py-3 font-bold text-center">Amount</th>
-                   <th className="px-4 py-3 font-bold text-center">Payment</th>
-                   <th className="px-4 py-3 font-bold text-center">Status</th>
-                   <th className="px-4 py-3 font-bold text-center">Action</th>
+                   <th className="px-5 py-4 font-bold">Order Details</th>
+                   <th className="px-5 py-4 font-bold">Buyer Information</th>
+                   <th className="px-5 py-4 font-bold">Book Title</th>
+                   <th className="px-5 py-4 font-bold text-center">Qty</th>
+                   <th className="px-5 py-4 font-bold text-center">Amount</th>
+                   <th className="px-5 py-4 font-bold text-center">Payment</th>
+                   <th className="px-5 py-4 font-bold text-center">Status & Action</th>
                 </tr>
              </thead>
              <tbody className="divide-y divide-gray-100">
-               {orders.length === 0 ? <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500 italic">No orders received yet.</td></tr> : orders.map((ord, idx) => (
+               {groupedOrdersList.length === 0 ? <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500 italic">No orders found.</td></tr> : groupedOrdersList.map((ord: any, idx: number) => {
+                 const orderDate = new Date(ord.createdAt || ord.date);
+                 const isSlaBreached = (new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60) > 24 && ['Pending Verification', 'Pending', 'Accepted', 'Processing'].includes(ord.status);
+                 return (
                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="font-bold text-paa-navy tracking-wide">ORD-{ord.orderId}</p>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">{ord.date}</p>
+                    <td className="px-5 py-4">
+                      <p className="font-bold text-paa-navy tracking-wide text-xs">ORD-{ord.orderId}</p>
+                      <p className="text-[9px] text-gray-400 uppercase tracking-widest mt-1">{ord.date}</p>
+                      {isSlaBreached && <span className="text-[9px] font-bold text-white bg-red-600 px-2 py-0.5 rounded uppercase tracking-widest mt-1.5 inline-block animate-pulse">SLA Breached</span>}
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="font-bold text-paa-navy">{ord.customerName}</p>
-                      <p className="text-xs text-gray-500 truncate max-w-[200px]" title={ord.address}>{ord.address}</p>
-                      {ord.customerPhone && <p className="text-[10px] text-[#4a90e2] mt-0.5">{ord.customerPhone}</p>}
+                    <td className="px-5 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-paa-navy text-xs truncate">{ord.customerName}</p>
+                          <p className="text-[10px] text-gray-500 truncate mt-0.5" title={ord.address}>{ord.address}</p>
+                        </div>
+                        <button
+                          onClick={() => setViewBuyerInfoOrder(ord)}
+                          className="p-1.5 bg-gray-50 border border-gray-200 hover:border-paa-navy hover:bg-paa-navy hover:text-white text-gray-500 rounded transition-colors shrink-0 mt-0.5"
+                          title="View Full Details"
+                        >
+                          <Eye size={12} />
+                        </button>
+                      </div>
+                      {ord.customerPhone && <p className="text-[9px] font-bold text-[#4a90e2] mt-1">{ord.customerPhone}</p>}
                     </td>
-                    <td className="px-4 py-3 font-medium text-paa-navy max-w-[200px] truncate" title={ord.bookTitle}>{ord.bookTitle}</td>
-                    <td className="px-4 py-3 text-center font-bold text-paa-navy">{ord.quantity}</td>
-                    <td className="px-4 py-3 text-center font-bold text-paa-navy">₹{ord.amount}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col gap-2 max-w-[200px]">
+                         {ord.books.map((b: any, i: number) => (
+                           <div key={i} className="border-b border-gray-100 last:border-0 pb-1 last:pb-0">
+                             <p className="font-medium text-paa-navy text-xs truncate" title={b.title}>{b.title}</p>
+                             <p className="text-[9px] text-gray-500 uppercase tracking-widest mt-0.5">Qty: {b.quantity} &nbsp;&middot;&nbsp; ₹{b.amount}</p>
+                           </div>
+                         ))}
+                         {ord.order?.totalDiscount > 0 && <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded inline-block w-max mt-1">Discount Applied</span>}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-center font-bold text-paa-navy">{ord.totalQuantity}</td>
+                    <td className="px-5 py-4 text-center font-bold text-paa-navy">₹{ord.totalAmount}</td>
+                    <td className="px-5 py-4 text-center">
                       {ord.paymentScreenshot ? (
-                        <div className="flex flex-col items-center gap-1">
+                        <div className="flex flex-col items-center gap-1.5">
                           <a
                             href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${ord.paymentScreenshot}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[10px] font-bold text-[#4a90e2] hover:text-paa-navy underline tracking-widest uppercase transition-colors"
+                            className="text-[9px] font-bold text-[#4a90e2] hover:text-paa-navy underline tracking-widest uppercase transition-colors"
                           >
                             View Receipt
                           </a>
                           {ord.paymentVerified && (
-                            <span className="text-[10px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded-full border border-green-100"><Check size={10}/> Verified</span>
+                            <span className="text-[9px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1 bg-green-50 px-2.5 py-1 rounded-full border border-green-100"><Check size={10}/> Verified</span>
                           )}
                         </div>
-                      ) : <span className="text-[10px] text-gray-400 italic">No receipt</span>}
+                      ) : <span className="text-[9px] text-gray-400 italic">No receipt</span>}
                     </td>
-                    <td className="px-4 py-3 text-center">
-                       <span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border ${
-                         ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
-                         : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
-                         : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
-                         : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
-                         : 'bg-yellow-50 text-yellow-800 border-yellow-200'
-                       }`}>
-                         {ord.status}
-                       </span>
-                       {ord.status === 'Rejected' && ord.rejectionReason && (
-                         <div className="mt-1 text-[10px] text-red-600 truncate max-w-[120px]" title={ord.rejectionReason}>Reason: {ord.rejectionReason}</div>
-                       )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {/* Author must Approve / Reject any Pending order regardless of payment verification */}
+                    <td className="px-5 py-4 text-center">
                       {ord.status === 'Pending Verification' || ord.status === 'Pending' ? (
                         <div className="flex gap-2 items-center justify-center">
                           <button
-                            onClick={() => handleApprove(ord.id)}
-                            disabled={loadingAction === ord.id}
-                            className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 rounded w-20"
+                            onClick={() => handleApprove(ord.itemIds)}
+                            disabled={loadingAction !== null}
+                            className="text-[9px] font-bold uppercase tracking-widest px-3 py-2 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 rounded shadow-sm"
                           >
-                            {loadingAction === ord.id ? '...' : 'Approve'}
+                            {loadingAction === String(ord.itemIds[0]) ? '...' : 'Approve'}
                           </button>
                           <button
-                             onClick={() => { setRejectItemId(ord.id); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }}
-                             disabled={loadingAction === ord.id}
-                             className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 rounded w-20"
+                             onClick={() => { setRejectItemId(ord.itemIds); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }}
+                             disabled={loadingAction !== null}
+                             className="text-[9px] font-bold uppercase tracking-widest px-3 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 rounded shadow-sm"
                            >
                              Reject
                            </button>
                         </div>
-                      ) : null}
-                      {/* Status Dropdown for approved orders */
-                      (ord.status === 'Accepted' || ord.status === 'Dispatched' || ord.status === 'Delivered' || ord.status === 'Completed') && (
-                        <div className="flex flex-col gap-2 items-center">
-                          <select 
-                            className="dash-input text-[10px] py-1 px-2 uppercase font-bold" 
-                            value={ord.status === 'Completed' ? 'Delivered' : ord.status} 
-                            disabled={loadingAction === ord.id}
-                            onChange={(e) => handleStatusChange(ord.id, e.target.value)}
-                          >
-                            <option value="Accepted">Accepted</option>
-                            <option value="Dispatched">Dispatched</option>
-                            <option value="Delivered">Delivered</option>
-                          </select>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          {editingStatusOrderId === String(ord.orderId) ? (
+                            <select 
+                              className={`dash-input text-[9px] py-1.5 px-3 uppercase font-bold w-full max-w-[120px] text-center rounded-full border shadow-sm outline-none ${
+                                ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
+                                : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
+                                : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
+                                : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                              }`} 
+                              value={ord.status === 'Completed' ? 'Delivered' : ord.status} 
+                              disabled={loadingAction !== null}
+                              onChange={(e) => {
+                                handleStatusChange(ord.itemIds, e.target.value);
+                                setEditingStatusOrderId(null);
+                              }}
+                              onBlur={() => setEditingStatusOrderId(null)}
+                              autoFocus
+                            >
+                              <option value="Accepted">Accepted</option>
+                              <option value="Dispatched">Dispatched</option>
+                              <option value="Delivered">Delivered</option>
+                            </select>
+                          ) : (
+                            <div className="flex items-center justify-center gap-2">
+                               <span className={`inline-flex items-center justify-center px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full border ${
+                                 ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
+                                 : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                 : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
+                                 : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
+                                 : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                               }`}>
+                                 {ord.status}
+                               </span>
+                               {ord.status !== 'Rejected' && ord.status !== 'Completed' && ord.status !== 'Delivered' && (
+                                 <button
+                                   onClick={() => setEditingStatusOrderId(String(ord.orderId))}
+                                   className="text-gray-400 hover:text-paa-navy transition-colors shrink-0"
+                                   title="Edit Status"
+                                 >
+                                   <Edit2 size={12} />
+                                 </button>
+                               )}
+                            </div>
+                          )}
+                          {ord.status === 'Rejected' && ord.rejectionReason && (
+                            <div className="mt-1 text-[9px] text-red-600 truncate max-w-[120px]" title={ord.rejectionReason}>Reason: {ord.rejectionReason}</div>
+                          )}
                         </div>
                       )}
                     </td>
                  </tr>
-               ))}
+               )})}
              </tbody>
           </table>
-        </div>
       </div>
+      </div>
+
+      {loadingAction !== null && (
+        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-paa-navy">
+          <div className="w-12 h-12 border-4 border-paa-navy border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="font-serif text-2xl font-medium">Processing Order...</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -2187,6 +2841,8 @@ function EventsDashboard({ registrations }: any) {
   const [listedBooks, setListedBooks] = useState<any[]>([]);
   const [pastEvents, setPastEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
   
   const [optInEventId, setOptInEventId] = useState<number | null>(null);
@@ -2460,7 +3116,7 @@ function EventsDashboard({ registrations }: any) {
                              View Participants Catalogue
                           </button>
                           
-                          {isOptedIn && evt.status !== 'Past' && (
+                          {isOptedIn && evt.status !== 'Past' && evt.livePosEnabled !== false && (
                              <button onClick={() => navigate(`/dashboard/pos/${evt.id}`)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800 mt-2">
                                 Launch Live POS
                              </button>
@@ -2738,7 +3394,7 @@ function AuthorSalesReport({ data }: { data: any }) {
     return true; // lifetime
   };
 
-  const webOrders = (data.authorOrders || []).filter((o: any) => (o.status === 'Completed' || o.status === 'Dispatched') && filterByDate(new Date(o.createdAt)));
+  const webOrders = (data.authorOrders || []).filter((o: any) => o.paymentVerified && filterByDate(new Date(o.createdAt)));
   const posOrders = (data.posOrders || []).filter((o: any) => o.paymentStatus === 'CONFIRMED' && filterByDate(new Date(o.createdAt)));
 
   // Daily Aggregation
@@ -3036,6 +3692,8 @@ function AuthorSalesReport({ data }: { data: any }) {
 
 export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }: { data: any, onRefresh: () => void, buttonStates: any, setButtonStates: any }) {
   const authorProfile = data.authorProfile;
+  const authorOrders = data.authorOrders || [];
+
   const [editProfileForm, setEditProfileForm] = useState({
     name: authorProfile.name || '',
     penName: authorProfile.penName || '',
@@ -3050,11 +3708,47 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
     experience: authorProfile.experience || '',
     skills: authorProfile.skills || '',
     hobbies: authorProfile.hobbies || '',
+    whyJoining: authorProfile.whyJoining || '',
     bio: authorProfile.bio || '',
     phone: authorProfile.phone || '',
     whatsapp: authorProfile.whatsapp || ''
   });
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
+  const [selectedGalleryEvent, setSelectedGalleryEvent] = useState<any>(null);
+  const [galleryUploadFile, setGalleryUploadFile] = useState<File | null>(null);
+  const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+
+  
+  const handleUploadGalleryImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGalleryEvent || !galleryUploadFile) return;
+    try {
+      setIsUploadingGallery(true);
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('photo', galleryUploadFile);
+      formData.append('caption', galleryUploadCaption);
+      
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/${selectedGalleryEvent.id}/images`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (res.ok) {
+        alert('Image uploaded successfully! It will appear in the gallery.');
+        setGalleryUploadFile(null);
+        setGalleryUploadCaption('');
+        setSelectedGalleryEvent(null);
+      } else {
+        alert('Failed to upload image.');
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setIsUploadingGallery(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3079,6 +3773,7 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
   };
 
   return (
+    <>
     <div className="animate-fade-in-up">
       <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
         <div>
@@ -3156,10 +3851,14 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
             <input className="dash-input w-full" value={editProfileForm.skills} onChange={e => setEditProfileForm({...editProfileForm, skills: e.target.value})} />
           </div>
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
-            <input className="dash-input w-full" value={editProfileForm.hobbies} onChange={e => setEditProfileForm({...editProfileForm, hobbies: e.target.value})} />
-          </div>
-        </div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
+                  <input className="dash-input w-full" value={editProfileForm.hobbies} onChange={e => setEditProfileForm({...editProfileForm, hobbies: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Why did you join the group? (Published Authors)</label>
+                <textarea className="dash-input w-full resize-y" rows={2} value={editProfileForm.whyJoining} onChange={e => setEditProfileForm({...editProfileForm, whyJoining: e.target.value})} />
+              </div>
         <div>
           <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (150 words)</label>
           <textarea required className="dash-input w-full" rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({...editProfileForm, bio: e.target.value})} />
@@ -3172,6 +3871,325 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
           <button type="submit" disabled={buttonStates.editProfile} className="dash-btn dash-btn-primary px-8 disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save & Submit for Review'}</button>
         </div>
       </form>
+    </div>
+
+    </>
+  );
+}
+
+function BundleOffersTab({ data }: { data: any }) {
+  const authorProfile = data?.authorProfile || {};
+  
+  const initialRules = authorProfile?.extraData?.bundleRules || [];
+  if (initialRules.length === 0 && authorProfile?.extraData?.bundleRule) {
+    initialRules.push({
+       id: 1,
+       buyCount: authorProfile.extraData.bundleRule.buyCount,
+       discount: authorProfile.extraData.bundleRule.discount,
+       enabled: authorProfile.extraData.bundleRule.enabled
+    });
+  }
+  
+  const [bundleRules, setBundleRules] = useState<any[]>(initialRules.length > 0 ? initialRules : [
+     { id: Date.now(), buyCount: 3, discount: 50, enabled: false }
+  ]);
+  const [bundleSaving, setBundleSaving] = useState(false);
+
+  const handleSaveBundle = async () => {
+    setBundleSaving(true);
+    try {
+      const extraData = authorProfile?.extraData || {};
+      extraData.bundleRules = bundleRules;
+      if (bundleRules.length > 0) {
+         extraData.bundleRule = bundleRules[0];
+      }
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/extra`, { extraData }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Bundle Offers updated successfully!');
+    } catch (err) {
+      toast.error('Failed to update Bundle Offers');
+    } finally {
+      setBundleSaving(false);
+    }
+  };
+
+  const addRule = () => {
+     setBundleRules([...bundleRules, { id: Date.now(), buyCount: 2, discount: 20, enabled: true }]);
+  };
+  
+  const removeRule = (id: number) => {
+     setBundleRules(bundleRules.filter(r => r.id !== id));
+  };
+
+  const updateRule = (id: number, field: string, value: any) => {
+     setBundleRules(bundleRules.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  return (
+    <div className="bg-white p-6 md:p-8 rounded-2xl border border-paa-navy/5 shadow-sm">
+      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+        <div>
+           <h2 className="text-xl font-serif font-bold text-paa-navy tracking-tight">Dynamic Bundle Offers</h2>
+           <p className="text-sm text-gray-500 mt-1">Configure automated discount rules for customers buying multiple books.</p>
+        </div>
+        <button onClick={addRule} className="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-colors uppercase tracking-widest flex items-center gap-1">
+           <Plus size={14} /> Add Offer
+        </button>
+      </div>
+      
+      <div className="space-y-4">
+        {bundleRules.length === 0 ? (
+           <div className="text-center py-8 text-sm text-gray-500 bg-gray-50 rounded-xl border border-gray-100">No active bundle offers. Click "Add Offer" to create one.</div>
+        ) : bundleRules.map((rule, idx) => (
+           <div key={rule.id} className="relative bg-white border border-gray-200 rounded-xl p-5 hover:border-paa-navy/20 transition-all">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                 <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      id={`bundleEnabled-${rule.id}`}
+                      checked={rule.enabled}
+                      onChange={e => updateRule(rule.id, 'enabled', e.target.checked)}
+                      className="w-5 h-5 accent-paa-navy cursor-pointer"
+                    />
+                    <label htmlFor={`bundleEnabled-${rule.id}`} className={`text-sm font-bold ${rule.enabled ? 'text-paa-navy' : 'text-gray-400'} cursor-pointer`}>
+                       {rule.enabled ? 'Active Offer' : 'Offer Disabled'}
+                    </label>
+                 </div>
+                 
+                 <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                       <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Buy Qty</label>
+                       <input 
+                         type="number" min="2"
+                         className="w-20 px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-paa-navy" 
+                         value={rule.buyCount} 
+                         onChange={e => updateRule(rule.id, 'buyCount', Number(e.target.value))} 
+                       />
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Discount (₹)</label>
+                       <input 
+                         type="number" min="0"
+                         className="w-24 px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-paa-navy" 
+                         value={rule.discount} 
+                         onChange={e => updateRule(rule.id, 'discount', Number(e.target.value))} 
+                       />
+                    </div>
+                 </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                 <p className="text-xs text-gray-500 bg-blue-50 px-3 py-1.5 rounded-full text-blue-800 font-medium">
+                   <strong>Preview:</strong> "Buy {rule.buyCount}+ books by this author, get ₹{rule.discount} off!"
+                 </p>
+                 <button onClick={() => removeRule(rule.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors" title="Remove Offer">
+                    <Minus size={16} />
+                 </button>
+              </div>
+           </div>
+        ))}
+
+        <div className="flex justify-end pt-6 mt-6 border-t border-gray-100">
+          <button 
+            onClick={handleSaveBundle}
+            disabled={bundleSaving} 
+            className="dash-btn dash-btn-primary min-w-[200px]"
+          >
+            {bundleSaving ? 'Saving...' : 'Save Bundle Offers'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+function AuthorGallery() {
+  const [galleries, setGalleries] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [selectedGalleryEvent, setSelectedGalleryEvent] = React.useState<any>(null);
+  const [galleryUploadFiles, setGalleryUploadFiles] = React.useState<File[]>([]);
+  const [galleryUploadCaption, setGalleryUploadCaption] = React.useState('');
+  const [isUploadingGallery, setIsUploadingGallery] = React.useState(false);
+
+  React.useEffect(() => {
+    fetchGalleries();
+  }, []);
+
+  const fetchGalleries = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/gallery/events`);
+      setGalleries(res.data);
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUploadGalleryImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGalleryEvent || galleryUploadFiles.length === 0) return;
+    try {
+      setIsUploadingGallery(true);
+      const token = localStorage.getItem('token');
+      
+      const promises = galleryUploadFiles.map(file => {
+        const formData = new FormData();
+        formData.append('photo', file);
+        formData.append('caption', galleryUploadCaption);
+        return fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/${selectedGalleryEvent.id}/images`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+      });
+      
+      await Promise.all(promises);
+      
+      toast.success('Images uploaded successfully!');
+      setGalleryUploadFiles([]);
+      setGalleryUploadCaption('');
+      setSelectedGalleryEvent(null);
+      fetchGalleries();
+    } catch(err) {
+      console.error(err);
+      toast.error('Failed to upload image.');
+    } finally {
+      setIsUploadingGallery(false);
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy"/></div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="dash-panel">
+        <div className="dash-panel-header">
+          <h2 className="dash-panel-title">Event Galleries</h2>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-gray-500 mb-6">Select an event below to upload your photos. They will be shared in the public gallery instantly!</p>
+          <div className="grid grid-cols-1 gap-6">
+            {galleries.map(ge => (
+               <div key={ge.id} className="border border-paa-navy/10 rounded-xl overflow-hidden bg-gray-50 flex flex-col hover:shadow-premium-hover transition-all duration-300 ease-out">
+                  <div className="p-5 flex justify-between items-start border-b border-paa-navy/5 bg-white">
+                    <div>
+                      <h3 className="font-serif font-bold text-paa-navy text-xl">{ge.type} @ {ge.location}</h3>
+                      <p className="text-[11px] font-bold tracking-widest text-paa-gray-text uppercase mt-1">{new Date(ge.date).toLocaleDateString()} &bull; {ge.city}</p>
+                      <p className="text-sm text-gray-600 mt-3 max-w-2xl">{ge.description}</p>
+                    </div>
+                    <button onClick={() => setSelectedGalleryEvent(ge)} className="dash-btn dash-btn-primary shrink-0"><Upload className="w-4 h-4 inline-block mr-2" />Upload Photos</button>
+                  </div>
+                  {ge.images && ge.images.length > 0 ? (
+                    <div className="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {ge.images.filter((img: any) => img.status === 'Approved').map((img: any) => (
+                        <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-paa-navy/10 shadow-sm bg-white">
+                          <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={img.caption || 'Event image'} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-xs text-gray-400 font-medium italic text-center">No images uploaded for this event yet. Be the first!</div>
+                  )}
+               </div>
+            ))}
+          </div>
+          {galleries.length === 0 && <p className="text-gray-500 text-sm">No active galleries found.</p>}
+        </div>
+      </div>
+
+      {selectedGalleryEvent && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setSelectedGalleryEvent(null)}>
+          <div className="bg-white rounded-3xl-2xl max-w-md w-full shadow-premium overflow-hidden animate-fade-in-up">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Upload to Gallery</h3>
+              <button onClick={() => setSelectedGalleryEvent(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-gray-500 transition-colors"><X size={16}/></button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleUploadGalleryImage} className="flex flex-col gap-4">
+                <div>
+                   <label className="dash-label">Event</label>
+                   <input disabled className="dash-input bg-gray-100 w-full" value={selectedGalleryEvent.type + ' @ ' + selectedGalleryEvent.location} />
+                </div>
+                <div>
+                   <label className="dash-label">Photos (Select Multiple) *</label>
+                   <input type="file" multiple required accept="image/*" className="dash-input text-xs w-full" onChange={e => setGalleryUploadFiles(Array.from(e.target.files || []))} />
+                </div>
+                <div>
+                   <label className="dash-label">Caption (Optional)</label>
+                   <input className="dash-input w-full" placeholder="e.g., Book signing moment..." value={galleryUploadCaption} onChange={e => setGalleryUploadCaption(e.target.value)} />
+                </div>
+                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <button type="button" onClick={() => { setSelectedGalleryEvent(null); setGalleryUploadFiles([]); }} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button>
+                  <button type="submit" disabled={isUploadingGallery} className="dash-btn dash-btn-primary disabled:opacity-50">{isUploadingGallery ? 'Uploading...' : 'Upload Image'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
+function AuthorReviews({ books }: { books: any[] }) {
+  const booksWithReviews = books.filter(b => b.reviews && b.reviews.length > 0);
+  
+  if (booksWithReviews.length === 0) {
+    return (
+      <div className="text-center py-20 bg-white rounded-3xl-2xl border border-gray-100 border-dashed">
+        <Star className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-serif text-paa-navy">No reviews yet</h3>
+        <p className="text-gray-500 text-sm mt-1">Your books haven't received any customer reviews yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="mb-6">
+        <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Customer Reviews & Ratings</h2>
+        <p className="text-sm text-gray-500 mt-1">See what readers are saying about your published works.</p>
+      </div>
+      
+      {booksWithReviews.map(book => {
+        const avgRating = book.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / book.reviews.length;
+        return (
+          <div key={book.id} className="bg-white rounded-3xl-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-bold text-paa-navy text-lg">{book.title}</h3>
+              <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <span className="font-bold text-paa-navy">{avgRating.toFixed(1)}</span>
+                <span className="text-xs text-gray-500">({book.reviews.length} reviews)</span>
+              </div>
+            </div>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {book.reviews.map((r: any) => (
+                <div key={r.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-bold text-sm text-paa-navy">{r.reviewerName}</div>
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <Star key={star} className={`w-3 h-3 ${star <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 italic">"{r.comment}"</p>
+                  <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest">{new Date(r.createdAt).toLocaleDateString()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import axios from 'axios';
-import { MapPin, Calendar as CalendarIcon, User, BookOpen } from 'lucide-react';
+import { MapPin, Calendar as CalendarIcon, User, BookOpen, ImageIcon, X } from 'lucide-react';
 import { NavBar } from './NavBar';
 import { Footer } from './Footer';
+import { CustomerGallery } from './CustomerGallery';
 
 export const EventCataloguePage = () => {
   const { eventId } = useParams();
   const [event, setEvent] = useState<any>(null);
   const [catalogue, setCatalogue] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGallery, setShowGallery] = useState(false);
 
   useEffect(() => {
     const fetchCatalogue = async () => {
@@ -39,6 +41,12 @@ export const EventCataloguePage = () => {
             <span className="flex items-center gap-2"><CalendarIcon className="w-4 h-4" /> {event.date} ({event.duration})</span>
             <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {event.location}</span>
           </div>
+          <button 
+            onClick={() => setShowGallery(true)}
+            className="mt-8 mx-auto flex items-center justify-center gap-2 bg-paa-gold text-paa-navy font-bold uppercase tracking-widest px-8 py-3 rounded-full hover:bg-yellow-400 transition-colors"
+          >
+            <ImageIcon className="w-5 h-5" /> View Event Gallery
+          </button>
         </div>
       </div>
 
@@ -88,6 +96,26 @@ export const EventCataloguePage = () => {
           </div>
         )}
       </div>
+
+      {showGallery && event && event.galleryEvent && (
+        <div className="fixed inset-0 z-[5000] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowGallery(false)}>
+          <div className="bg-white w-full max-w-6xl h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
+              <div>
+                <h3 className="font-serif text-2xl text-paa-navy font-bold">{event.name} Gallery</h3>
+                <p className="text-sm text-gray-500 font-bold uppercase tracking-widest mt-1">{event.location}</p>
+              </div>
+              <button onClick={() => setShowGallery(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors bg-gray-100 text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-white">
+              <CustomerGallery eventId={event.galleryEvent.id.toString()} />
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

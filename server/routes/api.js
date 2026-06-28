@@ -14,6 +14,33 @@ const fs = require('fs');
 
 // --- BOOKS & AUTHORS ---
 
+// --- PUBLIC CONTACT INQUIRY ---
+router.post('/api/contact', async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+    if (!name || !email || !message) return res.status(400).json({ error: 'Missing fields' });
+    
+    // Save to DB
+    const inquiry = await prisma.contactInquiry.create({
+      data: { name, email, message }
+    });
+    
+    // Also create a Query so it appears in the Admin Helpdesk
+    await prisma.query.create({
+      data: {
+        subject: `Contact Form: ${name}`,
+        message: `From: ${email}\n\n${message}`,
+        status: 'Pending'
+      }
+    });
+    
+    res.status(201).json(inquiry);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to submit' });
+  }
+});
+
 // 1. Get all approved books for catalogue
 router.get('/api/books', async (req, res) => {
   const { genre } = req.query;
@@ -26,10 +53,20 @@ router.get('/api/books', async (req, res) => {
 
   const books = await prisma.book.findMany({
     where,
-    include: { author: true }
+    include: { author: true, reviews: { select: { rating: true } } }
   });
-  setCache(cacheKey, books, 60 * 1000); // 60s cache
-  res.json(books);
+
+  const filteredBooks = books.filter(b => {
+    const extraData = b.author?.extraData;
+    if (extraData && extraData.lateFines > 0 && extraData.fineDate) {
+      const diffDays = (new Date().getTime() - new Date(extraData.fineDate).getTime()) / (1000 * 3600 * 24);
+      if (diffDays > 3) return false;
+    }
+    return true;
+  });
+
+  setCache(cacheKey, filteredBooks, 60 * 1000); // 60s cache
+  res.json(filteredBooks);
 });
 
 // 1b. Get single book by ID (with author + reviews)
@@ -43,6 +80,13 @@ router.get('/api/books/:id', async (req, res) => {
       }
     });
     if (!book) return res.status(404).json({ error: 'Book not found' });
+    
+    const extraData = book.author?.extraData;
+    if (extraData && extraData.lateFines > 0 && extraData.fineDate) {
+      const diffDays = (new Date().getTime() - new Date(extraData.fineDate).getTime()) / (1000 * 3600 * 24);
+      if (diffDays > 3) return res.status(403).json({ error: 'Book is temporarily suspended' });
+    }
+
     res.json(book);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch book' });
@@ -227,7 +271,7 @@ router.get('/api/authors/:email', async (req, res) => {
 router.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
   try {
     const authors = await prisma.author.findMany({
-      include: { books: true, eventRegistrations: true, eventAuthors: true }
+      include: { books: { include: { reviews: true } }, eventRegistrations: true, eventAuthors: true }
     });
     const mapped = authors.map(a => ({
       ...a,
@@ -492,7 +536,7 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
     // 6. Quick Alerts & Activities
     const lowStockAlerts = await prisma.book.findMany({
       where: { stock: { lt: 10 } },
-      include: { author: true },
+      include: { author: true, reviews: { select: { rating: true } } },
       take: 20
     });
 
@@ -639,7 +683,7 @@ router.get('/api/admin/authors/:id/dashboard-data', verifyToken, isAdmin, async 
     const authorProfile = await prisma.author.findUnique({
       where: { id: parseInt(req.params.id) },
       include: { 
-        books: true,
+        books: { include: { reviews: true } },
         eventRegistrations: {
           include: { activity: true }
         }
@@ -673,6 +717,8 @@ router.get('/api/admin/authors/:id/dashboard-data', verifyToken, isAdmin, async 
         paymentVerified: item.order.status === 'Completed',
         paymentFailed: item.order.status === 'Payment Not Received',
         createdAt: item.createdAt,
+        dispatchedAt: item.dispatchedAt,
+        deliveredAt: item.deliveredAt,
         date: item.createdAt.toISOString().split('T')[0]
       }));
     }
@@ -719,7 +765,7 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
     const authorProfile = await prisma.author.findUnique({
       where: { email: req.user.email },
       include: { 
-        books: true,
+        books: { include: { reviews: true } },
         eventRegistrations: {
           include: { activity: true }
         }
@@ -752,6 +798,8 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
         paymentVerified: item.order.status === 'Completed',
         paymentFailed: item.order.status === 'Payment Not Received',
         createdAt: item.createdAt,
+        dispatchedAt: item.dispatchedAt,
+        deliveredAt: item.deliveredAt,
         date: item.createdAt.toISOString().split('T')[0]
       }));
     }
@@ -776,7 +824,11 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
       where: { authorId: authorProfile.id },
       include: { items: { include: { book: true } } }
     });
-    const result = { authorProfile, authorOrders, dynamicFields, eventInvites, listedBooks, posOrders };
+    const notifications = await prisma.notification.findMany({
+      where: { OR: [{ target: 'ALL' }, { target: authorProfile.name }, { target: `@${authorProfile.name}` }] },
+      orderBy: { createdAt: 'desc' }
+    });
+    const result = { authorProfile, authorOrders, dynamicFields, eventInvites, listedBooks, posOrders, notifications };
     setCache(cacheKey, result, 20 * 1000); // 20s cache for dashboard
     res.json(result);
   } catch (err) {
@@ -809,7 +861,7 @@ router.put('/api/author/inventory/:id', verifyToken, async (req, res) => {
 // Author: Update own bio / profile info
 router.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async (req, res) => {
   try {
-    const { bio, phone, whatsapp, name, penName, city, state, instagram, facebook, address, aadharNumber, qualification, age, experience, skills, hobbies } = req.body;
+    const { bio, phone, whatsapp, name, penName, city, state, instagram, facebook, address, aadharNumber, qualification, age, experience, skills, hobbies, whyJoining } = req.body;
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(403).json({ error: 'Not an author' });
 
@@ -830,6 +882,7 @@ router.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async
       ...(experience !== undefined && { experience }),
       ...(skills !== undefined && { skills }),
       ...(hobbies !== undefined && { hobbies }),
+      ...(whyJoining !== undefined && { whyJoining }),
       rejectionReason: null // Clear previous rejection if any
     };
     if (req.file) {
@@ -863,16 +916,25 @@ router.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async
 router.put('/api/author/books/:id', verifyToken, async (req, res) => {
   try {
     const bookId = parseInt(req.params.id);
-    const { title, subtitle, genre, subGenre, mrp, stock, synopsis, pages, language, isbn, publisher, publicationDate, edition, format } = req.body;
+    const { title, subtitle, genre, subGenre, mrp, stock, synopsis, pages, language, isbn, publisher, publicationDate, edition, format, printFormat } = req.body;
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(403).json({ error: 'Not an author' });
 
     const book = await prisma.book.findUnique({ where: { id: bookId } });
     if (!book || book.authorId !== author.id) return res.status(403).json({ error: 'Not authorized' });
 
+    
+    let isOverpriced = false;
+    if (pages && printFormat && mrp) {
+        const rate = printFormat === 'Black & White' ? 1 : 3;
+        const fairPrice = (parseInt(pages) * rate) + 100;
+        isOverpriced = parseFloat(mrp) > fairPrice;
+    }
+
     const updated = await prisma.book.update({
       where: { id: bookId },
       data: {
+        ...(mrp !== undefined && pages !== undefined && printFormat !== undefined && { overpriced: isOverpriced }),
         ...(title !== undefined && { title }),
         ...(subtitle !== undefined && { subtitle: subtitle || null }),
         ...(genre !== undefined && { genre }),
@@ -887,6 +949,7 @@ router.put('/api/author/books/:id', verifyToken, async (req, res) => {
         ...(publicationDate !== undefined && { publicationDate: publicationDate || null }),
         ...(edition !== undefined && { edition: edition || null }),
         ...(format !== undefined && { format: format || null }),
+        ...(printFormat !== undefined && { printFormat }),
         status: 'Pending', // Setting back to pending for re-evaluation
         rejectionReason: null
       }
@@ -911,9 +974,18 @@ router.put('/api/author/books/:id/cover', verifyToken, upload.single('cover'), a
     if (!book || book.authorId !== author.id) return res.status(403).json({ error: 'Not authorized' });
 
     const coverUrl = `/uploads/${req.file.filename}`;
+    
+    let isOverpriced = false;
+    if (pages && printFormat && mrp) {
+        const rate = printFormat === 'Black & White' ? 1 : 3;
+        const fairPrice = (parseInt(pages) * rate) + 100;
+        isOverpriced = parseFloat(mrp) > fairPrice;
+    }
+
     const updated = await prisma.book.update({
       where: { id: bookId },
-      data: { coverUrl }
+      data: {
+        ...(mrp !== undefined && pages !== undefined && printFormat !== undefined && { overpriced: isOverpriced }), coverUrl }
     });
     res.json(updated);
   } catch (err) {
@@ -929,7 +1001,7 @@ router.get('/api/admin/pending-books', verifyToken, isAdmin, async (req, res) =>
   try {
     const pendingBooks = await prisma.book.findMany({
       where: { status: 'Pending' },
-      include: { author: true }
+      include: { author: true, reviews: { select: { rating: true } } }
     });
     res.json(pendingBooks);
   } catch (err) {
@@ -942,9 +1014,18 @@ router.get('/api/admin/pending-books', verifyToken, isAdmin, async (req, res) =>
 router.post('/api/admin/books/:id/approve', verifyToken, isAdmin, async (req, res) => {
   try {
     const bookId = parseInt(req.params.id);
+    
+    let isOverpriced = false;
+    if (pages && printFormat && mrp) {
+        const rate = printFormat === 'Black & White' ? 1 : 3;
+        const fairPrice = (parseInt(pages) * rate) + 100;
+        isOverpriced = parseFloat(mrp) > fairPrice;
+    }
+
     const updated = await prisma.book.update({
       where: { id: bookId },
-      data: { status: 'Approved' }
+      data: {
+        ...(mrp !== undefined && pages !== undefined && printFormat !== undefined && { overpriced: isOverpriced }), status: 'Approved' }
     });
     res.json(updated);
   } catch (err) {
@@ -954,7 +1035,8 @@ router.post('/api/admin/books/:id/approve', verifyToken, isAdmin, async (req, re
 });
 router.post('/api/author/books', verifyToken, upload.single('cover'), async (req, res) => {
   try {
-    const { title, subtitle, genre, subGenre, synopsis, pages, mrp, stock, overpriced, language, isbn, publisher, publicationDate, edition, format } = req.body;
+    const { title, subtitle, genre, subGenre, synopsis, pages, mrp, stock, overpriced, isOverpriced, language, isbn, publisher, publicationDate, edition, format, printFormat } = req.body;
+    
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(403).json({ error: 'Not an author' });
 
@@ -970,13 +1052,14 @@ router.post('/api/author/books', verifyToken, upload.single('cover'), async (req
         pages: parseInt(pages) || null,
         mrp: parseFloat(mrp),
         stock: parseInt(stock) || 0,
-        overpriced: overpriced === 'true',
+        overpriced: overpriced === 'true' || isOverpriced === 'true',
         language: language || null,
         isbn: isbn || null,
         publisher: publisher || null,
         publicationDate: publicationDate || null,
         edition: edition || null,
         format: format || null,
+        printFormat: printFormat || null,
         coverUrl,
         authorId: author.id,
         status: 'Pending'
@@ -1002,6 +1085,107 @@ router.get('/api/activities', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch activities' });
   }
 });
+
+// Pay Late Delivery Fine
+router.post('/api/author/fine/pay', verifyToken, upload.single('paymentScreenshot'), async (req, res) => {
+  try {
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    let extraData = author.extraData || {};
+    extraData.fineStatus = 'Pending Verification';
+    extraData.finePaymentScreenshot = req.file ? `/uploads/${req.file.filename}` : null;
+    extraData.finePaymentDate = new Date().toISOString();
+
+    const updatedAuthor = await prisma.author.update({
+      where: { id: author.id },
+      data: { extraData }
+    });
+
+    await prisma.notification.create({
+      data: {
+        message: `${author.name} has submitted payment for their late delivery fine.`,
+        target: 'ADMIN'
+      }
+    });
+
+    invalidateCache(`authorData_${author.email}`);
+    invalidateCache('adminAuthors');
+    res.json(updatedAuthor);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to pay fine' });
+  }
+});
+
+// Admin: Approve Fine Payment
+router.post('/api/admin/authors/:id/approve-fine', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const author = await prisma.author.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+    
+    let extraData = author.extraData || {};
+    
+    // Add to history
+    if (!extraData.fineHistory) extraData.fineHistory = [];
+    extraData.fineHistory.push({
+      amount: extraData.lateFines || 0,
+      chargedAt: extraData.fineDate || null,
+      paidAt: extraData.finePaymentDate || null,
+      approvedAt: new Date().toISOString()
+    });
+    
+    extraData.lateFines = 0;
+    extraData.fineDate = null;
+    extraData.lateNotificationDate = null;
+    extraData.fineStatus = null;
+    extraData.finePaymentScreenshot = null;
+    extraData.finePaymentDate = null;
+    extraData.lastFinePaidAt = new Date().toISOString();
+    
+    const updatedAuthor = await prisma.author.update({
+      where: { id: author.id },
+      data: { extraData }
+    });
+    
+    await prisma.notification.create({
+      data: {
+        message: 'Your late delivery fine payment has been approved. Your account has been reactivated.',
+        target: author.email
+      }
+    });
+    
+    invalidateCache(`authorData_${author.email}`);
+    invalidateCache('adminAuthors');
+    res.json(updatedAuthor);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to approve fine' });
+  }
+});
+
+// Admin: Reject Fine Payment
+router.post('/api/admin/authors/:id/reject-fine', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const author = await prisma.author.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+    
+    let extraData = author.extraData || {};
+    extraData.fineStatus = null;
+    extraData.finePaymentScreenshot = null;
+    
+    const updatedAuthor = await prisma.author.update({
+      where: { id: author.id },
+      data: { extraData }
+    });
+    
+    invalidateCache(`authorData_${author.email}`);
+    invalidateCache('adminAuthors');
+    res.json(updatedAuthor);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reject fine' });
+  }
+});
+
 
 // Register for Activity
 router.post('/api/author/activities/register', verifyToken, upload.single('paymentScreenshot'), async (req, res) => {
@@ -1033,7 +1217,7 @@ router.post('/api/author/activities/register', verifyToken, upload.single('payme
 router.put('/api/orders/:id/cancel', verifyToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const order = await prisma.order.findUnique({ where: { id }, include: { items: { include: { book: { include: { author: true } } } } } });
+    const order = await prisma.order.findUnique({ where: { id }, include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } } });
     if (!order) return res.status(404).json({ error: 'Not found' });
     if (order.customerEmail !== req.user.email) return res.status(403).json({ error: 'Forbidden' });
     
@@ -1097,7 +1281,7 @@ router.post('/api/orders', verifyToken, upload.single('paymentScreenshot'), asyn
           }))
         }
       },
-      include: { items: { include: { book: { include: { author: true } } } } }
+      include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } }
     });
 
     const orderId = `PAA-${String(order.id).padStart(4, '0')}`;
@@ -1189,7 +1373,7 @@ router.put('/api/order-items/:id/author-approve', verifyToken, async (req, res) 
 
     const orderItem = await prisma.orderItem.findUnique({
       where: { id: orderItemId },
-      include: { book: { include: { author: true } }, order: true }
+      include: { book: { include: { author: true, reviews: { select: { rating: true } } } }, order: true }
     });
     if (!orderItem || orderItem.book.authorId !== author.id) {
       return res.status(403).json({ error: 'Not authorized' });
@@ -1208,7 +1392,7 @@ router.put('/api/order-items/:id/author-approve', verifyToken, async (req, res) 
     const updated = await prisma.orderItem.update({
       where: { id: orderItemId },
       data: { status: 'Accepted' },
-      include: { book: { include: { author: true } }, order: true }
+      include: { book: { include: { author: true, reviews: { select: { rating: true } } } }, order: true }
     });
 
     // Deduct stock
@@ -1294,7 +1478,7 @@ router.get('/api/order-items/:id/invoice', verifyToken, async (req, res) => {
 
     const orderItem = await prisma.orderItem.findUnique({
       where: { id: orderItemId },
-      include: { book: { include: { author: true } }, order: true }
+      include: { book: { include: { author: true, reviews: { select: { rating: true } } } }, order: true }
     });
     if (!orderItem || orderItem.book.authorId !== author.id) {
       return res.status(403).json({ error: 'Not authorized' });
@@ -1372,11 +1556,11 @@ router.get('/api/admin/reports/sales', verifyToken, isAdmin, async (req, res) =>
     const period = req.query.period || 'daily';
     const webOrders = await prisma.order.findMany({
       where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } },
-      include: { items: { include: { book: { include: { author: true } } } } }
+      include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } }
     });
     
     const posOrders = await prisma.posOrder.findMany({
-      include: { event: true, items: { include: { book: { include: { author: true } } } } }
+      include: { event: true, items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } }
     });
 
     const flatData = [];
@@ -1520,7 +1704,7 @@ router.get('/api/admin/reports/chart', verifyToken, isAdmin, async (req, res) =>
 router.get('/api/admin/orders/export', verifyToken, isAdmin, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
-      include: { items: { include: { book: { include: { author: true } } } } },
+      include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } },
       orderBy: { createdAt: 'desc' }
     });
     const flatData = [];
@@ -1558,7 +1742,7 @@ router.get('/api/admin/orders/export', verifyToken, isAdmin, async (req, res) =>
 router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
-      include: { items: { include: { book: { include: { author: true } } } } },
+      include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } },
       orderBy: { createdAt: 'desc' }
     });
     const mapped = orders.map(ord => ({
@@ -1571,11 +1755,16 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
         title: i.book.title, 
         qty: i.quantity, 
         authorName: i.book.author.name,
+        authorId: i.book.author.id,
+        authorEmail: i.book.author.email,
         status: i.status,
         createdAt: i.createdAt,
         dispatchedAt: i.dispatchedAt,
         deliveredAt: i.deliveredAt,
-        trackingNumber: i.trackingNumber
+        trackingNumber: i.trackingNumber,
+        feedbackCondition: i.feedbackCondition,
+        feedbackRating: i.feedbackRating,
+        feedbackComments: i.feedbackComments
       })),
       total: ord.amount,
       status: ord.status === 'Pending Verification' ? 'Pending' : ord.status,
@@ -1604,9 +1793,18 @@ router.put('/api/admin/orders/:id/status', verifyToken, isAdmin, async (req, res
 router.put('/api/order-items/:id/status', verifyToken, async (req, res) => {
   try {
     const { status } = req.body;
+    let updateData = { status };
+    if (status === 'Delivered' || status === 'Completed') {
+       updateData.deliveredAt = new Date();
+    } else if (status === 'Accepted') {
+       updateData.acceptedAt = new Date();
+    } else if (status === 'Dispatched') {
+       updateData.dispatchedAt = new Date();
+    }
+
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
-      data: { status }
+      data: updateData
     });
     res.json(orderItem);
   } catch (err) {
@@ -1660,8 +1858,8 @@ router.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
 
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'Accepted' },
-      include: { book: { include: { author: true } } }
+      data: { status: 'Accepted', acceptedAt: new Date() },
+      include: { book: { include: { author: true, reviews: { select: { rating: true } } } } }
     });
     // Deduct stock immediately
     if (orderItem) {
@@ -1703,9 +1901,16 @@ router.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
 
 router.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => {
   try {
+    const { condition, rating, comments } = req.body || {};
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'Completed', deliveredAt: new Date() }
+      data: { 
+        status: 'Completed', 
+        deliveredAt: new Date(),
+        feedbackCondition: condition || null,
+        feedbackRating: rating ? parseInt(rating) : null,
+        feedbackComments: comments || null
+      }
     });
     res.json(orderItem);
 
@@ -1761,6 +1966,36 @@ router.post('/api/contact', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to save inquiry' });
+  }
+});
+
+router.get('/api/admin/queries', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const queries = await prisma.query.findMany({
+      include: { author: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    const mappedQueries = queries.map(q => ({...q, itemType: 'Query'}));
+
+    const inquiries = await prisma.contactInquiry.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    const mappedInquiries = inquiries.map(i => ({
+      id: `inq_${i.id}`,
+      originalId: i.id,
+      subject: 'Contact Form Inquiry',
+      message: i.message,
+      author: { name: i.name, email: i.email },
+      status: 'Unread',
+      itemType: 'Message',
+      createdAt: i.createdAt
+    }));
+
+    const combined = [...mappedQueries, ...mappedInquiries].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(combined);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch inquiries' });
   }
 });
 // 10. Gallery Events
@@ -2228,7 +2463,10 @@ router.get('/api/public/events', async (req, res) => {
 router.get('/api/events/:eventId/catalogue', async (req, res) => {
   try {
     const eventId = parseInt(req.params.eventId);
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    const event = await prisma.event.findUnique({ 
+      where: { id: eventId },
+      include: { galleryEvent: true }
+    });
     
     const listedBooks = await prisma.eventBook.findMany({
       where: { eventId },
@@ -2248,7 +2486,7 @@ router.get('/api/events/:eventId/catalogue', async (req, res) => {
 
 router.post('/api/admin/events', verifyToken, isAdmin, upload.single('banner'), validate(eventSchema), async (req, res) => {
   try {
-    const { name, location, date, duration, eventType, registrationFee, feeType, description } = req.body;
+    const { name, location, date, duration, eventType, registrationFee, feeType, description, livePosEnabled } = req.body;
     
     const existingEvent = await prisma.event.findFirst({
       where: { name, location, date }
@@ -2307,13 +2545,14 @@ router.get('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
 router.put('/api/admin/events/:id', verifyToken, isAdmin, upload.single('banner'), async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
-    const { name, location, date, duration, status, eventType, registrationFee, feeType, description } = req.body;
+    const { name, location, date, duration, status, eventType, registrationFee, feeType, description, livePosEnabled } = req.body;
     
     let updateData = { name, location, date, duration, status };
     if (description !== undefined) updateData.description = description;
     if (eventType !== undefined) updateData.eventType = eventType;
     if (registrationFee !== undefined) updateData.registrationFee = parseFloat(registrationFee);
     if (feeType !== undefined) updateData.feeType = feeType;
+    if (livePosEnabled !== undefined) updateData.livePosEnabled = livePosEnabled === 'true' || livePosEnabled === true;
     
     if (req.file) {
       updateData.bannerUrl = `/uploads/${req.file.filename}`;
@@ -2341,7 +2580,7 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
     
     const eventAuthors = await prisma.eventAuthor.findMany({
       where: { eventId },
-      include: { author: true }
+      include: { author: true, reviews: { select: { rating: true } } }
     });
 
     const authorsData = [];
@@ -2508,5 +2747,318 @@ router.post('/api/admin/events/:id/broadcast', verifyToken, isAdmin, async (req,
   }
 });
 
+
+
+
+// Notifications
+router.get('/api/notifications', async (req, res) => {
+  try {
+    const notifications = await prisma.notification.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+    res.json(notifications);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+router.post('/api/admin/notifications', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { message, target } = req.body;
+    const notification = await prisma.notification.create({
+      data: {
+        message,
+        target: target || 'ALL'
+      }
+    });
+    res.json(notification);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create notification' });
+  }
+});
+
+router.delete('/api/admin/notifications/:id', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await prisma.notification.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete notification' });
+  }
+});
+
+
+// Author: Upload image to Gallery Event
+router.post('/api/author/gallery/:id/images', verifyToken, upload.single('photo'), async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const { caption } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+    
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    // Validate event exists
+    const event = await prisma.galleryEvent.findUnique({ where: { id: eventId } });
+    if (!event) return res.status(404).json({ error: 'Gallery event not found' });
+
+    // Append author name to caption automatically so Admin knows who uploaded it
+    const finalCaption = caption ? `${caption} (Uploaded by ${author.name})` : `Uploaded by ${author.name}`;
+
+    const newImage = await prisma.galleryImage.create({
+      data: {
+        galleryEventId: eventId,
+        url: `/uploads/${req.file.filename}`,
+        caption: finalCaption,
+        dateTaken: new Date(),
+        status: 'Approved'
+      }
+    });
+
+    res.json(newImage);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+
+// --- GALLERY ENDPOINTS ---
+
+router.get('/api/gallery/events', async (req, res) => {
+  try {
+    const events = await prisma.galleryEvent.findMany({
+      orderBy: { date: 'desc' },
+      include: { images: true }
+    });
+    res.json(events);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch gallery events' });
+  }
+});
+
+router.get('/api/gallery/images', async (req, res) => {
+  try {
+    const { eventId } = req.query;
+    const where = {};
+    if (eventId) {
+      where.galleryEventId = parseInt(eventId);
+    }
+    const images = await prisma.galleryImage.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(images);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch gallery images' });
+  }
+});
+
+
+router.get('/api/admin/gallery/pending', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const images = await prisma.galleryImage.findMany({
+      where: { status: 'Pending' },
+      include: { galleryEvent: true }
+    });
+    res.json(images);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch pending images' });
+  }
+});
+
+router.put('/api/admin/gallery/images/:id/approve', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const img = await prisma.galleryImage.update({
+      where: { id: parseInt(req.params.id) },
+      data: { status: 'Approved' }
+    });
+    res.json(img);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to approve image' });
+  }
+});
+
+router.delete('/api/admin/gallery/images/:id', verifyToken, isAdmin, async (req, res) => {
+  try {
+    await prisma.galleryImage.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reject image' });
+  }
+});
+
+// Admin: Notify author of late delivery
+router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const authorId = parseInt(req.params.id);
+    const author = await prisma.author.findUnique({ where: { id: authorId } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+    
+    let extraData = author.extraData || {};
+    extraData.lateNotificationDate = new Date().toISOString();
+    
+    const updatedAuthor = await prisma.author.update({
+      where: { id: authorId },
+      data: { extraData }
+    });
+
+    // Notifications are handled dynamically via AuthorDashboard banner
+
+    invalidateCache('adminAuthors');
+    res.json(updatedAuthor);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to notify author' });
+  }
+});
+
+// Admin: Charge late delivery fine
+router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const authorId = parseInt(req.params.id);
+    const { amount } = req.body;
+    const author = await prisma.author.findUnique({ where: { id: authorId } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+    
+    let extraData = author.extraData || {};
+    extraData.lateFines = (extraData.lateFines || 0) + Number(amount);
+    if (!extraData.fineDate) {
+      extraData.fineDate = new Date().toISOString();
+    }
+    
+    const updatedAuthor = await prisma.author.update({
+      where: { id: authorId },
+      data: { extraData }
+    });
+    
+    invalidateCache('adminAuthors');
+    res.json(updatedAuthor);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to apply fine' });
+  }
+});
+
+
+router.get('/api/admin/reviews', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const reviews = await prisma.bookReview.findMany({
+      include: { book: { select: { title: true, author: { select: { name: true } } } } },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+
+// Escalate order
+router.post('/api/admin/orders/:id/escalate', verifyToken, isAdmin, async (req, res) => {
+  try {
+    // In a real system, send email via AWS SES or SendGrid here
+    console.log(`[ESCALATION] Email sent to author for order item ${req.params.id}`);
+    res.json({ success: true, message: "Escalation email sent to author" });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to escalate' });
+  }
+});
+
+// Notify low stock
+router.post('/api/admin/authors/:id/notify-low-stock', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const authorId = Number(req.params.id);
+    const { bookId, title } = req.body;
+    const author = await prisma.author.findUnique({ where: { id: authorId } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+    
+    let extraData = author.extraData || {};
+    let lowStockAlerts = extraData.lowStockAlerts || [];
+    lowStockAlerts.push({ bookId, title, timestamp: Date.now(), read: false });
+    extraData.lowStockAlerts = lowStockAlerts;
+    
+    await prisma.author.update({
+      where: { id: authorId },
+      data: { extraData }
+    });
+    
+    invalidateCache('adminAuthors');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to notify low stock:', err);
+    res.status(500).json({ error: 'Failed to notify low stock' });
+  }
+});
+
+// --- POSTAL API PROXY (bypass CORS) ---
+
+router.get('/api/postal/state/:state', async (req, res) => {
+  const https = require('https');
+  const state = encodeURIComponent(req.params.state);
+  const url = `https://api.postalpincode.in/postoffice/${state}`;
+  
+  https.get(url, (apiRes) => {
+    let data = '';
+    apiRes.on('data', chunk => data += chunk);
+    apiRes.on('end', () => {
+      try {
+        res.json(JSON.parse(data));
+      } catch (e) {
+        res.status(500).json({ error: 'Failed to parse postal data' });
+      }
+    });
+  }).on('error', (err) => {
+    res.status(500).json({ error: 'Failed to fetch postal data' });
+  });
+});
+
+router.get('/api/postal/pincode/:pincode', async (req, res) => {
+  const https = require('https');
+  const pincode = encodeURIComponent(req.params.pincode);
+  const url = `https://api.postalpincode.in/pincode/${pincode}`;
+  
+  https.get(url, (apiRes) => {
+    let data = '';
+    apiRes.on('data', chunk => data += chunk);
+    apiRes.on('end', () => {
+      try {
+        res.json(JSON.parse(data));
+      } catch (e) {
+        res.status(500).json({ error: 'Failed to parse postal data' });
+      }
+    });
+  }).on('error', (err) => {
+    res.status(500).json({ error: 'Failed to fetch postal data' });
+  });
+});
+
+router.get('/api/postal/postoffice/:district', async (req, res) => {
+  const https = require('https');
+  const district = encodeURIComponent(req.params.district);
+  const url = `https://api.postalpincode.in/postoffice/${district}`;
+  
+  https.get(url, (apiRes) => {
+    let data = '';
+    apiRes.on('data', chunk => data += chunk);
+    apiRes.on('end', () => {
+      try {
+        res.json(JSON.parse(data));
+      } catch (e) {
+        res.status(500).json({ error: 'Failed to parse postal data' });
+      }
+    });
+  }).on('error', (err) => {
+    res.status(500).json({ error: 'Failed to fetch postal data' });
+  });
+});
 
 module.exports = router;

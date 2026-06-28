@@ -90,6 +90,7 @@ export function AuthorRegistrationPage() {
     conflictOfInterestSignature: "",
     agreedToGuidelines: false,
     agreedToInfoDoc: false,
+    printFormat: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -110,17 +111,19 @@ export function AuthorRegistrationPage() {
     if (key === "bio" && !value) error = "Bio is required.";
     if (key === "city" && !value) error = "City is required.";
     if (key === "state" && !value) error = "State is required.";
-    
+
     // For book details
     if (key === "title" && !value) error = "Title is required.";
     if (key === "genre" && !value) error = "Category is required.";
     if (key === "synopsis" && !value) error = "Synopsis is required.";
     if (key === "mrp" && (!value || Number(value) <= 0)) error = "Valid MRP is required.";
+    if (key === "pages" && (!value || Number(value) <= 0)) error = "Number of Pages is required.";
     if (key === "language" && !value) error = "Language is required.";
     if (key === "publisher" && !value) error = "Publisher is required.";
     if (key === "publicationDate" && !value) error = "Publication Date is required.";
     if (key === "format" && !value) error = "Book Format is required.";
-    
+    if (key === "printFormat" && !value) error = "Print Format is required.";
+
     // Questionnaire
     if (key === "conflictOfInterestSignature" && !value) error = "Signature is required.";
     if (key === "whyJoining" && !value) error = "This field is required.";
@@ -196,7 +199,7 @@ export function AuthorRegistrationPage() {
                       {errors.email && <div className="text-red-500 text-xs mt-1 font-medium">{errors.email}</div>}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Phone Number *</label>
@@ -228,7 +231,7 @@ export function AuthorRegistrationPage() {
                     </div>
                   </div>
 
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">City *</label>
@@ -241,7 +244,7 @@ export function AuthorRegistrationPage() {
                       {errors.state && <div className="text-red-500 text-xs mt-1 font-medium">{errors.state}</div>}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Instagram Profile</label>
@@ -252,7 +255,7 @@ export function AuthorRegistrationPage() {
                       <input type="text" value={form.facebook} onChange={(e) => update("facebook", e.target.value)} className="dash-input w-full" placeholder="Profile URL" />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <label className="dash-label">Qualification *</label>
@@ -310,11 +313,11 @@ export function AuthorRegistrationPage() {
                           <div key={f.name}>
                             <label className="dash-label">{f.name} *</label>
                             {f.type === 'number' ? (
-                              <input type="number" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                              <input type="number" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
                             ) : f.type === 'date' ? (
-                              <input type="date" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                              <input type="date" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
                             ) : (
-                              <input type="text" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                              <input type="text" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
                             )}
                           </div>
                         ))}
@@ -420,7 +423,7 @@ export function AuthorRegistrationPage() {
 
                 <div className={`space-y-6 ${books.length > 0 ? 'p-8 bg-gray-50/50 rounded-3xl-2xl border border-paa-navy/5' : ''}`}>
                   {books.length > 0 && <h3 className="font-serif text-lg font-medium text-paa-navy mb-2">Add Another Book</h3>}
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-2">
                       <label className="dash-label">Book Title *</label>
@@ -503,7 +506,7 @@ export function AuthorRegistrationPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                       <label className="dash-label">ISBN Number</label>
                       <input type="text" placeholder="e.g. 978-3-16-148410-0" value={form.isbn} onChange={(e) => update("isbn", e.target.value)} className="dash-input w-full" />
@@ -522,12 +525,22 @@ export function AuthorRegistrationPage() {
                       </select>
                       {errors.format && <div className="text-red-500 text-xs mt-1 font-medium">{errors.format}</div>}
                     </div>
+                    <div>
+                      <label className="dash-label">Print Format *</label>
+                      <select value={form.printFormat} onChange={(e) => update("printFormat", e.target.value)} className={`dash-input w-full ${errors.printFormat ? '!border-red-500' : ''}`}>
+                        <option value="">Select Print Format</option>
+                        <option value="Black & White">Black & White</option>
+                        <option value="Colored">Colored</option>
+                      </select>
+                      {errors.printFormat && <div className="text-red-500 text-xs mt-1 font-medium">{errors.printFormat}</div>}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label className="dash-label">Number of Pages</label>
-                      <input type="number" placeholder="256" value={form.pages} onChange={(e) => update("pages", e.target.value)} className="dash-input w-full" />
+                      <label className="dash-label">Number of Pages *</label>
+                      <input type="number" placeholder="256" value={form.pages} onChange={(e) => update("pages", e.target.value)} className={`dash-input w-full ${errors.pages ? '!border-red-500' : ''}`} />
+                      {errors.pages && <div className="text-red-500 text-xs mt-1 font-medium">{errors.pages}</div>}
                     </div>
                     <div>
                       <label className="dash-label">MRP (₹) *</label>
@@ -535,10 +548,23 @@ export function AuthorRegistrationPage() {
                       {errors.mrp && <div className="text-red-500 text-xs mt-1 font-medium">{errors.mrp}</div>}
                     </div>
                     <div>
-                      <label className="dash-label">Initial Stock (Optional)</label>
+                      <label className="dash-label">Initial Stock *</label>
                       <input type="number" placeholder="0" value={form.stock} onChange={(e) => update("stock", e.target.value)} className="dash-input w-full" />
                     </div>
                   </div>
+
+                  {(() => {
+                     const pages = Number(form.pages);
+                     const mrp = Number(form.mrp);
+                     if (pages > 0 && form.printFormat && mrp > 0) {
+                        const rate = form.printFormat === 'Colored' ? 2.40 : 0.50;
+                        const maxPrice = (pages * rate) + 250;
+                        if (mrp > maxPrice) {
+                           return <div className="text-yellow-700 text-xs font-bold bg-yellow-50 p-3 rounded-lg border border-yellow-200 mt-2 mb-4">Warning: Your MRP (₹{mrp}) exceeds the recommended max price of ₹{maxPrice} based on your pages and format.</div>;
+                        }
+                     }
+                     return null;
+                  })()}
 
                   {/* Cover upload */}
                   <div className="pt-2">
@@ -579,12 +605,12 @@ export function AuthorRegistrationPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!form.title || !form.genre || !form.synopsis || !form.mrp || !form.language || !form.publisher || !form.publicationDate || !form.format || !coverBlob) {
+                        if (!form.title || !form.genre || !form.synopsis || !form.mrp || !form.language || !form.publisher || !form.publicationDate || !form.format || !form.printFormat || !form.pages || !coverBlob) {
                           alert("Please fill all compulsory fields and upload a cover to add this book.");
                           return;
                         }
                         setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
-                        setForm({...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: ""});
+                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "" });
                         setCoverBlob(null);
                         setCoverFileUrl(null);
                       }}
@@ -612,7 +638,7 @@ export function AuthorRegistrationPage() {
 
                   <div className="p-5 bg-gray-50 border border-paa-navy/10 rounded-2xl space-y-4">
                     <h3 className="font-serif font-medium text-paa-navy">Declarations</h3>
-                    
+
                     <label className="flex items-start gap-3 cursor-pointer group">
                       <div className="mt-0.5">
                         <input type="checkbox" checked={form.agreedToGuidelines} onChange={(e) => update("agreedToGuidelines", e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
@@ -659,7 +685,7 @@ export function AuthorRegistrationPage() {
                     <label className="dash-label">Transaction ID *</label>
                     <input type="text" required placeholder="e.g. T23456789012" value={form.transactionId} onChange={(e) => update("transactionId", e.target.value)} className={`dash-input w-full ${errors.transactionId ? '!border-red-500' : ''}`} />
                     {errors.transactionId && <div className="text-red-500 text-xs mt-1 font-medium">{errors.transactionId}</div>}
-                    
+
                     <div className="mt-8 bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800 leading-relaxed shadow-sm">
                       <strong className="font-bold text-emerald-900 block mb-1">Application Fee: ₹1000</strong>
                       <span className="opacity-90 text-xs">Your application will be reviewed within 5-7 business days. You will be notified via email once approved.</span>
@@ -716,7 +742,7 @@ export function AuthorRegistrationPage() {
                   onClick={() => {
                     if (step === 1 && form.title && form.genre && form.mrp) {
                       setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
-                      setForm({...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: ""});
+                      setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "" });
                       setCoverBlob(null);
                       setCoverFileUrl(null);
                     }
@@ -760,8 +786,8 @@ export function AuthorRegistrationPage() {
                     // Step 1 Validations
                     const hasBook = books.length > 0 || (form.title && form.genre && form.mrp && coverBlob && form.purposeOfWriting);
                     if (!hasBook) {
-                        setStep(1);
-                        alert("Please fill all compulsory fields for at least one book (including the purpose of writing) and upload a cover."); return;
+                      setStep(1);
+                      alert("Please fill all compulsory fields for at least one book (including the purpose of writing) and upload a cover."); return;
                     }
 
                     // Step 2 Validations
@@ -775,22 +801,22 @@ export function AuthorRegistrationPage() {
                       alert("Please provide the transaction ID and upload the payment screenshot.");
                       return;
                     }
-                    
+
                     setIsSubmitting(true);
                     try {
                       const formData = new FormData();
                       Object.entries(form).forEach(([key, val]) => {
                         const bookKeys = ['subcategory', 'subSubcategory', 'title', 'genre', 'synopsis', 'pages', 'mrp', 'stock', 'subtitle', 'language', 'isbn', 'publisher', 'publicationDate', 'edition', 'format'];
                         if (!bookKeys.includes(key)) {
-                           formData.append(key, String(val));
+                          formData.append(key, String(val));
                         }
                       });
-                      
+
                       const finalBooks = [...books];
                       if (form.title && form.genre && form.mrp) {
                         finalBooks.push({ ...form, coverBlob });
                       }
-                      
+
                       formData.append("books", JSON.stringify(finalBooks.map(b => {
                         let subGenre = b.subcategory;
                         if (b.subSubcategory) subGenre += ' > ' + b.subSubcategory;
@@ -822,7 +848,7 @@ export function AuthorRegistrationPage() {
                         formData.append("extraData", JSON.stringify(extraDataState));
                       }
 
-                      
+
                       const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/authors/register`, formData);
                       setSubmitted(true);
                     } catch (e: any) {
@@ -849,10 +875,10 @@ export function AuthorRegistrationPage() {
             </div>
             <h2 className="font-serif text-3xl font-medium text-paa-navy mb-3">Application Submitted!</h2>
             <p className="text-sm text-paa-gray-text leading-relaxed max-w-md mx-auto mb-8">
-              Thank you, <strong className="text-paa-navy font-bold">{form.name || "Author"}</strong>! Your application for <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em> has been received. <br/><br/>
+              Thank you, <strong className="text-paa-navy font-bold">{form.name || "Author"}</strong>! Your application for <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em> has been received. <br /><br />
               <strong className="text-paa-gold">Approval Pending:</strong> You must wait for the Admin to approve your account. Once approved, you will be able to log in to your Author Dashboard.
             </p>
-            
+
             {/* Receipt */}
             <div className="bg-gray-50 rounded-2xl p-6 max-w-sm mx-auto text-left border border-dashed border-paa-navy/20 shadow-sm mb-10">
               <div className="font-mono text-[10px] font-bold text-paa-gray-text tracking-widest uppercase mb-4 text-center">Application Receipt</div>
@@ -891,13 +917,13 @@ export function AuthorRegistrationPage() {
             <div className="p-8 overflow-y-auto prose prose-sm max-w-none text-paa-navy/80">
               <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-4">1. Code of Conduct</h4>
               <p>All members of the Pune Authors' Association are expected to treat fellow authors, readers, and administrative staff with the utmost respect and professionalism. Harassment, discrimination, or abusive behavior in any PAA event, forum, or communication channel will result in immediate termination of membership.</p>
-              
+
               <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">2. Originality & Plagiarism</h4>
               <p>By registering, you guarantee that all books and materials submitted to PAA are your original intellectual property or that you hold the explicit legal rights to distribute them. Plagiarism or copyright infringement is strictly prohibited.</p>
-              
+
               <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">3. Event Participation</h4>
               <p>When participating in PAA-sponsored book fairs or physical events, authors must adhere to the specific guidelines of that event, including arrival times, table presentation standards, and POS (Point of Sale) protocols.</p>
-              
+
               <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">4. Promotion & Spam</h4>
               <p>While self-promotion is encouraged in designated areas, spamming the PAA community, mass-emailing fellow authors, or using PAA platforms for unauthorized commercial advertising is not allowed.</p>
             </div>
@@ -919,7 +945,7 @@ export function AuthorRegistrationPage() {
             <div className="p-8 overflow-y-auto prose prose-sm max-w-none text-paa-navy/80">
               <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-4">About Pune Authors' Association</h4>
               <p>The Pune Authors' Association (PAA) is a premier collective dedicated to supporting, promoting, and elevating local authors. Whether you are traditionally published or an independent self-published author, PAA provides the infrastructure to help you succeed.</p>
-              
+
               <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">Membership Benefits</h4>
               <ul className="list-disc pl-5 space-y-2">
                 <li>Access to the exclusive PAA Author Dashboard.</li>
@@ -928,7 +954,7 @@ export function AuthorRegistrationPage() {
                 <li>Direct-to-consumer sales infrastructure using our integrated POS (Point of Sale) system.</li>
                 <li>Networking opportunities with industry professionals, editors, and fellow authors.</li>
               </ul>
-              
+
               <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">Application & Fee Structure</h4>
               <p>The ₹1000 registration fee is a one-time processing and onboarding charge. This fee covers the administrative cost of our editorial team reviewing your application, validating your bibliography, and setting up your secure author portal.</p>
               <p className="mt-2 italic text-sm">Note: This fee is non-refundable. If your application is rejected due to incomplete information, you will be given an opportunity to correct your application without paying again.</p>

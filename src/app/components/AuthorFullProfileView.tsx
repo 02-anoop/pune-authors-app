@@ -6,6 +6,8 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
   const [activeProfileTab, setActiveProfileTab] = useState<'profile' | 'inventory' | 'orders' | 'events' | 'distribution' | 'forms'>('profile');
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [fineAmount, setFineAmount] = useState('');
+  const [isChargingFine, setIsChargingFine] = useState(false);
   const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
   
@@ -35,6 +37,33 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
   if (!profileData) return <div className="p-8 text-center text-red-500 font-bold bg-white border border-red-200">Error loading author details.</div>;
 
   const { authorProfile, authorOrders } = profileData;
+
+  const lateDeliveryCount = authorOrders.filter((o: any) => o.dispatchedAt && (new Date(o.dispatchedAt).getTime() - new Date(o.createdAt).getTime() > 24 * 60 * 60 * 1000)).length;
+  const lateFines = authorProfile.extraData?.lateFines || 0;
+
+  const handleChargeFine = async () => {
+    if (!fineAmount || isNaN(Number(fineAmount))) {
+      alert("Please enter a valid fine amount.");
+      return;
+    }
+    const confirmCharge = window.confirm(`Are you sure you want to charge ₹${fineAmount} to this author?`);
+    if (!confirmCharge) return;
+    setIsChargingFine(true);
+    try {
+      await axios.post(`${API}/api/admin/authors/${author.id}/fine`, { amount: Number(fineAmount) }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert('Fine applied successfully.');
+      setFineAmount('');
+      const res = await axios.get(`${API}/api/admin/authors/${author.id}/dashboard-data`);
+      setProfileData(res.data);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to apply fine.');
+    } finally {
+      setIsChargingFine(false);
+    }
+  };
 
   return (
     <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
@@ -90,6 +119,20 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
             </div>
           </div>
           
+          <div className="bg-white border border-red-500/20 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out mt-6">
+            <h3 className="text-2xl font-serif font-semibold text-red-600 tracking-tight mb-4 border-l-4 border-red-500 pl-2">Delivery Performance</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+              <div><span className="text-xs font-bold text-red-500 uppercase block mb-1">Late Deliveries (&gt;24 Hrs)</span><span className="text-xl text-red-600 font-bold">{lateDeliveryCount}</span></div>
+              <div><span className="text-xs font-bold text-red-500 uppercase block mb-1">Total Late Fines</span><span className="text-xl text-red-600 font-bold">₹{lateFines}</span></div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <input type="number" placeholder="Enter Amount (₹)" value={fineAmount} onChange={e => setFineAmount(e.target.value)} className="dash-input w-48 text-sm" />
+              <button onClick={handleChargeFine} disabled={isChargingFine} className="px-6 py-2 bg-red-600 text-white text-xs font-bold tracking-widest uppercase hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50">
+                 {isChargingFine ? 'Charging...' : 'Charge Fine'}
+              </button>
+            </div>
+          </div>
+          
           <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>
             <div className="space-y-4">
@@ -97,7 +140,10 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
                 <div key={b.id} className="border border-paa-navy/5 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
                   {b.coverUrl && <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + b.coverUrl : "http://localhost:3001" + b.coverUrl} alt="Cover" className="w-20 h-28 object-cover border border-paa-navy/20" />}
                   <div className="flex-1">
-                    <h4 className="text-lg font-bold text-paa-navy">{b.title}</h4>
+                    <h4 className="text-lg font-bold text-paa-navy flex items-center gap-2">
+                      {b.title}
+                      {(b.overpriced || b.isOverpriced) && <span className="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Overpriced</span>}
+                    </h4>
                     {b.subtitle && <p className="text-sm text-paa-gray-text font-medium mb-1">{b.subtitle}</p>}
                     <p className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2 bg-[#f0f4f8] inline-block px-2 py-0.5">{b.genre} {b.subGenre && `> ${b.subGenre}`}</p>
                     

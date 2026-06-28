@@ -103,7 +103,9 @@ export const bookCategories = {
       "Blockchain"
     ],
     "Politics & Current Affairs": [],
-    "Religion & Spirituality": [],
+    "Spirituality": [],
+    "Mythology": [],
+    "Society & Philosophy": [],
     "Travel": [],
     "Education": [],
     "True Crime": [],
@@ -218,17 +220,7 @@ export const bookCategories = {
     "Manual": []
   },
 
-  "Religion & Spirituality": {
-    "Hinduism": [],
-    "Islam": [],
-    "Christianity": [],
-    "Sikhism": [],
-    "Buddhism": [],
-    "Jainism": [],
-    "Spiritual Growth": [],
-    "Meditation": [],
-    "Sacred Texts": []
-  },
+
 
   "Arts & Entertainment": {
     "Painting": [],

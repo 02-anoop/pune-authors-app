@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X, User, ShoppingCart } from "lucide-react";
 
 const navLinks = [
   { label: "About Us", href: "/about" },
@@ -16,9 +16,21 @@ export function NavBar() {
   const [logoError, setLogoError] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const [cartCount, setCartCount] = useState(0);
 
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("userRole");
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      const saved = localStorage.getItem('checkout_cart');
+      if (saved) setCartCount(JSON.parse(saved).length);
+      else setCartCount(0);
+    };
+    updateCartCount();
+    window.addEventListener('cart_updated', updateCartCount);
+    return () => window.removeEventListener('cart_updated', updateCartCount);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -71,7 +83,7 @@ export function NavBar() {
             <img 
               src="/logo.png" 
               alt="Pune Authors' Association Logo" 
-              style={{ height: 40, objectFit: "contain", transition: "transform 0.3s ease" }} 
+              style={{ height: 60, objectFit: "contain", transition: "transform 0.3s ease" }} 
               onError={() => setLogoError(true)} 
               onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
               onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
@@ -95,7 +107,7 @@ export function NavBar() {
               P
             </div>
           )}
-          <span className="brand-text" style={{ fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 600, color: "#111", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <span className="brand-text" style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600, color: "#111", letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Pune Authors' Association
           </span>
         </Link>
@@ -132,6 +144,10 @@ export function NavBar() {
         
         {/* Desktop Actions */}
         <div className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+          <Link to="/checkout" style={{ position: 'relative', display: 'flex', alignItems: 'center', color: '#111', textDecoration: 'none' }}>
+            <ShoppingCart size={20} />
+            {cartCount > 0 && <span style={{ position: 'absolute', top: -8, right: -12, background: '#b44d28', color: '#fff', fontSize: 10, fontWeight: 'bold', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>{cartCount}</span>}
+          </Link>
           {token ? (
             <Link
               to={userRole === "ADMIN" ? "/operations" : userRole === "AUTHOR" ? "/dashboard" : "/profile"}
@@ -203,21 +219,27 @@ export function NavBar() {
           )}
         </div>
 
-        {/* Mobile Toggle */}
-        <button 
-          className="mobile-toggle"
-          onClick={() => setMenuOpen(!menuOpen)}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "#111",
-            display: "none",
-            padding: "0.5rem",
-          }}
-        >
-          {menuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Mobile Toggle & Cart */}
+        <div className="mobile-toggle" style={{ display: "none", alignItems: "center", gap: "1.2rem" }}>
+          <Link to="/checkout" style={{ position: 'relative', display: 'flex', color: '#111', textDecoration: 'none' }}>
+            <ShoppingCart size={22} />
+            {cartCount > 0 && <span style={{ position: 'absolute', top: -8, right: -12, background: '#b44d28', color: '#fff', fontSize: 10, fontWeight: 'bold', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>{cartCount}</span>}
+          </Link>
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#111",
+              padding: "0.2rem",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}
@@ -318,7 +340,7 @@ export function NavBar() {
         
         @media (max-width: 992px) {
           .desktop-nav { display: none !important; }
-          .mobile-toggle { display: block !important; }
+          .mobile-toggle { display: flex !important; }
         }
         @media (max-width: 600px) {
           .brand-text { display: none !important; }

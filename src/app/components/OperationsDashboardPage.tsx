@@ -5,7 +5,7 @@ import {
   Eye, Edit, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle, 
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
   ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2, FileText, AlertCircle,
-  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare
+  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie
@@ -65,7 +65,7 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'reviews' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
@@ -152,6 +152,11 @@ export function OperationsDashboardPage() {
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
   const [registrationsFilter, setRegistrationsFilter] = useState('All');
   const [registrationsPage, setRegistrationsPage] = useState(1);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [newNotification, setNewNotification] = useState('');
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(-1);
 
   const fetchEventRegistrations = async (eventId: number) => {
     setLoadingRegistrations(true);
@@ -445,8 +450,8 @@ export function OperationsDashboardPage() {
         if (activeTab === 'overview') {
             promises.push(fetchOverview());
             promises.push(fetchOrders(true));
-            promises.push(fetchAuthors(true));
-            promises.push(fetchBooks(true));
+            promises.push(fetchAuthors());
+            promises.push(fetchBooks());
         } else if (activeTab === 'authors' || activeTab === 'author_data') {
             promises.push(fetchAuthors());
         } else if (activeTab === 'books') {
@@ -592,6 +597,76 @@ export function OperationsDashboardPage() {
     }
   };
 
+  
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNotification.trim()) return;
+    try {
+      const token = localStorage.getItem('token');
+      let target = 'ALL';
+      // Find the first author whose name is mentioned in the message
+      const mentionedAuthor = authors?.find(a => newNotification.includes(`@${a.name}`));
+      if (mentionedAuthor) {
+         target = mentionedAuthor.name;
+      }
+      
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ message: newNotification, target })
+      });
+      if (res.ok) {
+        const notif = await res.json();
+        setNotifications([notif, ...notifications]);
+        setNewNotification('');
+      } else {
+        alert('Failed to send notification');
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  };
+  
+  const handleDeleteNotification = async (id: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/notifications/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setNotifications(notifications.filter(n => n.id !== id));
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  const handleNotificationChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNewNotification(val);
+    
+    const cursor = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, cursor);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+       setMentionQuery(mentionMatch[1]);
+       setShowMentionDropdown(true);
+       setMentionIndex(textBeforeCursor.lastIndexOf('@'));
+    } else {
+       setShowMentionDropdown(false);
+    }
+  };
+
+  const handleMentionSelect = (authorName: string) => {
+    const before = newNotification.slice(0, mentionIndex);
+    const after = newNotification.slice(mentionIndex + mentionQuery.length + 1);
+    setNewNotification(before + '@' + authorName + ' ' + after);
+    setShowMentionDropdown(false);
+  };
+
   const handleApproveBook = async (id: number) => {
     setLoadingAction('approveBook_' + id);
     try {
@@ -684,6 +759,16 @@ export function OperationsDashboardPage() {
     }
   };
 
+  
+  const handleEscalateOrder = async (id: number) => {
+    try {
+      await axios.post(`${API}/api/admin/orders/${id}/escalate`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+      toast.success("Escalation email sent to author!");
+    } catch(err) {
+      toast.error("Failed to escalate order");
+    }
+  };
+
   const handleExportCSV = async () => {
     try {
       const res = await axios.get(`${API}/api/admin/orders/export`, {
@@ -712,8 +797,8 @@ export function OperationsDashboardPage() {
        const saved = localStorage.getItem('paa_dismissed_actions');
        return saved ? JSON.parse(saved) : [];
     });
-    const [notifiedBooks, setNotifiedBooks] = useState<Record<string, number>>(() => {
-       const saved = localStorage.getItem('paa_notified_lowstock');
+    const [notifiedBooks, setNotifiedBooks] = useState<Record<string, { inv: number, time: number }>>(() => {
+       const saved = localStorage.getItem('paa_notified_lowstock_v2');
        return saved ? JSON.parse(saved) : {};
     });
 
@@ -727,34 +812,51 @@ export function OperationsDashboardPage() {
     };
 
     // Low stock books (threshold < 15)
-    // Only exclude if the inventory HAS NOT changed since we notified them.
+    // Exclude if inventory is same AND notified within 24 hours.
     const lowStockBooks = books.filter((b: any) => {
        const inv = b.inventory || 0;
        const id = b.id || b.dbId;
        if (inv >= 15 || b.status !== 'Approved') return false;
-       if (notifiedBooks[id] !== undefined && notifiedBooks[id] === inv) return false;
+       if (localDismissed.includes(`lowstock_${id}`)) return false;
+       const notified = notifiedBooks[id];
+       if (notified) {
+         if (notified.inv !== inv) return true; 
+         if (Date.now() - notified.time > 24 * 60 * 60 * 1000) return true; 
+         return false;
+       }
        return true;
     });
 
-    const handleNotifyAllLowStock = () => {
+    const handleNotifyAllLowStock = async () => {
        setNotifiedBooks(prev => {
           const next = { ...prev };
           lowStockBooks.forEach((b: any) => {
-             next[b.id || b.dbId] = b.inventory || 0;
+             next[b.id || b.dbId] = { inv: b.inventory || 0, time: Date.now() };
           });
-          localStorage.setItem('paa_notified_lowstock', JSON.stringify(next));
+          localStorage.setItem('paa_notified_lowstock_v2', JSON.stringify(next));
           return next;
        });
        toast.success(`Notified ${lowStockBooks.length} authors about low stock!`);
+       
+       for (const b of lowStockBooks) {
+         try {
+           await axios.post(`${API}/api/admin/authors/${b.authorId}/notify-low-stock`, { bookId: b.id || b.dbId, title: b.title }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+         } catch(e) {}
+       }
     };
 
-    const handleNotifySingleBook = (id: string, currentInventory: number) => {
+    const handleNotifySingleBook = async (b: any) => {
+       const id = b.id || b.dbId;
+       const currentInventory = b.inventory || 0;
        setNotifiedBooks(prev => {
-          const next = { ...prev, [id]: currentInventory };
-          localStorage.setItem('paa_notified_lowstock', JSON.stringify(next));
+          const next = { ...prev, [id]: { inv: currentInventory, time: Date.now() } };
+          localStorage.setItem('paa_notified_lowstock_v2', JSON.stringify(next));
           return next;
        });
        toast.success('Author notified about low stock!');
+       try {
+         await axios.post(`${API}/api/admin/authors/${b.authorId}/notify-low-stock`, { bookId: id, title: b.title }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+       } catch(e) {}
     };
 
     // KPIs & Insights
@@ -768,17 +870,27 @@ export function OperationsDashboardPage() {
     const orderCompletionRate = totalOrders ? Math.round((completedOrders / totalOrders) * 100) : 0;
 
     const totalAuthorsCount = authors.length;
-    const eventAuthors = authors.filter((a: any) => a.eventParticipation && a.eventParticipation.length > 0).length;
-    const eventAdoptionRate = totalAuthorsCount ? Math.round((eventAuthors / totalAuthorsCount) * 100) : 0;
+    
+    const sortedEventsForAdoption = [...events].sort((a: any, b: any) => new Date(b.date || b.startDate).getTime() - new Date(a.date || a.startDate).getTime());
+    const last3Events = sortedEventsForAdoption.slice(0, 3).map(ev => {
+       let p = 0;
+       if (ev.registrations) p = ev.registrations.filter((r:any) => r.optInStatus === 'Opted-In').length;
+       else p = authors.filter((a:any) => a.eventParticipation?.some((ep:any) => ep.eventId === ev.id && (ep.status === 'Approved' || ep.optInStatus==='Opted-In'))).length;
+       return { name: ev.name || ev.title, rate: totalAuthorsCount ? Math.round((p / totalAuthorsCount) * 100) : 0 };
+    });
+    const latestEventRate = last3Events.length > 0 ? last3Events[0].rate : 0;
 
-    // Chart Data 1: Category Sales
     const categorySalesMap: Record<string, number> = {};
     orders.forEach((o: any) => {
        if (o.status === 'Completed' || o.status === 'Dispatched') {
           o.items?.forEach((item: any) => {
              const book = books.find((b: any) => b.title === item.title || b.id === item.bookId);
-             const cat = book && book.category ? book.category : 'Unknown';
-             categorySalesMap[cat] = (categorySalesMap[cat] || 0) + (item.qty || 1);
+             const catName = book && book.category ? book.category : 'Unknown';
+             const genreName = book && book.genre ? book.genre : '';
+             const cat = genreName || catName;
+             if (cat && cat !== 'Unknown') {
+               categorySalesMap[cat] = (categorySalesMap[cat] || 0) + (item.qty || 1);
+             }
           });
        }
     });
@@ -796,17 +908,39 @@ export function OperationsDashboardPage() {
     });
     const orderStatusData = Object.entries(orderStatusMap).map(([name, value]) => ({ name, value }));
 
-    // Chart Data 3: Top Authors
+    // Chart Data 3: Top Authors and Books
     const authorSalesMap: Record<string, number> = {};
+    const bookSalesMap: Record<string, number> = {};
     orders.forEach((o: any) => {
       if (o.status === 'Completed' || o.status === 'Dispatched') {
         o.items?.forEach((it: any) => {
           const aName = it.authorName || 'Unknown Author';
+          const bTitle = it.title || 'Unknown Book';
           authorSalesMap[aName] = (authorSalesMap[aName] || 0) + (it.qty || 1);
+          bookSalesMap[bTitle] = (bookSalesMap[bTitle] || 0) + (it.qty || 1);
         });
       }
     });
+    
+    let totalDeliveryTime = 0;
+    let deliveredCount = 0;
+    orders.forEach((o: any) => {
+       o.items?.forEach((it: any) => {
+          if (it.status === 'Delivered' && it.dispatchedAt && it.deliveredAt) {
+             const time = new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime();
+             totalDeliveryTime += time;
+             deliveredCount++;
+          }
+       });
+    });
+    const avgDeliveryDays = deliveredCount > 0 ? (totalDeliveryTime / deliveredCount / (1000 * 3600 * 24)).toFixed(1) : 0;
+    
     const topAuthorsData = Object.entries(authorSalesMap)
+      .map(([name, sales]) => ({ name, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
+
+    const topBooksData = Object.entries(bookSalesMap)
       .map(([name, sales]) => ({ name, sales }))
       .sort((a, b) => b.sales - a.sales)
       .slice(0, 5);
@@ -835,7 +969,7 @@ export function OperationsDashboardPage() {
       { label: 'Avg Order Value', value: `₹${avgOrderValue}`, desc: 'Avg revenue per successful order', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
       { label: 'Order Completion', value: `${orderCompletionRate}%`, desc: 'Of all web orders', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
       { label: 'Web Books Sold', value: totalBooksSoldWeb, desc: 'Total physical copies sold online', icon: ShoppingCart, color: 'text-purple-600', bg: 'bg-purple-50' },
-      { label: 'Event Adoption', value: `${eventAdoptionRate}%`, desc: 'Authors in live events', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' }
+      { label: 'Event Adoption', value: `${latestEventRate}%`, desc: 'Latest event adoption', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50', hoverData: last3Events }
     ];
 
     return (
@@ -865,13 +999,30 @@ export function OperationsDashboardPage() {
            {/* Mini Insight Cards */}
            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
              {insights.map((insight, idx) => (
-               <div key={idx} className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow">
+               <div key={idx} className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow relative group">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${insight.bg} ${insight.color}`}>
                      <insight.icon size={16} />
                   </div>
                   <h4 className="text-2xl font-bold text-paa-navy mb-1">{insight.value}</h4>
                   <p className="text-xs font-semibold text-gray-800 mb-1">{insight.label}</p>
-                  <p className="text-[10px] text-paa-gray-text">{insight.desc}</p>
+                  <p className="text-[10px] text-paa-gray-text flex items-center justify-between">
+                     {insight.desc}
+                     {(insight as any).hoverData && <Eye size={12} className="cursor-pointer text-indigo-400 hover:text-indigo-600" />}
+                  </p>
+                  
+                  {(insight as any).hoverData && (
+                     <div className="absolute z-10 bottom-full left-0 mb-2 w-48 bg-white border border-gray-100 shadow-xl rounded-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-2 border-b pb-1">Last 3 Events</p>
+                        <div className="space-y-2">
+                           {(insight as any).hoverData.map((ev: any, i: number) => (
+                              <div key={i} className="flex justify-between items-center text-xs">
+                                 <span className="text-gray-600 truncate mr-2">{ev.name}</span>
+                                 <span className="font-bold text-paa-navy">{ev.rate}%</span>
+                              </div>
+                           ))}
+                        </div>
+                     </div>
+                  )}
                </div>
              ))}
            </div>
@@ -929,10 +1080,10 @@ export function OperationsDashboardPage() {
            </div>
 
            {/* Charts Row 2 */}
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm col-span-1">
                <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4 text-blue-500" /> Most Popular Categories
+                  <BarChart2 className="w-4 h-4 text-blue-500" /> Popular by Category & Genre
                </h3>
                <div className="h-56 w-full">
                  {categoryChartData.length > 0 ? (
@@ -955,28 +1106,43 @@ export function OperationsDashboardPage() {
                </div>
              </div>
 
-             <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+             <div className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm">
                <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-amber-500" /> Top Performing Authors
+                  <Users className="w-4 h-4 text-indigo-500" /> Top Selling Authors
                </h3>
-               <div className="h-56 w-full">
-                 {topAuthorsData.length > 0 ? (
-                   <ResponsiveContainer width="100%" height="100%">
-                     <BarChart data={topAuthorsData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                       <XAxis dataKey="name" fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
-                       <YAxis fontSize={10} tick={{fill:'#6B7280'}} axisLine={false} tickLine={false} />
-                       <RechartsTooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px'}} />
-                       <Bar dataKey="sales" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Books Sold">
-                          {topAuthorsData.map((entry, index) => (
-                             <Cell key={`cell-${index}`} fill={['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][index % 5]} />
-                          ))}
-                       </Bar>
-                     </BarChart>
-                   </ResponsiveContainer>
-                 ) : (
-                   <div className="h-full flex items-center justify-center text-gray-400 text-xs">No author sales data.</div>
-                 )}
+               <div className="space-y-3">
+                  {topAuthorsData.length > 0 ? topAuthorsData.map((a, idx) => (
+                     <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
+                        <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold shrink-0">#{idx + 1}</div>
+                           <p className="text-sm font-bold text-paa-navy line-clamp-1">{a.name}</p>
+                        </div>
+                        <div className="text-right shrink-0 ml-4">
+                           <span className="text-sm font-black text-indigo-600">{a.sales}</span>
+                           <span className="text-[10px] text-gray-500 ml-1">Sold</span>
+                        </div>
+                     </div>
+                  )) : <p className="text-xs text-gray-400">No completed sales yet.</p>}
+               </div>
+             </div>
+
+             <div className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm">
+               <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-emerald-500" /> Highest Selling Books
+               </h3>
+               <div className="space-y-3">
+                  {topBooksData.length > 0 ? topBooksData.map((b, idx) => (
+                     <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
+                        <div className="flex items-center gap-3 min-w-0 pr-4">
+                           <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold shrink-0">#{idx + 1}</div>
+                           <p className="text-sm font-bold text-paa-navy line-clamp-1">{b.name}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                           <span className="text-sm font-black text-emerald-600">{b.sales}</span>
+                           <span className="text-[10px] text-gray-500 ml-1">Sold</span>
+                        </div>
+                     </div>
+                  )) : <p className="text-xs text-gray-400">No completed sales yet.</p>}
                </div>
              </div>
            </div>
@@ -1088,8 +1254,11 @@ export function OperationsDashboardPage() {
                             <p className="text-xs text-paa-gray-text">by {b.authorName}</p>
                          </div>
                          <div className="flex items-center gap-3 shrink-0">
-                            <button onClick={() => handleNotifySingleBook(b.id || b.dbId, b.inventory || 0)} className="opacity-0 group-hover:opacity-100 p-1.5 bg-white text-gray-400 hover:text-amber-500 rounded-full shadow-sm transition-all" title="Notify Author">
+                            <button onClick={() => handleNotifySingleBook(b)} className="opacity-0 group-hover:opacity-100 p-1.5 bg-white text-gray-400 hover:text-amber-500 rounded-full shadow-sm transition-all" title="Notify Author">
                                <Bell size={14} />
+                            </button>
+                            <button onClick={(e) => handleDismiss(e, `lowstock_${b.dbId || b.id}`)} className="opacity-0 group-hover:opacity-100 p-1.5 bg-white text-gray-400 hover:text-red-500 rounded-full shadow-sm transition-all" title="Dismiss Alert">
+                               <X size={14} />
                             </button>
                             <div className="text-right">
                                <span className="text-lg font-black text-red-600">{b.inventory || 0}</span>
@@ -1309,111 +1478,121 @@ export function OperationsDashboardPage() {
   };
 
   const WebOrdersTab = ({ refreshTrigger }: { refreshTrigger?: number }) => {
+    const [fineModalAuthor, setFineModalAuthor] = useState<{ id: number, name: string } | null>(null);
+    const [fineAmount, setFineAmount] = useState('500');
+    const [isSubmittingFine, setIsSubmittingFine] = useState(false);
+
     const successfulOrders = orders.filter((o: any) => o.status === 'Completed').length;
     const toApproveOrders = orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
     const underDeliveryOrders = orders.filter((o: any) => o.status === 'Dispatched').length;
+    const returnedOrdersCount = orders.filter((o: any) => o.status === 'Returned' || o.status === 'Cancelled').length;
+
+    const totalRevenueWebOrders = orders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
+    const avgOrderValueWeb = successfulOrders > 0 ? Math.round(totalRevenueWebOrders / successfulOrders) : 0;
 
     // Additional Insights
-    const authorSalesMap: Record<string, number> = {};
-    const bookSalesMap: Record<string, number> = {};
+
+    let totalDeliveryTime = 0;
+    let deliveredCount = 0;
+    
+    const lateDeliveriesMap: Record<number, { authorName: string, authorEmail: string, orderId: string, hours: number, count: number }> = {};
     
     orders.forEach((o: any) => {
-      if (o.status === 'Completed' || o.status === 'Dispatched') {
-        o.items?.forEach((it: any) => {
-          const aName = it.authorName || 'Unknown Author';
-          const bTitle = it.title || 'Unknown Book';
-          authorSalesMap[aName] = (authorSalesMap[aName] || 0) + (it.qty || 1);
-          bookSalesMap[bTitle] = (bookSalesMap[bTitle] || 0) + (it.qty || 1);
-        });
-      }
+       o.items?.forEach((it: any) => {
+          if (it.status === 'Delivered' && it.dispatchedAt && it.deliveredAt) {
+             const time = new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime();
+             totalDeliveryTime += time;
+             deliveredCount++;
+          }
+       });
     });
-
-    const topAuthorsData = Object.entries(authorSalesMap)
-      .map(([name, sales]) => ({ name, sales }))
-      .sort((a, b) => b.sales - a.sales)
-      .slice(0, 3);
-
-    const topBooksData = Object.entries(bookSalesMap)
-      .map(([name, sales]) => ({ name, sales }))
-      .sort((a, b) => b.sales - a.sales)
-      .slice(0, 3);
+    const avgDeliveryDays = deliveredCount > 0 ? (totalDeliveryTime / deliveredCount / (1000 * 3600 * 24)).toFixed(1) : 0;
+    
 
     return (
       <div className="space-y-6">
         {/* ── Order Tracking KPIs ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-              <Check size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Successful Orders</p>
-              <h3 className="text-2xl font-bold text-paa-navy">{successfulOrders}</h3>
-            </div>
-          </div>
-          <div className="dash-kpi-card amber" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div className="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
-              <AlertCircle size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Verified</p>
-              <h3 className="text-2xl font-bold text-paa-navy">{toApproveOrders}</h3>
-            </div>
-          </div>
-          <div className="dash-kpi-card blue" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-              <Package size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Under Delivery</p>
-              <h3 className="text-2xl font-bold text-paa-navy">{underDeliveryOrders}</h3>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[
+            { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'text-green-600 bg-green-100', bgClass: 'border-green-100' },
+            { label: 'Avg Order Value', value: `₹${avgOrderValueWeb}`, icon: DollarSign, colorClass: 'text-emerald-600 bg-emerald-100', bgClass: 'border-emerald-100' },
+            { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'text-orange-600 bg-orange-100', bgClass: 'border-orange-100' },
+            { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'text-blue-600 bg-blue-100', bgClass: 'border-blue-100' },
+            { label: 'Avg Delivery Time', value: avgDeliveryDays > 0 ? `${avgDeliveryDays} Days` : 'N/A', icon: TrendingUp, colorClass: 'text-teal-600 bg-teal-100', bgClass: 'border-teal-100' },
+            { label: 'Returns & Cancels', value: returnedOrdersCount, icon: XCircle, colorClass: 'text-red-600 bg-red-100', bgClass: 'border-red-100' },
+          ].map((kpi, i) => (
+             <div key={i} className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col justify-center items-start gap-3 hover:-translate-y-1 hover:shadow-md transition-all`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kpi.colorClass}`}>
+                   <kpi.icon size={18} />
+                </div>
+                <div>
+                   <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+                   <h3 className="text-2xl font-bold text-paa-navy">{kpi.value}</h3>
+                </div>
+             </div>
+          ))}
         </div>
 
-        {/* ── Order Insights Row ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-           <div className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm">
-             <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
-                <Users className="w-4 h-4 text-indigo-500" /> Top Selling Authors
-             </h3>
-             <div className="space-y-3">
-                {topAuthorsData.length > 0 ? topAuthorsData.map((a, idx) => (
-                   <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
-                      <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold shrink-0">#{idx + 1}</div>
-                         <p className="text-sm font-bold text-paa-navy line-clamp-1">{a.name}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                         <span className="text-sm font-black text-indigo-600">{a.sales}</span>
-                         <span className="text-[10px] text-gray-500 ml-1">Sold</span>
-                      </div>
-                   </div>
-                )) : <p className="text-xs text-gray-400">No completed sales yet.</p>}
-             </div>
-           </div>
 
-           <div className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm">
-             <h3 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-emerald-500" /> Highest Selling Books
-             </h3>
-             <div className="space-y-3">
-                {topBooksData.length > 0 ? topBooksData.map((b, idx) => (
-                   <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
-                      <div className="flex items-center gap-3 min-w-0 pr-4">
-                         <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold shrink-0">#{idx + 1}</div>
-                         <p className="text-sm font-bold text-paa-navy line-clamp-1">{b.name}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                         <span className="text-sm font-black text-emerald-600">{b.sales}</span>
-                         <span className="text-[10px] text-gray-500 ml-1">Sold</span>
-                      </div>
-                   </div>
-                )) : <p className="text-xs text-gray-400">No completed sales yet.</p>}
-             </div>
-           </div>
-        </div>
+        {/* Author Logistics Alerts */}
+        {(() => {
+          const alerts: any[] = [];
+          orders.forEach((ord: any) => {
+            ord.items?.forEach((it: any) => {
+              if (it.status === 'Completed' && it.deliveredAt && it.dispatchedAt) {
+                const days = (new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24);
+                if (days > 10 || (it.feedbackRating && it.feedbackRating <= 2) || (it.feedbackCondition === 'Damaged')) {
+                  alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: it.feedbackCondition === 'Damaged' ? 'Damaged Condition Reported' : (it.feedbackRating && it.feedbackRating <= 2) ? `Low Rating (${it.feedbackRating} Stars)` : `Slow Delivery (${Math.round(days)} days)` });
+                }
+              } else if (it.status === 'Dispatched' && it.dispatchedAt) {
+                const days = (new Date().getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24);
+                if (days > 14) alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: `Stuck in Transit (${Math.round(days)} days)` });
+              } else if ((it.status === 'Pending' || it.status === 'Accepted' || it.status === 'Pending Verification') && it.createdAt) {
+                const days = (new Date().getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600 * 24);
+                if (days > 7) alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: `Not Dispatched (${Math.round(days)} days)` });
+              }
+            });
+          });
 
+          if (alerts.length === 0) return null;
+
+          return (
+            <div className="bg-red-50 border border-red-200 shadow-sm flex flex-col mb-6">
+              <div className="p-4 border-b border-red-200 flex items-center gap-2 bg-red-100/50">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <h3 className="text-lg font-serif font-semibold text-red-900 tracking-tight">Author Logistics Alerts (Defaulters)</h3>
+              </div>
+              <div className="p-4 overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="text-xs uppercase tracking-widest text-red-800 border-b border-red-200">
+                      <th className="pb-2 font-bold">Author</th>
+                      <th className="pb-2 font-bold">Book</th>
+                      <th className="pb-2 font-bold">Issue</th>
+                      <th className="pb-2 font-bold">Order Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {alerts.map((a, idx) => (
+                      <tr key={idx} className="border-b border-red-100 last:border-0 text-sm text-red-900">
+                        <td className="py-3 font-bold">{a.authorName}</td>
+                        <td className="py-3">{a.title}</td>
+                        <td className="py-3 font-bold flex items-center gap-2">
+                          <span className="bg-red-200 text-red-800 px-2 py-1 rounded text-xs">{a.issue}</span>
+                          {a.feedbackComments && <span className="text-xs italic text-red-700 bg-red-50 px-2 py-1 rounded border border-red-100">"{a.feedbackComments}"</span>}
+                        </td>
+                        <td className="py-3">
+                          <p className="font-mono text-xs">{a.orderId}</p>
+                          <p className="text-xs opacity-80">{a.customer} ({a.date})</p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out flex flex-col">
           <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
@@ -1507,6 +1686,367 @@ export function OperationsDashboardPage() {
             {orders.length === 0 && <div className="text-center py-8 text-sm text-gray-500">No orders yet.</div>}
           </div>
         </div>
+
+      </div>
+    );
+  };
+
+  const LateAuthorsSystemTab = () => {
+    const [activeTable, setActiveTable] = React.useState<'approvals' | 'suspended' | 'late' | 'history'>('late');
+    const [fineModalAuthor, setFineModalAuthor] = React.useState<{ id: number, name: string } | null>(null);
+    const [fineAmount, setFineAmount] = React.useState('500');
+    const [isSubmittingFine, setIsSubmittingFine] = React.useState(false);
+
+    // Reconstruct lateDeliveriesMap for active deliveries (to charge fine)
+    const lateDeliveriesMap: Record<number, any> = {};
+    orders.forEach((o: any) => {
+       o.items?.forEach((it: any) => {
+          if ((it.status === 'Pending Verification' || it.status === 'Pending' || it.status === 'Accepted') && it.createdAt) {
+            const hours = (new Date().getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600);
+            let ignoreForLate = false;
+            const authorData = authors.find((a: any) => a.id === it.authorId);
+            if (authorData?.extraData?.lastFinePaidAt) {
+               if (new Date(it.createdAt).getTime() < new Date(authorData.extraData.lastFinePaidAt).getTime()) {
+                  ignoreForLate = true;
+               }
+            }
+
+            if (hours > 24 && it.authorId && !ignoreForLate) {
+              if (!lateDeliveriesMap[it.authorId]) {
+                lateDeliveriesMap[it.authorId] = { authorName: it.authorName, authorEmail: it.authorEmail, orderId: o.id, hours: Math.round(hours), count: 0 };
+              }
+              lateDeliveriesMap[it.authorId].count++;
+              if (Math.round(hours) > lateDeliveriesMap[it.authorId].hours) {
+                lateDeliveriesMap[it.authorId].hours = Math.round(hours);
+              }
+            }
+          }
+       });
+    });
+    const lateDeliveries = Object.entries(lateDeliveriesMap).map(([authorId, data]) => ({ authorId: Number(authorId), ...data })).sort((a,b) => b.hours - a.hours);
+
+    // Identify pending fine approvals
+    const pendingFineApprovals = authors.filter((a: any) => 
+       (a.extraData?.fineStatus === 'Pending Verification' || (!a.extraData?.fineStatus && a.extraData?.finePaymentScreenshot)) 
+       && a.extraData?.finePaymentScreenshot
+    );
+    // Identify fined authors (fine active)
+    const activeFines = authors.filter((a: any) => a.extraData?.lateFines > 0 && a.extraData?.fineStatus !== 'Pending Verification');
+    // Identify authors with fine history
+    const historyAuthors = authors.filter((a: any) => a.extraData?.fineHistory && a.extraData.fineHistory.length > 0);
+
+    const handleOpenFineModal = (authorId: number, authorName: string) => {
+       setFineModalAuthor({ id: authorId, name: authorName });
+       setFineAmount('500');
+    };
+
+    const submitFine = async () => {
+       if (!fineModalAuthor) return;
+       const amount = parseInt(fineAmount);
+       if (isNaN(amount) || amount <= 0) return toast.error('Invalid amount');
+       setIsSubmittingFine(true);
+       try {
+         await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${fineModalAuthor.id}/fine`, { amount }, {
+           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+         });
+         toast.success(`Fine of ₹${amount} charged successfully`);
+         setFineModalAuthor(null);
+         fetchAuthors();
+       } catch (err) {
+         toast.error('Failed to charge fine');
+       } finally {
+         setIsSubmittingFine(false);
+       }
+    };
+
+    const handleApproveFine = async (authorId: number) => {
+       try {
+         await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${authorId}/approve-fine`, {}, {
+           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+         });
+         toast.success(`Fine payment approved.`);
+         fetchAuthors();
+       } catch (err) {
+         toast.error('Failed to approve fine payment');
+       }
+    };
+
+    const handleRejectFine = async (authorId: number) => {
+       try {
+         await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${authorId}/reject-fine`, {}, {
+           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+         });
+         toast.success(`Fine payment rejected.`);
+         fetchAuthors();
+       } catch (err) {
+         toast.error('Failed to reject fine payment');
+       }
+    };
+
+    return (
+      <div className="space-y-6 animate-fade-in-up">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Late Authors System</h2>
+            <p className="text-sm text-gray-500 mt-1">Manage delayed dispatches, charge fines, and approve fine payments.</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
+            <button 
+              onClick={() => setActiveTable('late')}
+              className={`px-4 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl flex items-center gap-2 ${activeTable === 'late' ? 'bg-white text-paa-navy shadow-premium' : 'text-gray-500 hover:text-paa-navy'}`}
+            >
+              <Clock size={14} /> Late Dispatches
+            </button>
+            <button 
+              onClick={() => setActiveTable('approvals')}
+              className={`px-4 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl flex items-center gap-2 ${activeTable === 'approvals' ? 'bg-white text-paa-navy shadow-premium' : 'text-gray-500 hover:text-paa-navy'}`}
+            >
+              <CheckCircle size={14} /> Approvals
+            </button>
+            <button 
+              onClick={() => setActiveTable('suspended')}
+              className={`px-4 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl flex items-center gap-2 ${activeTable === 'suspended' ? 'bg-white text-paa-navy shadow-premium' : 'text-gray-500 hover:text-paa-navy'}`}
+            >
+              <AlertCircle size={14} /> Suspended
+            </button>
+            <button 
+              onClick={() => setActiveTable('history')}
+              className={`px-4 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl flex items-center gap-2 ${activeTable === 'history' ? 'bg-white text-paa-navy shadow-premium' : 'text-gray-500 hover:text-paa-navy'}`}
+            >
+              <FileText size={14} /> History
+            </button>
+          </div>
+        </div>
+
+        {/* ── Pending Fine Approvals ── */}
+        {activeTable === 'approvals' && (
+        <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm animate-fade-in-up">
+          <div className="flex justify-between items-center mb-4">
+             <h3 className="text-lg font-serif font-semibold text-paa-navy flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500" /> Pending Fine Payment Approvals
+             </h3>
+          </div>
+          <div className="overflow-x-auto">
+             <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-[#f0fdf4] text-green-700 uppercase tracking-widest text-xs border-b border-green-100">
+                   <tr>
+                      <th className="px-4 py-3 font-bold">Author Name</th>
+                      <th className="px-4 py-3 font-bold">Screenshot</th>
+                      <th className="px-4 py-3 font-bold text-center">Action</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {pendingFineApprovals.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No pending payments.</td></tr> : pendingFineApprovals.map((a: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-green-50 transition-colors">
+                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
+                       <td className="px-4 py-3">
+                         <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${a.extraData.finePaymentScreenshot}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                           <ImageIcon size={14} /> View Screenshot
+                         </a>
+                       </td>
+                       <td className="px-4 py-3 text-center flex justify-center gap-2">
+                          <button onClick={() => handleApproveFine(a.id)} className="dash-btn dash-btn-primary bg-green-600 hover:bg-green-700 border-none text-white text-xs px-3 py-1.5 h-auto">
+                            Approve
+                          </button>
+                          <button onClick={() => handleRejectFine(a.id)} className="dash-btn dash-btn-primary bg-red-600 hover:bg-red-700 border-none text-white text-xs px-3 py-1.5 h-auto">
+                            Reject
+                          </button>
+                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+             </table>
+          </div>
+        </div>
+        )}
+
+        {/* ── Active Fines (Unpaid) ── */}
+        {activeTable === 'suspended' && (
+        <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm animate-fade-in-up">
+          <div className="flex justify-between items-center mb-4">
+             <h3 className="text-lg font-serif font-semibold text-paa-navy flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-500" /> Currently Fined Authors (Suspended)
+             </h3>
+          </div>
+          <div className="overflow-x-auto">
+             <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-[#fef2f2] text-red-700 uppercase tracking-widest text-xs border-b border-red-100">
+                   <tr>
+                      <th className="px-4 py-3 font-bold">Author Name</th>
+                      <th className="px-4 py-3 font-bold">Fine Amount</th>
+                      <th className="px-4 py-3 font-bold">Date Charged</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {activeFines.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No currently fined authors.</td></tr> : activeFines.map((a: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-red-50 transition-colors">
+                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
+                       <td className="px-4 py-3 font-bold text-red-600">₹{a.extraData.lateFines}</td>
+                       <td className="px-4 py-3 text-gray-600">{a.extraData.fineDate ? new Date(a.extraData.fineDate).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+             </table>
+          </div>
+        </div>
+        )}
+
+        {/* ── Late Deliveries Row (Charging) ── */}
+        {activeTable === 'late' && (
+        <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm animate-fade-in-up">
+          <div className="flex justify-between items-center mb-4">
+             <h3 className="text-lg font-serif font-semibold text-paa-navy flex items-center gap-2">
+                <Clock className="w-5 h-5 text-orange-500" /> Dispatches Pending &gt; 24 Hrs
+             </h3>
+          </div>
+          <div className="overflow-x-auto">
+             <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-[#fffbeb] text-orange-700 uppercase tracking-widest text-xs border-b border-orange-100">
+                   <tr>
+                      <th className="px-4 py-3 font-bold">Latest Order ID</th>
+                      <th className="px-4 py-3 font-bold">Author Name</th>
+                      <th className="px-4 py-3 font-bold text-center">Unaccepted Items</th>
+                      <th className="px-4 py-3 font-bold text-center">Delay</th>
+                      <th className="px-4 py-3 font-bold text-center">Action</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {lateDeliveries.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">No late deliveries currently.</td></tr> : lateDeliveries.map((ld, idx) => (
+                    <tr key={idx} className="hover:bg-orange-50 transition-colors">
+                       <td className="px-4 py-3 font-bold text-paa-navy">{ld.orderId}</td>
+                       <td className="px-4 py-3 font-medium text-paa-navy">{ld.authorName}</td>
+                       <td className="px-4 py-3 text-center font-bold text-orange-600">{ld.count}</td>
+                       <td className="px-4 py-3 text-center text-xs text-orange-500">{ld.hours} hrs</td>
+                       <td className="px-4 py-3 text-center flex justify-center gap-2">
+                         {(() => {
+                            const authorInfo = authors.find((a: any) => a.id === ld.authorId);
+                            const fineAmt = authorInfo?.extraData?.lateFines || 0;
+                            const isPendingApprove = authorInfo?.extraData?.fineStatus === 'Pending Verification';
+                            
+                            if (fineAmt > 0 && !isPendingApprove) {
+                              return (
+                                 <span className="bg-red-100 text-red-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                   <AlertCircle size={12} /> Fine Active
+                                 </span>
+                              );
+                            }
+                            if (isPendingApprove) {
+                              return (
+                                 <span className="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                   <CheckCircle size={12} /> Reviewing Pmt
+                                 </span>
+                              );
+                            }
+                            
+                            const notifiedDateStr = authorInfo?.extraData?.lateNotificationDate;
+                            let diffDays = -1;
+                            if (notifiedDateStr) {
+                              diffDays = (new Date().getTime() - new Date(notifiedDateStr).getTime()) / (1000 * 3600 * 24);
+                            }
+                            
+                            if (diffDays >= 0 && diffDays <= 3) {
+                              const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
+                              return (
+                                 <span className="bg-orange-100 text-orange-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                   <Check size={12} /> Notified ({daysLeft}d left)
+                                 </span>
+                              );
+                            } else {
+                              return (
+                                <>
+                                   <button onClick={async () => { 
+                                      try {
+                                         await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${ld.authorId}/notify-late`, {}, {
+                                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                                         });
+                                         toast.success(`Notification sent to ${ld.authorName}`);
+                                         fetchAuthors();
+                                      } catch(err) {
+                                         toast.error('Failed to notify author');
+                                      }
+                                   }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors shadow-sm border border-blue-100" title="Send 3-Day Warning">
+                                     <Bell size={14} />
+                                   </button>
+                                   <button onClick={() => handleOpenFineModal(ld.authorId, ld.authorName)} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 font-bold text-xs shadow-sm border border-red-100 transition-colors" title="Charge Fine">
+                                     ₹
+                                   </button>
+                                </>
+                              );
+                            }
+                         })()}
+                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+             </table>
+          </div>
+        </div>
+        )}
+
+        {/* ── Fine History ── */}
+        {activeTable === 'history' && (
+        <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm animate-fade-in-up">
+          <div className="flex justify-between items-center mb-4">
+             <h3 className="text-lg font-serif font-semibold text-paa-navy flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-500" /> Fine Payment History
+             </h3>
+          </div>
+          <div className="overflow-x-auto">
+             <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-[#eef2ff] text-indigo-700 uppercase tracking-widest text-xs border-b border-indigo-100">
+                   <tr>
+                      <th className="px-4 py-3 font-bold">Author Name</th>
+                      <th className="px-4 py-3 font-bold">Fine Amount</th>
+                      <th className="px-4 py-3 font-bold">Payment Date</th>
+                      <th className="px-4 py-3 font-bold">Approved Date</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {historyAuthors.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500 italic">No fine history available.</td></tr> : historyAuthors.flatMap((a: any) => 
+                     a.extraData.fineHistory.map((h: any, idx: number) => (
+                       <tr key={`${a.id}-${idx}`} className="hover:bg-indigo-50 transition-colors">
+                          <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
+                          <td className="px-4 py-3 font-bold text-indigo-600">₹{h.amount}</td>
+                          <td className="px-4 py-3 text-gray-600">{h.paidAt ? new Date(h.paidAt).toLocaleDateString() : 'N/A'}</td>
+                          <td className="px-4 py-3 text-gray-600">{h.approvedAt ? new Date(h.approvedAt).toLocaleDateString() : 'N/A'}</td>
+                       </tr>
+                     ))
+                  )}
+                </tbody>
+             </table>
+          </div>
+        </div>
+        )}
+
+        {fineModalAuthor && (
+          <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setFineModalAuthor(null)}>
+            <div className="dash-modal" style={{ maxWidth: 400 }}>
+              <div className="dash-modal-header">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Charge Fine</h3>
+                <button onClick={() => setFineModalAuthor(null)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">✕</button>
+              </div>
+              <div className="dash-modal-body flex flex-col gap-4">
+                <div>
+                  <label className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1 block">Author</label>
+                  <p className="font-semibold text-paa-navy">{fineModalAuthor.name}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1 block">Fine Amount (₹)</label>
+                  <input type="number" min="1" className="dash-input text-xs w-full" value={fineAmount} onChange={e => setFineAmount(e.target.value)} />
+                </div>
+                <div className="flex justify-end gap-2 mt-2">
+                  <button onClick={() => setFineModalAuthor(null)} className="dash-btn dash-btn-ghost">Cancel</button>
+                  <button onClick={submitFine} disabled={isSubmittingFine} className="dash-btn dash-btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50 border-none text-white">
+                    {isSubmittingFine ? 'Processing...' : 'Charge Fine'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1786,7 +2326,10 @@ export function OperationsDashboardPage() {
              {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter)).map((book) => (
                <tr key={book.id}>
                  <td>
-                   <p className="font-bold text-paa-navy mb-1">{book.title}</p>
+                   <p className="font-bold text-paa-navy mb-1 flex items-center">
+                     {book.title}
+                     {(book.overpriced || book.isOverpriced) && <span className="ml-2 bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Overpriced (Warning)</span>}
+                   </p>
                    <div className="flex items-center gap-2 text-xs font-medium">
                      <span className="text-[#5bc0de] font-bold uppercase">{book.genre}</span>
                    </div>
@@ -2132,7 +2675,17 @@ export function OperationsDashboardPage() {
       }
     };
 
-    const handleExportCSV = () => {
+    
+  const handleEscalateOrder = async (id: number) => {
+    try {
+      await axios.post(`${API}/api/admin/orders/${id}/escalate`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+      toast.success("Escalation email sent to author!");
+    } catch(err) {
+      toast.error("Failed to escalate order");
+    }
+  };
+
+  const handleExportCSV = () => {
       const baseFields = ['Status', 'Name', 'Pen Name', 'Email', 'Phone', 'WhatsApp', 'Address', 'City', 'State', 'Aadhar Number', 'Qualification', 'Age', 'Experience', 'Skills', 'Hobbies', 'Why Joining', 'Transaction ID', 'Joined Date'];
       let csv = baseFields.join(',');
       selectedColumns.forEach(col => csv += `,${col}`);
@@ -2498,6 +3051,7 @@ export function OperationsDashboardPage() {
              { id: 'books', label: 'Inventory / Books', icon: BookOpen, hasAlert: pendingAlerts.books },
              { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
              { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
+             { id: 'late_authors', label: 'Late Authors System', icon: AlertCircle },
              { id: 'author_data', label: 'Author Extra Data', icon: ClipboardList },
              { id: 'helpdesk', label: 'Helpdesk / Queries', icon: Users, hasAlert: pendingAlerts.queries },
              { id: 'settings', label: 'System Settings', icon: Settings },
@@ -2557,46 +3111,101 @@ export function OperationsDashboardPage() {
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-black/8 text-paa-navy hover:bg-black/4 transition-colors"
               >
-                 <Bell className="w-4 h-4" />
+                 <Megaphone className="w-4 h-4" />
                  {(pendingAlerts.orders || pendingAlerts.queries || pendingAlerts.authors || pendingAlerts.books) && (
                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                  )}
               </button>
               
               {showNotifications && (
-                 <div className="dash-notification-panel">
-                    <div className="px-4 py-3 border-b border-black/6 bg-gray-50">
-                      <p className="text-xs font-bold uppercase tracking-widest text-paa-navy">Notifications</p>
+                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 420, background: '#fff', borderRadius: 16, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', zIndex: 9999, overflow: 'hidden' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fafafa' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>📢 Broadcast to Authors</p>
+                        <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X className="w-4 h-4" /></button>
+                      </div>
+                      <p style={{ fontSize: 12, color: '#6b6b80', marginTop: 4 }}>Type <span style={{ background: '#e0e7ff', color: '#3b82f6', padding: '1px 6px', borderRadius: 4, fontWeight: 700, fontFamily: 'monospace' }}>@</span> to mention an author, or send to all.</p>
                     </div>
-                    <div className="max-h-72 overflow-y-auto divide-y divide-black/5">
-                       {pendingAlerts.authors && (
-                          <button onClick={() => { setActiveTab('authors'); localStorage.setItem('adminActiveTab', 'authors'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
-                             <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                             <div><p className="text-sm font-semibold text-paa-navy">Authors Pending</p><p className="text-xs text-paa-gray-text mt-0.5">Authors waiting for approval or profile update review</p></div>
-                          </button>
-                       )}
-                       {pendingAlerts.books && (
-                          <button onClick={() => { setActiveTab('books'); localStorage.setItem('adminActiveTab', 'books'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
-                             <div className="w-2 h-2 rounded-full bg-violet-500 mt-1.5 shrink-0"></div>
-                             <div><p className="text-sm font-semibold text-paa-navy">Books Pending</p><p className="text-xs text-paa-gray-text mt-0.5">New books or book updates listed for review</p></div>
-                          </button>
-                       )}
-                       {pendingAlerts.orders && (
-                          <button onClick={() => { setActiveTab('orders'); localStorage.setItem('adminActiveTab', 'orders'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
-                             <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                             <div><p className="text-sm font-semibold text-paa-navy">Orders Pending</p><p className="text-xs text-paa-gray-text mt-0.5">Pending customer web orders</p></div>
-                          </button>
-                       )}
-                       {pendingAlerts.queries && (
-                          <button onClick={() => { setActiveTab('helpdesk'); localStorage.setItem('adminActiveTab', 'helpdesk'); setShowNotifications(false); }} className="w-full text-left px-4 py-3 hover:bg-black/3 flex items-start gap-3 transition-colors">
-                             <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
-                             <div><p className="text-sm font-semibold text-paa-navy">Unanswered Queries</p><p className="text-xs text-paa-gray-text mt-0.5">Helpdesk tickets need response</p></div>
-                          </button>
-                       )}
-                       {!(pendingAlerts.orders || pendingAlerts.queries || pendingAlerts.authors || pendingAlerts.books) && (
-                          <div className="px-4 py-6 text-center text-paa-gray-text text-xs">All clear â€” no new notifications.</div>
-                       )}
+                    
+                    <div style={{ padding: '16px 20px', position: 'relative' }}>
+                      <textarea
+                        value={newNotification}
+                        onChange={handleNotificationChange}
+                        placeholder="Type your message... Use @authorname to tag specific authors"
+                        rows={3}
+                        style={{ width: '100%', padding: '12px 14px', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 10, fontFamily: 'var(--font-body)', fontSize: 14, background: '#f7f7f9', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                      />
+                      
+                      {/* @mention dropdown */}
+                      {showMentionDropdown && (
+                        <div style={{ position: 'absolute', left: 20, right: 20, bottom: '100%', marginBottom: -60, background: '#fff', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: 180, overflowY: 'auto', zIndex: 10 }}>
+                          {authors
+                            .filter((a: any) => a.name?.toLowerCase().includes(mentionQuery.toLowerCase()))
+                            .slice(0, 8)
+                            .map((a: any) => (
+                              <button
+                                key={a.id}
+                                onClick={() => handleMentionSelect(a.name)}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.04)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s' }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f0f4')}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                              >
+                                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#3b82f6' }}>
+                                  {a.name?.charAt(0)?.toUpperCase()}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{a.name}</div>
+                                  <div style={{ fontSize: 11, color: '#6b6b80' }}>{a.email || a.phone || 'Author'}</div>
+                                </div>
+                              </button>
+                            ))
+                          }
+                          {authors.filter((a: any) => a.name?.toLowerCase().includes(mentionQuery.toLowerCase())).length === 0 && (
+                            <div style={{ padding: '12px 14px', fontSize: 12, color: '#6b6b80', textAlign: 'center' }}>No authors found</div>
+                          )}
+                        </div>
+                      )}
                     </div>
+
+                    <div style={{ padding: '0 20px 16px', display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={async () => {
+                          if (!newNotification.trim()) return;
+                          try {
+                            await axios.post(`${API}/api/admin/notifications`, { message: newNotification, target: 'ALL' });
+                            toast.success('Broadcast sent to all authors!');
+                            setNewNotification('');
+                            setShowNotifications(false);
+                          } catch (e) { toast.error('Failed to send broadcast'); }
+                        }}
+                        style={{ flex: 1, padding: '10px 16px', background: '#1a1a2e', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'opacity 0.2s' }}
+                      >
+                        <Users className="w-4 h-4" /> Notify All
+                      </button>
+                      <button
+                        onClick={handleSendNotification}
+                        disabled={!newNotification.trim()}
+                        style={{ flex: 1, padding: '10px 16px', background: newNotification.includes('@') ? '#2563eb' : '#e5e5e5', color: newNotification.includes('@') ? '#fff' : '#999', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: newNotification.includes('@') ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.2s' }}
+                      >
+                        <MessageSquare className="w-4 h-4" /> Send to Tagged
+                      </button>
+                    </div>
+
+                    {/* Recent broadcasts */}
+                    {notifications.length > 0 && (
+                      <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', maxHeight: 160, overflowY: 'auto' }}>
+                        <div style={{ padding: '10px 20px 6px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6b6b80' }}>Recent Broadcasts</div>
+                        {notifications.slice(0, 5).map((n: any) => (
+                          <div key={n.id} style={{ padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 8, borderBottom: '1px solid rgba(0,0,0,0.03)' }}>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: 12, color: '#1a1a2e', lineHeight: 1.4 }}>{n.message}</p>
+                              <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{n.target === 'ALL' ? '→ All Authors' : `→ @${n.target}`} · {new Date(n.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <button onClick={() => handleDeleteNotification(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#ef4444', opacity: 0.5 }}><Trash2 className="w-3 h-3" /></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                  </div>
               )}
            </div>
@@ -2616,6 +3225,7 @@ export function OperationsDashboardPage() {
            {activeTab === 'events' && <EventsTab />}
            {activeTab === 'forms' && <FormsTab />}
            {activeTab === 'gallery' && <GalleryTab />}
+           {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
            {activeTab === 'author_data' && <AuthorDataTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
            {activeTab === 'settings' && (
@@ -2787,6 +3397,7 @@ export function OperationsDashboardPage() {
             fd.append('registrationFee', target.registrationFee.value);
             fd.append('feeType', target.feeType.value);
             if (target.description.value) fd.append('description', target.description.value);
+            fd.append('livePosEnabled', target.livePosEnabled.checked ? 'true' : 'false');
             if (target.banner.files[0]) fd.append('banner', target.banner.files[0]);
 
             await axios.post(`${API}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
@@ -3703,15 +4314,20 @@ export function OperationsDashboardPage() {
 
 const HelpdeskTab = ({ refreshTrigger }: any) => {
   const [queries, setQueries] = useState<any[]>([]);
-  const [replyText, setReplyText] = useState<{ [key: number]: string }>({});
-  const [isReplying, setIsReplying] = useState<{ [key: number]: boolean }>({});
+  const [filterType, setFilterType] = useState<'All' | 'Query' | 'Message'>('All');
+  const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
+  const [isReplying, setIsReplying] = useState<{ [key: string]: boolean }>({});
 
   const fetchQueries = async () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/queries`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setQueries(res.data);
+      const mappedQueries = res.data.map((q: any) => ({
+        ...q,
+        itemType: q.subject?.startsWith('Contact Form') ? 'Message' : 'Query'
+      }));
+      setQueries(mappedQueries);
     } catch (e) {
       toast.error('Failed to load queries');
     }
@@ -3721,7 +4337,28 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
     fetchQueries();
   }, []);
 
-  const handleReply = async (id: number) => {
+  const [broadcastTarget, setBroadcastTarget] = useState('ALL');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  const handleBroadcast = async () => {
+    if (!broadcastMessage.trim()) return;
+    setIsBroadcasting(true);
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/notifications`, 
+        { message: broadcastMessage, target: broadcastTarget },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      toast.success('Broadcast notification sent!');
+      setBroadcastMessage('');
+    } catch (e) {
+      toast.error('Failed to send broadcast');
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
+  const handleReply = async (id: string | number) => {
     if (!replyText[id]) return;
     setIsReplying({ ...isReplying, [id]: true });
     try {
@@ -3737,41 +4374,67 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
     }
   };
 
+  const filteredQueries = queries.filter(q => filterType === 'All' || q.itemType === filterType);
+
   return (
     <div className="space-y-6 max-w-6xl">
+
        <div className="bg-white p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl">
           <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
              <div>
                 <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
-                   <Users className="w-5 h-5" /> Support Helpdesk
+                   <Users className="w-5 h-5" /> Messages / Queries
                 </h3>
-                <p className="text-paa-gray-text text-sm">Manage and respond to author queries.</p>
+                <p className="text-paa-gray-text text-sm">Manage author queries and contact inquiries.</p>
              </div>
-             <button onClick={fetchQueries} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
-                <RefreshCw size={18} />
-             </button>
+             <div className="flex items-center gap-3">
+               <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
+                 {['All', 'Query', 'Message'].map(t => (
+                   <button 
+                     key={t}
+                     onClick={() => setFilterType(t as any)}
+                     className={`px-4 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${filterType === t ? 'bg-white text-paa-navy shadow-premium' : 'text-gray-500 hover:text-paa-navy'}`}
+                   >
+                     {t}
+                   </button>
+                 ))}
+               </div>
+               <button onClick={fetchQueries} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+                  <RefreshCw size={18} />
+               </button>
+             </div>
           </div>
           
           <div className="space-y-6">
-             {queries.length === 0 ? (
-                <p className="text-sm text-gray-500 italic text-center py-8">No queries found.</p>
-             ) : queries.map(q => (
-                <div key={q.id} className="border border-gray-200 rounded-3xl-2xl p-6 bg-gray-50 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-                   <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
+             {filteredQueries.length === 0 ? (
+                <p className="text-sm text-gray-500 italic text-center py-8">No messages or queries found.</p>
+             ) : filteredQueries.map(q => (
+                <div key={q.id} className="border border-gray-200 rounded-3xl-2xl p-6 bg-gray-50 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out relative overflow-hidden">
+                   <div className={`absolute left-0 top-0 bottom-0 w-1 ${q.itemType === 'Message' ? 'bg-blue-500' : 'bg-paa-gold'}`}></div>
+                   <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4 pl-2">
                       <div>
-                         <h4 className="font-bold text-paa-navy text-lg">{q.subject}</h4>
-                         <p className="text-xs text-gray-500 mt-1">From: <span className="font-bold">{q.author?.name}</span> ({q.author?.email})</p>
+                         <div className="flex items-center gap-2 mb-1">
+                           <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.itemType === 'Message' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                             {q.itemType}
+                           </span>
+                           <h4 className="font-bold text-paa-navy text-lg">{q.subject}</h4>
+                         </div>
+                         {q.itemType !== 'Message' && (
+                           <p className="text-xs text-gray-500 mt-1">From: <span className="font-bold">{q.author?.name || 'Unknown'}</span> ({q.author?.email || 'N/A'})</p>
+                         )}
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-3xl-2xl ${q.status === 'Answered' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}>
-                        {q.status}
-                      </span>
+                      {q.itemType !== 'Message' && (
+                         <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-3xl-2xl ${q.status === 'Answered' ? 'bg-green-100 text-green-800 border border-green-200' : q.status === 'Unread' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}>
+                           {q.status}
+                         </span>
+                      )}
                    </div>
-                   <div className="bg-white p-4 rounded-3xl-2xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-inner">
+                   <div className="bg-white p-4 rounded-3xl-2xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-inner ml-2">
                       {q.message}
                    </div>
 
-                   {q.status === 'Pending' ? (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
+                   {q.itemType === 'Query' && q.status === 'Pending' && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 ml-2">
                          <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Write a Reply</label>
                          <textarea 
                            rows={3} 
@@ -3788,10 +4451,16 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
                            {isReplying[q.id] ? 'Sending...' : 'Send Reply'}
                          </button>
                       </div>
-                   ) : (
-                      <div className="mt-4 pt-4 border-t border-gray-200 bg-green-50/50 p-4 rounded-3xl-2xl">
+                   )}
+                   {q.itemType === 'Query' && q.status === 'Answered' && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 bg-green-50/50 p-4 rounded-3xl-2xl ml-2">
                          <p className="text-xs font-bold uppercase tracking-widest text-paa-gold mb-2">Your Reply:</p>
                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{q.reply}</p>
+                      </div>
+                   )}
+                   {q.itemType === 'Message' && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 ml-2">
+                         <p className="text-xs text-gray-500 italic">Please reply to this inquiry directly via email to {q.author?.email}.</p>
                       </div>
                    )}
                 </div>
@@ -3803,4 +4472,176 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
 };
 
 export default OperationsDashboardPage;
+
+
+
+
+function GalleryReviewTab() {
+  const [pendingImages, setPendingImages] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  const fetchPendingImages = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/pending`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setPendingImages(res.data);
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => { fetchPendingImages(); }, []);
+
+  const handleAction = async (id: number, action: 'approve' | 'reject') => {
+    try {
+      const token = localStorage.getItem('token');
+      if (action === 'approve') {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/images/${id}/approve`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Image approved for public gallery.');
+      } else {
+        await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/images/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Image rejected and deleted.');
+      }
+      fetchPendingImages();
+    } catch(err) {
+      toast.error('Failed to process image action.');
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy"/></div>;
+
+  return (
+    <div className="space-y-6 animate-fade-in-up">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Gallery Review</h2>
+          <p className="text-sm text-gray-500 mt-1">Review event photos uploaded by authors before they appear in the public gallery.</p>
+        </div>
+        <div className="bg-amber-100 text-amber-800 px-4 py-2 rounded-xl text-sm font-bold shadow-sm border border-amber-200 flex items-center gap-2">
+          <ImageIcon className="w-4 h-4"/> {pendingImages.length} Pending
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
+        {pendingImages.map(img => (
+          <div key={img.id} className="bg-white rounded-3xl-2xl border border-gray-100 shadow-premium overflow-hidden hover:-translate-y-1 transition-all">
+            <div className="aspect-square bg-gray-100 relative group">
+              <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} alt="Event" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                <button onClick={() => handleAction(img.id, 'approve')} className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors shadow-lg" title="Approve"><Check size={20}/></button>
+                <button onClick={() => handleAction(img.id, 'reject')} className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg" title="Reject"><X size={20}/></button>
+              </div>
+            </div>
+            <div className="p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 line-clamp-1">{img.galleryEvent?.location || 'Unknown Event'}</p>
+              <p className="text-sm text-gray-600 line-clamp-2">{img.caption || 'No caption provided'}</p>
+              <div className="mt-4 flex gap-2">
+                 <button onClick={() => handleAction(img.id, 'approve')} className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 py-2 rounded-xl text-xs font-bold transition-colors text-center border border-green-200">APPROVE</button>
+                 <button onClick={() => handleAction(img.id, 'reject')} className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 py-2 rounded-xl text-xs font-bold transition-colors text-center border border-red-200">REJECT</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {pendingImages.length === 0 && (
+        <div className="text-center py-20 bg-white rounded-3xl-2xl border border-gray-100 border-dashed">
+          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8 text-green-500" />
+          </div>
+          <h3 className="text-lg font-serif text-paa-navy">All caught up!</h3>
+          <p className="text-gray-500 text-sm mt-1">There are no pending gallery images to review.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+function AdminReviewsTab() {
+  const [reviews, setReviews] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/reviews`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setReviews(res.data);
+      } catch(err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReviews();
+  }, []);
+
+  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy"/></div>;
+
+  return (
+    <div className="space-y-6 animate-fade-in-up">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Global Book Reviews</h2>
+          <p className="text-sm text-gray-500 mt-1">Monitor all customer feedback and ratings across the platform.</p>
+        </div>
+        <div className="bg-paa-navy text-paa-cream px-4 py-2 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2">
+          <Star className="w-4 h-4"/> {reviews.length} Total Reviews
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl-2xl border border-gray-100 shadow-premium overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Reviewer</th>
+              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Book</th>
+              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Rating</th>
+              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Feedback</th>
+              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {reviews.map(r => (
+              <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="font-bold text-sm text-paa-navy">{r.reviewerName}</div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="font-bold text-sm text-paa-navy line-clamp-1">{r.book?.title}</div>
+                  <div className="text-xs text-gray-500 line-clamp-1">by {r.book?.author?.name}</div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex bg-amber-50 text-amber-700 px-2 py-1 rounded-lg w-fit items-center gap-1">
+                    <span className="font-bold text-sm">{r.rating}</span>
+                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <p className="text-sm text-gray-600 line-clamp-2 min-w-[200px] italic">"{r.comment}"</p>
+                </td>
+                <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                  {new Date(r.createdAt).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
+            {reviews.length === 0 && (
+              <tr><td colSpan={5} className="text-center py-10 text-gray-500">No reviews found in the system.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 

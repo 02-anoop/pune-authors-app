@@ -48,6 +48,10 @@ interface CatalogueBook {
   publicationDate?: string;
   edition?: string;
   format?: string;
+  rating: number;
+  reviewsCount: number;
+  bundleRules?: { enabled: boolean; buyCount: number; discount: number }[];
+  bundleRule?: { enabled: boolean; buyCount: number; discount: number };
 }
 
 
@@ -224,11 +228,44 @@ export function CataloguePage() {
   const [activeSubSubcategory, setActiveSubSubcategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "title">("default");
-  const [cart, setCart] = useState<string[]>([]);
+  const [cart, setCart] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('checkout_cart');
+      return saved ? JSON.parse(saved).map(String) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('checkout_cart', JSON.stringify(cart));
+  }, [cart]);
+  const [minPrice, setMinPrice] = useState<number | ''>('');
+  const [maxPrice, setMaxPrice] = useState<number | ''>('');
+  const [formatFilter, setFormatFilter] = useState<string>("All");
+  const [ratingFilter, setRatingFilter] = useState<number>(0);
+  const [showFilters, setShowFilters] = useState<boolean>(false);
   const [tooltip, setTooltip] = useState<{ name: string; bio: string; x: number; y: number } | null>(null);
   const [allBooks, setAllBooks] = useState<CatalogueBook[]>([]);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const userRole = localStorage.getItem("userRole");
+
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      try {
+        const saved = localStorage.getItem('checkout_cart');
+        if (saved) setCart(JSON.parse(saved).map(String));
+      } catch (e) {}
+    };
+    window.addEventListener('cart_updated', handleCartUpdate);
+    // Also listen to storage events if updated in another tab
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'checkout_cart') handleCartUpdate();
+    });
+    return () => {
+      window.removeEventListener('cart_updated', handleCartUpdate);
+      window.removeEventListener('storage', handleCartUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     const w = window as any;
@@ -267,12 +304,17 @@ export function CataloguePage() {
           publisher: b.publisher || "",
           publicationDate: b.publicationDate || "",
           edition: b.edition || "",
-          format: b.format || ""
+          format: b.format || "",
+          rating: b.reviews && b.reviews.length > 0 ? b.reviews.reduce((acc, r) => acc + r.rating, 0) / b.reviews.length : 0,
+          reviewsCount: b.reviews ? b.reviews.length : 0,
+          bundleRules: b.author?.extraData?.bundleRules || [],
+          bundleRule: b.author?.extraData?.bundleRule || undefined
         }));
         w.__apiCache.catalogueBooks = mapped;
         setAllBooks(mapped);
       })
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
   }, []);
 
   const handleCategoryChange = (cat: string) => {
@@ -318,13 +360,26 @@ export function CataloguePage() {
           b.synopsis.toLowerCase().includes(q)
       );
     }
+    
+    if (minPrice !== '') {
+      list = list.filter(b => b.mrp !== null && b.mrp >= minPrice);
+    }
+    if (maxPrice !== '') {
+      list = list.filter(b => b.mrp !== null && b.mrp <= maxPrice);
+    }
+    if (formatFilter !== "All") {
+      list = list.filter(b => b.format === formatFilter);
+    }
+    if (ratingFilter > 0) {
+       list = list.filter(b => b.rating >= ratingFilter);
+    }
 
     if (sortBy === "price_asc") list.sort((a, b) => (a.mrp ?? 0) - (b.mrp ?? 0));
     else if (sortBy === "price_desc") list.sort((a, b) => (b.mrp ?? 0) - (a.mrp ?? 0));
     else if (sortBy === "title") list.sort((a, b) => a.title.localeCompare(b.title));
 
     return list;
-  }, [activeCategory, activeSubcategory, activeSubSubcategory, searchQuery, sortBy, allBooks]);
+  }, [activeCategory, activeSubcategory, activeSubSubcategory, searchQuery, sortBy, allBooks, minPrice, maxPrice, formatFilter, ratingFilter]);
 
   const addToCart = (id: string) =>
     setCart((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -495,30 +550,117 @@ export function CataloguePage() {
               )}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <span style={{ fontSize: 13, color: "#333", fontWeight: 600 }}>
-              {filteredBooks.length} result{filteredBooks.length !== 1 && "s"}
-            </span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                style={{ padding: "0.6rem 0.85rem", border: "1.5px solid rgba(0,0,0,0.1)", borderRadius: 10, fontFamily: "var(--font-body)", fontSize: 13, background: "#fff", cursor: "pointer", outline: "none" }}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <button 
+                onClick={() => setShowFilters(!showFilters)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "0.5rem",
+                  padding: "0.6rem 1.2rem",
+                  border: showFilters ? "1px solid #111" : "1px solid #eaeaea",
+                  borderRadius: 24,
+                  fontFamily: "var(--font-body)",
+                  fontSize: 13,
+                  background: showFilters ? "#111" : "#fff",
+                  color: showFilters ? "#fff" : "#111",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  outline: "none",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                }}
+                onMouseEnter={e => { if (!showFilters) e.currentTarget.style.borderColor = "#111" }}
+                onMouseLeave={e => { if (!showFilters) e.currentTarget.style.borderColor = "#eaeaea" }}
               >
-                <option value="default">Sort: Default</option>
-                <option value="title">A → Z</option>
-                <option value="price_asc">Price: Low → High</option>
-                <option value="price_desc">Price: High → Low</option>
+                <SlidersHorizontal size={14} /> Filters
+              </button>
+              
+              <div style={{ position: "relative" }}>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  style={{
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    padding: "0.6rem 2.5rem 0.6rem 1.2rem",
+                    border: "1px solid #eaeaea",
+                    borderRadius: 24,
+                    fontFamily: "var(--font-body)",
+                    fontSize: 13,
+                    background: "#fff",
+                    color: "#111",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    outline: "none",
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "#111"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "#eaeaea"}
+                >
+                  <option value="default">Sort: Default</option>
+                  <option value="title">A → Z</option>
+                  <option value="price_asc">Price: Low → High</option>
+                  <option value="price_desc">Price: High → Low</option>
+                </select>
+                <ChevronRight size={14} color="#111" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(90deg)", pointerEvents: "none" }} />
+              </div>
+            </div>
+            
+          {/* Advanced Filters Dropdown/Bar */}
+          {showFilters && (
+            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", alignItems: "center", marginTop: "1rem", padding: "1.5rem", background: "#fff", borderRadius: 16, border: "1px solid #eaeaea", boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}>
+              {/* Price Range Slider */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", minWidth: 200, flex: 1 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span>Max Price</span>
+                <span style={{ color: "#b44d28", fontWeight: 800 }}>{maxPrice === '' || maxPrice >= 2000 ? 'Any Price' : `Under ₹${maxPrice}`}</span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="2000" 
+                step="50" 
+                value={maxPrice === '' ? 2000 : maxPrice} 
+                onChange={e => setMaxPrice(Number(e.target.value) === 2000 ? '' : Number(e.target.value))}
+                style={{ accentColor: "#111", cursor: "pointer", width: "100%" }}
+              />
+            </div>
+            
+            <div style={{ width: "1px", height: "30px", background: "#eaeaea" }}></div>
+            
+            {/* Format Dropdown */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "0.05em" }}>Book Format</span>
+              <select value={formatFilter} onChange={e => setFormatFilter(e.target.value)} style={{ padding: "0.5rem 1.5rem 0.5rem 0.8rem", borderRadius: 8, border: "1px solid #eaeaea", fontSize: 13, outline: "none", cursor: "pointer", background: "#f9fafb", color: "#111", fontWeight: 500 }}>
+                <option value="All">All Formats</option>
+                <option value="Paperback">Paperback</option>
+                <option value="Hardcover">Hardcover</option>
+                <option value="Ebook">Ebook</option>
+              </select>
+            </div>
+            
+            <div style={{ width: "1px", height: "30px", background: "#eaeaea" }}></div>
+            
+            {/* Rating Dropdown */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "0.05em" }}>Minimum Rating</span>
+              <select value={ratingFilter} onChange={e => setRatingFilter(Number(e.target.value))} style={{ padding: "0.5rem 1.5rem 0.5rem 0.8rem", borderRadius: 8, border: "1px solid #eaeaea", fontSize: 13, outline: "none", cursor: "pointer", background: "#f9fafb", color: "#111", fontWeight: 500 }}>
+                <option value={0}>Any Rating</option>
+                <option value={4}>4+ Stars</option>
+                <option value={3}>3+ Stars</option>
               </select>
             </div>
           </div>
+          )}
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* Results bar */}
       <div style={{ maxWidth: 1320, margin: "0 auto", padding: "1rem 1.5rem 0", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
         <span style={{ fontSize: 13, color: "#6b6b80" }}>
           Showing <strong style={{ color: "#1a1a2e" }}>{filteredBooks.length}</strong> book{filteredBooks.length !== 1 ? "s" : ""}
-          {searchQuery && <> for "<strong>{searchQuery}</strong>"</>}
+          {searchQuery && <span> for "<strong>{searchQuery}</strong>"</span>}
         </span>
         {activeCategory !== "All" && (
           <span style={{ background: getCategoryColor(activeCategory).bg, color: getCategoryColor(activeCategory).color, border: `1px solid ${getCategoryColor(activeCategory).border}`, borderRadius: 20, padding: "0.2rem 0.7rem", fontSize: 12, fontWeight: 600 }}>
@@ -529,7 +671,12 @@ export function CataloguePage() {
 
       {/* Books Grid */}
       <section style={{ maxWidth: 1320, margin: "0 auto", padding: "1.5rem 1.5rem 4rem" }}>
-        {filteredBooks.length === 0 ? (
+        {isLoading ? (
+          <div style={{ textAlign: "center", padding: "5rem", color: "#6b6b80" }}>
+            <div className="w-8 h-8 border-4 border-paa-navy border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p style={{ fontSize: 15, fontWeight: 600 }}>Loading catalogue...</p>
+          </div>
+        ) : filteredBooks.length === 0 ? (
           <div style={{ textAlign: "center", padding: "5rem", color: "#6b6b80" }}>
             <BookOpen size={40} style={{ margin: "0 auto 1rem", opacity: 0.3, display: "block" }} />
             <p style={{ fontSize: 15, fontWeight: 600 }}>No books found</p>
@@ -603,7 +750,7 @@ export function CataloguePage() {
                     {/* Rating placeholder */}
                     <div style={{ position: "absolute", bottom: 10, right: 10, display: "flex", alignItems: "center", gap: "0.25rem", background: "rgba(0,0,0,0.6)", borderRadius: 6, padding: "0.2rem 0.5rem" }}>
                       <Star size={11} fill="#f59e0b" color="#f59e0b" />
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#fff", fontWeight: 600 }}>4.5</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#fff", fontWeight: 600 }}>{book.rating > 0 ? book.rating.toFixed(1) : 'New'}</span>
                     </div>
                   </div>
 
@@ -635,11 +782,28 @@ export function CataloguePage() {
                     >
                       {book.title}
                     </h3>
-                    {book.subGenre && (
-                      <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, borderRadius: 4, padding: "0.15rem 0.5rem" }}>
-                        {book.subGenre}
-                      </span>
-                    )}
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {book.subGenre && (
+                        <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, borderRadius: 4, padding: "0.15rem 0.5rem" }}>
+                          {book.subGenre}
+                        </span>
+                      )}
+                      {(() => {
+                         const rules = book.bundleRules?.filter(r => r.enabled) || [];
+                         if (rules.length > 0) {
+                            rules.sort((a,b) => b.buyCount - a.buyCount);
+                            const r = rules[0];
+                            return <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "#fef3c7", color: "#d97706", border: `1px solid #fde68a`, borderRadius: 4, padding: "0.15rem 0.5rem" }}>
+                              Buy {r.buyCount}+ Get ₹{r.discount} Off
+                            </span>;
+                         } else if (book.bundleRule?.enabled) {
+                            return <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "#fef3c7", color: "#d97706", border: `1px solid #fde68a`, borderRadius: 4, padding: "0.15rem 0.5rem" }}>
+                              Buy {book.bundleRule.buyCount}+ Get ₹{book.bundleRule.discount} Off
+                            </span>;
+                         }
+                         return null;
+                      })()}
+                    </div>
 
                     {/* Synopsis */}
                     <p style={{ fontSize: 12, color: "#6b6b80", lineHeight: 1.65, flex: 1, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", margin: 0 }}>

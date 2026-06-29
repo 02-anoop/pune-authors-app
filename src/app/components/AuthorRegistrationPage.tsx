@@ -183,6 +183,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     printFormat: "",
   });
 
+  const [showAddBookForm, setShowAddBookForm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateField = (key: string, value: string | boolean) => {
@@ -617,7 +618,17 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                 )}
 
                 <div className={`space-y-6 ${books.length > 0 ? 'p-8 bg-gray-50/50 rounded-3xl-2xl border border-paa-navy/5' : ''}`}>
-                  {books.length > 0 && <h3 className="font-serif text-lg font-medium text-paa-navy mb-2">Add Another Book</h3>}
+                  {books.length > 0 && !showAddBookForm ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddBookForm(true)}
+                      className="px-6 py-2.5 bg-paa-navy text-white hover:bg-paa-navy/90 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 mb-2"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Another Book
+                    </button>
+                  ) : (
+                    <>
+                      {books.length > 0 && <h3 className="font-serif text-lg font-medium text-paa-navy mb-2">Add Another Book</h3>}
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-2">
@@ -802,7 +813,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       <button
                         type="button"
                         onClick={() => {
-                          setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "" });
+                          setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
                           setCoverBlob(null);
                           setCoverFileUrl(null);
                           setStep(2);
@@ -810,6 +821,20 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         className="px-4 py-2 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
                       >
                         <X className="w-3 h-3" /> Cancel & Continue
+                      </button>
+                    )}
+                    {books.length > 0 && showAddBookForm && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
+                          setCoverBlob(null);
+                          setCoverFileUrl(null);
+                          setShowAddBookForm(false);
+                        }}
+                        className="px-4 py-2 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                      >
+                        <X className="w-3 h-3" /> Cancel
                       </button>
                     )}
                     <button
@@ -837,15 +862,18 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           return;
                         }
                         setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
-                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "" });
+                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
                         setCoverBlob(null);
                         setCoverFileUrl(null);
+                        setShowAddBookForm(false);
                       }}
                       className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
                     >
                       <Plus className="w-3 h-3" /> Save & Add Another Book
                     </button>
                   </div>
+                </>
+              )}
                 </div>
               </div>
             )}

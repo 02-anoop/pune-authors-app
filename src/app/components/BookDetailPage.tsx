@@ -71,6 +71,8 @@ export function BookDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [book, setBook] = useState<BookDetail | null>(null);
+  const [moreFromAuthor, setMoreFromAuthor] = useState<any[]>([]);
+  const [moreFromCategory, setMoreFromCategory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -82,14 +84,30 @@ export function BookDetailPage() {
   const [submitMsg, setSubmitMsg] = useState("");
 
   useEffect(() => {
-    fetch(`${API}/api/books/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) setError(data.error);
-        else setBook(data);
-      })
-      .catch(() => setError("Failed to load book"))
-      .finally(() => setLoading(false));
+    window.scrollTo(0, 0);
+    Promise.all([
+      fetch(`${API}/api/books/${id}`).then(r => r.json()),
+      fetch(`${API}/api/books`).then(r => r.json())
+    ])
+    .then(([bookData, allBooksData]) => {
+      if (bookData.error) {
+        setError(bookData.error);
+      } else {
+        setBook(bookData);
+        if (Array.isArray(allBooksData)) {
+          const authorId = bookData.author?.id;
+          const genre = bookData.genre;
+          
+          const fromAuthor = allBooksData.filter(b => b.id !== bookData.id && b.author?.id === authorId);
+          setMoreFromAuthor(fromAuthor.slice(0, 4));
+
+          const fromCategory = allBooksData.filter(b => b.id !== bookData.id && b.genre === genre && b.author?.id !== authorId);
+          setMoreFromCategory(fromCategory.slice(0, 4));
+        }
+      }
+    })
+    .catch(() => setError("Failed to load book data"))
+    .finally(() => setLoading(false));
   }, [id]);
 
   const handleSubmitReview = async () => {
@@ -294,12 +312,7 @@ export function BookDetailPage() {
               </div>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <p style={{ fontWeight: 700, color: "#1a1a2e", margin: "0 0 0.5rem", fontSize: 16 }}>{book.author.name}</p>
-                {book.author.qualification && (
-                  <p style={{ margin: "0 0 0.75rem", fontSize: 11, lineHeight: 1.6, color: "#94a3b8", fontFamily: "system-ui, sans-serif", textTransform: "uppercase", letterSpacing: "1px" }}>
-                    <strong>Qual:</strong> {book.author.qualification} &nbsp;|&nbsp; <strong>DOB:</strong> {book.author.age || '—'} &nbsp;|&nbsp; <strong>Exp:</strong> {book.author.experience || '—'}
-                    <br/><strong>Skills:</strong> {book.author.skills || '—'} &nbsp;|&nbsp; <strong>Hobbies:</strong> {book.author.hobbies || '—'}
-                  </p>
-                )}
+
                 <p style={{ color: "#6b7280", lineHeight: 1.75, fontSize: 14, margin: 0 }}>{book.author.bio || "No bio available."}</p>
                 {book.author.extraData && Object.keys(book.author.extraData).length > 0 && (
                   <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f0f0f5' }}>
@@ -452,6 +465,84 @@ export function BookDetailPage() {
             <p style={{ fontSize: 11, color: "#333", margin: "1rem 0 0" }}>Pune Authors' Association</p>
           </div>
         </div>
+      </div>
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 1.5rem 4rem" }}>
+        {moreFromAuthor.length > 0 && (
+          <div style={{ marginTop: "4rem", paddingTop: "3rem", borderTop: "1px solid #eaeaea" }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, color: "#1a1a2e", marginBottom: "2rem" }}>
+              More from {book?.author?.name || 'this Author'}
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "2rem" }}>
+              {moreFromAuthor.map((relatedBook) => (
+                <div key={`author-${relatedBook.id}`} style={{ display: "flex", flexDirection: "column" }}>
+                  <div style={{ background: "#f9f9f9", height: 260, padding: "1rem", border: "1px solid #eaeaea", marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img
+                      src={relatedBook.coverUrl ? (relatedBook.coverUrl.startsWith("http") ? relatedBook.coverUrl : `${API}${relatedBook.coverUrl.startsWith('/') ? relatedBook.coverUrl : '/' + relatedBook.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=450&fit=crop"}
+                      alt={relatedBook.title}
+                      style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain", boxShadow: "0 4px 10px rgba(0,0,0,0.05)" }}
+                    />
+                  </div>
+                  <div>
+                    <h4 style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600, color: "#111", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {relatedBook.title}
+                    </h4>
+                    <div style={{ fontSize: 11, color: "#666", marginBottom: "0.5rem" }}>by {relatedBook.authorName || relatedBook.author?.name}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "#b44d28" }}>
+                        ₹{relatedBook.mrp || 428}
+                      </span>
+                      <button 
+                        onClick={() => navigate(`/book/${relatedBook.id}`)}
+                        style={{ background: "#111", color: "#fff", border: "none", padding: "0.3rem 0.8rem", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer" }}
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {moreFromCategory.length > 0 && (
+          <div style={{ marginTop: moreFromAuthor.length > 0 ? "2rem" : "4rem", paddingTop: "3rem", borderTop: moreFromAuthor.length > 0 ? "none" : "1px solid #eaeaea" }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, color: "#1a1a2e", marginBottom: "2rem" }}>
+              More in {book?.genre === "NF" ? "Non-Fiction" : book?.genre === "F" ? "Fiction" : "Children's"}
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "2rem" }}>
+              {moreFromCategory.map((relatedBook) => (
+                <div key={`cat-${relatedBook.id}`} style={{ display: "flex", flexDirection: "column" }}>
+                  <div style={{ background: "#f9f9f9", height: 260, padding: "1rem", border: "1px solid #eaeaea", marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img
+                      src={relatedBook.coverUrl ? (relatedBook.coverUrl.startsWith("http") ? relatedBook.coverUrl : `${API}${relatedBook.coverUrl.startsWith('/') ? relatedBook.coverUrl : '/' + relatedBook.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=450&fit=crop"}
+                      alt={relatedBook.title}
+                      style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain", boxShadow: "0 4px 10px rgba(0,0,0,0.05)" }}
+                    />
+                  </div>
+                  <div>
+                    <h4 style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600, color: "#111", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {relatedBook.title}
+                    </h4>
+                    <div style={{ fontSize: 11, color: "#666", marginBottom: "0.5rem" }}>by {relatedBook.authorName || relatedBook.author?.name}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "#b44d28" }}>
+                        ₹{relatedBook.mrp || 428}
+                      </span>
+                      <button 
+                        onClick={() => navigate(`/book/${relatedBook.id}`)}
+                        style={{ background: "#111", color: "#fff", border: "none", padding: "0.3rem 0.8rem", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer" }}
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <style>{`

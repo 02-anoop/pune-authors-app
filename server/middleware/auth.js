@@ -20,4 +20,16 @@ const verifyToken = (req, res, next) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 };
-module.exports = { isAdmin, verifyToken, JWT_SECRET };
+
+const optionalVerifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (token && token !== 'null') {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+    } catch (err) {}
+  }
+  next();
+};
+
+module.exports = { isAdmin, verifyToken, optionalVerifyToken, JWT_SECRET };

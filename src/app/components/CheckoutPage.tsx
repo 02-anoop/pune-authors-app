@@ -22,7 +22,7 @@ export function CheckoutPage() {
     cartIds.reduce((acc, id) => ({ ...acc, [id]: 1 }), {})
   );
 
-  const [form, setForm] = useState({ name: "", phone: "", pincode: "", address: "", city: "", state: "", landmark: "", houseNo: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", pincode: "", address: "", city: "", state: "", landmark: "", houseNo: "" });
   const [pincodeOptions, setPincodeOptions] = useState<string[]>([]);
   const [districtOptions, setDistrictOptions] = useState<string[]>([]);
   const [fetchingLoc, setFetchingLoc] = useState(false);
@@ -73,25 +73,22 @@ export function CheckoutPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please login to place an order.");
-      navigate("/login?role=CUSTOMER");
-      return;
+    if (token) {
+      axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => {
+          const u = res.data.user;
+          setForm(prev => ({
+            ...prev,
+            name: u.name || "",
+            email: u.email || "",
+            phone: u.phone || "",
+            address: u.address || "",
+          }));
+        })
+        .catch(() => {
+          localStorage.removeItem("token");
+        });
     }
-    axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => {
-        const u = res.data.user;
-        setForm(prev => ({
-          ...prev,
-          name: u.name || "",
-          phone: u.phone || "",
-          address: u.address || "",
-        }));
-      })
-      .catch(() => {
-        localStorage.removeItem("token");
-        navigate("/login");
-      });
 
     axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/books`)
       .then(res => {
@@ -143,6 +140,7 @@ export function CheckoutPage() {
       const formData = new FormData();
       formData.append("amount", totalAmount.toString());
       formData.append("customerName", form.name);
+      formData.append("customerEmail", form.email || "guest@example.com");
       formData.append("customerPhone", form.phone);
       formData.append("address", `${form.address}, ${form.city}, ${form.state} - ${form.pincode}`);
       formData.append("items", JSON.stringify(itemsPayload));

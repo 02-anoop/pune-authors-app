@@ -284,9 +284,13 @@ export function LandingPage() {
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "3rem" }}>
-            {filteredGallery.slice(0, 4).map((book, i) => (
-              <div key={i} className="minimal-card" style={{ display: "flex", flexDirection: "column" }}>
+          {/* New Arrivals Section */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.5rem" }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 400, color: "#111", margin: 0 }}>New Arrivals</h3>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "3rem", marginBottom: "4rem" }}>
+            {[...filteredGallery].sort((a,b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 4).map((book, i) => (
+              <div key={`new-${book.id || i}`} className="minimal-card" style={{ display: "flex", flexDirection: "column" }}>
                 <div style={{ background: "#fff", height: 320, padding: "1.5rem", border: "1px solid #eaeaea", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <img
                     src={book.coverUrl ? (book.coverUrl.startsWith("http") ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=450&fit=crop"}
@@ -296,10 +300,52 @@ export function LandingPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>
-                    {book.genre === "NF" ? "Non-Fiction" : book.genre === "F" ? "Fiction" : "Children's"}
+                    {book.genre === "NF" ? "Non-Fiction" : book.genre === "F" ? "Fiction" : book.genre || "Book"}
                   </div>
                   <h3 style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 400, color: "#111", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h3>
-                  <div style={{ fontSize: 12, color: "#333", fontWeight: 400 }}>by {book.authorName}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "0.5rem" }}>
+                    <div>
+                      <div style={{ fontSize: 12, color: "#333", fontWeight: 400, marginBottom: "0.2rem" }}>by {book.authorName}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 16, fontWeight: 700, color: "#b44d28" }}>
+                        {book.mrp != null ? `₹${book.mrp}` : (book.mrpRaw || "Price TBD")}
+                      </div>
+                    </div>
+                    <Link to={`/book/${book.id}`} style={{ textDecoration: "none", background: "#111", color: "#fff", padding: "0.4rem 1rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", transition: "opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity="0.8"} onMouseLeave={e => e.currentTarget.style.opacity="1"}>View & Buy</Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Trending Section */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.5rem" }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 400, color: "#111", margin: 0 }}>Trending & Best Sellers</h3>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "3rem" }}>
+            {[...filteredGallery].sort((a,b) => (b.reviews?.length || 0) - (a.reviews?.length || 0)).slice(0, 4).map((book, i) => (
+              <div key={`trend-${book.id || i}`} className="minimal-card" style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ background: "#fff", height: 320, padding: "1.5rem", border: "1px solid #eaeaea", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                  <div style={{ position: "absolute", top: 12, left: 12, background: "#fef3c7", color: "#d97706", fontSize: 10, fontWeight: 700, padding: "0.2rem 0.6rem", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Hot</div>
+                  <img
+                    src={book.coverUrl ? (book.coverUrl.startsWith("http") ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=450&fit=crop"}
+                    alt={book.title}
+                    style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain", boxShadow: "0 10px 20px rgba(0,0,0,0.05)" }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>
+                    {book.genre === "NF" ? "Non-Fiction" : book.genre === "F" ? "Fiction" : book.genre || "Book"}
+                  </div>
+                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 400, color: "#111", marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h3>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "0.5rem" }}>
+                    <div>
+                      <div style={{ fontSize: 12, color: "#333", fontWeight: 400, marginBottom: "0.2rem" }}>by {book.authorName}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 16, fontWeight: 700, color: "#b44d28" }}>
+                        {book.mrp != null ? `₹${book.mrp}` : (book.mrpRaw || "Price TBD")}
+                      </div>
+                    </div>
+                    <Link to={`/book/${book.id}`} style={{ textDecoration: "none", background: "#111", color: "#fff", padding: "0.4rem 1rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", transition: "opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity="0.8"} onMouseLeave={e => e.currentTarget.style.opacity="1"}>View & Buy</Link>
+                  </div>
                 </div>
               </div>
             ))}

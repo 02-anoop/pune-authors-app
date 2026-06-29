@@ -5,7 +5,7 @@ const router = express.Router();
 const prisma = require('../config/db');
 const bcrypt = require('bcrypt');
 const { getCache, setCache, invalidateCache } = require('../utils/cache');
-const { isAdmin, verifyToken } = require('../middleware/auth');
+const { isAdmin, verifyToken, optionalVerifyToken } = require('../middleware/auth');
 const { sendNotificationEmail, emailWrap } = require('../utils/email');
 const { upload } = require('../config/upload');
 const { inr } = require('../utils/helpers');
@@ -1514,9 +1514,9 @@ router.put('/api/orders/:id/cancel', verifyToken, async (req, res) => {
   }
 });
 
-router.post('/api/orders', verifyToken, upload.single('paymentScreenshot'), async (req, res) => {
+router.post('/api/orders', optionalVerifyToken, upload.single('paymentScreenshot'), async (req, res) => {
   try {
-    const { customerName, customerPhone, address, amount, items, transactionId } = req.body;
+    const { customerName, customerEmail, customerPhone, address, amount, items, transactionId } = req.body;
     const parsedItems = Array.isArray(items) ? items : JSON.parse(items);
     const paymentScreenshot = req.file ? `/uploads/${req.file.filename}` : null;
 
@@ -1532,7 +1532,7 @@ router.post('/api/orders', verifyToken, upload.single('paymentScreenshot'), asyn
     const order = await prisma.order.create({
       data: {
         customerName,
-        customerEmail: req.user.email,
+        customerEmail: req.user ? req.user.email : (customerEmail || 'guest@example.com'),
         customerPhone,
         address,
         amount: parseFloat(amount),

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router";
 import { Menu, X, User, ShoppingCart } from "lucide-react";
+import { CartDrawer } from "./CartDrawer";
 
 const navLinks = [
   { label: "About Us", href: "/about" },
@@ -13,6 +14,7 @@ const navLinks = [
 
 export function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
@@ -144,10 +146,10 @@ export function NavBar() {
         
         {/* Desktop Actions */}
         <div className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-          <Link to="/checkout" style={{ position: 'relative', display: 'flex', alignItems: 'center', color: '#111', textDecoration: 'none' }}>
+          <button onClick={() => setCartOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", position: 'relative', display: 'flex', alignItems: 'center', color: '#111' }}>
             <ShoppingCart size={20} />
             {cartCount > 0 && <span style={{ position: 'absolute', top: -8, right: -12, background: '#b44d28', color: '#fff', fontSize: 10, fontWeight: 'bold', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>{cartCount}</span>}
-          </Link>
+          </button>
           {token ? (
             <Link
               to={userRole === "ADMIN" ? "/operations" : userRole === "AUTHOR" ? "/dashboard" : "/profile"}
@@ -221,10 +223,10 @@ export function NavBar() {
 
         {/* Mobile Toggle & Cart */}
         <div className="mobile-toggle" style={{ display: "none", alignItems: "center", gap: "1.2rem" }}>
-          <Link to="/checkout" style={{ position: 'relative', display: 'flex', color: '#111', textDecoration: 'none' }}>
+          <button onClick={() => setCartOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", position: 'relative', display: 'flex', color: '#111' }}>
             <ShoppingCart size={22} />
             {cartCount > 0 && <span style={{ position: 'absolute', top: -8, right: -12, background: '#b44d28', color: '#fff', fontSize: 10, fontWeight: 'bold', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>{cartCount}</span>}
-          </Link>
+          </button>
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
             style={{
@@ -346,6 +348,7 @@ export function NavBar() {
           .brand-text { display: none !important; }
         }
       `}</style>
+      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
     </header>
   );
 }

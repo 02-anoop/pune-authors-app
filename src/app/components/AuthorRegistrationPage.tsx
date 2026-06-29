@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import qrCode from "./data/qr_code.jpeg";
 import { bookCategories } from "../data/categories";
-import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X } from "lucide-react";
+import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit } from "lucide-react";
 
 const steps = [
   { title: "Author Profile", icon: <User size={18} />, desc: "Personal information and bio" },
@@ -192,7 +192,10 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     if (!isReapply && key === "password" && (value as string).length < 6) error = "Password must be at least 6 characters.";
     if (key === "phone" && !/^\d{10}$/.test((value as string).replace(/\D/g, ''))) error = "Must be a 10-digit number.";
     if (key === "address" && !value) error = "Full Address is required.";
-    if (key === "aadharNumber" && !value) error = "Aadhar Number is required.";
+    if (key === "aadharNumber") {
+      if (!value) error = "Aadhar Number is required.";
+      else if (!/^\d{12}$/.test(value as string)) error = "Aadhar Number must be exactly 12 digits.";
+    }
     if (key === "dob" && !value) error = "Date of Birth is required.";
     if (key === "experience" && !value) error = "Experience is required.";
     if (key === "skills" && !value) error = "Skills are required.";
@@ -238,6 +241,32 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   const update = (key: string, val: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: val }));
     validateField(key, val);
+  };
+  const handleEditAddedBook = (idx: number) => {
+    const bookToEdit = books[idx];
+    setForm({
+      ...form,
+      title: bookToEdit.title || "",
+      subtitle: bookToEdit.subtitle || "",
+      genre: bookToEdit.genre || "",
+      subcategory: bookToEdit.subcategory || "",
+      subSubcategory: bookToEdit.subSubcategory || "",
+      synopsis: bookToEdit.synopsis || "",
+      pages: bookToEdit.pages || "",
+      mrp: bookToEdit.mrp || "",
+      stock: bookToEdit.stock || "0",
+      language: bookToEdit.language || "",
+      isbn: bookToEdit.isbn || "",
+      publisher: bookToEdit.publisher || "",
+      publicationDate: bookToEdit.publicationDate || "",
+      edition: bookToEdit.edition || "",
+      format: bookToEdit.format || "",
+      printFormat: bookToEdit.printFormat || "",
+      purposeOfWriting: bookToEdit.purposeOfWriting || ""
+    });
+    setCoverBlob(bookToEdit.coverBlob || null);
+    setCoverFileUrl(bookToEdit.coverFileUrl || (bookToEdit.coverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${bookToEdit.coverUrl}` : null));
+    setBooks(books.filter((_, i) => i !== idx));
   };
 
   return (
@@ -576,6 +605,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">{b.genre} {b.subcategory && `> ${b.subcategory}`}</div>
                         </div>
                         {(b.coverFileUrl || b.coverUrl) && <img src={b.coverFileUrl || `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${b.coverUrl}`} alt="cover" className="h-12 w-9 object-cover rounded shadow-sm border border-paa-navy/10 flex-shrink-0" />}
+                        <button type="button" onClick={() => handleEditAddedBook(idx)} className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 flex items-center justify-center transition-colors" title="Edit book">
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
                         <button type="button" onClick={() => setBooks(books.filter((_, i2) => i2 !== idx))} className="flex-shrink-0 w-7 h-7 rounded-full bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-600 flex items-center justify-center transition-colors" title="Remove book">
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -1018,6 +1050,10 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     if (!/^\d{10}$/.test(form.phone.replace(/\D/g, ''))) {
                       setStep(0);
                       alert("Please enter a valid 10-digit phone number."); return;
+                    }
+                    if (!/^\d{12}$/.test(form.aadharNumber)) {
+                      setStep(0);
+                      alert("Please enter a valid 12-digit Aadhar number."); return;
                     }
 
                     // Step 1 Validations

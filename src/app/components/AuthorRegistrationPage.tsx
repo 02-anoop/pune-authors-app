@@ -31,13 +31,15 @@ const genreOptions = [
   { code: "C", label: "Children's", color: "#16a34a" },
 ];
 
-export function AuthorRegistrationPage({ initialData, isReapply = false, onReapplySuccess, isAdminEdit = false, onAdminSave, onAdminReject, onAdminCancel }: any = {}) {
+export function AuthorRegistrationPage({ initialData, isReapply = false, onReapplySuccess, isAdminEdit = false, onAdminSave, onAdminReject, onAdminCancel, hideNavbar = false }: any = {}) {
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [coverFileUrl, setCoverFileUrl] = useState<string | null>(null);
+  const [backCoverFileUrl, setBackCoverFileUrl] = useState<string | null>(null);
   const [authorPhotoUrl, setAuthorPhotoUrl] = useState<string | null>(null);
   const [coverBlob, setCoverBlob] = useState<File | null>(null);
+  const [backCoverBlob, setBackCoverBlob] = useState<File | null>(null);
   const [authorBlob, setAuthorBlob] = useState<File | null>(null);
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState<string | null>(null);
   const [paymentBlob, setPaymentBlob] = useState<File | null>(null);
@@ -145,6 +147,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              })));
           }
           if (firstBook.coverUrl) setCoverFileUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${firstBook.coverUrl}`);
+          if (firstBook.backCoverUrl) setBackCoverFileUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${firstBook.backCoverUrl}`);
        } else {
           setForm(prev => ({
              ...prev,
@@ -259,7 +262,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       const draft = {
         step,
         form,
-        books: books.map(b => ({ ...b, coverBlob: null })), // Don't save blobs
+        books: books.map(b => ({ ...b, coverBlob: null, backCoverBlob: null })), // Don't save blobs
         qualifications: qualifications.map(q => ({ ...q, certificateBlob: null })), // Don't save blobs
         extraDataState,
         skillInput,
@@ -384,14 +387,16 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       purposeOfWriting: bookToEdit.purposeOfWriting || ""
     });
     setCoverBlob(bookToEdit.coverBlob || null);
+    setBackCoverBlob(bookToEdit.backCoverBlob || null);
     setCoverFileUrl(bookToEdit.coverFileUrl || (bookToEdit.coverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${bookToEdit.coverUrl}` : null));
+    setBackCoverFileUrl(bookToEdit.backCoverFileUrl || (bookToEdit.backCoverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${bookToEdit.backCoverUrl}` : null));
     setBooks(books.filter((_, i) => i !== idx));
   };
 
   return (
     <main className="font-sans min-h-screen bg-[#F8FAFC] text-paa-navy">
       {/* Scrollable Header Banner */}
-      {isAdminEdit ? (
+      {!hideNavbar && (isAdminEdit ? (
         <section className="bg-paa-navy py-6 md:py-8 px-6 text-center text-white relative">
           <button onClick={onAdminCancel} className="absolute left-6 top-1/2 -translate-y-1/2 text-paa-gold hover:text-white flex items-center gap-2 text-sm font-bold tracking-widest uppercase transition-colors">
             <ArrowLeft size={16} /> <span className="hidden md:inline">Back to Dashboard</span>
@@ -410,10 +415,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
           <h1 className="font-serif text-2xl md:text-3xl font-medium tracking-tight mb-2 md:mb-3">Join Pune Authors&apos; Association</h1>
           <p className="text-xs md:text-sm text-white/60 max-w-lg mx-auto">A one-time application reviewed by our editorial team within 5-7 working days.</p>
         </section>
-      )}
+      ))}
 
       {/* Sticky Stepper Only */}
-      <div className={`sticky z-40 w-full shadow-md ${isAdminEdit ? 'top-0' : isReapply ? 'top-[64px]' : 'top-0'}`}>
+      {/* Sticky Stepper Only */}
+      <div className={`z-40 w-full shadow-md ${hideNavbar ? 'relative border-b border-gray-200' : 'sticky ' + (isAdminEdit ? 'top-0' : isReapply ? 'top-[64px]' : 'top-0')}`}>
         <div className="bg-white border-b border-paa-navy/5 px-2 md:px-6 py-3 md:py-4 overflow-x-auto hide-scrollbar">
           <div className="max-w-3xl mx-auto flex items-center justify-between md:justify-center min-w-max md:min-w-0 pb-1 md:pb-0">
             {steps.map((s, i) => (
@@ -624,7 +630,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                             </select>
                           </div>
                           <div>
-                            <label className="dash-label">Upload Certificate (Optional)</label>
+                            <label className="dash-label">Upload Certificate *</label>
                             <div className="flex items-center gap-3">
                               <button
                                 type="button"
@@ -1081,6 +1087,41 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     />
                   </div>
 
+                  {/* Back Cover upload */}
+                  <div className="pt-2">
+                    <label className="dash-label">Book Back Cover Upload *</label>
+                    <div
+                      className="border border-dashed border-paa-navy/20 rounded-3xl-2xl p-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex flex-col items-center justify-center"
+                      onClick={() => document.getElementById("back-cover-upload")?.click()}
+                    >
+                      {backCoverFileUrl ? (
+                        <div className="flex flex-col items-center gap-3">
+                          <img src={backCoverFileUrl} alt="back cover preview" className="h-24 object-contain rounded shadow-sm border border-paa-navy/10 bg-white" />
+                          <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Back Cover Uploaded</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-paa-navy/40 mb-3" />
+                          <div className="text-sm font-medium text-paa-navy mb-1">Upload Book Back Cover</div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">High resolution JPG or PNG, ideally 1600×2400px</div>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="back-cover-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setBackCoverBlob(file);
+                          setBackCoverFileUrl(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </div>
+
                   <div className="flex justify-end mt-4 gap-3">
                     {books.length > 0 && (
                       <button
@@ -1088,7 +1129,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         onClick={() => {
                           setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
                           setCoverBlob(null);
+                          setBackCoverBlob(null);
                           setCoverFileUrl(null);
+                          setBackCoverFileUrl(null);
                           setStep(2);
                         }}
                         className="px-4 py-2 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
@@ -1102,7 +1145,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         onClick={() => {
                           setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
                           setCoverBlob(null);
+                          setBackCoverBlob(null);
                           setCoverFileUrl(null);
+                          setBackCoverFileUrl(null);
                           setShowAddBookForm(false);
                         }}
                         className="px-4 py-2 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
@@ -1126,7 +1171,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         if (!form.printFormat) missingBookFields.push('Print Format');
                         if (!form.pages) missingBookFields.push('Pages');
                         if (!form.isbn) missingBookFields.push('ISBN');
-                        if (!coverBlob && !coverFileUrl) missingBookFields.push('Cover Image');
+                        if (!coverBlob && !coverFileUrl) missingBookFields.push('Book Front Cover');
+                        if (!backCoverBlob && !backCoverFileUrl) missingBookFields.push('Book Back Cover');
                         if (missingBookFields.length > 0) {
                           alert(`Please fill these missing fields: ${missingBookFields.join(', ')}`);
                           return;
@@ -1135,10 +1181,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           alert("Synopsis cannot exceed 100 words.");
                           return;
                         }
-                        setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
+                        setBooks([...books, { ...form, coverBlob, backCoverBlob, coverFileUrl, backCoverFileUrl }]);
                         setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
                         setCoverBlob(null);
+                        setBackCoverBlob(null);
                         setCoverFileUrl(null);
+                        setBackCoverFileUrl(null);
                         setShowAddBookForm(false);
                       }}
                       className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
@@ -1287,7 +1335,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         if (!form.printFormat) missingContinueFields.push('Print Format');
                         if (!form.pages) missingContinueFields.push('Pages');
                         if (!form.isbn) missingContinueFields.push('ISBN');
-                        if (!coverBlob && !coverFileUrl) missingContinueFields.push('Cover Image');
+                        if (!coverBlob && !coverFileUrl) missingContinueFields.push('Book Front Cover');
+                        if (!backCoverBlob && !backCoverFileUrl) missingContinueFields.push('Book Back Cover');
                         if (missingContinueFields.length > 0) {
                           alert(`Please fill these missing fields: ${missingContinueFields.join(', ')}`);
                           return;
@@ -1296,10 +1345,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           alert("Synopsis cannot exceed 100 words.");
                           return;
                         }
-                        setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
+                        setBooks([...books, { ...form, coverBlob, backCoverBlob, coverFileUrl, backCoverFileUrl }]);
                         setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", purposeOfWriting: "" });
                         setCoverBlob(null);
+                        setBackCoverBlob(null);
                         setCoverFileUrl(null);
+                        setBackCoverFileUrl(null);
                       } else if (books.length === 0) {
                         alert("Please fill all compulsory fields for at least one book.");
                         return;
@@ -1383,11 +1434,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
 
                     // Step 1 Validations
-                    const hasFirstBook = form.title && form.genre && form.mrp && (coverBlob || coverFileUrl) && form.purposeOfWriting && form.pages && form.isbn && form.synopsis.split(/\s+/).filter(Boolean).length <= 100;
+                    const hasFirstBook = form.title && form.genre && form.mrp && (coverBlob || coverFileUrl) && (backCoverBlob || backCoverFileUrl) && form.purposeOfWriting && form.pages && form.isbn && form.synopsis.split(/\s+/).filter(Boolean).length <= 100;
                     const hasBook = books.length > 0 || hasFirstBook;
                     if (!hasBook) {
                       setStep(1);
-                      alert("Please fill all compulsory fields for at least one book (including ISBN, Pages, and purpose of writing) and upload a cover."); return;
+                      alert("Please fill all compulsory fields for at least one book (including ISBN, Pages, purpose of writing) and upload both front and back covers."); return;
                     }
 
                     // Step 2 Validations
@@ -1406,6 +1457,13 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     if (!paymentBlob && !paymentScreenshotUrl) missingPaymentFields.push('Payment Screenshot');
                     if (missingPaymentFields.length > 0) {
                       alert(`Payment: Please provide — ${missingPaymentFields.join(', ')}`);
+                      return;
+                    }
+
+                    // Qualification Validation
+                    if (!qualifications[0]?.certificateBlob && !qualifications[0]?.certificateUrl) {
+                      setStep(0); // Assuming qualifications are on step 0
+                      alert("Please upload the required Qualification Certificate.");
                       return;
                     }
 
@@ -1455,6 +1513,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       if (authorBlob) formData.append("photo", authorBlob);
                       finalBooks.forEach((b, idx) => {
                         if (b.coverBlob) formData.append(`cover_${idx}`, b.coverBlob);
+                        if (b.backCoverBlob) formData.append(`backCover_${idx}`, b.backCoverBlob);
                       });
 
                       if (paymentBlob) formData.append("paymentScreenshot", paymentBlob);

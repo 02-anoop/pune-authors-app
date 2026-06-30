@@ -90,6 +90,7 @@ model Book {
   pages           Int?
   mrp             Float
   coverUrl        String?
+  backCoverUrl    String?
   status          String      @default("Pending")
   rejectionReason String?
   authorId        Int

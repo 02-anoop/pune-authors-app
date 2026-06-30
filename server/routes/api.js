@@ -178,6 +178,7 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
 
     let photoUrl = null, paymentScreenshotUrl = null, qrCodeUrl = null, certificateUrl = null;
     let covers = {};
+    let backCovers = {};
     if (Array.isArray(req.files)) {
        for (const file of req.files) {
           if (file.fieldname === 'photo') photoUrl = `/uploads/${file.filename}`;
@@ -185,9 +186,14 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
           if (file.fieldname === 'qrCode') qrCodeUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'certificate') certificateUrl = `/uploads/${file.filename}`;
           if (file.fieldname === 'cover') covers[0] = `/uploads/${file.filename}`;
+          if (file.fieldname === 'backCover') backCovers[0] = `/uploads/${file.filename}`;
           if (file.fieldname.startsWith('cover_')) {
              const idx = file.fieldname.split('_')[1];
              covers[idx] = `/uploads/${file.filename}`;
+          }
+          if (file.fieldname.startsWith('backCover_')) {
+             const idx = file.fieldname.split('_')[1];
+             backCovers[idx] = `/uploads/${file.filename}`;
           }
           if (file.fieldname.startsWith('certificate_')) {
              const id = file.fieldname.split('_')[1];
@@ -207,6 +213,17 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
     // Explicitly validate payment requirements
     if (!paymentScreenshotUrl || !transactionId) {
       return res.status(400).json({ error: 'Payment screenshot and Transaction ID are mandatory for registration.' });
+    }
+
+    // Explicitly validate mandatory file uploads (cover, backCover, certificate)
+    if (!covers[0]) {
+      return res.status(400).json({ error: 'Book Front Cover is mandatory.' });
+    }
+    if (!backCovers[0]) {
+      return res.status(400).json({ error: 'Book Back Cover is mandatory.' });
+    }
+    if (!qualificationsArray[0]?.certificateUrl) {
+      return res.status(400).json({ error: 'Qualification Certificate is mandatory.' });
     }
 
     // Create login user
@@ -278,6 +295,7 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
             printFormat: b.printFormat || "NA",
             purpose: b.purpose || "NA",
             coverUrl: covers[idx] || covers[0] || "",
+            backCoverUrl: backCovers[idx] || backCovers[0] || "",
             status: 'Pending'
           }))
         }
@@ -344,6 +362,7 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
 
     let photoUrl = author.photoUrl, paymentScreenshotUrl = author.paymentScreenshot, qrCodeUrl = author.qrCodeUrl;
     let covers = {};
+    let backCovers = {};
     
     // Copy existing certificates
     let existingQuals = [];
@@ -361,6 +380,10 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
           if (file.fieldname.startsWith('cover_')) {
              const idx = file.fieldname.split('_')[1];
              covers[idx] = `/uploads/${file.filename}`;
+          }
+          if (file.fieldname.startsWith('backCover_')) {
+             const idx = file.fieldname.split('_')[1];
+             backCovers[idx] = `/uploads/${file.filename}`;
           }
           if (file.fieldname.startsWith('certificate_')) {
              const id = file.fieldname.split('_')[1];
@@ -405,6 +428,9 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
        };
        if (covers[i] || (i === 0 && covers[0])) {
           bookData.coverUrl = covers[i] || covers[0];
+       }
+       if (backCovers[i] || (i === 0 && backCovers[0])) {
+          bookData.backCoverUrl = backCovers[i] || backCovers[0];
        }
        if (existingBook) {
           await prisma.book.update({ where: { id: existingBook.id }, data: bookData });
@@ -520,6 +546,7 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
 
     let photoUrl = author.photoUrl, paymentScreenshotUrl = author.paymentScreenshot, qrCodeUrl = author.qrCodeUrl;
     let covers = {};
+    let backCovers = {};
     
     // Copy existing certificates
     let existingQuals = [];
@@ -537,6 +564,10 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
           if (file.fieldname.startsWith('cover_')) {
              const idx = file.fieldname.split('_')[1];
              covers[idx] = `/uploads/${file.filename}`;
+          }
+          if (file.fieldname.startsWith('backCover_')) {
+             const idx = file.fieldname.split('_')[1];
+             backCovers[idx] = `/uploads/${file.filename}`;
           }
           if (file.fieldname.startsWith('certificate_')) {
              const certId = file.fieldname.split('_')[1];
@@ -583,6 +614,9 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
        };
        if (covers[i] || (i === 0 && covers[0])) {
           bookData.coverUrl = covers[i] || covers[0];
+       }
+       if (backCovers[i] || (i === 0 && backCovers[0])) {
+          bookData.backCoverUrl = backCovers[i] || backCovers[0];
        }
        if (existingBook) {
           await prisma.book.update({ where: { id: existingBook.id }, data: { ...bookData, status: 'Approved' } });

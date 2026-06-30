@@ -127,6 +127,7 @@ export function OperationsDashboardPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
   const [selectedPendingAuthor, setSelectedPendingAuthor] = useState<any>(null);
+  const handleViewEditAuthor = (author: any) => setSelectedPendingAuthor(author);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isEditBookModalOpen, setIsEditBookModalOpen] = useState(false);
   const [rejectAuthorTarget, setRejectAuthorTarget] = useState<any>(null);
@@ -2333,7 +2334,7 @@ export function OperationsDashboardPage() {
                           }
                           return null;
                        })()}
-                       <button onClick={() => setSelectedPendingAuthor(author)} className="dash-btn dash-btn-success" title="View & Edit Application">
+                       <button onClick={() => handleViewEditAuthor(author)} className="dash-btn dash-btn-success" title="View & Edit Application">
                          View / Edit
                        </button>
                        <button onClick={() => handleDeleteAuthor(author.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">

@@ -6,6 +6,7 @@ import { LandingPage } from "./components/LandingPage";
 import { CataloguePage } from "./components/CataloguePage";
 import { CheckoutPage } from "./components/CheckoutPage";
 import { AuthorRegistrationPage } from "./components/AuthorRegistrationPage";
+import { AuthorOnboardingWizard } from "./components/AuthorOnboardingWizard";
 import { AuthorDashboardPage } from "./components/AuthorDashboardPage";
 import { OperationsDashboardPage } from "./components/OperationsDashboardPage";
 import { GoaCafePage } from "./components/GoaCafePage";
@@ -26,7 +27,7 @@ import { useLocation } from "react-router";
 
 function AppContent() {
   const location = useLocation();
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/operations');
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/operations') || location.pathname === '/register';
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "var(--font-body)" }}>
@@ -38,7 +39,7 @@ function AppContent() {
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/catalogue" element={<CataloguePage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/register" element={<AuthorRegistrationPage />} />
+          <Route path="/register" element={<AuthorOnboardingWizard />} />
           <Route path="/login" element={<AuthPage type="login" />} />
           <Route path="/signup" element={<AuthPage type="signup" />} />
           <Route path="/dashboard/*" element={<AuthorDashboardPage />} />

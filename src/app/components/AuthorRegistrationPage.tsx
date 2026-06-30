@@ -55,6 +55,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   const [showGuidelines, setShowGuidelines] = useState(false);
   const [showInfoDoc, setShowInfoDoc] = useState(false);
   const hasInitialized = useRef(false);
+  const hasLoadedDraft = useRef(false);
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author-fields`)
@@ -231,6 +232,42 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
 
   const [showAddBookForm, setShowAddBookForm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!isAdminEdit && !isReapply && !hasLoadedDraft.current) {
+      hasLoadedDraft.current = true;
+      try {
+        const draftStr = localStorage.getItem("authorRegistrationDraft");
+        if (draftStr) {
+          const draft = JSON.parse(draftStr);
+          if (draft.step !== undefined) setStep(draft.step);
+          if (draft.form) setForm(prev => ({ ...prev, ...draft.form }));
+          if (draft.books) setBooks(draft.books);
+          if (draft.qualifications) setQualifications(draft.qualifications);
+          if (draft.extraDataState) setExtraDataState(draft.extraDataState);
+          if (draft.skillInput) setSkillInput(draft.skillInput);
+          if (draft.hobbyInput) setHobbyInput(draft.hobbyInput);
+        }
+      } catch (e) {
+        console.error("Failed to load registration draft:", e);
+      }
+    }
+  }, [isAdminEdit, isReapply]);
+
+  useEffect(() => {
+    if (!isAdminEdit && !isReapply && hasLoadedDraft.current) {
+      const draft = {
+        step,
+        form,
+        books: books.map(b => ({ ...b, coverBlob: null })), // Don't save blobs
+        qualifications: qualifications.map(q => ({ ...q, certificateBlob: null })), // Don't save blobs
+        extraDataState,
+        skillInput,
+        hobbyInput
+      };
+      localStorage.setItem("authorRegistrationDraft", JSON.stringify(draft));
+    }
+  }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, isAdminEdit, isReapply]);
 
   const validateField = (key: string, value: string | boolean) => {
     let error = "";
@@ -1449,6 +1486,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/authors/register`, formData);
                       }
                       
+                      localStorage.removeItem("authorRegistrationDraft");
                       setSubmitted(true);
                       if (isReapply && onReapplySuccess) {
                         onReapplySuccess();

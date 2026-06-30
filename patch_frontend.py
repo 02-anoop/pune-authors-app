@@ -1,208 +1,294 @@
+import os
 import re
 
-file_path = "c:/Users/arvin/Desktop/pune-authors-app/src/app/components/AuthorDashboardPage.tsx"
+file_path = "src/app/components/AuthorRegistrationPage.tsx"
 with open(file_path, "r", encoding="utf-8") as f:
     content = f.read()
 
-# 1. Update Invoice Function
-old_invoice = """  const handlePrintInvoice = (ord: any) => {
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Shipping Label - PAA-${ord.orderId.toString().padStart(4, '0')}</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;color:#000} .container{border:2px solid #000;padding:20px;max-width:500px;margin:0 auto} h1{font-size:20px;margin:0 0 15px;border-bottom:2px solid #000;padding-bottom:10px;text-transform:uppercase;text-align:center} .row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px} .label{font-weight:bold;width:140px;text-transform:uppercase;font-size:12px;color:#555} .val{font-weight:bold;max-width:60%;text-align:right} @media print{button{display:none}}</style>
-    </head><body>
-    <div class="container">
-      <h1>Shipping Label</h1>
-      <div class="row"><div class="label">Order ID:</div><div class="val">#PAA-${ord.orderId.toString().padStart(4, '0')}</div></div>
-      <div class="row"><div class="label">Date:</div><div class="val">${ord.date}</div></div>
-      <div class="row"><div class="label">Book Title:</div><div class="val">${ord.bookTitle}</div></div>
-      <div class="row"><div class="label">Quantity:</div><div class="val">${ord.quantity}</div></div>
-      <div class="row"><div class="label">Amount Paid:</div><div class="val">₹${ord.amount}</div></div>
-      <hr style="margin:15px 0;border:none;border-top:1px dashed #ccc"/>
-      <div class="row"><div class="label">Deliver To:</div><div class="val" style="font-size:16px">${ord.customerName}</div></div>
-      <div class="row"><div class="label">Phone:</div><div class="val">${ord.customerPhone || 'N/A'}</div></div>
-      <div class="row"><div class="label">Email:</div><div class="val">${ord.customerEmail || 'N/A'}</div></div>
-      <div class="row"><div class="label">Address:</div><div class="val">${ord.address}</div></div>
-      <br/><br/>
-      <button onclick="window.print()" style="padding:10px 20px;background:#1a1a2e;color:#fff;border:none;cursor:pointer;width:100%;font-weight:bold;font-size:16px">PRINT LABEL</button>
-    </div>
-    </body></html>`);
-    win.document.close();
-  };"""
+# 1. Add new icons to import
+if "Instagram, Facebook, Linkedin, Youtube," not in content:
+    content = content.replace(
+        "import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit } from \"lucide-react\";",
+        "import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon } from \"lucide-react\";"
+    )
 
-new_invoice = """  const handlePrintInvoice = (ord: any) => {
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Invoice / Shipping Label - PAA-${ord.orderId.toString().padStart(4, '0')}</title>
-    <style>
-      body { font-family: 'Times New Roman', serif; padding: 0; margin: 0; color: #000; background: #fff; }
-      @page { size: A4; margin: 20mm; }
-      .container { max-width: 800px; margin: 0 auto; padding: 40px; border: 1px solid #ccc; box-sizing: border-box; }
-      .header { text-align: center; border-bottom: 2px solid #1a1a2e; padding-bottom: 20px; margin-bottom: 30px; }
-      .header h1 { margin: 0; font-size: 28px; text-transform: uppercase; letter-spacing: 2px; color: #1a1a2e; }
-      .header p { margin: 5px 0 0; font-size: 14px; color: #555; }
-      .invoice-title { font-size: 22px; font-weight: bold; margin-bottom: 20px; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
-      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-      .box { border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #fafafa; }
-      .box h3 { margin-top: 0; font-size: 14px; text-transform: uppercase; color: #666; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
-      .row { display: flex; margin-bottom: 10px; font-size: 14px; }
-      .label { font-weight: bold; width: 120px; color: #333; }
-      .val { flex: 1; }
-      .table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-      .table th, .table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-      .table th { background: #f4f4f5; text-transform: uppercase; font-size: 12px; color: #555; }
-      .table td { font-size: 14px; }
-      .total-row { font-weight: bold; font-size: 16px; }
-      .footer { text-align: center; margin-top: 50px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 20px; }
-      .print-btn { display: block; margin: 20px auto; padding: 12px 30px; background: #1a1a2e; color: #fff; border: none; font-size: 16px; cursor: pointer; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
-      @media print { .print-btn { display: none; } .container { border: none; padding: 0; } }
-    </style>
-    </head><body>
-    <button class="print-btn" onclick="window.print()">Print Invoice</button>
-    <div class="container">
-      <div class="header">
-        <h1>Pune Authors' Association</h1>
-        <p>Connecting Authors, Inspiring Readers</p>
-      </div>
-      <div class="invoice-title">Tax Invoice / Shipping Label</div>
-      
-      <div class="grid">
-        <div class="box">
-          <h3>Order Information</h3>
-          <div class="row"><div class="label">Order ID:</div><div class="val">#PAA-${ord.orderId.toString().padStart(4, '0')}</div></div>
-          <div class="row"><div class="label">Order Date:</div><div class="val">${ord.date}</div></div>
-          <div class="row"><div class="label">Payment:</div><div class="val">${ord.paymentScreenshot ? 'Paid' : 'Pending'}</div></div>
-        </div>
-        
-        <div class="box">
-          <h3>Shipping Address</h3>
-          <div class="row"><div class="label">Name:</div><div class="val" style="font-weight:bold">${ord.customerName}</div></div>
-          <div class="row"><div class="label">Phone:</div><div class="val">${ord.customerPhone || 'N/A'}</div></div>
-          <div class="row"><div class="label">Email:</div><div class="val">${ord.customerEmail || 'N/A'}</div></div>
-          <div class="row"><div class="label">Address:</div><div class="val">${ord.address}</div></div>
-        </div>
-      </div>
-      
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Item Description</th>
-            <th style="text-align:center;width:100px;">Qty</th>
-            <th style="text-align:right;width:150px;">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>${ord.bookTitle}</td>
-            <td style="text-align:center">${ord.quantity}</td>
-            <td style="text-align:right">₹${ord.amount}</td>
-          </tr>
-          <tr class="total-row">
-            <td colspan="2" style="text-align:right">Grand Total:</td>
-            <td style="text-align:right">₹${ord.amount}</td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <div class="footer">
-        <p>Thank you for supporting authors directly through the Pune Authors' Association platform.</p>
-        <p>This is a computer-generated invoice and does not require a physical signature.</p>
-      </div>
-    </div>
-    </body></html>`);
-    win.document.close();
-  };"""
+# 2. Add new fields to form state
+if "district: \"\"," not in content:
+    content = content.replace(
+        "address: \"\",",
+        "address: \"\",\n    district: \"\",\n    pincode: \"\","
+    )
+    content = content.replace(
+        "skills: \"\",\n    hobbies: \"\",",
+        "skills: [],\n    hobbies: [],"
+    )
 
-content = content.replace(old_invoice, new_invoice)
+# 3. Add skills/hobbies input state
+if "const [skillInput, setSkillInput] = useState(\"\");" not in content:
+    content = content.replace(
+        "const [showPassword, setShowPassword] = useState(false);",
+        "const [showPassword, setShowPassword] = useState(false);\n  const [skillInput, setSkillInput] = useState(\"\");\n  const [hobbyInput, setHobbyInput] = useState(\"\");"
+    )
 
+# 4. Indian States array
+indian_states = """const indianStates = [
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
+  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", 
+  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", 
+  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+];
+"""
+if "const indianStates =" not in content:
+    content = content.replace(
+        "const steps = [",
+        indian_states + "\nconst steps = ["
+    )
 
-# 2. Add filters and sort to AuthorOrders
-old_author_orders_start = """function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => void }) {
-  const [loadingAction, setLoadingAction] = useState<number | null>(null);
+# 5. Language options
+indian_languages = """const languages = [
+  "English", "Hindi", "Marathi", "Bengali", "Telugu", "Tamil", "Gujarati", "Urdu", "Kannada", "Odia", "Malayalam", "Punjabi", "Other"
+];
+"""
+if "const languages =" not in content:
+    content = content.replace(
+        "const genreOptions = [",
+        indian_languages + "\nconst genreOptions = ["
+    )
 
-  const handleAccept = async (id: number) => {"""
+# 6. Update validation
+content = content.replace(
+    "if (key === \"experience\" && !value) error = \"Experience is required.\";",
+    "if (key === \"experience\" && (value === \"\" || isNaN(Number(value)) || Number(value) < 0 || Number(value) > 70)) error = \"Experience must be a number between 0 and 70.\";"
+)
+content = content.replace(
+    "if (key === \"skills\" && !value) error = \"Skills are required.\";",
+    "if (key === \"skills\" && (!value || value.length === 0)) error = \"Skills are required.\";"
+)
+content = content.replace(
+    "if (key === \"hobbies\" && !value) error = \"Hobbies are required.\";",
+    "if (key === \"hobbies\" && (!value || value.length === 0)) error = \"Hobbies are required.\";"
+)
+if "pincode" not in content:
+    content = content.replace(
+        "if (key === \"address\" && !value) error = \"Full Address is required.\";",
+        "if (key === \"address\" && !value) error = \"Full Address is required.\";\n    if (key === \"district\" && !value) error = \"District is required.\";\n    if (key === \"pincode\" && !/^\\d{6}$/.test(String(value))) error = \"Pincode must be 6 digits.\";"
+    )
 
-new_author_orders_start = """function AuthorOrders({ orders, onRefresh }: { orders: any[], onRefresh: () => void }) {
-  const [loadingAction, setLoadingAction] = useState<number | null>(null);
-  const [filterStatus, setFilterStatus] = useState('All');
-  const [sortOrder, setSortOrder] = useState('desc');
+# 7. Form submission - skills/hobbies serialization
+content = content.replace(
+    "formData.append(key, String(val));",
+    """if (key === 'skills' || key === 'hobbies') {
+                            formData.append(key, JSON.stringify(val));
+                          } else {
+                            formData.append(key, String(val));
+                          }"""
+)
 
-  const filteredOrders = orders
-    .filter(o => filterStatus === 'All' ? true : o.status === filterStatus)
-    .sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-    });
+# 8. Name validation
+content = content.replace(
+    "value={form.name} onChange={(e) => update(\"name\", e.target.value)}",
+    "value={form.name} onChange={(e) => update(\"name\", e.target.value.replace(/[^a-zA-Z\\s]/g, ''))}"
+)
 
-  const handleAccept = async (id: number) => {"""
+# 9. DOB validation - future dates
+content = content.replace(
+    "value={form.dob} onChange={(e) => update(\"dob\", e.target.value)} className={`dash-input w-full",
+    "value={form.dob} max={new Date().toISOString().split('T')[0]} onChange={(e) => update(\"dob\", e.target.value)} className={`dash-input w-full"
+)
 
-content = content.replace(old_author_orders_start, new_author_orders_start)
+# 10. Helper text for profile
+content = content.replace(
+    "Tell us about yourself. This information will be publicly displayed on your PAA author page.",
+    "Tell us about yourself.<br/><span className='text-xs mt-1 block opacity-80'>Only public information (Bio, Profile Picture, Qualifications, Skills, Books) will be visible publicly. Sensitive information like Aadhaar Number, Phone Number, Address, Certificates, etc. will remain private.</span>"
+)
 
+# 11. State to dropdown
+content = content.replace(
+    "<input type=\"text\" value={form.state} onChange={(e) => update(\"state\", e.target.value)} className={`dash-input w-full ${errors.state ? '!border-red-500' : ''}`} placeholder=\"e.g. Maharashtra\" />",
+    """<select value={form.state} onChange={(e) => update("state", e.target.value)} className={`dash-input w-full ${errors.state ? '!border-red-500' : ''}`}>
+                          <option value="">Select State</option>
+                          {indianStates.map(st => <option key={st} value={st}>{st}</option>)}
+                        </select>"""
+)
 
-# 3. Add Filter UI
-old_table_header = """  return (
-    <div>
-      <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">MY WEB ORDERS</h1>
-      <div className="bg-white border border-paa-navy/10 overflow-hidden mb-12">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">"""
+# 12. District and Pincode
+address_row = """<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="dash-label">District *</label>
+                      <input type="text" value={form.district} onChange={(e) => update("district", e.target.value)} className={`dash-input w-full ${errors.district ? '!border-red-500' : ''}`} placeholder="e.g. Pune" />
+                      {errors.district && <div className="text-red-500 text-xs mt-1 font-medium">{errors.district}</div>}
+                    </div>
+                    <div>
+                      <label className="dash-label">Pincode *</label>
+                      <input type="text" value={form.pincode} onChange={(e) => update("pincode", e.target.value.replace(/\\D/g, ''))} maxLength={6} className={`dash-input w-full ${errors.pincode ? '!border-red-500' : ''}`} placeholder="6-digit Pincode" />
+                      {errors.pincode && <div className="text-red-500 text-xs mt-1 font-medium">{errors.pincode}</div>}
+                    </div>
+                  </div>"""
 
-new_table_header = """  return (
-    <div>
-      <h1 className="text-4xl font-serif text-paa-navy mb-6 text-center uppercase">MY WEB ORDERS</h1>
-      
-      <div className="mb-6 flex flex-wrap gap-4 bg-white p-4 border border-paa-navy/10 items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Filter By Status:</span>
-          <select 
-            className="border border-paa-navy/20 p-2 text-sm bg-gray-50 outline-none"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="All">All Orders</option>
-            <option value="Pending Verification">Pending Verification</option>
-            <option value="Accepted">Accepted</option>
-            <option value="Dispatched">Dispatched</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-            <option value="Rejected">Rejected</option>
-          </select>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Sort Date:</span>
-          <select 
-            className="border border-paa-navy/20 p-2 text-sm bg-gray-50 outline-none"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-          >
-            <option value="desc">Newest First</option>
-            <option value="asc">Oldest First</option>
-          </select>
-        </div>
-      </div>
+if "District *" not in content:
+    content = content.replace(
+        "placeholder=\"Street, Locality\" />\n                      {errors.address",
+        "placeholder=\"House No./Flat No., Building, Street, Area\" />\n                      {errors.address"
+    )
+    content = content.replace(
+        "<div className=\"grid grid-cols-1 md:grid-cols-2 gap-6\">\n                    <div>\n                      <label className=\"dash-label\">City *</label>",
+        address_row + "\n                  <div className=\"grid grid-cols-1 md:grid-cols-2 gap-6\">\n                    <div>\n                      <label className=\"dash-label\">City *</label>"
+    )
 
-      <div className="bg-white border border-paa-navy/10 overflow-hidden mb-12 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">"""
+# 13. Social media icons
+content = content.replace(
+    "<label className=\"dash-label\">Instagram Profile</label>",
+    "<label className=\"dash-label flex items-center gap-1.5\"><Instagram size={14}/> Instagram Profile</label>"
+)
+content = content.replace(
+    "<label className=\"dash-label\">Facebook Profile</label>",
+    "<label className=\"dash-label flex items-center gap-1.5\"><Facebook size={14}/> Facebook Profile</label>"
+)
+content = content.replace(
+    "<label className=\"dash-label\">LinkedIn Profile</label>",
+    "<label className=\"dash-label flex items-center gap-1.5\"><Linkedin size={14}/> LinkedIn Profile</label>"
+)
+content = content.replace(
+    "<label className=\"dash-label\">YouTube Channel</label>",
+    "<label className=\"dash-label flex items-center gap-1.5\"><Youtube size={14}/> YouTube Channel</label>"
+)
 
-content = content.replace(old_table_header, new_table_header)
+# 14. Skills chips
+skills_input = """<div>
+                      <label className="dash-label">Skills * <span className="font-normal opacity-70">(Press Enter to add)</span></label>
+                      <div className={`p-2 border rounded-xl bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all ${errors.skills ? 'border-red-500' : 'border-gray-200'} flex flex-wrap gap-2`}>
+                        {form.skills && form.skills.map((s: string, i: number) => (
+                          <div key={i} className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                            {s} <button type="button" onClick={() => update("skills", form.skills.filter((_: any, idx: number) => idx !== i))} className="hover:text-emerald-900"><X size={12}/></button>
+                          </div>
+                        ))}
+                        <input type="text" value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (skillInput.trim()) { update("skills", [...(form.skills || []), skillInput.trim()]); setSkillInput(""); } } }} className="flex-1 min-w-[120px] outline-none text-sm bg-transparent" placeholder="Type and press Enter" />
+                      </div>
+                      {errors.skills && <div className="text-red-500 text-xs mt-1 font-medium">{errors.skills}</div>}
+                    </div>"""
+content = content.replace(
+    "<div>\n                      <label className=\"dash-label\">Skills *</label>\n                      <input type=\"text\" value={form.skills} onChange={(e) => update(\"skills\", e.target.value)} className={`dash-input w-full ${errors.skills ? '!border-red-500' : ''}`} placeholder=\"e.g. Copywriting, Editing\" />\n                      {errors.skills && <div className=\"text-red-500 text-xs mt-1 font-medium\">{errors.skills}</div>}\n                    </div>",
+    skills_input
+)
 
+hobbies_input = """<div>
+                      <label className="dash-label">Hobbies * <span className="font-normal opacity-70">(Press Enter to add)</span></label>
+                      <div className={`p-2 border rounded-xl bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all ${errors.hobbies ? 'border-red-500' : 'border-gray-200'} flex flex-wrap gap-2`}>
+                        {form.hobbies && form.hobbies.map((h: string, i: number) => (
+                          <div key={i} className="flex items-center gap-1 bg-paa-navy/5 text-paa-navy px-2.5 py-1 rounded-full text-xs font-medium">
+                            {h} <button type="button" onClick={() => update("hobbies", form.hobbies.filter((_: any, idx: number) => idx !== i))} className="hover:text-paa-navy/70"><X size={12}/></button>
+                          </div>
+                        ))}
+                        <input type="text" value={hobbyInput} onChange={(e) => setHobbyInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (hobbyInput.trim()) { update("hobbies", [...(form.hobbies || []), hobbyInput.trim()]); setHobbyInput(""); } } }} className="flex-1 min-w-[120px] outline-none text-sm bg-transparent" placeholder="Type and press Enter" />
+                      </div>
+                      {errors.hobbies && <div className="text-red-500 text-xs mt-1 font-medium">{errors.hobbies}</div>}
+                    </div>"""
+content = content.replace(
+    "<div>\n                      <label className=\"dash-label\">Hobbies *</label>\n                      <input type=\"text\" value={form.hobbies} onChange={(e) => update(\"hobbies\", e.target.value)} className={`dash-input w-full ${errors.hobbies ? '!border-red-500' : ''}`} placeholder=\"e.g. Reading, Traveling\" />\n                      {errors.hobbies && <div className=\"text-red-500 text-xs mt-1 font-medium\">{errors.hobbies}</div>}\n                    </div>",
+    hobbies_input
+)
 
-# 4. Use filteredOrders mapping instead of orders
-old_map = """{orders.length === 0 ? <tr><td colSpan={7} className="p-4 text-center">No orders received yet.</td></tr> : orders.map((ord, idx) => ("""
-new_map = """{filteredOrders.length === 0 ? <tr><td colSpan={7} className="p-4 text-center">No matching orders found.</td></tr> : filteredOrders.map((ord, idx) => ("""
-content = content.replace(old_map, new_map)
+# 15. Book Category (Other)
+content = content.replace(
+    "{Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}",
+    "{Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}\n<option value=\"Other\">Other</option>"
+)
 
-# 5. Fix Cancelled badge style
-old_badge = """<span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${ord.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : ord.status === 'Dispatched' ? 'bg-[#5bc0de] text-white border-[#46b8da]' : ord.status === 'Accepted' ? 'bg-[#337ab7] text-white border-[#2e6da4]' : ord.status === 'Rejected' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-gray-200 text-paa-gray-text border-gray-300'}`}>"""
+# 16. Book Language Dropdown
+language_select = """<select value={form.language} onChange={(e) => update("language", e.target.value)} className={`dash-input w-full ${errors.language ? '!border-red-500' : ''}`}>
+                        <option value="">Select Language</option>
+                        {languages.map(l => <option key={l} value={l}>{l}</option>)}
+                      </select>"""
+content = content.replace(
+    "<input type=\"text\" placeholder=\"e.g. English, Marathi\" value={form.language} onChange={(e) => update(\"language\", e.target.value)} className={`dash-input w-full ${errors.language ? '!border-red-500' : ''}`} />",
+    language_select
+)
 
-new_badge = """<span className={`inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${ord.status === 'Completed' ? 'bg-[#5cb85c] text-white border-[#4cae4c]' : ord.status === 'Dispatched' ? 'bg-[#5bc0de] text-white border-[#46b8da]' : ord.status === 'Accepted' ? 'bg-[#337ab7] text-white border-[#2e6da4]' : (ord.status === 'Rejected' || ord.status === 'Cancelled') ? 'bg-red-100 text-red-800 border-red-300' : 'bg-gray-200 text-paa-gray-text border-gray-300'}`}>"""
+# 17. Self Published checkbox
+publisher_row = """<div>
+                      <label className="dash-label flex items-center justify-between">
+                        Publisher Name *
+                        <label className="flex items-center gap-1.5 text-xs font-normal cursor-pointer lowercase text-gray-500"><input type="checkbox" checked={form.isSelfPublished === 'yes'} onChange={(e) => { update('isSelfPublished', e.target.checked ? 'yes' : 'no'); if(e.target.checked) update('publisher', 'Self Published'); else update('publisher', ''); }} className="w-3 h-3"/> I am Self Published</label>
+                      </label>
+                      <input type="text" placeholder="e.g. Penguin" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} className={`dash-input w-full ${errors.publisher ? '!border-red-500' : ''}`} disabled={form.isSelfPublished === 'yes'} />
+                      {errors.publisher && <div className="text-red-500 text-xs mt-1 font-medium">{errors.publisher}</div>}
+                    </div>"""
+content = content.replace(
+    """<div>
+                      <label className="dash-label">Publisher Name *</label>
+                      <input type="text" placeholder="e.g. Self-Published" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} className={`dash-input w-full ${errors.publisher ? '!border-red-500' : ''}`} />
+                      {errors.publisher && <div className="text-red-500 text-xs mt-1 font-medium">{errors.publisher}</div>}
+                    </div>""",
+    publisher_row
+)
 
-content = content.replace(old_badge, new_badge)
+# 18. Navbar inside success page
+navbar_snippet = """{/* Registration Success View with Navbar access */}
+          <div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-10 md:p-14 text-center shadow-premium animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
+              <CheckCircle className="w-10 h-10 text-emerald-500" />
+            </div>
+            <h2 className="font-serif text-3xl font-medium text-paa-navy mb-3">{isReapply ? "Application Resubmitted!" : "Application Submitted!"}</h2>
+            <p className="text-sm text-paa-gray-text leading-relaxed max-w-md mx-auto mb-8">
+              Thank you, <strong className="text-paa-navy font-bold">{form.name || "Author"}</strong>! 
+              Your application is under review. An email confirmation has been sent to you.
+              <br /><br />
+              <strong className="text-paa-gold">Approval Pending:</strong> Our editorial team will review your application within 5-7 working days. Once approved, you will be able to log in to your Author Dashboard.
+              <br /><br />
+              While you wait, you can continue browsing our website.
+            </p>"""
+content = content.replace(
+    """<div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-10 md:p-14 text-center shadow-premium animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
+              <CheckCircle className="w-10 h-10 text-emerald-500" />
+            </div>
+            <h2 className="font-serif text-3xl font-medium text-paa-navy mb-3">{isReapply ? "Application Resubmitted!" : "Application Submitted!"}</h2>
+            <p className="text-sm text-paa-gray-text leading-relaxed max-w-md mx-auto mb-8">
+              Thank you, <strong className="text-paa-navy font-bold">{form.name || "Author"}</strong>! 
+              {` Your ${isReapply ? "updated " : ""}application for `}
+              <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em>
+              {` has been received. `}
+              <br /><br />
+              <strong className="text-paa-gold">Approval Pending:</strong> You must wait for the Admin to approve your account. Once approved, you will be able to log in to your Author Dashboard.
+            </p>""",
+    navbar_snippet
+)
 
+# Replace the "Go to Login" with "Go to Home" and "Go to Login"
+buttons_snippet = """<div className="flex justify-center gap-4">
+              <a href="/" className="dash-btn px-8 py-3 rounded-full bg-gray-100 text-paa-navy hover:bg-gray-200">
+                Go to Homepage
+              </a>
+              <a href="/login" className="dash-btn dash-btn-primary rounded-full px-8 py-3">
+                Go to Login
+              </a>
+            </div>"""
+content = content.replace(
+    """<button onClick={() => window.location.href = "/login"} className="dash-btn dash-btn-primary rounded-full px-8 py-3">
+              Go to Login
+            </button>""",
+    buttons_snippet
+)
+
+# 19. Form layout max-width change
+content = content.replace(
+    "className=\"max-w-3xl mx-auto my-12 px-6 pb-20\"",
+    "className=\"max-w-5xl mx-auto my-12 px-6 pb-20\""
+)
+
+# 20. Divide into sections using headings
+content = content.replace(
+    "<div className=\"grid grid-cols-1 md:grid-cols-2 gap-6\">\n                    <div>\n                      <label className=\"dash-label\"><Instagram",
+    "<h3 className=\"font-serif text-xl mt-8 mb-4 pt-8 border-t border-gray-100\">Social Media</h3>\n                  <div className=\"grid grid-cols-1 md:grid-cols-2 gap-6\">\n                    <div>\n                      <label className=\"dash-label\"><Instagram"
+)
+content = content.replace(
+    "<div className=\"space-y-4\">\n                    <div className=\"flex justify-between items-center\">\n                      <label className=\"dash-label mb-0 text-lg font-serif\">Qualifications</label>",
+    "<h3 className=\"font-serif text-xl mt-8 pt-8 border-t border-gray-100\">Qualifications</h3>\n                  <div className=\"space-y-4\">\n                    <div className=\"flex justify-between items-center\">\n                      <label className=\"dash-label mb-0 text-sm opacity-0\">Qualifications</label>"
+)
 
 with open(file_path, "w", encoding="utf-8") as f:
     f.write(content)
-print("Frontend invoice and filters patched successfully")
+
+print("Frontend patched.")

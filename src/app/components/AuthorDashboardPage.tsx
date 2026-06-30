@@ -530,7 +530,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     publicationDate: '',
     edition: '',
     format: '',
-    printFormat: ''
+    printFormat: '', purpose: '',
+    purpose: ''
   });
   const [cover, setCover] = useState<File | null>(null);
   const [editingBook, setEditingBook] = useState<any>(null);
@@ -684,6 +685,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       formData.append('publisher', newBook.publisher);
       formData.append('publicationDate', newBook.publicationDate);
       formData.append('printFormat', newBook.printFormat || '');
+      formData.append('purpose', newBook.purpose || '');
       
       let maxFairPrice = 0;
       if (newBook.pages && newBook.printFormat) {
@@ -781,7 +783,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     try {
       const formData = new FormData();
       Object.entries(editProfileForm).forEach(([key, val]) => {
-        formData.append(key, val);
+        if(key === 'age') formData.append('dob', val);
+        else if(key === 'skills') formData.append('skills', JSON.stringify(val.split(',').map((s:any)=>s.trim()).filter(Boolean)));
+        else if(key === 'hobbies') formData.append('hobbies', JSON.stringify(val.split(',').map((s:any)=>s.trim()).filter(Boolean)));
+        else formData.append(key, val);
       });
       if (editPhoto) formData.append('photo', editPhoto);
       const token = localStorage.getItem('token');
@@ -837,7 +842,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       publicationDate: book.publicationDate || '',
       edition: book.edition || '',
       format: book.format || '',
-      printFormat: book.printFormat || ''
+      printFormat: book.printFormat || '',
+      purpose: book.purpose || ''
     });
   };
 
@@ -883,7 +889,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
         publicationDate: editingBook.publicationDate,
         edition: editingBook.edition,
         format: editingBook.format,
-        printFormat: editingBook.printFormat
+        printFormat: editingBook.printFormat,
+        purpose: editingBook.purpose
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -1048,6 +1055,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Address</label>
                 <input className="dash-input w-full" value={editProfileForm.address} onChange={e => setEditProfileForm({...editProfileForm, address: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pincode</label>
+                <input className="dash-input w-full" value={editProfileForm.pincode} onChange={e => setEditProfileForm({...editProfileForm, pincode: e.target.value.replace(/\D/g, '')})} maxLength={6} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
@@ -1296,6 +1307,17 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                       <option value="">Select Print Format</option>
                       <option value="Black & White">Black & White</option>
                       <option value="Colored">Colored</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="dash-label">Purpose of Writing *</label>
+                    <select required className="dash-input" value={(newBook as any).purpose || ''} onChange={e => setNewBook({...newBook, purpose: e.target.value})}>
+                      <option value="">Select Purpose</option>
+                      <option value="Hobby">Hobby</option>
+                      <option value="Professional/Academic">Professional/Academic</option>
+                      <option value="Commercial/Revenue">Commercial/Revenue</option>
+                      <option value="Social Cause/Awareness">Social Cause/Awareness</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
                 </div>

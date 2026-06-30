@@ -2,13 +2,26 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import qrCode from "./data/qr_code.jpeg";
 import { bookCategories } from "../data/categories";
-import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit } from "lucide-react";
+import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon } from "lucide-react";
+
+const indianStates = [
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
+  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", 
+  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", 
+  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+];
 
 const steps = [
   { title: "Author Profile", icon: <User size={18} />, desc: "Personal information and bio" },
   { title: "Book Details", icon: <BookOpen size={18} />, desc: "Title, synopsis, and cover" },
   { title: "Questionnaire", icon: <FileText size={18} />, desc: "Declarations & Guidelines" },
   { title: "Submit & Payment", icon: <CreditCard size={18} />, desc: "Application fee" },
+];
+
+const languages = [
+  "English", "Hindi", "Marathi", "Bengali", "Telugu", "Tamil", "Gujarati", "Urdu", "Kannada", "Odia", "Malayalam", "Punjabi", "Other"
 ];
 
 const genreOptions = [
@@ -35,6 +48,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [books, setBooks] = useState<any[]>([]);
   const [showPassword, setShowPassword] = useState(false);
+  const [skillInput, setSkillInput] = useState("");
+  const [hobbyInput, setHobbyInput] = useState("");
 
   // Modals for guidelines
   const [showGuidelines, setShowGuidelines] = useState(false);
@@ -63,13 +78,14 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              name: initialData.name || "",
              email: initialData.email || "",
              phone: initialData.phone || "",
-             whatsapp: initialData.whatsapp || "",
+
              address: initialData.address || "",
+             pincode: initialData.pincode || "",
              aadharNumber: initialData.aadharNumber || "",
-             dob: initialData.age || "",
+             dob: initialData.dob || initialData.age || "",
              experience: initialData.experience || "",
-             skills: initialData.skills || "",
-             hobbies: initialData.hobbies || "",
+             skills: (() => { try { return JSON.parse(initialData.skillsJson) } catch(e) { return initialData.skills ? initialData.skills.split(',').map((s:any)=>s.trim()) : [] } })(),
+             hobbies: (() => { try { return JSON.parse(initialData.hobbiesJson) } catch(e) { return initialData.hobbies ? initialData.hobbies.split(',').map((s:any)=>s.trim()) : [] } })(),
              whyJoining: initialData.whyJoining || "",
              bio: initialData.bio || "",
              penName: initialData.penName || "",
@@ -111,13 +127,14 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              name: initialData.name || "",
              email: initialData.email || "",
              phone: initialData.phone || "",
-             whatsapp: initialData.whatsapp || "",
+
              address: initialData.address || "",
+             pincode: initialData.pincode || "",
              aadharNumber: initialData.aadharNumber || "",
-             dob: initialData.age || "",
+             dob: initialData.dob || initialData.age || "",
              experience: initialData.experience || "",
-             skills: initialData.skills || "",
-             hobbies: initialData.hobbies || "",
+             skills: (() => { try { return JSON.parse(initialData.skillsJson) } catch(e) { return initialData.skills ? initialData.skills.split(',').map((s:any)=>s.trim()) : [] } })(),
+             hobbies: (() => { try { return JSON.parse(initialData.hobbiesJson) } catch(e) { return initialData.hobbies ? initialData.hobbies.split(',').map((s:any)=>s.trim()) : [] } })(),
              whyJoining: initialData.whyJoining || "",
              bio: initialData.bio || "",
              penName: initialData.penName || "",
@@ -143,13 +160,14 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     email: "",
     password: "",
     phone: "",
-    whatsapp: "",
+
     address: "",
+    pincode: "",
     aadharNumber: "",
     dob: "",
     experience: "",
-    skills: "",
-    hobbies: "",
+    skills: [],
+    hobbies: [],
     whyJoining: "",
     bio: "",
     penName: "",
@@ -198,9 +216,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       else if (!/^\d{12}$/.test(value as string)) error = "Aadhar Number must be exactly 12 digits.";
     }
     if (key === "dob" && !value) error = "Date of Birth is required.";
-    if (key === "experience" && !value) error = "Experience is required.";
-    if (key === "skills" && !value) error = "Skills are required.";
-    if (key === "hobbies" && !value) error = "Hobbies are required.";
+    if (key === "experience" && (value === "" || isNaN(Number(value)) || Number(value) < 0 || Number(value) > 70)) error = "Experience must be a number between 0 and 70.";
+    if (key === "skills" && (!value || value.length === 0)) error = "Skills are required.";
+    if (key === "hobbies" && (!value || value.length === 0)) error = "Hobbies are required.";
     if (key === "bio") {
       if (!value) error = "Bio is required.";
       else {
@@ -209,8 +227,16 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
         if (wordCount > 150) error = "Bio cannot exceed 150 words.";
       }
     }
+    
     if (key === "city" && !value) error = "City is required.";
     if (key === "state" && !value) error = "State is required.";
+    
+    // Social Media
+    if (key === "facebook" && value && !/^https?:\/\//.test(String(value))) error = "Must be a valid URL starting with http:// or https://";
+    if (key === "instagram" && value && !/^https?:\/\//.test(String(value)) && !String(value).startsWith('@')) error = "Must be a valid URL or @username";
+    if (key === "linkedin" && value && !/^https?:\/\//.test(String(value))) error = "Must be a valid URL starting with http:// or https://";
+    if (key === "youtube" && value && !/^https?:\/\//.test(String(value))) error = "Must be a valid URL starting with http:// or https://";
+
 
     // For book details
     if (key === "title" && !value) error = "Title is required.";
@@ -280,7 +306,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       </section>
 
       {/* Stepper */}
-      <div className="bg-white border-b border-paa-navy/5 px-2 md:px-6 py-4 md:py-5 sticky top-0 z-40 shadow-sm overflow-x-auto hide-scrollbar">
+      <div className="bg-white border-b border-paa-navy/5 px-2 md:px-6 py-4 md:py-5 fixed top-0 left-0 right-0 z-40 shadow-sm overflow-x-auto hide-scrollbar">
         <div className="max-w-3xl mx-auto flex items-center justify-between md:justify-center min-w-max md:min-w-0 pb-1 md:pb-0">
           {steps.map((s, i) => (
             <div key={s.title} className="flex items-center">
@@ -292,7 +318,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   ${i < step ? "bg-emerald-500 text-white shadow-emerald-500/20" : i === step ? "bg-paa-gold text-paa-navy shadow-paa-gold/20" : "bg-gray-100 text-gray-400"}`}>
                   {i < step ? <CheckCircle size={14} className="md:w-[18px] md:h-[18px]" /> : <span className="scale-75 md:scale-100">{s.icon}</span>}
                 </div>
-                <span className={`text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-center w-14 md:max-w-[80px] md:w-auto truncate transition-colors ${i === step ? "text-paa-navy" : "text-gray-400"}`}>
+                <span className={`text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-center whitespace-nowrap transition-colors ${i === step ? "text-paa-navy" : "text-gray-400"}`}>
                   {s.title}
                 </span>
               </div>
@@ -304,20 +330,21 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto my-12 px-6 pb-20">
+      <div className="w-full px-6 md:px-12 lg:px-20 my-12 pb-20 pt-24">
+        <div className="max-w-5xl mx-auto">
         {!submitted ? (
           <div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-8 md:p-12 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out">
             {/* Step 0: Author Profile */}
             {step === 0 && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Author Profile</h2>
-                <p className="text-sm text-paa-gray-text mb-8">Tell us about yourself. This information will be publicly displayed on your PAA author page.</p>
+                <p className="text-sm text-paa-gray-text mb-8">Tell us about yourself.<br/><span className='text-xs mt-1 block opacity-80'>Only public information (Bio, Profile Picture, Qualifications, Skills, Books) will be visible publicly. Sensitive information like Aadhaar Number, Phone Number, Address, Certificates, etc. will remain private.</span></p>
 
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <label className="dash-label">Full Name *</label>
-                      <input type="text" value={form.name} onChange={(e) => update("name", e.target.value)} className={`dash-input w-full ${errors.name ? '!border-red-500' : ''}`} placeholder="e.g. Jane Doe" />
+                      <input type="text" value={form.name} onChange={(e) => update("name", e.target.value.replace(/[^a-zA-Z\s]/g, ''))} className={`dash-input w-full ${errors.name ? '!border-red-500' : ''}`} placeholder="e.g. Jane Doe" />
                       {errors.name && <div className="text-red-500 text-xs mt-1 font-medium">{errors.name}</div>}
                     </div>
                     <div>
@@ -331,13 +358,13 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     </div>
                   </div>
 
+                  {/* Phone + Password in one row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Phone Number *</label>
                       <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''}`} placeholder="10-digit mobile number" />
                       {errors.phone && <div className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</div>}
                     </div>
-                    {/* Password field only shown if NOT reapplying */}
                     {!isReapply && (
                       <div>
                         <label className="dash-label">Password (For Login) *</label>
@@ -358,10 +385,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     )}
                   </div>
 
+                  {/* Address + Aadhaar */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Full Address *</label>
-                      <input type="text" value={form.address} onChange={(e) => update("address", e.target.value)} className={`dash-input w-full ${errors.address ? '!border-red-500' : ''}`} placeholder="Street, Locality" />
+                      <input type="text" value={form.address} onChange={(e) => update("address", e.target.value)} className={`dash-input w-full ${errors.address ? '!border-red-500' : ''}`} placeholder="House No./Flat No., Building, Street, Area" />
                       {errors.address && <div className="text-red-500 text-xs mt-1 font-medium">{errors.address}</div>}
                     </div>
                     <div>
@@ -371,8 +399,13 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     </div>
                   </div>
 
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Pincode + City + State in one row */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="dash-label">Pincode *</label>
+                      <input type="text" value={form.pincode} onChange={(e) => update("pincode", e.target.value.replace(/\D/g, ''))} maxLength={6} className={`dash-input w-full ${errors.pincode ? '!border-red-500' : ''}`} placeholder="6-digit Pincode" />
+                      {errors.pincode && <div className="text-red-500 text-xs mt-1 font-medium">{errors.pincode}</div>}
+                    </div>
                     <div>
                       <label className="dash-label">City *</label>
                       <input type="text" value={form.city} onChange={(e) => update("city", e.target.value)} className={`dash-input w-full ${errors.city ? '!border-red-500' : ''}`} placeholder="e.g. Pune" />
@@ -380,40 +413,68 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     </div>
                     <div>
                       <label className="dash-label">State *</label>
-                      <input type="text" value={form.state} onChange={(e) => update("state", e.target.value)} className={`dash-input w-full ${errors.state ? '!border-red-500' : ''}`} placeholder="e.g. Maharashtra" />
+                      <select value={form.state} onChange={(e) => update("state", e.target.value)} className={`dash-input w-full ${errors.state ? '!border-red-500' : ''}`}>
+                        <option value="">Select State</option>
+                        {indianStates.map(st => <option key={st} value={st}>{st}</option>)}
+                      </select>
                       {errors.state && <div className="text-red-500 text-xs mt-1 font-medium">{errors.state}</div>}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="dash-label">Instagram Profile</label>
-                      <input type="text" value={form.instagram} onChange={(e) => update("instagram", e.target.value)} className="dash-input w-full" placeholder="Instagram URL or @username" />
+                      <label className="dash-label">Instagram</label>
+                      <div className={`flex items-center border rounded-xl overflow-hidden bg-white transition-all focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-500 ${errors.instagram ? '!border-red-500' : 'border-gray-200'}`}>
+                        <div className="flex items-center justify-center w-11 h-11 shrink-0" style={{background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)'}}>
+                          <Instagram size={18} className="text-white" />
+                        </div>
+                        <input type="text" value={form.instagram} onChange={(e) => update("instagram", e.target.value)} className="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent" placeholder="https://instagram.com/yourprofile" />
+                      </div>
+                      {errors.instagram && <div className="text-red-500 text-xs mt-1 font-medium">{errors.instagram}</div>}
                     </div>
                     <div>
-                      <label className="dash-label">Facebook Profile</label>
-                      <input type="text" value={form.facebook} onChange={(e) => update("facebook", e.target.value)} className="dash-input w-full" placeholder="Facebook Profile URL" />
+                      <label className="dash-label">Facebook</label>
+                      <div className={`flex items-center border rounded-xl overflow-hidden bg-white transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 ${errors.facebook ? '!border-red-500' : 'border-gray-200'}`}>
+                        <div className="flex items-center justify-center w-11 h-11 shrink-0 bg-[#1877F2]">
+                          <Facebook size={18} className="text-white" />
+                        </div>
+                        <input type="text" value={form.facebook} onChange={(e) => update("facebook", e.target.value)} className="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent" placeholder="https://facebook.com/yourprofile" />
+                      </div>
+                      {errors.facebook && <div className="text-red-500 text-xs mt-1 font-medium">{errors.facebook}</div>}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="dash-label">LinkedIn Profile</label>
-                      <input type="text" value={form.linkedin} onChange={(e) => update("linkedin", e.target.value)} className="dash-input w-full" placeholder="LinkedIn Profile URL" />
+                      <label className="dash-label">LinkedIn</label>
+                      <div className={`flex items-center border rounded-xl overflow-hidden bg-white transition-all focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 ${errors.linkedin ? '!border-red-500' : 'border-gray-200'}`}>
+                        <div className="flex items-center justify-center w-11 h-11 shrink-0 bg-[#0A66C2]">
+                          <Linkedin size={18} className="text-white" />
+                        </div>
+                        <input type="text" value={form.linkedin} onChange={(e) => update("linkedin", e.target.value)} className="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent" placeholder="https://linkedin.com/in/yourprofile" />
+                      </div>
+                      {errors.linkedin && <div className="text-red-500 text-xs mt-1 font-medium">{errors.linkedin}</div>}
                     </div>
                     <div>
-                      <label className="dash-label">YouTube Channel</label>
-                      <input type="text" value={form.youtube} onChange={(e) => update("youtube", e.target.value)} className="dash-input w-full" placeholder="YouTube Channel URL" />
+                      <label className="dash-label">YouTube</label>
+                      <div className={`flex items-center border rounded-xl overflow-hidden bg-white transition-all focus-within:ring-2 focus-within:ring-red-500/20 focus-within:border-red-500 ${errors.youtube ? '!border-red-500' : 'border-gray-200'}`}>
+                        <div className="flex items-center justify-center w-11 h-11 shrink-0 bg-[#FF0000]">
+                          <Youtube size={18} className="text-white" />
+                        </div>
+                        <input type="text" value={form.youtube} onChange={(e) => update("youtube", e.target.value)} className="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent" placeholder="https://youtube.com/@yourchannel" />
+                      </div>
+                      {errors.youtube && <div className="text-red-500 text-xs mt-1 font-medium">{errors.youtube}</div>}
                     </div>
                   </div>
 
+                  <h3 className="font-serif text-xl mt-8 pt-8 border-t border-gray-100">Qualifications</h3>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <label className="dash-label mb-0 text-lg font-serif">Qualifications</label>
-                      <button type="button" onClick={() => setQualifications([...qualifications, { id: Date.now(), qualification: "", institution: "", subject: "", certificateUrl: "", certificateBlob: null }])} className="text-xs font-bold uppercase tracking-widest text-paa-navy hover:text-paa-gold flex items-center gap-1"><Plus size={14}/> Add Another</button>
+                      <label className="dash-label mb-0 text-sm opacity-0">Qualifications</label>
+                      <button type="button" onClick={() => setQualifications([...qualifications, { id: Date.now(), qualification: "", institution: "", subject: "", mode: "", certificateUrl: "", certificateBlob: null }])} className="text-xs font-bold uppercase tracking-widest text-paa-navy hover:text-paa-gold flex items-center gap-1"><Plus size={14}/> Add Another</button>
                     </div>
                     {qualifications.map((q, idx) => (
-                      <div key={q.id} className="p-4 border border-paa-navy/10 rounded-2xl bg-white shadow-sm space-y-4 relative">
+                      <div key={q.id} className="p-5 border border-paa-navy/10 rounded-2xl bg-white shadow-sm space-y-4 relative">
                         {qualifications.length > 1 && (
                           <button type="button" onClick={() => setQualifications(qualifications.filter((_, i) => i !== idx))} className="absolute top-4 right-4 text-red-500 hover:text-red-700 flex items-center gap-1">
                             <span className="text-[10px] font-bold">REMOVE</span>
@@ -433,18 +494,64 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                             <input type="text" value={q.subject} onChange={(e) => { const n = [...qualifications]; n[idx].subject = e.target.value; setQualifications(n); }} className={`dash-input w-full ${!q.subject ? '!border-red-500' : ''}`} placeholder="e.g. Computer Science" />
                           </div>
                         </div>
-                        <div>
-                          <label className="dash-label">Upload Certificate (Optional)</label>
-                          <input type="file" accept="image/*,application/pdf" onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const n = [...qualifications];
-                              n[idx].certificateBlob = file;
-                              n[idx].certificateUrl = URL.createObjectURL(file);
-                              setQualifications(n);
-                            }
-                          }} className="text-xs w-full block"/>
-                          {q.certificateUrl && <span className="text-[10px] text-emerald-600 block mt-2 font-bold uppercase tracking-widest">Certificate Selected</span>}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="dash-label">Mode of Degree *</label>
+                            <select value={q.mode || ''} onChange={(e) => { const n = [...qualifications]; n[idx].mode = e.target.value; setQualifications(n); }} className="dash-input w-full">
+                              <option value="">Select Mode</option>
+                              <option value="Full Time">Full Time</option>
+                              <option value="Part Time">Part Time</option>
+                              <option value="Online">Online</option>
+                              <option value="Distance">Distance</option>
+                              <option value="Correspondence">Correspondence</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="dash-label">Upload Certificate (Optional)</label>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => document.getElementById(`cert-upload-${idx}`)?.click()}
+                                className="border border-dashed border-paa-navy/20 rounded-xl px-4 py-2.5 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex items-center gap-2 shrink-0"
+                              >
+                                <Upload className="w-4 h-4 text-paa-navy/40" />
+                                <span className="text-xs font-medium text-paa-navy">{q.certificateUrl ? 'Change' : 'Upload'}</span>
+                              </button>
+                              {q.certificateUrl && (
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  {q.certificateBlob && q.certificateBlob.type?.startsWith('image/') ? (
+                                    <img src={q.certificateUrl} alt="Certificate" className="w-12 h-12 object-cover rounded-lg border border-gray-200 shadow-sm" />
+                                  ) : (
+                                    <div className="w-12 h-12 bg-red-50 rounded-lg border border-red-100 flex items-center justify-center shrink-0">
+                                      <FileText className="w-5 h-5 text-red-500" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-paa-navy truncate">{q.certificateBlob?.name || 'Certificate'}</p>
+                                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Uploaded ✓</p>
+                                  </div>
+                                  <button type="button" onClick={() => { const n = [...qualifications]; n[idx].certificateUrl = ''; n[idx].certificateBlob = null; setQualifications(n); }} className="ml-auto text-gray-400 hover:text-red-500 transition-colors shrink-0">
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              id={`cert-upload-${idx}`}
+                              type="file"
+                              accept="image/*,application/pdf"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const n = [...qualifications];
+                                  n[idx].certificateBlob = file;
+                                  n[idx].certificateUrl = URL.createObjectURL(file);
+                                  setQualifications(n);
+                                }
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -453,25 +560,39 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Date of Birth *</label>
-                      <input type="date" value={form.dob} onChange={(e) => update("dob", e.target.value)} className={`dash-input w-full ${errors.dob ? '!border-red-500' : ''}`} />
+                      <input type="date" value={form.dob} max={new Date().toISOString().split('T')[0]} onChange={(e) => update("dob", e.target.value)} className={`dash-input w-full ${errors.dob ? '!border-red-500' : ''}`} />
                       {errors.dob && <div className="text-red-500 text-xs mt-1 font-medium">{errors.dob}</div>}
                     </div>
                     <div>
                       <label className="dash-label">Years of Experience *</label>
-                      <input type="text" value={form.experience} onChange={(e) => update("experience", e.target.value)} className={`dash-input w-full ${errors.experience ? '!border-red-500' : ''}`} placeholder="e.g. 5 years" />
+                      <input type="text" inputMode="numeric" value={form.experience} onChange={(e) => update("experience", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.experience ? '!border-red-500' : ''}`} placeholder="e.g. 5" />
                       {errors.experience && <div className="text-red-500 text-xs mt-1 font-medium">{errors.experience}</div>}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="dash-label">Skills *</label>
-                      <input type="text" value={form.skills} onChange={(e) => update("skills", e.target.value)} className={`dash-input w-full ${errors.skills ? '!border-red-500' : ''}`} placeholder="e.g. Copywriting, Editing" />
+                      <label className="dash-label">Skills * <span className="font-normal opacity-70">(Press Enter to add)</span></label>
+                      <div className={`p-2 border rounded-xl bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all ${errors.skills ? 'border-red-500' : 'border-gray-200'} flex flex-wrap gap-2`}>
+                        {form.skills && form.skills.map((s: string, i: number) => (
+                          <div key={i} className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                            {s} <button type="button" onClick={() => update("skills", form.skills.filter((_: any, idx: number) => idx !== i))} className="hover:text-emerald-900"><X size={12}/></button>
+                          </div>
+                        ))}
+                        <input type="text" value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const val = skillInput.trim().toLowerCase(); if (val && !(form.skills || []).map((s: string) => s.toLowerCase()).includes(val)) { update("skills", [...(form.skills || []), val]); } setSkillInput(""); } }} className="flex-1 min-w-[120px] outline-none text-sm bg-transparent" placeholder="Type and press Enter" />
+                      </div>
                       {errors.skills && <div className="text-red-500 text-xs mt-1 font-medium">{errors.skills}</div>}
                     </div>
                     <div>
-                      <label className="dash-label">Hobbies *</label>
-                      <input type="text" value={form.hobbies} onChange={(e) => update("hobbies", e.target.value)} className={`dash-input w-full ${errors.hobbies ? '!border-red-500' : ''}`} placeholder="e.g. Reading, Traveling" />
+                      <label className="dash-label">Hobbies * <span className="font-normal opacity-70">(Press Enter to add)</span></label>
+                      <div className={`p-2 border rounded-xl bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all ${errors.hobbies ? 'border-red-500' : 'border-gray-200'} flex flex-wrap gap-2`}>
+                        {form.hobbies && form.hobbies.map((h: string, i: number) => (
+                          <div key={i} className="flex items-center gap-1 bg-paa-navy/5 text-paa-navy px-2.5 py-1 rounded-full text-xs font-medium">
+                            {h} <button type="button" onClick={() => update("hobbies", form.hobbies.filter((_: any, idx: number) => idx !== i))} className="hover:text-paa-navy/70"><X size={12}/></button>
+                          </div>
+                        ))}
+                        <input type="text" value={hobbyInput} onChange={(e) => setHobbyInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const val = hobbyInput.trim().toLowerCase(); if (val && !(form.hobbies || []).map((h: string) => h.toLowerCase()).includes(val)) { update("hobbies", [...(form.hobbies || []), val]); } setHobbyInput(""); } }} className="flex-1 min-w-[120px] outline-none text-sm bg-transparent" placeholder="Type and press Enter" />
+                      </div>
                       {errors.hobbies && <div className="text-red-500 text-xs mt-1 font-medium">{errors.hobbies}</div>}
                     </div>
                   </div>
@@ -648,6 +769,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       <select value={form.genre} onChange={(e) => { update("genre", e.target.value); update("subcategory", ""); update("subSubcategory", ""); }} className={`dash-input w-full ${errors.genre ? '!border-red-500' : ''}`}>
                         <option value="">Select Category</option>
                         {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
+<option value="Other">Other</option>
                       </select>
                       {errors.genre && <div className="text-red-500 text-xs mt-1 font-medium">{errors.genre}</div>}
                     </div>
@@ -697,12 +819,18 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <label className="dash-label">Language *</label>
-                      <input type="text" placeholder="e.g. English, Marathi" value={form.language} onChange={(e) => update("language", e.target.value)} className={`dash-input w-full ${errors.language ? '!border-red-500' : ''}`} />
+                      <select value={form.language} onChange={(e) => update("language", e.target.value)} className={`dash-input w-full ${errors.language ? '!border-red-500' : ''}`}>
+                        <option value="">Select Language</option>
+                        {languages.map(l => <option key={l} value={l}>{l}</option>)}
+                      </select>
                       {errors.language && <div className="text-red-500 text-xs mt-1 font-medium">{errors.language}</div>}
                     </div>
                     <div>
-                      <label className="dash-label">Publisher Name *</label>
-                      <input type="text" placeholder="e.g. Self-Published" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} className={`dash-input w-full ${errors.publisher ? '!border-red-500' : ''}`} />
+                      <label className="dash-label flex items-center justify-between">
+                        Publisher Name *
+                        <label className="flex items-center gap-1.5 text-xs font-normal cursor-pointer lowercase text-gray-500"><input type="checkbox" checked={form.isSelfPublished === 'yes'} onChange={(e) => { update('isSelfPublished', e.target.checked ? 'yes' : 'no'); if(e.target.checked) update('publisher', 'Self Published'); else update('publisher', ''); }} className="w-3 h-3"/> I am Self Published</label>
+                      </label>
+                      <input type="text" placeholder="e.g. Penguin" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} className={`dash-input w-full ${errors.publisher ? '!border-red-500' : ''}`} disabled={form.isSelfPublished === 'yes'} />
                       {errors.publisher && <div className="text-red-500 text-xs mt-1 font-medium">{errors.publisher}</div>}
                     </div>
                     <div>
@@ -849,6 +977,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         if (!form.publisher) missingBookFields.push('Publisher');
                         if (!form.publicationDate) missingBookFields.push('Publication Date');
                         if (!form.format) missingBookFields.push('Format');
+                        if (!form.purposeOfWriting) missingBookFields.push('Purpose of Writing');
                         if (!form.printFormat) missingBookFields.push('Print Format');
                         if (!form.pages) missingBookFields.push('Pages');
                         if (!form.isbn) missingBookFields.push('ISBN');
@@ -1007,6 +1136,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         if (!form.publisher) missingContinueFields.push('Publisher');
                         if (!form.publicationDate) missingContinueFields.push('Publication Date');
                         if (!form.format) missingContinueFields.push('Format');
+                        if (!form.purposeOfWriting) missingContinueFields.push('Purpose of Writing');
                         if (!form.printFormat) missingContinueFields.push('Print Format');
                         if (!form.pages) missingContinueFields.push('Pages');
                         if (!form.isbn) missingContinueFields.push('ISBN');
@@ -1020,7 +1150,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           return;
                         }
                         setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
-                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "" });
+                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", purposeOfWriting: "" });
                         setCoverBlob(null);
                         setCoverFileUrl(null);
                       } else if (books.length === 0) {
@@ -1113,7 +1243,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       Object.entries(form).forEach(([key, val]) => {
                         const bookKeys = ['subcategory', 'subSubcategory', 'title', 'genre', 'synopsis', 'pages', 'mrp', 'stock', 'subtitle', 'language', 'isbn', 'publisher', 'publicationDate', 'edition', 'format'];
                         if (!bookKeys.includes(key)) {
-                          formData.append(key, String(val));
+                          if (key === 'skills' || key === 'hobbies') {
+                            formData.append(key, JSON.stringify(val));
+                          } else {
+                            formData.append(key, String(val));
+                          }
                         }
                       });
 
@@ -1156,7 +1290,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         id: q.id,
                         qualification: q.qualification,
                         institution: q.institution,
-                        subject: q.subject
+                        subject: q.subject,
+                        mode: q.mode
                       }))));
                       qualifications.forEach(q => {
                         if (q.certificateBlob) formData.append(`certificate_${q.id}`, q.certificateBlob);
@@ -1202,11 +1337,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
             <h2 className="font-serif text-3xl font-medium text-paa-navy mb-3">{isReapply ? "Application Resubmitted!" : "Application Submitted!"}</h2>
             <p className="text-sm text-paa-gray-text leading-relaxed max-w-md mx-auto mb-8">
               Thank you, <strong className="text-paa-navy font-bold">{form.name || "Author"}</strong>! 
-              {` Your ${isReapply ? "updated " : ""}application for `}
-              <em>"{[...books.map(b => b.title), form.title].filter(Boolean).join(", ") || "your books"}"</em>
-              {` has been received. `}
+              Your application is under review. An email confirmation has been sent to you.
               <br /><br />
-              <strong className="text-paa-gold">Approval Pending:</strong> You must wait for the Admin to approve your account. Once approved, you will be able to log in to your Author Dashboard.
+              <strong className="text-paa-gold">Approval Pending:</strong> Our editorial team will review your application within 5-7 working days. Once approved, you will be able to log in to your Author Dashboard.
+              <br /><br />
+              While you wait, you can continue browsing our website.
             </p>
 
             {/* Receipt */}
@@ -1229,11 +1364,17 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
               </div>
             </div>
 
-            <button onClick={() => window.location.href = "/login"} className="dash-btn dash-btn-primary rounded-full px-8 py-3">
-              Go to Login
-            </button>
+            <div className="flex justify-center gap-4">
+              <a href="/" className="dash-btn px-8 py-3 rounded-full bg-gray-100 text-paa-navy hover:bg-gray-200">
+                Go to Homepage
+              </a>
+              <a href="/login" className="dash-btn dash-btn-primary rounded-full px-8 py-3">
+                Go to Login
+              </a>
+            </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Group Guidelines Modal */}

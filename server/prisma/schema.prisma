@@ -39,6 +39,9 @@ model Author {
   instagram          String?
   facebook           String?
   extraData          Json?
+  qualificationsJson Json?
+  skillsJson         Json?
+  hobbiesJson        Json?
   qrCodeUrl          String?
   qualification      String?
   institution        String?
@@ -51,6 +54,9 @@ model Author {
   whyJoining         String?
   aadharNumber       String?
   address            String?
+  district           String?
+  pincode            String?
+  dob                String?
   books              Book[]
   eventRegistrations EventRegistration[]
   formResponses      FormResponse[]
@@ -96,6 +102,7 @@ model Book {
   subtitle        String?
   language        String?
   isbn            String?
+  purpose         String?
   publisher       String?
   publicationDate String?
   edition         String?

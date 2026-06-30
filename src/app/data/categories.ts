@@ -73,6 +73,7 @@ export const bookCategories = {
       "Entrepreneurship",
       "Finance",
       "Marketing",
+      "Management",
       "Startups"
     ],
     "Health & Wellness": [
@@ -105,7 +106,10 @@ export const bookCategories = {
     "Politics & Current Affairs": [],
     "Spirituality": [],
     "Mythology": [],
-    "Society & Philosophy": [],
+    "Society & Philosophy": [
+      "Workplace Culture",
+      "Gender Issue"
+    ],
     "Travel": [],
     "Education": [],
     "True Crime": [],

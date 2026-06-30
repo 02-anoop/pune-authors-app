@@ -11,7 +11,7 @@ function WizardAboutStep() {
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-8 md:py-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center mb-10">
-        <div className="text-[10px] font-bold tracking-widest text-paa-navy uppercase mb-2">Origins & Mission</div>
+        {/* <div className="text-[10px] font-bold tracking-widest text-paa-navy uppercase mb-2">Origins & Mission</div> */}
         <h2 className="font-serif text-3xl md:text-5xl font-medium text-gray-900 mb-6 leading-tight">
           About <span className="italic text-paa-gold">The Group.</span>
         </h2>
@@ -38,6 +38,7 @@ function WizardAboutStep() {
 
 function WizardEventsStep() {
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [currentPastEventIndex, setCurrentPastEventIndex] = useState(0);
 
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
@@ -51,10 +52,22 @@ function WizardEventsStep() {
     fetchUpcomingEvents();
   }, []);
 
+  const nextPastEvent = () => {
+    setCurrentPastEventIndex((prev) => (prev + 1) % pastEvents.length);
+  };
+
+  const prevPastEvent = () => {
+    setCurrentPastEventIndex((prev) => (prev - 1 + pastEvents.length) % pastEvents.length);
+  };
+
+  const totalEvents = pastEvents.length;
+  const totalAuthors = pastEvents.reduce((sum, e) => sum + (e.authorsParticipated || 0), 0);
+  const totalBooks = pastEvents.reduce((sum, e) => sum + (e.booksSold || 0), 0);
+
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center mb-10">
-        <div className="text-[10px] font-bold tracking-widest text-paa-navy uppercase mb-2">PAA Community</div>
+        {/* <div className="text-[10px] font-bold tracking-widest text-paa-navy uppercase mb-2">PAA Community</div> */}
         <h2 className="font-serif text-3xl md:text-5xl font-medium text-gray-900 mb-6 leading-tight">
           Literary <span className="italic text-paa-gold">Events.</span>
         </h2>
@@ -84,17 +97,106 @@ function WizardEventsStep() {
         )}
 
         <div>
-          <h3 className="font-serif text-2xl text-paa-navy mb-6 border-b border-gray-200 pb-2">Past Highlights</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            {pastEvents.slice(0, 4).map((event, i) => (
-              <div key={i} className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm">
-                 <div className="flex justify-between items-start mb-3">
-                     <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{event.date}</span>
-                 </div>
-                 <h4 className="font-serif text-lg text-gray-900 font-medium mb-2">{event.name}</h4>
-                 <p className="text-sm text-gray-500 flex items-center gap-1.5"><MapPin size={14}/> {event.address}</p>
+          <h3 className="font-serif text-2xl text-paa-navy mb-6 border-b border-gray-200 pb-2">Past Highlights & Impact</h3>
+          
+          <div className="flex flex-col md:flex-row gap-8 items-center">
+            
+            {/* Left Side: Stats */}
+            <div className="w-full md:w-5/12 flex flex-col gap-6">
+              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalEvents}+</div>
+                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Events Organized</div>
               </div>
-            ))}
+              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalAuthors}+</div>
+                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Author Participations</div>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalBooks}+</div>
+                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Books Sold</div>
+              </div>
+            </div>
+
+            {/* Right Side: Stacked Mini Cards */}
+            <div className="w-full md:w-7/12 relative min-h-[420px] md:min-h-[450px] flex justify-center perspective-[1000px]">
+              {pastEvents.map((event, index) => {
+                const diff = (index - currentPastEventIndex + pastEvents.length) % pastEvents.length;
+                
+                // Show only top 3 cards + 1 transitioning out
+                if (diff > 2 && diff < pastEvents.length - 1) return null;
+
+                let style: React.CSSProperties = {
+                   position: "absolute",
+                   top: 0,
+                   width: "100%",
+                   maxWidth: "380px",
+                   transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                };
+
+                if (diff === 0) {
+                  style = { ...style, transform: "translateY(0) scale(1)", zIndex: 30, opacity: 1, pointerEvents: "auto" };
+                } else if (diff === 1) {
+                  style = { ...style, transform: "translateY(25px) scale(0.92)", zIndex: 20, opacity: 0.8, pointerEvents: "none" };
+                } else if (diff === 2) {
+                  style = { ...style, transform: "translateY(50px) scale(0.84)", zIndex: 10, opacity: 0.4, pointerEvents: "none" };
+                } else if (diff === pastEvents.length - 1) {
+                  style = { ...style, transform: "translateY(-40px) scale(1.05)", zIndex: 40, opacity: 0, pointerEvents: "none" };
+                }
+
+                return (
+                  <div key={index} style={style} className="bg-white rounded-2xl border border-paa-navy/10 shadow-lg overflow-hidden flex flex-col">
+                    <div className="h-40 bg-gray-100 relative">
+                      {(event as any).photoUrl ? (
+                        <img 
+                          src={(event as any).photoUrl.startsWith('http') ? (event as any).photoUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${(event as any).photoUrl}`} 
+                          alt={event.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center p-4 text-center bg-paa-navy/5">
+                           <h3 className="font-serif text-lg text-gray-400 leading-tight">{event.name}</h3>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col bg-white">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[9px] font-bold text-paa-navy uppercase tracking-widest bg-paa-navy/5 px-2 py-1 rounded">{event.date}</span>
+                        <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                          <Clock size={10} /> {event.duration}
+                        </span>
+                      </div>
+                      <h4 className="font-serif text-lg text-gray-900 font-medium mb-1 line-clamp-1">{event.name}</h4>
+                      <p className="text-xs text-gray-500 flex items-center gap-1.5 mb-4 line-clamp-1">
+                        <MapPin size={12} className="shrink-0" /> {event.address}
+                      </p>
+                      
+                      <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3 mt-auto">
+                        <div>
+                          <div className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5">Authors</div>
+                          <div className="font-serif text-lg text-paa-navy">{event.authorsParticipated}</div>
+                        </div>
+                        <div>
+                          <div className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5">Books Sold</div>
+                          <div className="font-serif text-lg text-paa-navy">{event.booksSold !== null ? event.booksSold : "TBA"}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Navigation Controls over the stack */}
+              <div className="absolute -bottom-2 md:bottom-2 z-50 flex gap-3">
+                 <button onClick={prevPastEvent} className="p-3 bg-white rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 shadow-md transition-all active:scale-95">
+                   <ChevronLeft size={20} />
+                 </button>
+                 <button onClick={nextPastEvent} className="p-3 bg-paa-navy rounded-full text-white hover:bg-paa-navy/90 shadow-md transition-all active:scale-95">
+                   <ChevronRight size={20} />
+                 </button>
+              </div>
+            </div>
+            
           </div>
         </div>
       </div>
@@ -127,7 +229,7 @@ function WizardServicesStep() {
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center mb-12">
-        <div className="text-[10px] font-bold tracking-widest text-paa-navy uppercase mb-2">Capabilities</div>
+        {/* <div className="text-[10px] font-bold tracking-widest text-paa-navy uppercase mb-2">Capabilities</div> */}
         <h2 className="font-serif text-3xl md:text-5xl font-medium text-gray-900 mb-6 leading-tight">
           Our <span className="italic text-paa-gold">Services.</span>
         </h2>
@@ -195,9 +297,10 @@ export function AuthorOnboardingWizard() {
       </div>
 
       {/* Onboarding Stepper */}
-      <div className="sticky top-[60px] z-40 w-full bg-white border-b border-paa-navy/5 px-2 md:px-6 py-3 shadow-sm overflow-x-auto hide-scrollbar">
-        <div className="max-w-4xl mx-auto flex items-center justify-between md:justify-center min-w-max md:min-w-0">
-          {onboardingSteps.map((s, i) => (
+      {step < 3 && (
+        <div className="sticky top-[60px] md:top-[64px] z-40 w-full bg-white border-b border-paa-navy/5 px-2 md:px-6 py-3 shadow-sm overflow-x-auto hide-scrollbar">
+          <div className="max-w-4xl mx-auto flex items-center justify-between md:justify-center min-w-max md:min-w-0">
+            {onboardingSteps.map((s, i) => (
             <div key={s.title} className="flex items-center">
               <div
                 className="flex flex-col items-center px-2 md:px-4 cursor-pointer group"
@@ -220,6 +323,7 @@ export function AuthorOnboardingWizard() {
           ))}
         </div>
       </div>
+      )}
 
       <div className="flex-1 w-full relative">
         {step === 0 && (
@@ -259,11 +363,19 @@ export function AuthorOnboardingWizard() {
            </div>
         )}
         {step === 3 && (
-          <div className="w-full relative bg-gray-50 min-h-screen">
-             <div className="max-w-4xl mx-auto px-2 md:px-6 pt-4 pb-10">
-               <button onClick={() => setStep(2)} className="mb-4 inline-flex items-center text-[11px] font-bold tracking-widest uppercase text-paa-navy bg-white hover:bg-gray-50 px-4 py-2 rounded-full border border-gray-200 shadow-sm transition-colors">
-                  <ChevronLeft size={14} className="mr-1" /> Back to Services
+          <div className="w-full relative min-h-screen bg-[#F8FAFC]">
+             {/* Clean secondary bar for back navigation */}
+             <div className="w-full bg-white border-b border-gray-200 px-4 md:px-6 py-2 flex items-center z-30 relative">
+               <button onClick={() => setStep(2)} className="flex items-center text-[10px] md:text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-paa-navy transition-colors group">
+                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center mr-2 group-hover:bg-gray-200 transition-colors">
+                    <ChevronLeft size={14} />
+                  </div>
+                  Back to Services
                </button>
+             </div>
+             
+             {/* Full width registration page without max-w constraint blocking the stepper */}
+             <div className="w-full pb-10">
                <AuthorRegistrationPage hideNavbar={true} />
              </div>
           </div>

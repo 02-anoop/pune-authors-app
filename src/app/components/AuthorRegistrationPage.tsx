@@ -1634,17 +1634,53 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
               <button onClick={() => setShowGuidelines(false)} className="text-gray-400 hover:text-red-500 font-bold uppercase text-xs tracking-widest transition-colors">Close</button>
             </div>
             <div className="p-8 overflow-y-auto prose prose-sm max-w-none text-paa-navy/80">
-              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-4">1. Code of Conduct</h4>
-              <p>All members of the Pune Authors' Association are expected to treat fellow authors, readers, and administrative staff with the utmost respect and professionalism. Harassment, discrimination, or abusive behavior in any PAA event, forum, or communication channel will result in immediate termination of membership.</p>
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-2">1. Be Responsive</h4>
+              <p className="mb-6">Respond promptly to messages and avoid waiting until the last moment.</p>
 
-              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">2. Originality & Plagiarism</h4>
-              <p>By registering, you guarantee that all books and materials submitted to PAA are your original intellectual property or that you hold the explicit legal rights to distribute them. Plagiarism or copyright infringement is strictly prohibited.</p>
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">2. Share Constructive Ideas</h4>
+              <p className="mb-6">Offer practical suggestions along with ways to implement them.</p>
 
-              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">3. Event Participation</h4>
-              <p>When participating in PAA-sponsored book fairs or physical events, authors must adhere to the specific guidelines of that event, including arrival times, table presentation standards, and POS (Point of Sale) protocols.</p>
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">3. Take Initiative</h4>
+              <p className="mb-6">Contribute by organizing events instead of only advising others. Actions matter more than words.</p>
 
-              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">4. Promotion & Spam</h4>
-              <p>While self-promotion is encouraged in designated areas, spamming the PAA community, mass-emailing fellow authors, or using PAA platforms for unauthorized commercial advertising is not allowed.</p>
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">4. Keep the Group Relevant</h4>
+              <p className="mb-6">Avoid spamming the group with unnecessary messages, self-promotions, or unrelated content.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">5. Contact Admin First</h4>
+              <p className="mb-6">If you have a query, message the group admin privately. If needed, the admin will share it with the group.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">6. Share Useful Resources</h4>
+              <p className="mb-6">Help fellow authors by sharing valuable information such as publishers, printers, marketing opportunities, or literary resources.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">7. Maintain Harmony</h4>
+              <p className="mb-6">Avoid gossip, politics, backbiting, or behavior that disrupts the community. Foster collaboration and mutual respect.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">8. Be Genuine</h4>
+              <p className="mb-6">Participate sincerely and contribute positively to the group's objectives.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">9. Support Community Events</h4>
+              <p className="mb-6">When another member organizes an event, don't wait for a personal invitation. Every member is equally welcome to participate and support community initiatives.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">10. Invite Personally</h4>
+              <p className="mb-6">For your personal book launches or events, invite authors individually instead of expecting group announcements to be sufficient.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">11. Share Learnings</h4>
+              <p className="mb-6">If you achieve success as an author, explain how you achieved it so others can learn and benefit from your experience.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">12. Maintain Professionalism</h4>
+              <p className="mb-6">Treat the group as a professional literary community and work together toward common goals.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">13. Respect All Members</h4>
+              <p className="mb-6">Members who are temporarily inactive are still valued. Everyone has different priorities and challenges.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">14. Ethical Interaction at Events</h4>
+              <p className="mb-6">Do not aggressively sell books or prevent visitors from interacting with other authors. Allow readers to explore freely.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">15. No Business Promotion</h4>
+              <p className="mb-6">Do not promote unrelated businesses or collect visitors' contact details for marketing other services during literary events.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">16. Minimum Participation for Events</h4>
+              <p className="mb-6">A literary event can be organized with a minimum of five authors.</p>
             </div>
             <div className="p-6 border-t border-paa-navy/5 bg-gray-50 flex justify-end">
               <button onClick={() => { setShowGuidelines(false); update("agreedToGuidelines", true); }} className="dash-btn dash-btn-primary rounded-full px-8 py-2">I Agree to the Guidelines</button>
@@ -1658,25 +1694,117 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-paa-navy/80 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-3xl-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="p-6 border-b border-paa-navy/5 bg-gray-50 flex justify-between items-center">
-              <h3 className="font-serif text-xl font-medium text-paa-navy">PAA Information Document</h3>
+              <h3 className="font-serif text-xl font-medium text-paa-navy">PAA Event Guidelines</h3>
               <button onClick={() => setShowInfoDoc(false)} className="text-gray-400 hover:text-red-500 font-bold uppercase text-xs tracking-widest transition-colors">Close</button>
             </div>
             <div className="p-8 overflow-y-auto prose prose-sm max-w-none text-paa-navy/80">
-              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-4">About Pune Authors' Association</h4>
-              <p>The Pune Authors' Association (PAA) is a premier collective dedicated to supporting, promoting, and elevating local authors. Whether you are traditionally published or an independent self-published author, PAA provides the infrastructure to help you succeed.</p>
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-4">Introduction</h4>
+              <p className="mb-6">To ensure consistency across different venues and event formats, Pune Authors' Association follows a common set of event guidelines. These guidelines help maintain professionalism, fairness, and harmony among participating authors while representing the community as a whole.</p>
 
-              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">Membership Benefits</h4>
-              <ul className="list-disc pl-5 space-y-2">
-                <li>Access to the exclusive PAA Author Dashboard.</li>
-                <li>Opportunities to participate in official PAA Book Fairs and literary events.</li>
-                <li>Inclusion in digital and physical event catalogues distributed to readers.</li>
-                <li>Direct-to-consumer sales infrastructure using our integrated POS (Point of Sale) system.</li>
-                <li>Networking opportunities with industry professionals, editors, and fellow authors.</li>
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">1. No Personal Branding</h4>
+              <p className="mb-6">Do not bring personal standees, banners, or other promotional materials that make you stand out from fellow authors. Literary events are collective events, not individual competitions.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">2. Focus on Reader Interaction</h4>
+              <p className="mb-6">These are "Meet the Author" events intended for interaction between authors and readers. They are not hard-selling marketplaces. Authors should simply display their books professionally and engage with readers.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">3. No Promotion of Other Businesses</h4>
+              <p className="mb-2">Do not promote any unrelated business during literary events. This includes:</p>
+              <ul className="list-disc pl-5 mb-6 space-y-1">
+                <li>Distributing business cards for other businesses.</li>
+                <li>Collecting readers' contact details to market non-literary services.</li>
+                <li>Using literary events for commercial promotion outside your books.</li>
               </ul>
 
-              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mt-6 mb-4">Application & Fee Structure</h4>
-              <p>The ₹1000 registration fee is a one-time processing and onboarding charge. This fee covers the administrative cost of our editorial team reviewing your application, validating your bibliography, and setting up your secure author portal.</p>
-              <p className="mt-2 italic text-sm">Note: This fee is non-refundable. If your application is rejected due to incomplete information, you will be given an opportunity to correct your application without paying again.</p>
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">4. Uniform Book Display</h4>
+              <p className="mb-2">All authors should display books in a neat and uniform manner.</p>
+              <ul className="list-disc pl-5 mb-6 space-y-1">
+                <li>Use of book stands is mandatory.</li>
+                <li>Maintain consistency in presentation.</li>
+              </ul>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">5. Carry Your Name Display</h4>
+              <p className="mb-6">Every author should bring their own acrylic name display (name tally) for identification during events.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">6. Table Decoration</h4>
+              <p className="mb-2">If you have an individual table, light decoration is permitted. If the table is shared:</p>
+              <ul className="list-disc pl-5 mb-6 space-y-1">
+                <li>Maintain uniformity.</li>
+                <li>Avoid excessive decoration.</li>
+                <li>Follow any changes suggested by the organizer.</li>
+              </ul>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">7. Display Books of Other Authors Properly</h4>
+              <p className="mb-6">If you are requested to display books of authors who are unable to attend (especially authors outside Pune and Mumbai), ensure they are displayed properly and not kept aside.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">8. Fair Sharing of Table Space</h4>
+              <p className="mb-2">When tables are shared:</p>
+              <ul className="list-disc pl-5 mb-6 space-y-1">
+                <li>Authors with fewer titles should be paired with authors having more titles.</li>
+                <li>Avoid overcrowding.</li>
+                <li>Ensure equal distribution of display space.</li>
+              </ul>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">9. Don't Hold Visitors Too Long</h4>
+              <p className="mb-2">Avoid:</p>
+              <ul className="list-disc pl-5 mb-4 space-y-1">
+                <li>Calling visitors aggressively.</li>
+                <li>Keeping visitors occupied for too long.</li>
+                <li>Preventing readers from visiting other authors.</li>
+              </ul>
+              <p className="mb-6">Allow readers to freely interact with everyone.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">10. Respect Table Allocation</h4>
+              <p className="mb-6">Wait until the organizer assigns tables. Do not occupy tables before allocation.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">11. Contribute Equally</h4>
+              <p className="mb-6">Authors should contribute equally to community initiatives. Participation should not be limited only to displaying books while avoiding contributions to other association activities.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">12. Support Authors Outside Pune & Mumbai</h4>
+              <p className="mb-2">The association represents authors from different cities. Support fellow authors by:</p>
+              <ul className="list-disc pl-5 mb-6 space-y-1">
+                <li>Displaying their books properly.</li>
+                <li>Helping promote their work.</li>
+                <li>Making them feel part of the community.</li>
+              </ul>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">13. Participate in All Types of Events</h4>
+              <p className="mb-6">Avoid participating only in selective events such as corporate literary events. Housing society events and other literary programs are equally important.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">14. Non-Participation May Affect Membership</h4>
+              <p className="mb-2">Long-term non-participation, lack of response, or remaining inactive may result in removal from the association. Registration fees are non-refundable.</p>
+              <p className="mb-6">Members may also be removed if they misuse the community or join for purposes unrelated to the association's objectives.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">15. Registration Fee</h4>
+              <p className="mb-6">The annual registration fee of ₹2,000 exists to ensure seriousness and commitment among members. It is not intended as payment for unlimited services.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">16. Purpose of the Registration Fee</h4>
+              <p className="mb-2">The fee helps cover:</p>
+              <ul className="list-disc pl-5 mb-6 space-y-1">
+                <li>Event-related miscellaneous expenses</li>
+                <li>Coordination costs</li>
+                <li>Opportunity costs</li>
+                <li>Administrative efforts involved in organizing activities</li>
+              </ul>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">17. Lack of Participation</h4>
+              <p className="mb-6">Consistent lack of participation is discouraged. If you are unable to participate due to genuine reasons, communicate them to the organizers.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">18. Read All Guidelines</h4>
+              <p className="mb-6">Members should read and understand all association guidelines to ensure clarity and consistency.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">19. Maintain Professionalism</h4>
+              <p className="mb-6">This is a community of professional authors. Professional behavior, respectful conduct, and disciplined participation are expected at every event.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">20. Support the Community Mission</h4>
+              <p className="mb-4">The association exists to provide a platform, a structured process, and opportunities for authors to connect with readers. The community succeeds only when members actively contribute.</p>
+              <p className="mb-6">The organizer of an event receives the participation amount collected for organizing that event.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">21. Avoid Opportunistic Behaviour</h4>
+              <p className="mb-6">Members should not attempt to take unfair advantage of the efforts made by organizers or fellow authors. The association values trust, fairness, and collaboration.</p>
+
+              <h4 className="text-paa-navy font-bold uppercase tracking-widest text-xs mb-2 mt-6">22. Follow the Norms and Trust the Process</h4>
+              <p className="mb-4">Success comes through following community guidelines, trusting the established process, and working together professionally.</p>
+              <p className="mb-6 italic">Ultimately, the quality of your book remains the most important factor in achieving success.</p>
             </div>
             <div className="p-6 border-t border-paa-navy/5 bg-gray-50 flex justify-end">
               <button onClick={() => { setShowInfoDoc(false); update("agreedToInfoDoc", true); }} className="dash-btn dash-btn-primary rounded-full px-8 py-2">I Have Read The Document</button>

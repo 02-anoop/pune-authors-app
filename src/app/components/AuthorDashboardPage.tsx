@@ -22,6 +22,7 @@ export function AuthorDashboardPage() {
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [hasNewQueries, setHasNewQueries] = useState(false);
   const [showReapply, setShowReapply] = useState(false);
+  const [reapplyDone, setReapplyDone] = useState(false);
   const [reapplyForm, setReapplyForm] = useState({
     name: '',
     penName: '',
@@ -231,14 +232,35 @@ export function AuthorDashboardPage() {
   if (status === 'Pending' || status === 'Rejected') {
     if (showReapply) {
       return (
-        <AuthorRegistrationPage 
-          initialData={dashboardData?.authorProfile} 
-          isReapply={true} 
-          onReapplySuccess={() => {
-            setShowReapply(false);
-            fetchDashboardData(true);
-          }} 
-        />
+        <div className="flex flex-col min-h-screen">
+          <NavBar />
+          <AuthorRegistrationPage 
+            initialData={dashboardData?.authorProfile} 
+            isReapply={true} 
+            onReapplySuccess={() => {
+              setReapplyDone(true);
+              setShowReapply(false);
+              fetchDashboardData(true);
+            }} 
+          />
+        </div>
+      );
+    }
+
+    if (reapplyDone) {
+      return (
+        <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
+          <NavBar />
+          <main className="flex-1 flex items-center justify-center p-6 py-20">
+            <div className="bg-white max-w-md w-full p-10 rounded-3xl shadow-premium border border-paa-navy/5 text-center">
+              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-emerald-100">
+                <Check className="w-8 h-8 text-emerald-500" />
+              </div>
+              <h2 className="font-serif text-2xl font-medium text-paa-navy mb-3">Reapplication Submitted!</h2>
+              <p className="text-sm text-gray-500 leading-relaxed">Your updated application is now under review by our editorial team. We will notify you by email once a decision has been made (within 5–7 working days).</p>
+            </div>
+          </main>
+        </div>
       );
     }
 

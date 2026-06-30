@@ -2197,13 +2197,13 @@ export function OperationsDashboardPage() {
              </button>
              <div className="flex items-center gap-2">
                 <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
-                  {['All', 'Pending', 'Active', 'Rejected'].map(status => (
+                  {['All', 'Reapplied', 'Pending', 'Active', 'Rejected'].map(status => (
                     <button 
                       key={status}
                       onClick={() => setAuthorStatusFilter(status)}
                       className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
                     >
-                      {status}
+                      {status === 'Reapplied' ? '🔄 Reapplied' : status}
                     </button>
                   ))}
                 </div>
@@ -2230,16 +2230,28 @@ export function OperationsDashboardPage() {
                 <th>Payment Info</th>
                 <th style={{textAlign: 'center'}}>Status</th>
                 <th style={{textAlign: 'center'}}>Books</th>
-                <th style={{textAlign: 'center'}}>Events</th>
                 <th style={{textAlign: 'center'}}>Actions</th>
               </tr>
            </thead>
            <tbody>
-              {authors.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) && (authorStatusFilter === 'All' || a.status === authorStatusFilter)).sort((a, b) => {
-                if (a.status === 'Pending' && b.status !== 'Pending') return -1;
-                if (a.status !== 'Pending' && b.status === 'Pending') return 1;
-                return 0;
-              }).map((author) => (
+              {authors.filter(a => {
+                 const ed = typeof a.extraData === 'string' ? (() => { try { return JSON.parse(a.extraData); } catch(e) { return {}; } })() : (a.extraData || {});
+                 const isReapplied = ed?.isReapplied === true;
+                 const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase());
+                 if (!matchesSearch) return false;
+                 if (authorStatusFilter === 'All') return true;
+                 if (authorStatusFilter === 'Reapplied') return isReapplied && a.status === 'Pending';
+                 if (authorStatusFilter === 'Pending') return a.status === 'Pending' && !isReapplied;
+                 return a.status === authorStatusFilter;
+               }).sort((a, b) => {
+                 const edA = typeof a.extraData === 'string' ? (() => { try { return JSON.parse(a.extraData); } catch(e) { return {}; } })() : (a.extraData || {});
+                 const edB = typeof b.extraData === 'string' ? (() => { try { return JSON.parse(b.extraData); } catch(e) { return {}; } })() : (b.extraData || {});
+                 if (edA?.isReapplied && !edB?.isReapplied) return -1;
+                 if (!edA?.isReapplied && edB?.isReapplied) return 1;
+                 if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+                 if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+                 return 0;
+               }).map((author) => (
                 <tr key={author.id}>
                   <td>
                     <div className="flex items-center gap-3">
@@ -2283,15 +2295,20 @@ export function OperationsDashboardPage() {
                     )}
                   </td>
                   <td style={{textAlign: 'center'}}>
-                    <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
-                      {author.status}
-                    </span>
+                    {(() => {
+                      const ed = typeof author.extraData === 'string' ? (() => { try { return JSON.parse(author.extraData); } catch(e) { return {}; } })() : (author.extraData || {});
+                      const isReapplied = ed?.isReapplied === true && author.status === 'Pending';
+                      return isReapplied ? (
+                        <span className="dash-badge" style={{background:'#fef3c7', color:'#92400e', border:'1px solid #fcd34d'}}>🔄 Reapplied</span>
+                      ) : (
+                        <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
+                          {author.status}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
                     {author.totalBooks}
-                  </td>
-                  <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
-                    {author.eventsPart}
                   </td>
                   <td style={{textAlign: 'center'}}>
                     <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -2301,18 +2318,11 @@ export function OperationsDashboardPage() {
                               try { ed = JSON.parse(ed); } catch(e) {}
                           }
                           const hasPending = ed?.hasPendingEdits;
-                          if (author.status === 'Pending') {
-                              return (
-                                <button onClick={() => setSelectedPendingAuthor(author)} className="dash-btn dash-btn-success" title="View & Edit Application">
-                                  View / Edit
-                                </button>
-                              );
-                          }
-                          if (hasPending) {
+                          if (hasPending && author.status !== 'Pending') {
                               return (
                                 <>
                                   <button onClick={() => handleEditAuthorClick(author)} className="dash-btn dash-btn-success" title="Review Edits">
-                                    Review
+                                    Review Edits
                                   </button>
                                   <button onClick={() => handleRejectEditsDirect(author.id)} className="dash-btn dash-btn-danger" title="Reject Edits">
                                     {loadingAction === 'rejectEdits_' + author.id ? '...' : 'Reject'}
@@ -2322,19 +2332,16 @@ export function OperationsDashboardPage() {
                           }
                           return null;
                        })()}
-                       <button onClick={() => handleEditAuthorClick(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Profile">
-                         <Edit className="w-4 h-4" />
-                       </button>
-                       <button onClick={() => setSelectedAuthor(author)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Details">
-                         <Eye className="w-4 h-4" />
+                       <button onClick={() => setSelectedPendingAuthor(author)} className="dash-btn dash-btn-success" title="View & Edit Application">
+                         View / Edit
                        </button>
                        <button onClick={() => handleDeleteAuthor(author.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">
                          <Trash2 className="w-4 h-4" />
                        </button>
                     </div>
                     {author.status === 'Rejected' && author.rejectionReason && (
-                      <div className="mt-2 text-[10px] text-red-600 font-medium max-w-[200px] mx-auto text-left leading-tight bg-red-50 p-2 rounded-lg">
-                        Reason: {author.rejectionReason}
+                      <div className="mt-1 text-[11px] text-red-500 font-medium text-center leading-tight">
+                        <span className="font-bold">Reason:</span> {author.rejectionReason}
                       </div>
                     )}
                   </td>
@@ -2342,7 +2349,7 @@ export function OperationsDashboardPage() {
              ))}
              {authors.length === 0 && (
                <tr>
-                 <td colSpan={7} className="text-center py-8 text-paa-gray-text bg-white">No authors found.</td>
+                 <td colSpan={6} className="text-center py-8 text-paa-gray-text bg-white">No authors found.</td>
                </tr>
              )}
            </tbody>
@@ -2801,7 +2808,14 @@ export function OperationsDashboardPage() {
   };
 
   const handleExportCSV = () => {
-      const baseFields = ['Status', 'Name', 'Pen Name', 'Email', 'Phone', 'WhatsApp', 'Address', 'City', 'State', 'Aadhar Number', 'Qualification', 'DOB', 'Experience', 'Skills', 'Hobbies', 'Why Joining', 'Transaction ID', 'Joined Date'];
+      const baseFields = [
+        'Status', 'Name', 'Pen Name', 'Email', 'Phone', 'WhatsApp', 
+        'Address', 'District', 'City', 'State', 'Pincode', 
+        'Aadhar Number', 'DOB', 'Bio', 'Experience', 'Qualification', 'Skills', 'Hobbies', 'Why Joining', 
+        'Instagram', 'Facebook', 'LinkedIn', 'YouTube',
+        'Conflict of Interest Signature', 'Agreed To Guidelines', 'Agreed To Info Doc',
+        'Transaction ID', 'Payment Screenshot', 'Joined Date', 'Books Data'
+      ];
       let csv = baseFields.join(',');
       selectedColumns.forEach(col => csv += `,${col}`);
       csv += '\n';
@@ -2809,16 +2823,27 @@ export function OperationsDashboardPage() {
       authors.forEach(author => {
         const safe = (val: any) => `"${String(val || '').replace(/"/g, '""')}"`;
         const joinedDate = author.createdAt ? new Date(author.createdAt).toLocaleDateString() : '';
+        const extra = typeof author.extraData === 'string' ? JSON.parse(author.extraData) : (author.extraData || {});
+        
+        let booksData = '';
+        if (author.books && author.books.length > 0) {
+           booksData = author.books.map((b:any, i:number) => 
+             `Book ${i+1}: ${b.title || 'NA'} | Subtitle: ${b.subtitle || 'NA'} | Genre: ${b.genre || 'NA'} (${b.subGenre || 'NA'}) | Synopsis: ${b.synopsis || 'NA'} | Pages: ${b.pages || 0} | MRP: ${b.mrp || 0} | Stock: ${b.stock || 0} | Language: ${b.language || 'NA'} | ISBN: ${b.isbn || 'NA'} | Publisher: ${b.publisher || 'NA'} | Pub Date: ${b.publicationDate || 'NA'} | Edition: ${b.edition || '1'} | Format: ${b.format || 'NA'} | Print: ${b.printFormat || 'NA'} | Purpose: ${b.purpose || 'NA'}`
+           ).join('\n-----------------\n');
+        }
+
         const baseVals = [
           author.status, author.name, author.penName, author.email, author.phone, author.whatsapp, 
-          author.address, author.city, author.state, author.aadharNumber, author.qualification, 
-          author.age, author.experience, author.skills, author.hobbies, author.whyJoining, 
-          author.transactionId, joinedDate
+          author.address, author.district, author.city, author.state, author.pincode, 
+          author.aadharNumber, author.age || author.dob, author.bio, author.experience, author.qualification, author.skills, author.hobbies, author.whyJoining, 
+          author.instagram, author.facebook, extra.linkedin, extra.youtube,
+          extra.conflictOfInterestSignature, extra.agreedToGuidelines, extra.agreedToInfoDoc,
+          author.transactionId, author.paymentScreenshot, joinedDate, booksData
         ].map(safe);
         
         csv += baseVals.join(',');
         selectedColumns.forEach(col => {
-          const val = author.extraData && author.extraData[col] ? String(author.extraData[col]).replace(/"/g, '""') : '';
+          const val = extra && extra[col] ? String(extra[col]).replace(/"/g, '""') : '';
           csv += `,"${val}"`;
         });
         csv += '\n';

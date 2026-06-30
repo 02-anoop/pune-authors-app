@@ -137,7 +137,7 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
   try {
     const { 
       name, email, phone, whatsapp, password, bio, penName, city, state, instagram, facebook, linkedin, youtube, 
-      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId
+      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId, conflictOfInterestSignature, agreedToGuidelines, agreedToInfoDoc
     } = req.body;
     
     // Check if email already in use
@@ -219,62 +219,65 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
     try {
       author = await prisma.author.create({
       data: {
-        name,
-        email,
-        phone,
-        whatsapp,
-        bio,
-        penName,
-        city,
-        state,
-        instagram,
-        facebook,
-        photoUrl,
-        qrCodeUrl,
-        transactionId,
-        paymentScreenshot: paymentScreenshotUrl,
+        name: name || "NA",
+        email: email || "NA",
+        phone: phone || "NA",
+        whatsapp: whatsapp || "NA",
+        bio: bio || "NA",
+        penName: penName || "NA",
+        city: city || "NA",
+        state: state || "NA",
+        instagram: instagram || "",
+        facebook: facebook || "",
+        photoUrl: photoUrl || "",
+        qrCodeUrl: qrCodeUrl || "",
+        transactionId: transactionId || "NA",
+        paymentScreenshot: paymentScreenshotUrl || "",
         qualification: finalQualificationString,
-        institution: null,
-        subject: null,
-        certificateUrl: null,
-        age: dob,
-        experience,
-        skills,
-        hobbies,
-        whyJoining,
-        aadharNumber,
-        address,
-        district,
-        pincode,
-        dob,
+        institution: "NA",
+        subject: "NA",
+        certificateUrl: "",
+        age: dob || "NA",
+        experience: experience || "0",
+        skills: skills || "NA",
+        hobbies: hobbies || "NA",
+        whyJoining: whyJoining || "NA",
+        aadharNumber: aadharNumber || "NA",
+        address: address || "NA",
+        district: district || "NA",
+        pincode: pincode || "000000",
+        dob: dob || "NA",
         skillsJson: (() => { try { return JSON.parse(skills) } catch(e) { return [] } })(),
         hobbiesJson: (() => { try { return JSON.parse(hobbies) } catch(e) { return [] } })(),
         qualificationsJson: qualificationsArray,
         extraData: (() => {
           let parsed = extraData ? JSON.parse(extraData) : {};
-          if (linkedin) parsed.linkedin = linkedin;
-          if (youtube) parsed.youtube = youtube;
+          parsed.linkedin = linkedin || "";
+          parsed.youtube = youtube || "";
+          parsed.conflictOfInterestSignature = conflictOfInterestSignature || "NA";
+          if (agreedToGuidelines !== undefined) parsed.agreedToGuidelines = agreedToGuidelines === 'true' || agreedToGuidelines === true;
+          if (agreedToInfoDoc !== undefined) parsed.agreedToInfoDoc = agreedToInfoDoc === 'true' || agreedToInfoDoc === true;
           return parsed;
         })(),
         books: {
           create: booksArray.map((b, idx) => ({
-            title: b.title,
-            subtitle: b.subtitle,
-            genre: b.genre,
-            subGenre: b.subGenre,
-            synopsis: b.synopsis,
-              purpose: b.purpose,
-            pages: parseInt(b.pages) || null,
-            mrp: parseFloat(b.mrp),
+            title: b.title || "NA",
+            subtitle: b.subtitle || "NA",
+            genre: b.genre || "NA",
+            subGenre: b.subGenre || "NA",
+            synopsis: b.synopsis || "NA",
+            pages: parseInt(b.pages) || 0,
+            mrp: parseFloat(b.mrp) || 0,
             stock: parseInt(b.stock) || 0,
-            language: b.language,
-            isbn: b.isbn,
-            publisher: b.publisher,
-            publicationDate: b.publicationDate,
-            edition: b.edition,
-            format: b.format,
-            purpose: b.purpose,
-            coverUrl: covers[idx] || covers[0] || null,
+            language: b.language || "NA",
+            isbn: b.isbn || "0000000000000",
+            publisher: b.publisher || "NA",
+            publicationDate: b.publicationDate || "NA",
+            edition: b.edition || "1",
+            format: b.format || "NA",
+            printFormat: b.printFormat || "NA",
+            purpose: b.purpose || "NA",
+            coverUrl: covers[idx] || covers[0] || "",
             status: 'Pending'
           }))
         }
@@ -316,7 +319,7 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
 
     const { 
       name, phone, whatsapp, bio, penName, city, state, instagram, facebook, linkedin, youtube, 
-      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId
+      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId, conflictOfInterestSignature, agreedToGuidelines, agreedToInfoDoc
     } = req.body;
 
     let booksArray = [];
@@ -380,6 +383,10 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
           let parsed = extraData ? JSON.parse(extraData) : (author.extraData || {});
           if (linkedin) parsed.linkedin = linkedin;
           if (youtube) parsed.youtube = youtube;
+          if (conflictOfInterestSignature) parsed.conflictOfInterestSignature = conflictOfInterestSignature;
+          if (agreedToGuidelines !== undefined) parsed.agreedToGuidelines = agreedToGuidelines === 'true' || agreedToGuidelines === true;
+          if (agreedToInfoDoc !== undefined) parsed.agreedToInfoDoc = agreedToInfoDoc === 'true' || agreedToInfoDoc === true;
+          parsed.isReapplied = true;
           return parsed;
         })()
       }
@@ -394,7 +401,7 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
          synopsis: b.synopsis,
               purpose: b.purpose, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
          stock: parseInt(b.stock) || 0, language: b.language, isbn: b.isbn,
-         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, purpose: b.purpose
+         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat, purpose: b.purpose
        };
        if (covers[i] || (i === 0 && covers[0])) {
           bookData.coverUrl = covers[i] || covers[0];
@@ -404,6 +411,17 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
        } else {
           await prisma.book.create({ data: { ...bookData, authorId: author.id, status: 'Pending' } });
        }
+    }
+
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      const emailContent = `
+        <p>Dear ${author.name || name},</p>
+        <p>We have received your updated application with the Pune Authors' Association.</p>
+        <p>Your profile is now <strong>under review</strong> by our editorial team. We aim to process all applications within <strong>5–7 working days</strong>.</p>
+        <p>We hope to be able to approve your application this time. If you have any questions in the meantime, feel free to reach out to us.</p>
+        <p style="margin-top:16px;">Warm regards,<br/>Pune Authors' Association</p>
+      `;
+      sendNotificationEmail(author.email, "Reapplication Received – PAA", emailWrap("Reapplication Received", emailContent));
     }
 
     res.json({ success: true });
@@ -477,7 +495,7 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
 
     const { 
       name, phone, whatsapp, bio, penName, city, state, instagram, facebook, linkedin, youtube, 
-      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId
+      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId, conflictOfInterestSignature, agreedToGuidelines, agreedToInfoDoc
     } = req.body;
 
     let booksArray = [];
@@ -543,6 +561,9 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
           let parsed = extraData ? JSON.parse(extraData) : (author.extraData || {});
           if (linkedin) parsed.linkedin = linkedin;
           if (youtube) parsed.youtube = youtube;
+          if (conflictOfInterestSignature) parsed.conflictOfInterestSignature = conflictOfInterestSignature;
+          if (agreedToGuidelines !== undefined) parsed.agreedToGuidelines = agreedToGuidelines === 'true' || agreedToGuidelines === true;
+          if (agreedToInfoDoc !== undefined) parsed.agreedToInfoDoc = agreedToInfoDoc === 'true' || agreedToInfoDoc === true;
           parsed.hasPendingEdits = false;
           return parsed;
         })()
@@ -558,7 +579,7 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
          synopsis: b.synopsis,
          purpose: b.purpose, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
          stock: parseInt(b.stock) || 0, language: b.language, isbn: b.isbn,
-         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format
+         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat, purpose: b.purpose
        };
        if (covers[i] || (i === 0 && covers[0])) {
           bookData.coverUrl = covers[i] || covers[0];

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import qrCode from "./data/qr_code.jpeg";
 import { bookCategories } from "../data/categories";
-import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon } from "lucide-react";
+import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon, ArrowLeft } from "lucide-react";
 
 const indianStates = [
   "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
@@ -64,13 +64,30 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       })
       .catch(console.error);
       
-    if (isReapply && initialData && !hasInitialized.current) {
+    if ((isReapply || isAdminEdit) && initialData && !hasInitialized.current) {
        hasInitialized.current = true;
        let parsedQuals = [];
        try { parsedQuals = JSON.parse(initialData.qualification); } catch(e) {}
        if (!Array.isArray(parsedQuals) || parsedQuals.length === 0) parsedQuals = [{ id: Date.now(), qualification: "", institution: "", subject: "", certificateUrl: "", certificateBlob: null }];
        setQualifications(parsedQuals);
        
+       const parseArray = (jsonVal: any, strVal: any) => {
+         if (Array.isArray(jsonVal)) return jsonVal;
+         if (typeof jsonVal === 'string') { try { const p = JSON.parse(jsonVal); if (Array.isArray(p)) return p; } catch(e) {} }
+         if (typeof strVal === 'string') {
+           try { const p = JSON.parse(strVal); if (Array.isArray(p)) return p; } catch(e) {}
+           return strVal.split(',').map((s: string) => s.trim()).filter(Boolean);
+         }
+         return [];
+       };
+       
+       let extra = {};
+       if (typeof initialData.extraData === 'string') {
+         try { extra = JSON.parse(initialData.extraData); } catch (e) {}
+       } else if (initialData.extraData) {
+         extra = initialData.extraData;
+       }
+
        if (initialData.books && initialData.books.length > 0) {
           const firstBook = initialData.books[0];
           setForm(prev => ({
@@ -84,8 +101,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              aadharNumber: initialData.aadharNumber || "",
              dob: initialData.dob || initialData.age || "",
              experience: initialData.experience || "",
-             skills: (() => { try { return JSON.parse(initialData.skillsJson) } catch(e) { return initialData.skills ? initialData.skills.split(',').map((s:any)=>s.trim()) : [] } })(),
-             hobbies: (() => { try { return JSON.parse(initialData.hobbiesJson) } catch(e) { return initialData.hobbies ? initialData.hobbies.split(',').map((s:any)=>s.trim()) : [] } })(),
+             skills: parseArray(initialData.skillsJson, initialData.skills),
+             hobbies: parseArray(initialData.hobbiesJson, initialData.hobbies),
              whyJoining: initialData.whyJoining || "",
              bio: initialData.bio || "",
              penName: initialData.penName || "",
@@ -93,7 +110,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              state: initialData.state || "",
              instagram: initialData.instagram || "",
              facebook: initialData.facebook || "",
+             linkedin: (extra as any).linkedin || "",
+             youtube: (extra as any).youtube || "",
              transactionId: initialData.transactionId || "",
+             conflictOfInterestSignature: (extra as any).conflictOfInterestSignature || "",
+             agreedToGuidelines: (extra as any).agreedToGuidelines || false,
+             agreedToInfoDoc: (extra as any).agreedToInfoDoc || false,
              
              // book 1 prefill
              title: firstBook.title || "",
@@ -111,7 +133,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              publicationDate: firstBook.publicationDate || "",
              edition: firstBook.edition || "",
              format: firstBook.format || "",
-             printFormat: firstBook.printFormat || ""
+             printFormat: firstBook.printFormat || "",
+             purposeOfWriting: firstBook.purpose || ""
           }));
           if (initialData.books.length > 1) {
              setBooks(initialData.books.slice(1).map((b: any) => ({
@@ -133,8 +156,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              aadharNumber: initialData.aadharNumber || "",
              dob: initialData.dob || initialData.age || "",
              experience: initialData.experience || "",
-             skills: (() => { try { return JSON.parse(initialData.skillsJson) } catch(e) { return initialData.skills ? initialData.skills.split(',').map((s:any)=>s.trim()) : [] } })(),
-             hobbies: (() => { try { return JSON.parse(initialData.hobbiesJson) } catch(e) { return initialData.hobbies ? initialData.hobbies.split(',').map((s:any)=>s.trim()) : [] } })(),
+             skills: parseArray(initialData.skillsJson, initialData.skills),
+             hobbies: parseArray(initialData.hobbiesJson, initialData.hobbies),
              whyJoining: initialData.whyJoining || "",
              bio: initialData.bio || "",
              penName: initialData.penName || "",
@@ -142,7 +165,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              state: initialData.state || "",
              instagram: initialData.instagram || "",
              facebook: initialData.facebook || "",
-             transactionId: initialData.transactionId || ""
+             linkedin: (extra as any).linkedin || "",
+             youtube: (extra as any).youtube || "",
+             transactionId: initialData.transactionId || "",
+             conflictOfInterestSignature: (extra as any).conflictOfInterestSignature || "",
+             agreedToGuidelines: (extra as any).agreedToGuidelines || false,
+             agreedToInfoDoc: (extra as any).agreedToInfoDoc || false
           }));
        }
        if (initialData.extraData) {
@@ -152,7 +180,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
        if (initialData.paymentScreenshot) setPaymentScreenshotUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.paymentScreenshot}`);
        if (initialData.qrCodeUrl) setQrCodeUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.qrCodeUrl}`);
     }
-  }, [isReapply, initialData]);
+  }, [isReapply, isAdminEdit, initialData]);
 
 
   const [form, setForm] = useState({
@@ -208,15 +236,38 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     let error = "";
     if (key === "name" && !value) error = "Name is required.";
     if (key === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value as string)) error = "Invalid email address.";
-    if (!isReapply && key === "password" && (value as string).length < 6) error = "Password must be at least 6 characters.";
+    if (!isReapply && !isAdminEdit && key === "password" && (value as string).length < 6) error = "Password must be at least 6 characters.";
     if (key === "phone" && !/^\d{10}$/.test((value as string).replace(/\D/g, ''))) error = "Must be a 10-digit number.";
     if (key === "address" && !value) error = "Full Address is required.";
     if (key === "aadharNumber") {
       if (!value) error = "Aadhar Number is required.";
       else if (!/^\d{12}$/.test(value as string)) error = "Aadhar Number must be exactly 12 digits.";
     }
-    if (key === "dob" && !value) error = "Date of Birth is required.";
-    if (key === "experience" && (value === "" || isNaN(Number(value)) || Number(value) < 0 || Number(value) > 70)) error = "Experience must be a number between 0 and 70.";
+    if (key === "dob") {
+      if (!value) error = "Date of Birth is required.";
+      else if (form.experience) {
+        const birthDate = new Date(value as string);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        if (today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) age--;
+        if (Number(form.experience) > age) {
+          setErrors(prev => ({ ...prev, experience: "Experience cannot be greater than your age." }));
+        } else {
+          setErrors(prev => ({ ...prev, experience: "" }));
+        }
+      }
+    }
+    if (key === "experience") {
+      if (value === "" || isNaN(Number(value)) || Number(value) < 0 || Number(value) > 70) {
+        error = "Experience must be a number between 0 and 70.";
+      } else if (form.dob) {
+        const birthDate = new Date(form.dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        if (today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) age--;
+        if (Number(value) > age) error = "Experience cannot be greater than your age.";
+      }
+    }
     if (key === "skills" && (!value || value.length === 0)) error = "Skills are required.";
     if (key === "hobbies" && (!value || value.length === 0)) error = "Hobbies are required.";
     if (key === "bio") {
@@ -302,45 +353,52 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
 
   return (
     <main className="font-sans min-h-screen bg-[#F8FAFC] text-paa-navy">
-      {/* Header */}
+      {/* Scrollable Header Banner */}
       {isAdminEdit ? (
-        <section className="bg-paa-navy py-12 px-6 text-center text-white relative">
+        <section className="bg-paa-navy py-6 md:py-8 px-6 text-center text-white relative">
           <button onClick={onAdminCancel} className="absolute left-6 top-1/2 -translate-y-1/2 text-paa-gold hover:text-white flex items-center gap-2 text-sm font-bold tracking-widest uppercase transition-colors">
-            <ArrowLeft size={16} /> Back to Dashboard
+            <ArrowLeft size={16} /> <span className="hidden md:inline">Back to Dashboard</span>
           </button>
-          <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-2">Admin Review Mode</div>
-          <h1 className="font-serif text-3xl font-medium tracking-tight">Review Application: {initialData?.name}</h1>
+          <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-1 md:mb-2">Admin Review Mode</div>
+          <h1 className="font-serif text-2xl md:text-3xl font-medium tracking-tight">Review Application: {initialData?.name}</h1>
+        </section>
+      ) : isReapply ? (
+        <section className="bg-paa-navy py-6 px-6 text-center text-white">
+          <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-1">Edit &amp; Reapply</div>
+          <h1 className="font-serif text-xl md:text-2xl font-medium tracking-tight">Update Your Application</h1>
         </section>
       ) : (
-        <section className="bg-paa-navy py-16 px-6 text-center text-white">
-          <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-3">New Author Onboarding</div>
-          <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight mb-3">Join Pune Authors' Association</h1>
-          <p className="text-sm text-white/60 max-w-lg mx-auto">A one-time application reviewed by our editorial team within 5-7 working days.</p>
+        <section className="bg-paa-navy py-8 px-6 text-center text-white">
+          <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-2 md:mb-3">New Author Onboarding</div>
+          <h1 className="font-serif text-2xl md:text-3xl font-medium tracking-tight mb-2 md:mb-3">Join Pune Authors&apos; Association</h1>
+          <p className="text-xs md:text-sm text-white/60 max-w-lg mx-auto">A one-time application reviewed by our editorial team within 5-7 working days.</p>
         </section>
       )}
 
-      {/* Stepper */}
-      <div className="bg-white border-b border-paa-navy/5 px-2 md:px-6 py-4 md:py-5 sticky top-[72px] left-0 right-0 z-30 shadow-sm overflow-x-auto hide-scrollbar">
-        <div className="max-w-3xl mx-auto flex items-center justify-between md:justify-center min-w-max md:min-w-0 pb-1 md:pb-0">
-          {steps.map((s, i) => (
-            <div key={s.title} className="flex items-center">
-              <div
-                className={`flex flex-col items-center px-1 md:px-3 ${i <= step ? "cursor-pointer" : "cursor-default"}`}
-                onClick={() => { if (i <= step) setStep(i); }}
-              >
-                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-1.5 md:mb-2 transition-all duration-300 shadow-sm
-                  ${i < step ? "bg-emerald-500 text-white shadow-emerald-500/20" : i === step ? "bg-paa-gold text-paa-navy shadow-paa-gold/20" : "bg-gray-100 text-gray-400"}`}>
-                  {i < step ? <CheckCircle size={14} className="md:w-[18px] md:h-[18px]" /> : <span className="scale-75 md:scale-100">{s.icon}</span>}
+      {/* Sticky Stepper Only */}
+      <div className={`sticky z-40 w-full shadow-md ${isAdminEdit ? 'top-0' : isReapply ? 'top-[64px]' : 'top-0'}`}>
+        <div className="bg-white border-b border-paa-navy/5 px-2 md:px-6 py-3 md:py-4 overflow-x-auto hide-scrollbar">
+          <div className="max-w-3xl mx-auto flex items-center justify-between md:justify-center min-w-max md:min-w-0 pb-1 md:pb-0">
+            {steps.map((s, i) => (
+              <div key={s.title} className="flex items-center">
+                <div
+                  className={`flex flex-col items-center px-1 md:px-3 ${i <= step || isAdminEdit ? "cursor-pointer" : "cursor-default"}`}
+                  onClick={() => { if (i <= step || isAdminEdit) setStep(i); }}
+                >
+                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-1.5 md:mb-2 transition-all duration-300 shadow-sm
+                    ${i < step ? "bg-emerald-500 text-white shadow-emerald-500/20" : i === step ? "bg-paa-gold text-paa-navy shadow-paa-gold/20" : "bg-gray-100 text-gray-400"}`}>
+                    {i < step ? <CheckCircle size={14} className="md:w-[18px] md:h-[18px]" /> : <span className="scale-75 md:scale-100">{s.icon}</span>}
+                  </div>
+                  <span className={`text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-center whitespace-nowrap transition-colors ${i === step ? "text-paa-navy" : "text-gray-400"}`}>
+                    {s.title}
+                  </span>
                 </div>
-                <span className={`text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-center whitespace-nowrap transition-colors ${i === step ? "text-paa-navy" : "text-gray-400"}`}>
-                  {s.title}
-                </span>
+                {i < steps.length - 1 && (
+                  <div className={`w-6 md:w-12 h-0.5 transition-colors ${i < step ? "bg-emerald-500" : "bg-gray-200"}`} />
+                )}
               </div>
-              {i < steps.length - 1 && (
-                <div className={`w-6 md:w-12 h-0.5 transition-colors ${i < step ? "bg-emerald-500" : "bg-gray-200"}`} />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -372,14 +430,14 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     </div>
                   </div>
 
-                  {/* Phone + Password in one row */}
+                  {/* Phone + Password (if applicable) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Phone Number *</label>
                       <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''}`} placeholder="10-digit mobile number" />
                       {errors.phone && <div className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</div>}
                     </div>
-                    {!isReapply && (
+                    {!isReapply && !isAdminEdit ? (
                       <div>
                         <label className="dash-label">Password (For Login) *</label>
                         <div className="relative">
@@ -396,21 +454,29 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         </div>
                         {errors.password && <div className="text-red-500 text-xs mt-1 font-medium">{errors.password}</div>}
                       </div>
+                    ) : (
+                      <div>
+                        <label className="dash-label">Aadhar Number *</label>
+                        <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
+                        {errors.aadharNumber && <div className="text-red-500 text-xs mt-1 font-medium">{errors.aadharNumber}</div>}
+                      </div>
                     )}
                   </div>
 
-                  {/* Address + Aadhaar */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Address + Aadhaar (if password was shown) */}
+                  <div className={`grid grid-cols-1 ${!isReapply && !isAdminEdit ? "md:grid-cols-2" : ""} gap-6`}>
                     <div>
                       <label className="dash-label">Full Address *</label>
                       <input type="text" value={form.address} onChange={(e) => update("address", e.target.value)} className={`dash-input w-full ${errors.address ? '!border-red-500' : ''}`} placeholder="House No./Flat No., Building, Street, Area" />
                       {errors.address && <div className="text-red-500 text-xs mt-1 font-medium">{errors.address}</div>}
                     </div>
-                    <div>
-                      <label className="dash-label">Aadhar Number *</label>
-                      <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
-                      {errors.aadharNumber && <div className="text-red-500 text-xs mt-1 font-medium">{errors.aadharNumber}</div>}
-                    </div>
+                    {!isReapply && !isAdminEdit && (
+                      <div>
+                        <label className="dash-label">Aadhar Number *</label>
+                        <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
+                        {errors.aadharNumber && <div className="text-red-500 text-xs mt-1 font-medium">{errors.aadharNumber}</div>}
+                      </div>
+                    )}
                   </div>
 
                   {/* Pincode + City + State in one row */}
@@ -533,17 +599,45 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                               </button>
                               {q.certificateUrl && (
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  {q.certificateBlob && q.certificateBlob.type?.startsWith('image/') ? (
-                                    <img src={q.certificateUrl} alt="Certificate" className="w-12 h-12 object-cover rounded-lg border border-gray-200 shadow-sm" />
-                                  ) : (
-                                    <div className="w-12 h-12 bg-red-50 rounded-lg border border-red-100 flex items-center justify-center shrink-0">
-                                      <FileText className="w-5 h-5 text-red-500" />
-                                    </div>
-                                  )}
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-semibold text-paa-navy truncate">{q.certificateBlob?.name || 'Certificate'}</p>
-                                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Uploaded ✓</p>
-                                  </div>
+                                  {(() => {
+                                    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                                    const isServerUrl = q.certificateUrl.startsWith('/uploads');
+                                    const fullUrl = isServerUrl ? `${API_URL}${q.certificateUrl}` : q.certificateUrl;
+                                    const isImage = q.certificateBlob ? q.certificateBlob.type?.startsWith('image/') : /\.(jpg|jpeg|png|gif|webp)$/i.test(q.certificateUrl);
+                                    const isPdf = !isImage;
+                                    return (
+                                      <>
+                                        {isServerUrl ? (
+                                          <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 group">
+                                            {isImage ? (
+                                              <img src={fullUrl} alt="Certificate" className="w-14 h-14 object-cover rounded-lg border-2 border-paa-navy/20 shadow-sm group-hover:border-paa-gold transition-colors" />
+                                            ) : (
+                                              <div className="w-14 h-14 bg-red-50 rounded-lg border-2 border-red-100 group-hover:border-paa-gold flex flex-col items-center justify-center shrink-0 transition-colors gap-0.5">
+                                                <FileText className="w-5 h-5 text-red-500" />
+                                                <span className="text-[8px] font-bold text-red-500 uppercase">PDF</span>
+                                              </div>
+                                            )}
+                                          </a>
+                                        ) : isImage ? (
+                                          <img src={q.certificateUrl} alt="Certificate" className="w-12 h-12 object-cover rounded-lg border border-gray-200 shadow-sm" />
+                                        ) : (
+                                          <div className="w-12 h-12 bg-red-50 rounded-lg border border-red-100 flex items-center justify-center shrink-0">
+                                            <FileText className="w-5 h-5 text-red-500" />
+                                          </div>
+                                        )}
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-semibold text-paa-navy truncate">{q.certificateBlob?.name || 'Certificate'}</p>
+                                          {isServerUrl ? (
+                                            <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold uppercase tracking-widest hover:underline">
+                                              View {isPdf ? 'PDF' : 'Image'} ↗
+                                            </a>
+                                          ) : (
+                                            <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Uploaded ✓</p>
+                                          )}
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
                                   <button type="button" onClick={() => { const n = [...qualifications]; n[idx].certificateUrl = ''; n[idx].certificateBlob = null; setQualifications(n); }} className="ml-auto text-gray-400 hover:text-red-500 transition-colors shrink-0">
                                     <X size={14} />
                                   </button>
@@ -1136,9 +1230,10 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
               </button>
 
               {step < steps.length - 1 ? (
-                <button
-                  onClick={() => {
-                    if (step === 1) {
+                <div className="flex gap-3 flex-1 w-full justify-end">
+                  <button
+                    onClick={() => {
+                    if (step === 1 && !isAdminEdit) {
                       const hasPartialBook = form.title || form.genre || form.synopsis || form.mrp || form.pages || form.isbn;
                       if (hasPartialBook) {
                         const missingContinueFields = [];
@@ -1178,6 +1273,16 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                 >
                   Continue <ChevronRight size={14} />
                 </button>
+                {isAdminEdit && (
+                  <button
+                    type="button"
+                    onClick={onAdminReject}
+                    className="dash-btn px-6 py-2.5 rounded-full flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white shadow-premium hover:-translate-y-0.5 ml-auto"
+                  >
+                    <X className="w-4 h-4" /> Reject Application
+                  </button>
+                )}
+              </div>
               ) : (
                 <div className="flex gap-3">
                 <button
@@ -1190,7 +1295,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     if (!form.name) missingProfileFields.push('Name');
                     if (!form.email) missingProfileFields.push('Email');
                     if (!form.phone) missingProfileFields.push('Phone');
-                    if (!isReapply && !form.password) missingProfileFields.push('Password');
+                    if (!isReapply && !isAdminEdit && !form.password) missingProfileFields.push('Password');
                     if (!form.bio) missingProfileFields.push('Bio');
                     if (form.bio && (bioWordCount < 100 || bioWordCount > 150)) missingProfileFields.push(`Bio word count (currently ${bioWordCount}, needs 100-150)`);
                     if (!authorBlob && !authorPhotoUrl) missingProfileFields.push('Author Photo');
@@ -1289,7 +1394,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           publisher: b.publisher,
                           publicationDate: b.publicationDate,
                           edition: b.edition,
-                          format: b.format
+                          format: b.format,
+                          printFormat: b.printFormat,
+                          purpose: b.purposeOfWriting || b.purpose
                         };
                       })));
 
@@ -1348,7 +1455,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <button
                     type="button"
                     onClick={onAdminReject}
-                    className="dash-btn px-6 py-2.5 rounded-full flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white shadow-premium hover:-translate-y-0.5"
+                    className="dash-btn px-6 py-2.5 rounded-full flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white shadow-premium hover:-translate-y-0.5 ml-auto"
                   >
                     <X className="w-4 h-4" /> Reject Application
                   </button>

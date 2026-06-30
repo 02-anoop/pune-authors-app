@@ -146,10 +146,12 @@ export function NavBar() {
         
         {/* Desktop Actions */}
         <div className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-          <button onClick={() => setCartOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", position: 'relative', display: 'flex', alignItems: 'center', color: '#111' }}>
-            <ShoppingCart size={20} />
-            {cartCount > 0 && <span style={{ position: 'absolute', top: -8, right: -12, background: '#b44d28', color: '#fff', fontSize: 10, fontWeight: 'bold', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>{cartCount}</span>}
-          </button>
+          {token && (
+            <button onClick={() => setCartOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", position: 'relative', display: 'flex', alignItems: 'center', color: '#111' }}>
+              <ShoppingCart size={20} />
+              {cartCount > 0 && <span style={{ position: 'absolute', top: -8, right: -12, background: '#b44d28', color: '#fff', fontSize: 10, fontWeight: 'bold', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>{cartCount}</span>}
+            </button>
+          )}
           {token ? (
             <Link
               to={userRole === "ADMIN" ? "/operations" : userRole === "AUTHOR" ? "/dashboard" : "/profile"}
@@ -223,10 +225,12 @@ export function NavBar() {
 
         {/* Mobile Toggle & Cart */}
         <div className="mobile-toggle" style={{ display: "none", alignItems: "center", gap: "1.2rem" }}>
-          <button onClick={() => setCartOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", position: 'relative', display: 'flex', color: '#111' }}>
-            <ShoppingCart size={22} />
-            {cartCount > 0 && <span style={{ position: 'absolute', top: -8, right: -12, background: '#b44d28', color: '#fff', fontSize: 10, fontWeight: 'bold', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>{cartCount}</span>}
-          </button>
+          {token && (
+            <button onClick={() => setCartOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", position: 'relative', display: 'flex', color: '#111' }}>
+              <ShoppingCart size={22} />
+              {cartCount > 0 && <span style={{ position: 'absolute', top: -8, right: -12, background: '#b44d28', color: '#fff', fontSize: 10, fontWeight: 'bold', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>{cartCount}</span>}
+            </button>
+          )}
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
             style={{

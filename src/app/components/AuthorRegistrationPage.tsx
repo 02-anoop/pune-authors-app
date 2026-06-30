@@ -31,7 +31,7 @@ const genreOptions = [
   { code: "C", label: "Children's", color: "#16a34a" },
 ];
 
-export function AuthorRegistrationPage({ initialData, isReapply = false, onReapplySuccess }: any = {}) {
+export function AuthorRegistrationPage({ initialData, isReapply = false, onReapplySuccess, isAdminEdit = false, onAdminSave, onAdminReject, onAdminCancel }: any = {}) {
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -248,7 +248,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     if (key === "mrp" && (!value || Number(value) <= 0)) error = "Valid MRP is required.";
     if (key === "pages" && (!value || Number(value) <= 0)) error = "Number of Pages is required.";
     if (key === "language" && !value) error = "Language is required.";
-    if (key === "isbn" && !value) error = "ISBN is required.";
+    if (key === "isbn") {
+      const digits = String(value).replace(/\D/g, '');
+      if (!digits) error = "ISBN is required.";
+      else if (digits.length !== 10 && digits.length !== 13) error = "ISBN must be exactly 10 or 13 digits.";
+    }
     if (key === "publisher" && !value) error = "Publisher is required.";
     if (key === "publicationDate" && !value) error = "Publication Date is required.";
     if (key === "format" && !value) error = "Book Format is required.";
@@ -299,14 +303,24 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   return (
     <main className="font-sans min-h-screen bg-[#F8FAFC] text-paa-navy">
       {/* Header */}
-      <section className="bg-paa-navy py-16 px-6 text-center text-white">
-        <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-3">New Author Onboarding</div>
-        <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight mb-3">Join Pune Authors' Association</h1>
-        <p className="text-sm text-white/60 max-w-lg mx-auto">A one-time application reviewed by our editorial team within 5-7 working days.</p>
-      </section>
+      {isAdminEdit ? (
+        <section className="bg-paa-navy py-12 px-6 text-center text-white relative">
+          <button onClick={onAdminCancel} className="absolute left-6 top-1/2 -translate-y-1/2 text-paa-gold hover:text-white flex items-center gap-2 text-sm font-bold tracking-widest uppercase transition-colors">
+            <ArrowLeft size={16} /> Back to Dashboard
+          </button>
+          <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-2">Admin Review Mode</div>
+          <h1 className="font-serif text-3xl font-medium tracking-tight">Review Application: {initialData?.name}</h1>
+        </section>
+      ) : (
+        <section className="bg-paa-navy py-16 px-6 text-center text-white">
+          <div className="font-sans text-[10px] text-paa-gold tracking-widest uppercase font-bold mb-3">New Author Onboarding</div>
+          <h1 className="font-serif text-3xl md:text-4xl font-medium tracking-tight mb-3">Join Pune Authors' Association</h1>
+          <p className="text-sm text-white/60 max-w-lg mx-auto">A one-time application reviewed by our editorial team within 5-7 working days.</p>
+        </section>
+      )}
 
       {/* Stepper */}
-      <div className="bg-white border-b border-paa-navy/5 px-2 md:px-6 py-4 md:py-5 fixed top-0 left-0 right-0 z-40 shadow-sm overflow-x-auto hide-scrollbar">
+      <div className="bg-white border-b border-paa-navy/5 px-2 md:px-6 py-4 md:py-5 sticky top-[72px] left-0 right-0 z-30 shadow-sm overflow-x-auto hide-scrollbar">
         <div className="max-w-3xl mx-auto flex items-center justify-between md:justify-center min-w-max md:min-w-0 pb-1 md:pb-0">
           {steps.map((s, i) => (
             <div key={s.title} className="flex items-center">
@@ -330,7 +344,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
         </div>
       </div>
 
-      <div className="w-full px-6 md:px-12 lg:px-20 my-12 pb-20 pt-24">
+      <div className="w-full px-6 md:px-12 lg:px-20 my-12 pb-20">
         <div className="max-w-5xl mx-auto">
         {!submitted ? (
           <div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-8 md:p-12 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out">
@@ -843,12 +857,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                       <label className="dash-label">ISBN Number *</label>
-                      <input type="text" placeholder="e.g. 978-3-16-148410-0" value={form.isbn} onChange={(e) => update("isbn", e.target.value)} className={`dash-input w-full ${errors.isbn ? '!border-red-500' : ''}`} />
+                      <input type="text" inputMode="numeric" placeholder="10 or 13 digit ISBN" value={form.isbn} onChange={(e) => update("isbn", e.target.value.replace(/\D/g, ''))} maxLength={13} className={`dash-input w-full ${errors.isbn ? '!border-red-500' : ''}`} />
                       {errors.isbn && <div className="text-red-500 text-xs mt-1 font-medium">{errors.isbn}</div>}
                     </div>
                     <div>
                       <label className="dash-label">Edition</label>
-                      <input type="text" placeholder="e.g. 1st Edition" value={form.edition} onChange={(e) => update("edition", e.target.value)} className="dash-input w-full" />
+                      <input type="text" inputMode="numeric" placeholder="e.g. 1" value={form.edition} onChange={(e) => update("edition", e.target.value.replace(/\D/g, ''))} className="dash-input w-full" />
                     </div>
                     <div>
                       <label className="dash-label">Book Format *</label>
@@ -874,7 +888,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <label className="dash-label">Number of Pages *</label>
-                      <input type="number" placeholder="256" value={form.pages} onChange={(e) => update("pages", e.target.value)} className={`dash-input w-full ${errors.pages ? '!border-red-500' : ''}`} />
+                      <input type="text" inputMode="numeric" placeholder="256" value={form.pages} onChange={(e) => update("pages", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.pages ? '!border-red-500' : ''}`} />
                       {errors.pages && <div className="text-red-500 text-xs mt-1 font-medium">{errors.pages}</div>}
                     </div>
                     <div>
@@ -1165,6 +1179,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   Continue <ChevronRight size={14} />
                 </button>
               ) : (
+                <div className="flex gap-3">
                 <button
                   disabled={isSubmitting}
                   onClick={async () => {
@@ -1302,7 +1317,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       }
 
                       let res;
-                      if (isReapply) {
+                      if (isAdminEdit) {
+                        res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/admin/authors/${initialData.id}/full-update-and-approve`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+                        if (onAdminSave) onAdminSave();
+                        return;
+                      } else if (isReapply) {
                         res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author/reapply-full`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
                       } else {
                         res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/authors/register`, formData);
@@ -1323,8 +1342,18 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   }}
                   className={`dash-btn px-6 py-2.5 rounded-full flex items-center gap-2 ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-premium hover:-translate-y-0.5"}`}
                 >
-                  {isSubmitting ? <span className="animate-pulse">Submitting...</span> : <><CheckCircle size={14} /> Submit Application</>}
+                  {isSubmitting ? <span className="animate-pulse">{isAdminEdit ? "Approving..." : "Submitting..."}</span> : <><CheckCircle size={14} /> {isAdminEdit ? "Approve Application" : "Submit Application"}</>}
                 </button>
+                {isAdminEdit && (
+                  <button
+                    type="button"
+                    onClick={onAdminReject}
+                    className="dash-btn px-6 py-2.5 rounded-full flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white shadow-premium hover:-translate-y-0.5"
+                  >
+                    <X className="w-4 h-4" /> Reject Application
+                  </button>
+                )}
+                </div>
               )}
             </div>
           </div>

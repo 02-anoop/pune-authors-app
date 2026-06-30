@@ -469,6 +469,125 @@ router.delete('/api/admin/authors/:id', verifyToken, isAdmin, async (req, res) =
 });
 
 // 5. Operations Dashboard - Approve Author
+router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmin, upload.any(), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const author = await prisma.author.findUnique({ where: { id }, include: { books: true } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+
+    const { 
+      name, phone, whatsapp, bio, penName, city, state, instagram, facebook, linkedin, youtube, 
+      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId
+    } = req.body;
+
+    let booksArray = [];
+    if (req.body.books) {
+      try { booksArray = JSON.parse(req.body.books); } catch(e) {}
+    }
+    if (booksArray.length === 0 && req.body.title) {
+       booksArray.push({
+         title: req.body.title, subtitle: req.body.subtitle, genre: req.body.genre, subGenre: req.body.subGenre,
+         synopsis: req.body.synopsis, pages: req.body.pages, mrp: req.body.mrp, stock: req.body.stock,
+         language: req.body.language, isbn: req.body.isbn, publisher: req.body.publisher,
+         publicationDate: req.body.publicationDate, edition: req.body.edition, format: req.body.format, purpose: req.body.purposeOfWriting
+       });
+    }
+
+    let qualificationsArray = [];
+    if (qualifications) {
+       try { qualificationsArray = JSON.parse(qualifications); } catch(e) {}
+    } else if (qualification) {
+       qualificationsArray.push({ qualification, institution, subject });
+    }
+
+    let photoUrl = author.photoUrl, paymentScreenshotUrl = author.paymentScreenshot, qrCodeUrl = author.qrCodeUrl;
+    let covers = {};
+    
+    // Copy existing certificates
+    let existingQuals = [];
+    try { existingQuals = JSON.parse(author.qualification || '[]'); } catch(e) {}
+    qualificationsArray.forEach(q => {
+       const eq = existingQuals.find(ex => ex.id === q.id);
+       if (eq && eq.certificateUrl) q.certificateUrl = eq.certificateUrl;
+    });
+
+    if (Array.isArray(req.files)) {
+       for (const file of req.files) {
+          if (file.fieldname === 'photo') photoUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'paymentScreenshot') paymentScreenshotUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'qrCode') qrCodeUrl = `/uploads/${file.filename}`;
+          if (file.fieldname.startsWith('cover_')) {
+             const idx = file.fieldname.split('_')[1];
+             covers[idx] = `/uploads/${file.filename}`;
+          }
+          if (file.fieldname.startsWith('certificate_')) {
+             const certId = file.fieldname.split('_')[1];
+             const q = qualificationsArray.find(q => q.id == certId);
+             if (q) q.certificateUrl = `/uploads/${file.filename}`;
+          }
+       }
+    }
+    
+    const finalQualificationString = JSON.stringify(qualificationsArray);
+
+    await prisma.author.update({
+      where: { id },
+      data: {
+        name, phone, whatsapp, bio, penName, city, state, instagram, facebook,
+        photoUrl, qrCodeUrl, transactionId, paymentScreenshot: paymentScreenshotUrl,
+        qualification: finalQualificationString,
+        age: dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, dob, skillsJson: (() => { try { return JSON.parse(skills) } catch(e) { return [] } })(), hobbiesJson: (() => { try { return JSON.parse(hobbies) } catch(e) { return [] } })(), qualificationsJson: qualificationsArray,
+        status: 'Active',
+        rejectionReason: null,
+        extraData: (() => {
+          let parsed = extraData ? JSON.parse(extraData) : (author.extraData || {});
+          if (linkedin) parsed.linkedin = linkedin;
+          if (youtube) parsed.youtube = youtube;
+          parsed.hasPendingEdits = false;
+          return parsed;
+        })()
+      }
+    });
+
+    // Update existing books instead of deleting
+    for (let i = 0; i < booksArray.length; i++) {
+       const b = booksArray[i];
+       const existingBook = author.books[i];
+       const bookData = {
+         title: b.title, subtitle: b.subtitle, genre: b.genre, subGenre: b.subGenre,
+         synopsis: b.synopsis,
+         purpose: b.purpose, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
+         stock: parseInt(b.stock) || 0, language: b.language, isbn: b.isbn,
+         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format
+       };
+       if (covers[i] || (i === 0 && covers[0])) {
+          bookData.coverUrl = covers[i] || covers[0];
+       }
+       if (existingBook) {
+          await prisma.book.update({ where: { id: existingBook.id }, data: { ...bookData, status: 'Approved' } });
+       } else {
+          await prisma.book.create({ data: { ...bookData, authorId: author.id, status: 'Approved' } });
+       }
+    }
+
+    // Send approval email
+    const emailContent = `
+      <p>Dear ${author.name},</p>
+      <p>Congratulations! Your author profile has been officially approved by the Pune Authors' Association editorial team.</p>
+      <p>Your books are now live in the catalogue. You can log in to your dashboard to manage your inventory, track orders, and participate in upcoming events.</p>
+      <p>Welcome to the community!</p>
+    `;
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      sendNotificationEmail(author.email, "Welcome to PAA - Your Profile is Approved!", emailWrap("Profile Approved", emailContent));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Approve and update failed', details: error.message });
+  }
+});
+
 router.post('/api/admin/authors/:id/approve', verifyToken, isAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
   const author = await prisma.author.update({

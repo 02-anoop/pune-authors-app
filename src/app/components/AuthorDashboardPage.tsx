@@ -10,7 +10,8 @@ import { LivePosDashboard } from './LivePosDashboard';
 import fictionData from './data/fiction_catalogue.json';
 import nonFictionData from './data/non_fiction_catalogue.json';
 import { AuthorRegistrationPage } from './AuthorRegistrationPage';
-
+import { NavBar } from './NavBar';
+import { Footer } from './Footer';
 
 export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -242,11 +243,18 @@ export function AuthorDashboardPage() {
     }
 
     return (
-      <div className="min-h-screen bg-paa-cream animate-fade-in-up font-sans flex items-center justify-center p-6">
-        <div className="bg-white max-w-lg w-full p-8 rounded-3xl-2xl shadow-premium border border-paa-navy/5 text-center">
-          <div className="flex justify-end mb-4">
-            <button onClick={handleLogout} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold uppercase tracking-widest rounded-full transition-colors"><LogOut size={16}/> Logout</button>
-          </div>
+      <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
+        <NavBar />
+        <main className="flex-1 flex items-center justify-center p-6 py-20 animate-fade-in-up">
+          <div className="bg-white max-w-lg w-full p-8 md:p-12 rounded-3xl-2xl shadow-premium border border-paa-navy/5 text-center relative overflow-hidden">
+            {/* Background flourish */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-paa-gold/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-paa-navy/5 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div className="relative">
+              <div className="flex justify-end mb-6">
+                <button onClick={handleLogout} className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-xs font-bold uppercase tracking-widest rounded-full transition-colors hover:bg-red-50 px-3 py-1.5"><LogOut size={14}/> Logout</button>
+              </div>
           
           <div className="mb-6 flex justify-center">
             {status === 'Pending' ? (
@@ -285,7 +293,10 @@ export function AuthorDashboardPage() {
               </div>
             )}
           </div>
-        </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -530,7 +541,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     publicationDate: '',
     edition: '',
     format: '',
-    printFormat: '', purpose: '',
+    printFormat: '', 
     purpose: ''
   });
   const [cover, setCover] = useState<File | null>(null);

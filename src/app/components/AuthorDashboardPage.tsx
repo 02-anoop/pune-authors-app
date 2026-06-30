@@ -556,7 +556,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     synopsis: '',
     pages: '',
     mrp: '',
-    stock: '0',
+    stock: '',
     language: '',
     isbn: '',
     publisher: '',
@@ -698,6 +698,14 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       toast.error('ISBN number is mandatory.');
       return;
     }
+    if (!newBook.mrp || parseFloat(newBook.mrp) <= 0) {
+      toast.error('MRP is mandatory and must be greater than 0.');
+      return;
+    }
+    if (!newBook.stock || parseInt(newBook.stock) < 0) {
+      toast.error('Initial Stock is mandatory and must be 0 or greater.');
+      return;
+    }
     if (newBook.synopsis.split(/\s+/).filter(Boolean).length > 100) {
       toast.error('Synopsis cannot exceed 100 words.');
       return;
@@ -743,7 +751,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       
       if (addAnother) {
         setNewBook({
-          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '0', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: '', printFormat: ''
+          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: '', printFormat: ''
         });
         setCover(null);
       } else {

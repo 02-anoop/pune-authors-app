@@ -41,7 +41,6 @@ axios.interceptors.response.use(
 );
 
 import { AuthorFullProfileView } from './AuthorFullProfileView';
-import { AuthorRegistrationPage } from './AuthorRegistrationPage';
 
 const Modal = ({ isOpen, onClose, title, children }: any) => {
     if (!isOpen) return null;
@@ -126,7 +125,6 @@ export function OperationsDashboardPage() {
   const [pendingReportStatus, setPendingReportStatus] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
-  const [selectedPendingAuthor, setSelectedPendingAuthor] = useState<any>(null);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isEditBookModalOpen, setIsEditBookModalOpen] = useState(false);
   const [rejectAuthorTarget, setRejectAuthorTarget] = useState<any>(null);
@@ -605,7 +603,8 @@ export function OperationsDashboardPage() {
       editingAuthor.books.forEach((b: any, i: number) => {
         if (!b.title?.trim()) errors.push(`Book ${i + 1}: Title is required`);
         if (!b.genre?.trim()) errors.push(`Book ${i + 1}: Genre is required`);
-        if (!b.mrp) errors.push(`Book ${i + 1}: MRP is required`);
+        if (!b.mrp || parseFloat(b.mrp) <= 0) errors.push(`Book ${i + 1}: MRP must be greater than 0`);
+        if (!b.stock || parseInt(b.stock) < 0) errors.push(`Book ${i + 1}: Initial Stock is required (>= 0)`);
         if (!b.pages) errors.push(`Book ${i + 1}: Pages is required`);
       });
     }
@@ -2160,26 +2159,6 @@ export function OperationsDashboardPage() {
       document.body.removeChild(link);
     };
 
-    if (selectedPendingAuthor) {
-      return (
-        <div className="bg-white fixed inset-0 z-50 overflow-y-auto">
-          <AuthorRegistrationPage 
-            initialData={selectedPendingAuthor} 
-            isAdminEdit={true}
-            onAdminCancel={() => setSelectedPendingAuthor(null)}
-            onAdminSave={() => {
-              setSelectedPendingAuthor(null);
-              fetchAuthors();
-            }}
-            onAdminReject={() => {
-              openRejectAuthorModal(selectedPendingAuthor);
-              setSelectedPendingAuthor(null);
-            }}
-          />
-        </div>
-      );
-    }
-
     if (selectedAuthor) {
       return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;
     }
@@ -2465,7 +2444,7 @@ export function OperationsDashboardPage() {
                     </span>
                  </td>
                  <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">
-                    Γé╣{book.mrp}
+                    ₹{book.mrp}
                  </td>
                  <td style={{textAlign: 'center'}}>
                     {book.stock >= 10 ? (

@@ -126,7 +126,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
              synopsis: firstBook.synopsis || "",
              pages: firstBook.pages || "",
              mrp: firstBook.mrp || "",
-             stock: firstBook.stock || "0",
+             stock: firstBook.stock || "",
              language: firstBook.language || "",
              isbn: firstBook.isbn || "",
              publisher: firstBook.publisher || "",
@@ -213,7 +213,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     synopsis: "",
     pages: "",
     mrp: "",
-    stock: "0",
+    stock: "",
     language: "",
     isbn: "",
     publisher: "",
@@ -1240,7 +1240,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         if (!form.title) missingContinueFields.push('Title');
                         if (!form.genre) missingContinueFields.push('Category');
                         if (!form.synopsis) missingContinueFields.push('Synopsis');
-                        if (!form.mrp) missingContinueFields.push('MRP');
+                        if (!form.mrp || parseFloat(form.mrp) <= 0) missingContinueFields.push('MRP (> 0)');
+                        if (!form.stock || parseInt(form.stock) < 0) missingContinueFields.push('Initial Stock (>= 0)');
                         if (!form.language) missingContinueFields.push('Language');
                         if (!form.publisher) missingContinueFields.push('Publisher');
                         if (!form.publicationDate) missingContinueFields.push('Publication Date');
@@ -1259,11 +1260,21 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           return;
                         }
                         setBooks([...books, { ...form, coverBlob, coverFileUrl }]);
-                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", purposeOfWriting: "" });
+                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", purposeOfWriting: "" });
                         setCoverBlob(null);
                         setCoverFileUrl(null);
                       } else if (books.length === 0) {
                         alert("Please fill all compulsory fields for at least one book.");
+                        return;
+                      }
+                    }
+                    if (step === 2 && !isAdminEdit) {
+                      if (!form.whyJoining || !form.whyJoining.trim()) {
+                        alert("Please explain why you are joining this group.");
+                        return;
+                      }
+                      if (!form.conflictOfInterestSignature || !form.agreedToGuidelines || !form.agreedToInfoDoc) {
+                        alert("Please agree to the declarations and sign the conflict of interest statement.");
                         return;
                       }
                     }
@@ -1343,6 +1354,10 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
 
                     // Step 2 Validations
+                    if (!form.whyJoining || !form.whyJoining.trim()) {
+                      setStep(2);
+                      alert("Please explain why you are joining this group."); return;
+                    }
                     if (!form.conflictOfInterestSignature || !form.agreedToGuidelines || !form.agreedToInfoDoc) {
                       setStep(2);
                       alert("Please agree to the declarations and sign the conflict of interest statement."); return;

@@ -41,6 +41,7 @@ axios.interceptors.response.use(
 );
 
 import { AuthorFullProfileView } from './AuthorFullProfileView';
+import { AuthorRegistrationPage } from './AuthorRegistrationPage';
 
 const Modal = ({ isOpen, onClose, title, children }: any) => {
     if (!isOpen) return null;
@@ -125,6 +126,7 @@ export function OperationsDashboardPage() {
   const [pendingReportStatus, setPendingReportStatus] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
+  const [selectedPendingAuthor, setSelectedPendingAuthor] = useState<any>(null);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isEditBookModalOpen, setIsEditBookModalOpen] = useState(false);
   const [rejectAuthorTarget, setRejectAuthorTarget] = useState<any>(null);
@@ -2158,6 +2160,26 @@ export function OperationsDashboardPage() {
       link.click();
       document.body.removeChild(link);
     };
+
+    if (selectedPendingAuthor) {
+      return (
+        <div className="bg-white fixed inset-0 z-50 overflow-y-auto">
+          <AuthorRegistrationPage 
+            initialData={selectedPendingAuthor} 
+            isAdminEdit={true}
+            onAdminCancel={() => setSelectedPendingAuthor(null)}
+            onAdminSave={() => {
+              setSelectedPendingAuthor(null);
+              fetchAuthors();
+            }}
+            onAdminReject={() => {
+              openRejectAuthorModal(selectedPendingAuthor);
+              setSelectedPendingAuthor(null);
+            }}
+          />
+        </div>
+      );
+    }
 
     if (selectedAuthor) {
       return <AuthorFullProfileView author={selectedAuthor} onBack={() => setSelectedAuthor(null)} />;

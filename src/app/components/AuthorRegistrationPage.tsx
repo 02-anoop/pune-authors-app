@@ -1932,10 +1932,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         onReapplySuccess();
                       }
                     } catch (e: any) {
-                      const msg = e.response?.data?.error || e.message || "Unknown error";
-                      const details = e.response?.data?.details || "";
-                      alert(`Failed to submit: ${msg} ${details}`);
-                      console.error(e);
+                      console.error("Submission error:", e.response?.data || e.message || e);
+                      alert("Oops! We hit a small snag on our end. Please try clicking submit again, or contact support if the issue persists.");
                     } finally {
                       setIsSubmitting(false);
                     }

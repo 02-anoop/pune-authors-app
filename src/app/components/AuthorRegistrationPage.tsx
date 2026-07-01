@@ -381,6 +381,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
           skills: parseArray(initialData.skillsJson, initialData.skills),
           hobbies: parseArray(initialData.hobbiesJson, initialData.hobbies),
           whyJoining: initialData.whyJoining || '',
+          isTraditionallyPublished: (extra as any).isTraditionallyPublished || (initialData.whyJoining ? 'yes' : ''),
           bio: initialData.bio || '',
           penName: initialData.penName || '',
           city: initialData.city || '',
@@ -419,6 +420,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     skills: [],
     hobbies: [],
     whyJoining: "",
+    isTraditionallyPublished: "",
     bio: "",
     penName: "",
     city: "",
@@ -677,7 +679,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
 
     // Questionnaire
     if (key === "conflictOfInterestSignature" && !value) error = "Signature is required.";
-    if (key === "whyJoining" && !value) error = "This field is required.";
+    if (key === "isTraditionallyPublished" && !value) error = "This field is required.";
+    if (key === "whyJoining" && form.isTraditionallyPublished === 'yes' && !value) error = "This field is required.";
 
     // Payment
     if (key === "transactionId" && !value) error = "Transaction ID is required.";
@@ -1580,32 +1583,44 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
 
                 <div className="space-y-8">
                   <div>
-                    <label className="dash-label">If you are published by a publisher, why are you joining this group and what priority will you give to this group? *</label>
-                    <textarea value={form.whyJoining} onChange={(e) => update("whyJoining", e.target.value)} rows={3} className={`dash-input w-full resize-y ${errors.whyJoining ? '!border-red-500' : ''} ${getDiffClass("whyJoining")}`} placeholder="Please explain your reasons..." />
-                    {errors.whyJoining && <div className="text-red-500 text-xs mt-1 font-medium">{errors.whyJoining}</div>}
-                    {getDiffUi("whyJoining")}
+                    <label className="dash-label">Are you published by a traditional publisher? *</label>
+                    <select value={form.isTraditionallyPublished} onChange={(e) => { update("isTraditionallyPublished", e.target.value); if(e.target.value === 'no') update("whyJoining", ""); }} className={`dash-input w-full ${errors.isTraditionallyPublished ? '!border-red-500' : ''}`}>
+                      <option value="">Select...</option>
+                      <option value="yes">Yes, I am published by a publisher</option>
+                      <option value="no">No, I am self-published</option>
+                    </select>
+                    {errors.isTraditionallyPublished && <div className="text-red-500 text-xs mt-1 font-medium">{errors.isTraditionallyPublished}</div>}
                   </div>
+
+                  {form.isTraditionallyPublished === 'yes' && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                      <label className="dash-label">If you are published by a publisher, why are you joining this group and what priority will you give to this group? *</label>
+                      <textarea value={form.whyJoining} onChange={(e) => update("whyJoining", e.target.value)} rows={3} className={`dash-input w-full resize-y ${errors.whyJoining ? '!border-red-500' : ''} ${getDiffClass("whyJoining")}`} placeholder="Please explain your reasons..." />
+                      {errors.whyJoining && <div className="text-red-500 text-xs mt-1 font-medium">{errors.whyJoining}</div>}
+                      {getDiffUi("whyJoining")}
+                    </div>
+                  )}
 
                   <div className="p-5 bg-gray-50 border border-paa-navy/10 rounded-2xl space-y-4">
                     <h3 className="font-serif font-medium text-paa-navy">Declarations</h3>
 
-                    <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="flex items-start gap-3 cursor-pointer group" onClick={() => { if (!form.agreedToGuidelines) setShowGuidelines(true); else update("agreedToGuidelines", false); }}>
                       <div className="mt-0.5">
-                        <input type="checkbox" checked={form.agreedToGuidelines} onChange={(e) => update("agreedToGuidelines", e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                        <input type="checkbox" checked={form.agreedToGuidelines} readOnly className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 pointer-events-none" />
                       </div>
                       <div className="text-sm text-paa-navy font-medium">
                         I have read and agree to the <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowGuidelines(true); }} className="text-emerald-600 hover:text-emerald-700 underline underline-offset-2">Group Guidelines</button> *
                       </div>
-                    </label>
+                    </div>
 
-                    <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="flex items-start gap-3 cursor-pointer group" onClick={() => { if (!form.agreedToInfoDoc) setShowInfoDoc(true); else update("agreedToInfoDoc", false); }}>
                       <div className="mt-0.5">
-                        <input type="checkbox" checked={form.agreedToInfoDoc} onChange={(e) => update("agreedToInfoDoc", e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                        <input type="checkbox" checked={form.agreedToInfoDoc} readOnly className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 pointer-events-none" />
                       </div>
                       <div className="text-sm text-paa-navy font-medium">
                         I have read the <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowInfoDoc(true); }} className="text-emerald-600 hover:text-emerald-700 underline underline-offset-2">Group Information Document</button> *
                       </div>
-                    </label>
+                    </div>
                   </div>
 
                   <div>
@@ -1743,7 +1758,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       }
                     }
                     if (formStepIndex === 2 && !isAdminEdit) {
-                      if (!form.whyJoining || !form.whyJoining.trim()) {
+                      if (!form.isTraditionallyPublished) {
+                        alert("Please indicate if you are published by a traditional publisher.");
+                        return;
+                      }
+                      if (form.isTraditionallyPublished === 'yes' && (!form.whyJoining || !form.whyJoining.trim())) {
                         alert("Please explain why you are joining this group.");
                         return;
                       }
@@ -1849,7 +1868,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
 
                     // Step 2 Validations
-                    if (!form.whyJoining || !form.whyJoining.trim()) {
+                    if (!form.isTraditionallyPublished) {
+                      setStep(isOnboardingMode ? 5 : 2);
+                      alert("Please indicate if you are published by a traditional publisher."); return;
+                    }
+                    if (form.isTraditionallyPublished === 'yes' && (!form.whyJoining || !form.whyJoining.trim())) {
                       setStep(isOnboardingMode ? 5 : 2);
                       alert("Please explain why you are joining this group."); return;
                     }

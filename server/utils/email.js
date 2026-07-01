@@ -68,7 +68,7 @@ const emailWrap = (heading, content) => `
 </style></head>
 <body>
   <div class="wrap">
-    <div class="header"><h1>Pune Authors' Association</h1><p>puneauthors.com</p></div>
+    <div class="header"><h1>Pune Authors' Association</h1><p><a href="https://main.defgy33rjp0v1.amplifyapp.com/" style="color: #6366f1; text-decoration: none;">main.defgy33rjp0v1.amplifyapp.com</a></p></div>
     <div class="body"><h2>${heading}</h2>${content}</div>
     <div class="footer">This is an automated message from the PAA platform. Please do not reply directly to this email.</div>
   </div>

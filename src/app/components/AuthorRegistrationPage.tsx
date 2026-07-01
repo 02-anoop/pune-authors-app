@@ -339,14 +339,17 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
        setQualifications(parsedQuals);
        
        const parseArray = (jsonVal: any, strVal: any) => {
-         if (Array.isArray(jsonVal)) return jsonVal;
-         if (typeof jsonVal === 'string') { try { const p = JSON.parse(jsonVal); if (Array.isArray(p)) return p; } catch(e) {} }
-         if (typeof strVal === 'string') {
-           try { const p = JSON.parse(strVal); if (Array.isArray(p)) return p; } catch(e) {}
-           return strVal.split(',').map((s: string) => s.trim()).filter(Boolean);
-         }
-         return [];
-       };
+          let parsed: any[] = [];
+          if (Array.isArray(jsonVal) && jsonVal.length > 0) parsed = jsonVal;
+          else if (typeof jsonVal === 'string') { try { const p = JSON.parse(jsonVal); if (Array.isArray(p)) parsed = p; } catch(e) {} }
+          
+          if (parsed.length === 0 && typeof strVal === 'string') {
+            try { const p = JSON.parse(strVal); if (Array.isArray(p)) parsed = p; } catch(e) {}
+            if (parsed.length === 0) parsed = strVal.split(',').filter(Boolean);
+          }
+          
+          return parsed.map((s: any) => String(s).replace(/[\[\]"\\]/g, '').trim()).filter(Boolean);
+        };
        
        let extra = {};
        if (typeof initialData.extraData === 'string') {

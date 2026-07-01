@@ -24,6 +24,12 @@ interface BookDetail {
   stock: number;
   status: string;
   createdAt: string;
+  format?: string;
+  pages?: number;
+  language?: string;
+  publisher?: string;
+  publicationDate?: string;
+  isbn?: string;
   author: {
     name: string;
     bio: string;
@@ -318,9 +324,47 @@ export function BookDetailPage() {
                   <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f0f0f5' }}>
                     <p style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Additional Information</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
-                      {Object.entries(book.author.extraData).filter(([k, v]) => typeof v !== 'object' && v !== null && k !== 'bundleRules' && k !== 'lowStockAlerts' && k !== 'lateFines' && k !== 'isPublishedByPublisher' && k !== 'whyJoining').map(([k, v]) => (
+                      {book.author.age && book.author.age !== 'NA' && (
+                        <div>
+                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>AGE</span>
+                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{book.author.age}</span>
+                        </div>
+                      )}
+                      {book.author.experience && book.author.experience !== 'NA' && book.author.experience !== '0' && (
+                        <div>
+                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>EXPERIENCE</span>
+                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{book.author.experience} Years</span>
+                        </div>
+                      )}
+                      {book.author.qualification && (() => {
+                        try {
+                          const quals = JSON.parse(book.author.qualification);
+                          if (Array.isArray(quals) && quals.length > 0 && quals[0].qualification) {
+                            return (
+                              <div style={{ gridColumn: '1 / -1' }}>
+                                <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>QUALIFICATIONS</span>
+                                <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{quals.map((q: any) => q.qualification).join(', ')}</span>
+                              </div>
+                            );
+                          }
+                        } catch(e) {}
+                        return null;
+                      })()}
+                      {book.author.skills && book.author.skills !== 'NA' && (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>SKILLS</span>
+                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{book.author.skills}</span>
+                        </div>
+                      )}
+                      {book.author.hobbies && book.author.hobbies !== 'NA' && (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>HOBBIES</span>
+                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{book.author.hobbies}</span>
+                        </div>
+                      )}
+                      {Object.entries(book.author.extraData).filter(([k, v]) => typeof v !== 'object' && v !== null && v !== '' && k !== 'bundleRules' && k !== 'lowStockAlerts' && k !== 'lateFines' && k !== 'isPublishedByPublisher' && k !== 'whyJoining' && k !== 'conflictOfInterestSignature' && k !== 'agreedToGuidelines' && k !== 'agreedToInfoDoc').map(([k, v]) => (
                         <div key={k}>
-                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>{k}</span>
+                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{k}</span>
                           <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{String(v)}</span>
                         </div>
                       ))}
@@ -409,6 +453,12 @@ export function BookDetailPage() {
               {[
                 { icon: <Tag size={14} />, label: "Genre", value: meta.label },
                 book.subGenre ? { icon: <Tag size={14} />, label: "Sub-Genre", value: book.subGenre } : null,
+                book.format && book.format !== "NA" ? { icon: <BookOpen size={14} />, label: "Format", value: book.format } : null,
+                book.pages ? { icon: <BookOpen size={14} />, label: "Pages", value: book.pages } : null,
+                book.language && book.language !== "NA" ? { icon: <MessageSquare size={14} />, label: "Language", value: book.language } : null,
+                book.publisher && book.publisher !== "NA" ? { icon: <User size={14} />, label: "Publisher", value: book.publisher } : null,
+                book.publicationDate && book.publicationDate !== "NA" ? { icon: <Package size={14} />, label: "Publication Date", value: new Date(book.publicationDate).toLocaleDateString() === 'Invalid Date' ? book.publicationDate : new Date(book.publicationDate).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' }) } : null,
+                book.isbn && book.isbn !== "0000000000000" ? { icon: <Tag size={14} />, label: "ISBN", value: book.isbn } : null,
                 { icon: <IndianRupee size={14} />, label: "Price (MRP)", value: `₹${book.mrp}` },
                 { icon: <Package size={14} />, label: "Stock", value: book.stock > 0 ? "In Stock" : "Out of stock" },
                 {

@@ -95,12 +95,70 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
     });
     
     const contentHtml = Object.values(byAuthor).map((author, index) => {
+      // Calculate age if it's a DOB
+      let ageStr = author.age && author.age !== 'NA' ? String(author.age) : '—';
+      if (ageStr.includes('-')) {
+         const birthDate = new Date(ageStr);
+         if (!isNaN(birthDate.getTime())) {
+             const ageNum = new Date().getFullYear() - birthDate.getFullYear();
+             ageStr = ageNum.toString();
+         }
+      }
+
+      // Parse JSON for qualifications
+      let qualStr = '—';
+      if (author.qualification && author.qualification !== 'NA') {
+         try {
+            const parsed = JSON.parse(author.qualification);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+               qualStr = parsed.map((q: any) => q.qualification).filter(Boolean).join(', ');
+            } else {
+               qualStr = author.qualification;
+            }
+         } catch(e) { qualStr = author.qualification; }
+      }
+
+      // Parse JSON for skills
+      let skillsStr = '—';
+      if (author.skills && author.skills !== 'NA') {
+         try {
+            const parsed = JSON.parse(author.skills);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+               skillsStr = parsed.filter(Boolean).join(', ');
+            } else {
+               skillsStr = author.skills;
+            }
+         } catch(e) { skillsStr = author.skills; }
+      }
+
+      // Parse JSON for hobbies
+      let hobbiesStr = '—';
+      if (author.hobbies && author.hobbies !== 'NA') {
+         try {
+            const parsed = JSON.parse(author.hobbies);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+               hobbiesStr = parsed.filter(Boolean).join(', ');
+            } else {
+               hobbiesStr = author.hobbies;
+            }
+         } catch(e) { hobbiesStr = author.hobbies; }
+      }
+      
+      const expStr = author.experience && author.experience !== 'NA' && author.experience !== '0' ? author.experience + ' Years' : '—';
+
       // Social links block
       const socials = [];
-      if (author.whatsapp) socials.push(`<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px;">&#128222; ${author.whatsapp}</span>`);
-      if (author.instagram) socials.push(`<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px;">&#128247; ${author.instagram.replace('https://instagram.com/', '@')}</span>`);
-      if (author.facebook) socials.push(`<span style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px;">&#128101; Facebook</span>`);
-      const socialHtml = socials.length > 0 ? `<div style="margin-top: 20px; font-size: 11px; color: #cbd5e1; display: flex; gap: 10px; flex-wrap: wrap;">${socials.join('')}</div>` : '';
+      if (author.whatsapp && author.whatsapp !== 'NA') socials.push(`<a href="https://wa.me/${author.whatsapp.replace(/\D/g,'')}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+        &#128222; ${author.whatsapp}
+      </a>`);
+      if (author.instagram && author.instagram !== 'NA') socials.push(`<a href="${author.instagram.startsWith('http') ? author.instagram : 'https://instagram.com/'+author.instagram}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+        &#128247; ${author.instagram.replace('https://instagram.com/', '@').replace('https://www.instagram.com/', '@')}
+      </a>`);
+      if (author.facebook && author.facebook !== 'NA') socials.push(`<a href="${author.facebook.startsWith('http') ? author.facebook : 'https://facebook.com/'+author.facebook}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+        &#128101; Facebook
+      </a>`);
+      
+      const socialHtml = socials.length > 0 ? `<div style="margin-top: 25px; font-size: 11px; display: flex; gap: 10px; flex-wrap: wrap;">${socials.join('')}</div>` : '';
 
       const authorBooksHtml = author.books.map((b, bIdx) => `
         <div style="display: flex; gap: 30px; margin-bottom: 40px; padding-bottom: 40px; border-bottom: ${bIdx === author.books.length - 1 ? 'none' : '1px solid #e2e8f0'}; break-inside: avoid;">
@@ -148,11 +206,16 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
             <div style="flex: 1; position: relative; z-index: 2;">
               <div style="display: inline-block; background: #b44d28; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 4px 10px; margin-bottom: 15px; font-weight: 800; font-family: system-ui, sans-serif;">Featured Author</div>
               <h2 style="margin: 0 0 15px; font-size: 42px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">${author.name}</h2>
-              ${author.qualification ? `<p style="margin: 0 0 10px; font-size: 11px; line-height: 1.6; color: #94a3b8; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 1px;">
-                <strong>Qual:</strong> ${author.qualification} &nbsp;|&nbsp; <strong>DOB:</strong> ${author.age || '—'} &nbsp;|&nbsp; <strong>Exp:</strong> ${author.experience || '—'}<br/>
-                <strong>Skills:</strong> ${author.skills || '—'} &nbsp;|&nbsp; <strong>Hobbies:</strong> ${author.hobbies || '—'}
-              </p>` : ''}
-              <p style="margin: 0; font-size: 14px; line-height: 1.8; color: #cbd5e1; text-align: justify; font-style: italic;">${author.bio}</p>
+              <div style="margin: 0 0 15px; font-size: 11px; line-height: 1.6; color: #94a3b8; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 1px;">
+                ${qualStr !== '—' ? `<div style="margin-bottom: 4px;"><strong>Qual:</strong> <span style="color: #cbd5e1">${qualStr}</span></div>` : ''}
+                <div style="display: flex; gap: 15px; margin-bottom: 4px;">
+                  ${ageStr !== '—' ? `<div><strong>Age:</strong> <span style="color: #cbd5e1">${ageStr}</span></div>` : ''}
+                  ${expStr !== '—' ? `<div><strong>Exp:</strong> <span style="color: #cbd5e1">${expStr}</span></div>` : ''}
+                </div>
+                ${skillsStr !== '—' ? `<div style="margin-bottom: 4px;"><strong>Skills:</strong> <span style="color: #cbd5e1">${skillsStr}</span></div>` : ''}
+                ${hobbiesStr !== '—' ? `<div style="margin-bottom: 4px;"><strong>Hobbies:</strong> <span style="color: #cbd5e1">${hobbiesStr}</span></div>` : ''}
+              </div>
+              <p style="margin: 0; font-size: 14px; line-height: 1.8; color: #e2e8f0; text-align: justify; font-style: italic; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">${author.bio}</p>
               ${socialHtml}
             </div>
           </div>

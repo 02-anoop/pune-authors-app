@@ -1730,6 +1730,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       } else if (books.length === 0) {
                         alert("Please fill all compulsory fields for at least one book.");
                         return;
+                      } else {
+                        const invalidBook = books.find((b: any) => !b.purposeOfWriting && !b.purpose);
+                        if (invalidBook) {
+                          alert(`The book "${invalidBook.title}" is missing the Purpose of Writing. Please edit the book and fill it in.`);
+                          return;
+                        }
                       }
                     }
                     if (formStepIndex === 2 && !isAdminEdit) {
@@ -1826,6 +1832,14 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     if (!hasBook) {
                       setStep(isOnboardingMode ? 4 : 1);
                       alert("Please fill all compulsory fields for at least one book (including ISBN, Pages, purpose of writing) and upload both front and back covers."); return;
+                    }
+                    if (books.length > 0) {
+                      const invalidBook = books.find((b: any) => !b.purposeOfWriting && !b.purpose);
+                      if (invalidBook) {
+                        setStep(isOnboardingMode ? 4 : 1);
+                        alert(`The book "${invalidBook.title}" is missing the Purpose of Writing. Please edit the book and fill it in before submitting.`);
+                        return;
+                      }
                     }
 
                     // Step 2 Validations

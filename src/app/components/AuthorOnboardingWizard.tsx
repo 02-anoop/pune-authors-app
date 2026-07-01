@@ -24,7 +24,8 @@ export function AuthorOnboardingWizard() {
         setIsChecking(false);
       });
     } else {
-      setIsChecking(false);
+      // User is not logged in! Force them to sign up & verify OTP first.
+      navigate("/signup?role=AUTHOR");
     }
   }, [navigate]);
 

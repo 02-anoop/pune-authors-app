@@ -118,7 +118,7 @@ export function LandingPage() {
             We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels.
           </p>
           <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
-            <Link to="/register" className="link-underline" style={{ color: "#111", fontSize: 13, fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+            <Link to="/signup?role=AUTHOR" className="link-underline" style={{ color: "#111", fontSize: 13, fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
               New Authors — Click here to JOIN <ArrowRight size={14} />
             </Link>
             <Link to="/catalogue" className="link-underline-subtle" style={{ color: "#333", fontSize: 13, fontWeight: 400, textDecoration: "none" }}>

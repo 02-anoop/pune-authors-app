@@ -1784,6 +1784,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     if (!form.city) missingProfileFields.push('City');
                     if (!form.state) missingProfileFields.push('State');
                     if (!form.aadharNumber) missingProfileFields.push('Aadhar Number');
+                    if (!form.dob) missingProfileFields.push('Date of Birth');
+                    if (!form.experience) missingProfileFields.push('Years of Experience');
                     if (!form.skills || form.skills.length === 0) missingProfileFields.push('Skills');
                     if (!form.hobbies || form.hobbies.length === 0) missingProfileFields.push('Hobbies');
                     

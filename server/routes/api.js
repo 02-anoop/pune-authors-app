@@ -140,11 +140,12 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
       qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId, conflictOfInterestSignature, agreedToGuidelines, agreedToInfoDoc
     } = req.body;
     
-    // Check if email already in use
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+    // Check if email already in use by an actual Author profile
+    const existingAuthor = await prisma.author.findUnique({ where: { email } });
+    if (existingAuthor) {
+      return res.status(400).json({ error: 'Email already registered as an Author' });
     }
+    const existingUser = await prisma.user.findUnique({ where: { email } });
 
     let booksArray = [];
     if (req.body.books) {
@@ -226,11 +227,22 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
       return res.status(400).json({ error: 'Qualification Certificate is mandatory.' });
     }
 
-    // Create login user
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role: 'AUTHOR', address }
-    });
+    // Handle login user
+    let user = existingUser;
+    if (!existingUser) {
+      if (!password) {
+         return res.status(400).json({ error: 'Password is required for new registration' });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user = await prisma.user.create({
+        data: { name, email, password: hashedPassword, role: 'AUTHOR', address }
+      });
+    } else {
+      await prisma.user.update({
+        where: { email },
+        data: { name, address, role: 'AUTHOR' }
+      });
+    }
 
     let author;
     try {
@@ -303,8 +315,10 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
       include: { books: true }
     });
     } catch (dbError) {
-      // Rollback user if author fails
-      await prisma.user.delete({ where: { email } });
+      // Rollback user if author fails AND user was just created
+      if (!existingUser) {
+        await prisma.user.delete({ where: { email } });
+      }
       throw dbError;
     }
 

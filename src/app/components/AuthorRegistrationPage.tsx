@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import axios from "axios";
+import localforage from "localforage";
 import qrCode from "./data/qr_code.jpeg";
+import pastEvents from "./data/past_events.json";
 import { bookCategories } from "../data/categories";
-import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon, ArrowLeft, Info, CalendarDays, Briefcase, MapPin, Clock, LogOut } from "lucide-react";
 
 const indianStates = [
   "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
@@ -13,12 +15,216 @@ const indianStates = [
   "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
 ];
 
-const steps = [
+const formSteps = [
   { title: "Author Profile", icon: <User size={18} />, desc: "Personal information and bio" },
   { title: "Book Details", icon: <BookOpen size={18} />, desc: "Title, synopsis, and cover" },
   { title: "Questionnaire", icon: <FileText size={18} />, desc: "Declarations & Guidelines" },
   { title: "Submit & Payment", icon: <CreditCard size={18} />, desc: "Application fee" },
 ];
+
+const toBase64 = (file: File | Blob): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result as string);
+  reader.onerror = error => reject(error);
+});
+
+const fromBase64 = async (dataURI: string, filename: string): Promise<File | null> => {
+  if (!dataURI || typeof dataURI !== 'string' || !dataURI.includes(',')) return null;
+  try {
+    const arr = dataURI.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : '';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    if (n === 0) return null;
+    const u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, {type:mime});
+  } catch (e) {
+    return null;
+  }
+};
+
+const onboardingInfoSteps = [
+  { title: "About PAA", icon: <Info size={18} />, desc: "Our origins and mission" },
+  { title: "Past Events", icon: <CalendarDays size={18} />, desc: "Literary highlights" },
+  { title: "Our Services", icon: <Briefcase size={18} />, desc: "What we offer" },
+];
+
+function WizardAboutStep() {
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">About The Group</h2>
+      <p className="text-sm text-paa-gray-text mb-8">Discover our origins, mission, and the collective strength of Pune authors.</p>
+      <div className="space-y-6 text-gray-700 text-sm md:text-base leading-relaxed bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-paa-navy/5">
+        <p>
+          The group was conceived in <strong className="text-paa-navy font-semibold">December 2024</strong> following the Pune Book Fair. While networking at a local stall, several authors recognized a shared challenge: the immense difficulty of selling independently in a saturated market.
+        </p>
+        <p>
+          The idea to form a unified coalition of Pune authors was spearheaded by <strong className="text-paa-navy font-semibold">Cdr Shiv Mathur</strong>. Having witnessed firsthand the struggles authors face with visibility and distribution, the vision became clear: find a way to promote literature collaboratively rather than competitively.
+        </p>
+        <p>
+          By pooling resources, we discovered that financial barriers to self-marketing drastically decreased. Shared costs allow us to execute large-scale activities, prominent stall placements, and robust marketing campaigns that would be prohibitively expensive for an individual author.
+        </p>
+        <p>
+          Today, a strict group guideline document ensures every author understands our shared agenda and ethical rules. As our success grew, we expanded our invitation to authors from Mumbai, and we are now proudly welcoming talent from across the entire country into our literary ecosystem.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function WizardEventsStep() {
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [currentPastEventIndex, setCurrentPastEventIndex] = useState(0);
+
+  useEffect(() => {
+    const fetchUpcomingEvents = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/public/events`);
+        setUpcomingEvents(res.data);
+      } catch (error) {
+        console.error("Failed to fetch upcoming events:", error);
+      }
+    };
+    fetchUpcomingEvents();
+  }, []);
+
+  const nextPastEvent = () => setCurrentPastEventIndex((prev) => (prev + 1) % pastEvents.length);
+  const prevPastEvent = () => setCurrentPastEventIndex((prev) => (prev - 1 + pastEvents.length) % pastEvents.length);
+
+  const totalEvents = pastEvents.length;
+  const totalAuthors = pastEvents.reduce((sum, e) => sum + (e.authorsParticipated || 0), 0);
+  const totalBooks = pastEvents.reduce((sum, e) => sum + (e.booksSold || 0), 0);
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Literary Events</h2>
+      <p className="text-sm text-paa-gray-text mb-8">Discover our book fairs, reading sessions, and literary festivals across India.</p>
+
+      <div className="space-y-10">
+        {upcomingEvents.length > 0 && (
+          <div>
+            <h3 className="font-serif text-xl text-paa-navy mb-6 border-b border-gray-100 pb-2">Upcoming Events</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {upcomingEvents.map((event, i) => (
+                <div key={i} className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-3">
+                     <span className="text-xs font-bold text-paa-gold uppercase tracking-widest bg-paa-gold/10 px-2 py-1 rounded">{event.date}</span>
+                     <span className="text-xs text-gray-500 flex items-center gap-1"><Clock size={12}/> {event.duration}</span>
+                  </div>
+                  <h4 className="font-serif text-lg text-gray-900 font-medium mb-2">{event.name}</h4>
+                  <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-auto pt-4"><MapPin size={14}/> {event.location}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <h3 className="font-serif text-xl text-paa-navy mb-6 border-b border-gray-100 pb-2">Past Highlights & Impact</h3>
+          <div className="flex flex-col md:flex-row gap-8 items-center">
+            <div className="w-full md:w-5/12 flex flex-col gap-6">
+              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalEvents}+</div>
+                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Events Organized</div>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalAuthors}+</div>
+                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Author Participations</div>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalBooks}+</div>
+                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Books Sold</div>
+              </div>
+            </div>
+
+            <div className="w-full md:w-7/12 relative min-h-[420px] md:min-h-[450px] flex justify-center perspective-[1000px]">
+              {pastEvents.map((event, index) => {
+                const diff = (index - currentPastEventIndex + pastEvents.length) % pastEvents.length;
+                if (diff > 2 && diff < pastEvents.length - 1) return null;
+                let style: React.CSSProperties = { position: "absolute", top: 0, width: "100%", maxWidth: "380px", transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)" };
+                if (diff === 0) { style = { ...style, transform: "translateY(0) scale(1)", zIndex: 30, opacity: 1, pointerEvents: "auto" }; }
+                else if (diff === 1) { style = { ...style, transform: "translateY(25px) scale(0.92)", zIndex: 20, opacity: 0.8, pointerEvents: "none" }; }
+                else if (diff === 2) { style = { ...style, transform: "translateY(50px) scale(0.84)", zIndex: 10, opacity: 0.4, pointerEvents: "none" }; }
+                else if (diff === pastEvents.length - 1) { style = { ...style, transform: "translateY(-40px) scale(1.05)", zIndex: 40, opacity: 0, pointerEvents: "none" }; }
+
+                return (
+                  <div key={index} style={style} className="bg-white rounded-2xl border border-paa-navy/10 shadow-lg overflow-hidden flex flex-col">
+                    <div className="h-40 bg-gray-100 relative">
+                      {(event as any).photoUrl ? (
+                        <img src={(event as any).photoUrl.startsWith('http') ? (event as any).photoUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${(event as any).photoUrl}`} alt={event.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center p-4 text-center bg-paa-navy/5">
+                           <h3 className="font-serif text-lg text-gray-400 leading-tight">{event.name}</h3>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col bg-white">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[9px] font-bold text-paa-navy uppercase tracking-widest bg-paa-navy/5 px-2 py-1 rounded">{event.date}</span>
+                        <span className="text-[10px] text-gray-500 flex items-center gap-1"><Clock size={10} /> {event.duration}</span>
+                      </div>
+                      <h4 className="font-serif text-lg text-gray-900 font-medium mb-1 line-clamp-1">{event.name}</h4>
+                      <p className="text-xs text-gray-500 flex items-center gap-1.5 mb-4 line-clamp-1"><MapPin size={12} className="shrink-0" /> {event.address}</p>
+                      
+                      <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3 mt-auto">
+                        <div><div className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5">Authors</div><div className="font-serif text-lg text-paa-navy">{event.authorsParticipated}</div></div>
+                        <div><div className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5">Books Sold</div><div className="font-serif text-lg text-paa-navy">{event.booksSold !== null ? event.booksSold : "TBA"}</div></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="absolute -bottom-2 md:bottom-2 z-50 flex gap-3">
+                 <button onClick={prevPastEvent} className="p-3 bg-white rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 shadow-md transition-all active:scale-95"><ChevronLeft size={20} /></button>
+                 <button onClick={nextPastEvent} className="p-3 bg-paa-navy rounded-full text-white hover:bg-paa-navy/90 shadow-md transition-all active:scale-95"><ChevronRight size={20} /></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WizardServicesStep() {
+  const services = [
+    { num: "I.", title: "Publishing Support", desc: "We provide professional end-to-end manuscript production to ensure your book meets exact industry standards before hitting the market.", items: ["Formatting of Manuscript", "Book Cover Design", "Editing & Proof Reading", "Printing as low as 50 copies at minimal cost"] },
+    { num: "II.", title: "Promotional Support", desc: "Strategic visibility is crucial. We position your literature directly in front of discerning audiences using collective brand power.", items: ["Catalogue of fiction and non-fiction books", "Giving books to the Airport Libraries", "Donating books to well known local libraries", "LinkedIn page management"] },
+    { num: "III.", title: "Selling Books", desc: "Securing reliable revenue streams through vetted physical and digital distribution networks.", items: ["Participation in book fairs all over India (NBT)", "Literary Events in large housing societies & Educational Institutes", "Setting up stalls in housing societies"] }
+  ];
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Our Services</h2>
+      <p className="text-sm text-paa-gray-text mb-8">Empowering independent authors through collaborative publishing, strategic promotion, and widespread distribution.</p>
+      <div className="space-y-6">
+        {services.map((service, idx) => (
+          <div key={idx} className="bg-white p-6 md:p-8 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col md:flex-row gap-6 md:gap-10 hover:shadow-md transition-shadow">
+            <div className="md:w-1/3">
+              <div className="font-serif text-xl text-paa-gold italic mb-2">{service.num}</div>
+              <h3 className="font-serif text-2xl font-medium text-gray-900 leading-tight">{service.title}</h3>
+            </div>
+            <div className="md:w-2/3">
+              <p className="text-gray-700 text-sm md:text-base mb-4 leading-relaxed">{service.desc}</p>
+              <ul className="space-y-2">
+                {service.items.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="text-paa-gold mt-1">—</span><span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const languages = [
   "English", "Hindi", "Marathi", "Bengali", "Telugu", "Tamil", "Gujarati", "Urdu", "Kannada", "Odia", "Malayalam", "Punjabi", "Other"
@@ -59,7 +265,42 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   const hasInitialized = useRef(false);
   const hasLoadedDraft = useRef(false);
 
+  const isOnboardingMode = !isReapply && !isAdminEdit;
+  const currentSteps = isOnboardingMode ? [...onboardingInfoSteps, ...formSteps] : formSteps;
+  const formStepIndex = isOnboardingMode ? step - 3 : step;
+  const topRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top of stepper when changing steps
   useEffect(() => {
+    if (topRef.current) {
+      const y = topRef.current.getBoundingClientRect().top + window.scrollY - 72;
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+    }
+  }, [step]);
+
+  useEffect(() => {
+    if (!isReapply && !isAdminEdit && !hasLoadedDraft.current && localStorage.getItem('token')) {
+      hasLoadedDraft.current = true;
+      axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/get-draft`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => {
+        if (res.data.draft) {
+          const d = res.data.draft;
+          if (d.step !== undefined) setStep(d.step);
+          if (d.form && Object.keys(d.form).length > 0) {
+            setForm({ ...d.form, email: res.data.email || d.form.email });
+          } else if (res.data.email) {
+            setForm((prev: any) => ({ ...prev, email: res.data.email }));
+          }
+          if (d.books && d.books.length > 0) setBooks(d.books);
+          if (d.qualifications && d.qualifications.length > 0) setQualifications(d.qualifications);
+          if (d.extraDataState) setExtraDataState(d.extraDataState);
+          if (d.skillInput) setSkillInput(d.skillInput);
+          if (d.hobbyInput) setHobbyInput(d.hobbyInput);
+        }
+      }).catch(err => console.log('No draft found'));
+    }
+
     axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author-fields`)
       .then(res => {
         const requiredFields = res.data.filter((f: any) => f.requiredForRegistration);
@@ -187,13 +428,13 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   }, [isReapply, isAdminEdit, initialData]);
 
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<any>({
     name: "",
     email: "",
-    password: "",
     phone: "",
-
+    password: "",
     address: "",
+    district: "",
     pincode: "",
     aadharNumber: "",
     dob: "",
@@ -209,6 +450,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     facebook: "",
     linkedin: "",
     youtube: "",
+    conflictOfInterestSignature: "",
+    agreedToGuidelines: false,
+    agreedToInfoDoc: false,
+
+    // Book 1
     title: "",
     subtitle: "",
     genre: "",
@@ -224,14 +470,24 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     publicationDate: "",
     edition: "",
     format: "",
-    transactionId: "",
-    purposeOfWriting: "",
-    isSelfPublished: "",
-    conflictOfInterestSignature: "",
-    agreedToGuidelines: false,
-    agreedToInfoDoc: false,
     printFormat: "",
+    purposeOfWriting: "",
+
+    // Payment
+    transactionId: ""
   });
+
+  useEffect(() => {
+    if (isReapply || isAdminEdit || !hasLoadedDraft.current || !localStorage.getItem('token')) return;
+    const timeoutId = setTimeout(() => {
+      axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/save-draft`, {
+        step, form, books, qualifications, extraDataState, skillInput, hobbyInput
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).catch(err => console.log('Failed to save draft'));
+    }, 1500);
+    return () => clearTimeout(timeoutId);
+  }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, isReapply, isAdminEdit]);
 
   const [showAddBookForm, setShowAddBookForm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -250,6 +506,69 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
           if (draft.extraDataState) setExtraDataState(draft.extraDataState);
           if (draft.skillInput) setSkillInput(draft.skillInput);
           if (draft.hobbyInput) setHobbyInput(draft.hobbyInput);
+
+          // Restore files from localForage
+          (async () => {
+            try {
+              const files: any = await localforage.getItem("authorRegistrationFiles");
+              if (files) {
+                const restoreB64 = async (b64: string, name: string) => b64 ? await fromBase64(b64, name) : null;
+                
+                if (files.authorBlob) {
+                  const f = await restoreB64(files.authorBlob, 'photo.jpg');
+                  if (f) { setAuthorBlob(f); setAuthorPhotoUrl(URL.createObjectURL(f)); }
+                }
+                if (files.paymentBlob) {
+                  const f = await restoreB64(files.paymentBlob, 'payment.jpg');
+                  if (f) { setPaymentBlob(f); setPaymentScreenshotUrl(URL.createObjectURL(f)); }
+                }
+                if (files.qrCodeBlob) {
+                  const f = await restoreB64(files.qrCodeBlob, 'qr.jpg');
+                  if (f) { setQrCodeBlob(f); setQrCodeUrl(URL.createObjectURL(f)); }
+                }
+                
+                if (files.booksBlobs && draft.books) {
+                  const restoredBooks = await Promise.all(draft.books.map(async (b: any, idx: number) => {
+                    const bBlobs = files.booksBlobs[idx] || {};
+                    const cBlob = await restoreB64(bBlobs.coverBlob, 'cover.jpg');
+                    const bcBlob = await restoreB64(bBlobs.backCoverBlob, 'back.jpg');
+                    return {
+                      ...b,
+                      coverBlob: cBlob,
+                      backCoverBlob: bcBlob,
+                      coverFileUrl: cBlob ? URL.createObjectURL(cBlob) : null,
+                      backCoverFileUrl: bcBlob ? URL.createObjectURL(bcBlob) : null
+                    };
+                  }));
+                  setBooks(restoredBooks);
+                }
+                
+                if (files.activeCoverBlob) {
+                  const f = await restoreB64(files.activeCoverBlob, 'cover.jpg');
+                  if (f) { setCoverBlob(f); setCoverFileUrl(URL.createObjectURL(f)); }
+                }
+                if (files.activeBackCoverBlob) {
+                  const f = await restoreB64(files.activeBackCoverBlob, 'back.jpg');
+                  if (f) { setBackCoverBlob(f); setBackCoverFileUrl(URL.createObjectURL(f)); }
+                }
+                
+                if (files.qualificationsBlobs && draft.qualifications) {
+                  const restoredQuals = await Promise.all(draft.qualifications.map(async (q: any, idx: number) => {
+                    const certB64 = files.qualificationsBlobs[idx]?.certificateBlob;
+                    const f = await restoreB64(certB64, 'cert.jpg');
+                    return {
+                      ...q,
+                      certificateBlob: f,
+                      certificateUrl: f ? URL.createObjectURL(f) : ""
+                    };
+                  }));
+                  setQualifications(restoredQuals);
+                }
+              }
+            } catch (e) {
+              console.error("Failed to load local files:", e);
+            }
+          })();
         }
       } catch (e) {
         console.error("Failed to load registration draft:", e);
@@ -269,8 +588,32 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
         hobbyInput
       };
       localStorage.setItem("authorRegistrationDraft", JSON.stringify(draft));
+
+      // Save files to localForage using base64
+      (async () => {
+        try {
+          const getB64 = async (blob: any) => blob ? await toBase64(blob) : null;
+          const filesDraft = {
+            authorBlob: await getB64(authorBlob),
+            paymentBlob: await getB64(paymentBlob),
+            qrCodeBlob: await getB64(qrCodeBlob),
+            booksBlobs: await Promise.all(books.map(async b => ({
+              coverBlob: await getB64(b.coverBlob),
+              backCoverBlob: await getB64(b.backCoverBlob)
+            }))),
+            activeCoverBlob: await getB64(coverBlob),
+            activeBackCoverBlob: await getB64(backCoverBlob),
+            qualificationsBlobs: await Promise.all(qualifications.map(async q => ({
+              certificateBlob: await getB64(q.certificateBlob)
+            })))
+          };
+          await localforage.setItem("authorRegistrationFiles", filesDraft);
+        } catch (err) {
+          console.log('Failed to save files locally', err);
+        }
+      })();
     }
-  }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, isAdminEdit, isReapply]);
+  }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, authorBlob, paymentBlob, qrCodeBlob, coverBlob, backCoverBlob, isAdminEdit, isReapply]);
 
   const validateField = (key: string, value: string | boolean) => {
     let error = "";
@@ -416,47 +759,61 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
           <p className="text-xs md:text-sm text-white/60 max-w-lg mx-auto">A one-time application reviewed by our editorial team within 5-7 working days.</p>
         </section>
       ))}
+      <div ref={topRef} />
 
       {/* Sticky Stepper Only */}
-      {/* Sticky Stepper Only */}
-      <div className={`z-40 w-full shadow-md ${hideNavbar ? 'relative border-b border-gray-200' : 'sticky ' + (isAdminEdit ? 'top-0' : isReapply ? 'top-[64px]' : 'top-0')}`}>
-        <div className="bg-white border-b border-paa-navy/5 px-2 md:px-6 py-3 md:py-4 overflow-x-auto hide-scrollbar">
-          <div className="max-w-3xl mx-auto flex items-center justify-between md:justify-center min-w-max md:min-w-0 pb-1 md:pb-0">
-            {steps.map((s, i) => (
-              <div key={s.title} className="flex items-center">
-                <div
-                  className={`flex flex-col items-center px-1 md:px-3 ${i <= step || isAdminEdit ? "cursor-pointer" : "cursor-default"}`}
-                  onClick={() => { if (i <= step || isAdminEdit) setStep(i); }}
-                >
-                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-1.5 md:mb-2 transition-all duration-300 shadow-sm
-                    ${i < step ? "bg-emerald-500 text-white shadow-emerald-500/20" : i === step ? "bg-paa-gold text-paa-navy shadow-paa-gold/20" : "bg-gray-100 text-gray-400"}`}>
-                    {i < step ? <CheckCircle size={14} className="md:w-[18px] md:h-[18px]" /> : <span className="scale-75 md:scale-100">{s.icon}</span>}
-                  </div>
-                  <span className={`text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-center whitespace-nowrap transition-colors ${i === step ? "text-paa-navy" : "text-gray-400"}`}>
-                    {s.title}
-                  </span>
+      <div className={`z-40 w-full sticky ${isAdminEdit ? 'top-0' : 'top-[72px]'} pt-0`}>
+        <div className="w-full px-6 md:px-12 lg:px-20">
+          <div className="max-w-5xl mx-auto">
+            <div className={`bg-white rounded-2xl shadow-premium ${hideNavbar ? 'border border-gray-200' : 'border border-paa-navy/5'}`}>
+              <div className="px-1 sm:px-2 md:px-6 py-3 md:py-4">
+                <div className="flex items-center justify-between pb-1 md:pb-0 w-full max-w-full">
+                  {currentSteps.map((s, i) => (
+                    <Fragment key={s.title}>
+                      <div
+                        className={`flex flex-col items-center px-0.5 md:px-2 ${isReapply || isAdminEdit ? "cursor-pointer" : ""} group z-10 flex-shrink-0 max-w-[50px] sm:max-w-none`}
+                        onClick={() => {
+                          if (isReapply || isAdminEdit) setStep(i);
+                        }}
+                      >
+                        <div
+                          className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-1 transition-all duration-300 shadow-sm
+                            ${i < step ? "bg-emerald-500 text-white shadow-emerald-500/20" : i === step ? "bg-paa-gold text-paa-navy shadow-paa-gold/20" : "bg-gray-100 text-gray-400 group-hover:bg-gray-200"}`}
+                        >
+                          {i < step ? <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-[18px] md:h-[18px]" /> : <span className="scale-[0.6] sm:scale-75 md:scale-100">{s.icon}</span>}
+                        </div>
+                        <span className={`text-[6px] sm:text-[8px] md:text-[10px] font-bold uppercase tracking-tighter md:tracking-widest text-center leading-tight transition-colors ${i === step ? "text-paa-navy" : "text-gray-400 group-hover:text-gray-600"}`}>
+                          {s.title}
+                        </span>
+                      </div>
+                      {i < currentSteps.length - 1 && (
+                        <div className={`flex-1 h-0.5 mx-0.5 sm:mx-1 md:mx-2 min-w-[4px] transition-colors ${i < step ? "bg-emerald-500" : "bg-gray-200"}`} />
+                      )}
+                    </Fragment>
+                  ))}
                 </div>
-                {i < steps.length - 1 && (
-                  <div className={`w-6 md:w-12 h-0.5 transition-colors ${i < step ? "bg-emerald-500" : "bg-gray-200"}`} />
-                )}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="w-full px-6 md:px-12 lg:px-20 my-12 pb-20">
+      <div className="w-full px-6 md:px-12 lg:px-20 mt-6 mb-12 pb-20">
         <div className="max-w-5xl mx-auto">
         {!submitted ? (
           <div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-8 md:p-12 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out">
-            {/* Step 0: Author Profile */}
-            {step === 0 && (
+            {isOnboardingMode && step === 0 && <WizardAboutStep />}
+            {isOnboardingMode && step === 1 && <WizardEventsStep />}
+            {isOnboardingMode && step === 2 && <WizardServicesStep />}
+
+            {/* Form Step 0: Author Profile */}
+            {formStepIndex === 0 && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Author Profile</h2>
                 <p className="text-sm text-paa-gray-text mb-8">Tell us about yourself.<br/><span className='text-xs mt-1 block opacity-80'>Only public information (Bio, Profile Picture, Qualifications, Skills, Books) will be visible publicly. Sensitive information like Aadhaar Number, Phone Number, Address, Certificates, etc. will remain private.</span></p>
 
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className={`grid grid-cols-1 ${isAdminEdit ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
                     <div>
                       <label className="dash-label">Full Name *</label>
                       <input type="text" value={form.name} onChange={(e) => update("name", e.target.value.replace(/[^a-zA-Z\s]/g, ''))} className={`dash-input w-full ${errors.name ? '!border-red-500' : ''}`} placeholder="e.g. Jane Doe" />
@@ -466,11 +823,13 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       <label className="dash-label">Pen Name</label>
                       <input type="text" value={form.penName} onChange={(e) => update("penName", e.target.value)} className="dash-input w-full" placeholder="e.g. J.D." />
                     </div>
-                    <div>
-                      <label className="dash-label">Email Address *</label>
-                      <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className={`dash-input w-full ${errors.email ? '!border-red-500' : ''}`} placeholder="jane@example.com" />
-                      {errors.email && <div className="text-red-500 text-xs mt-1 font-medium">{errors.email}</div>}
-                    </div>
+                    {isAdminEdit && (
+                      <div>
+                        <label className="dash-label">Email Address *</label>
+                        <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className={`dash-input w-full ${errors.email ? '!border-red-500' : ''}`} placeholder="jane@example.com" />
+                        {errors.email && <div className="text-red-500 text-xs mt-1 font-medium">{errors.email}</div>}
+                      </div>
+                    )}
                   </div>
 
                   {/* Phone + Password (if applicable) */}
@@ -480,7 +839,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''}`} placeholder="10-digit mobile number" />
                       {errors.phone && <div className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</div>}
                     </div>
-                    {!isReapply && !isAdminEdit ? (
+                    {!isReapply && !isAdminEdit && !localStorage.getItem('token') ? (
                       <div>
                         <label className="dash-label">Password (For Login) *</label>
                         <div className="relative">
@@ -507,13 +866,13 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   </div>
 
                   {/* Address + Aadhaar (if password was shown) */}
-                  <div className={`grid grid-cols-1 ${!isReapply && !isAdminEdit ? "md:grid-cols-2" : ""} gap-6`}>
+                  <div className={`grid grid-cols-1 ${!isReapply && !isAdminEdit && !localStorage.getItem('token') ? "md:grid-cols-2" : ""} gap-6`}>
                     <div>
                       <label className="dash-label">Full Address *</label>
                       <input type="text" value={form.address} onChange={(e) => update("address", e.target.value)} className={`dash-input w-full ${errors.address ? '!border-red-500' : ''}`} placeholder="House No./Flat No., Building, Street, Area" />
                       {errors.address && <div className="text-red-500 text-xs mt-1 font-medium">{errors.address}</div>}
                     </div>
-                    {!isReapply && !isAdminEdit && (
+                    {!isReapply && !isAdminEdit && !localStorage.getItem('token') && (
                       <div>
                         <label className="dash-label">Aadhar Number *</label>
                         <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
@@ -774,7 +1133,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           <div key={f.name}>
                             <label className="dash-label">{f.name} *</label>
                             {f.type === 'number' ? (
-                              <input type="number" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
+                              <input type="number" onWheel={(e) => (e.target as HTMLElement).blur()} required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
                             ) : f.type === 'date' ? (
                               <input type="date" required className="dash-input w-full" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
                             ) : (
@@ -862,8 +1221,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
             </div>
             )}
 
-            {/* Step 1: Book Details */}
-            {step === 1 && (
+            {/* Form Step 1: Book Details */}
+            {formStepIndex === 1 && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Book Details</h2>
                 <p className="text-sm text-paa-gray-text mb-8">Information about the book(s) you wish to publish or register with PAA.</p>
@@ -986,7 +1345,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     </div>
                     <div>
                       <label className="dash-label">Publication Date *</label>
-                      <input type="date" value={form.publicationDate} onChange={(e) => update("publicationDate", e.target.value)} className={`dash-input w-full ${errors.publicationDate ? '!border-red-500' : ''}`} />
+                      <input type="date" max={new Date().toISOString().split('T')[0]} value={form.publicationDate} onChange={(e) => update("publicationDate", e.target.value)} className={`dash-input w-full ${errors.publicationDate ? '!border-red-500' : ''}`} />
                       {errors.publicationDate && <div className="text-red-500 text-xs mt-1 font-medium">{errors.publicationDate}</div>}
                     </div>
                   </div>
@@ -1030,12 +1389,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     </div>
                     <div>
                       <label className="dash-label">MRP (₹) *</label>
-                      <input type="number" placeholder="299" value={form.mrp} onChange={(e) => update("mrp", e.target.value)} className={`dash-input w-full ${errors.mrp ? '!border-red-500' : ''}`} />
+                      <input type="number" onWheel={(e) => (e.target as HTMLElement).blur()} placeholder="299" value={form.mrp} onChange={(e) => update("mrp", e.target.value)} className={`dash-input w-full ${errors.mrp ? '!border-red-500' : ''}`} />
                       {errors.mrp && <div className="text-red-500 text-xs mt-1 font-medium">{errors.mrp}</div>}
                     </div>
                     <div>
                       <label className="dash-label">Initial Stock *</label>
-                      <input type="number" placeholder="0" value={form.stock} onChange={(e) => update("stock", e.target.value)} className="dash-input w-full" />
+                      <input type="number" onWheel={(e) => (e.target as HTMLElement).blur()} placeholder="0" value={form.stock} onChange={(e) => update("stock", e.target.value)} className="dash-input w-full" />
                     </div>
                   </div>
 
@@ -1200,8 +1559,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
               </div>
             )}
 
-            {/* Step 2: Questionnaire & Declarations */}
-            {step === 2 && (
+            {/* Form Step 2: Questionnaire & Declarations */}
+            {formStepIndex === 2 && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Declarations & Guidelines</h2>
                 <p className="text-sm text-paa-gray-text mb-8">Please agree to the PAA guidelines and sign the conflict of interest declaration.</p>
@@ -1244,8 +1603,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
               </div>
             )}
 
-            {/* Step 3: Payment */}
-            {step === 3 && (
+            {/* Form Step 3: Payment & Submit */}
+            {formStepIndex === 3 && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Application Fee Payment</h2>
                 <p className="text-sm text-paa-gray-text mb-8">A one-time registration fee of ₹1000 secures your PAA membership and editorial review.</p>
@@ -1306,19 +1665,26 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
 
             {/* Navigation buttons */}
             <div className="flex justify-between items-center mt-10 pt-8 border-t border-paa-navy/5">
-              <button
-                onClick={() => setStep((s) => Math.max(0, s - 1))}
-                disabled={step === 0}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${step === 0 ? "text-gray-300 cursor-default" : "text-paa-navy hover:bg-gray-100 active:scale-95 border border-paa-navy/10"}`}
-              >
-                <ChevronLeft size={14} /> Back
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setStep((s) => Math.max(0, s - 1))}
+                  disabled={step === 0}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 ${step === 0 ? "text-gray-300 cursor-default" : "text-paa-navy hover:bg-gray-100 active:scale-95 border border-paa-navy/10"}`}
+                >
+                  <ChevronLeft size={14} /> Back
+                </button>
+                {localStorage.getItem('token') && !isAdminEdit && (
+                  <button type="button" onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }} className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 text-red-600 hover:bg-red-50 border border-red-100">
+                    <LogOut size={14} /> Logout
+                  </button>
+                )}
+              </div>
 
-              {step < steps.length - 1 ? (
+              {step < currentSteps.length - 1 ? (
                 <div className="flex gap-3 flex-1 w-full justify-end">
                   <button
                     onClick={() => {
-                    if (step === 1 && !isAdminEdit) {
+                    if (formStepIndex === 1 && !isAdminEdit) {
                       const hasPartialBook = form.title || form.genre || form.synopsis || form.mrp || form.pages || form.isbn;
                       if (hasPartialBook) {
                         const missingContinueFields = [];
@@ -1356,7 +1722,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         return;
                       }
                     }
-                    if (step === 2 && !isAdminEdit) {
+                    if (formStepIndex === 2 && !isAdminEdit) {
                       if (!form.whyJoining || !form.whyJoining.trim()) {
                         alert("Please explain why you are joining this group.");
                         return;
@@ -1366,7 +1732,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         return;
                       }
                     }
-                    setStep((s) => Math.min(steps.length - 1, s + 1));
+                    setStep((s) => Math.min(currentSteps.length - 1, s + 1));
                   }}
                   className="dash-btn dash-btn-primary rounded-full px-6 py-2.5 flex items-center gap-2"
                 >
@@ -1387,49 +1753,58 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                 <button
                   disabled={isSubmitting}
                   onClick={async () => {
-
                     // Step 0 Validations
                     const bioWordCount = form.bio.split(/\s+/).filter(Boolean).length;
                     const missingProfileFields = [];
                     if (!form.name) missingProfileFields.push('Name');
                     if (!form.email) missingProfileFields.push('Email');
                     if (!form.phone) missingProfileFields.push('Phone');
-                    if (!isReapply && !isAdminEdit && !form.password) missingProfileFields.push('Password');
+                    if (!isReapply && !isAdminEdit && !localStorage.getItem('token') && !form.password) missingProfileFields.push('Password');
                     if (!form.bio) missingProfileFields.push('Bio');
                     if (form.bio && (bioWordCount < 100 || bioWordCount > 150)) missingProfileFields.push(`Bio word count (currently ${bioWordCount}, needs 100-150)`);
                     if (!authorBlob && !authorPhotoUrl) missingProfileFields.push('Author Photo');
+                    if (!form.address) missingProfileFields.push('Address');
+                    if (!form.pincode) missingProfileFields.push('Pincode');
+                    if (!form.city) missingProfileFields.push('City');
+                    if (!form.state) missingProfileFields.push('State');
+                    if (!form.aadharNumber) missingProfileFields.push('Aadhar Number');
+                    
                     if (missingProfileFields.length > 0) {
-                      setStep(0);
+                      setStep(isOnboardingMode ? 3 : 0);
                       alert(`Author Profile: Please fix these fields — ${missingProfileFields.join(', ')}`); return;
                     }
                     for (const q of qualifications) {
-                      if (!q.qualification || !q.institution || !q.subject) {
-                        setStep(0);
-                        alert("Please fill all qualification fields (Qualification, Institution, Subject) correctly."); return;
+                      if (!q.qualification || !q.institution || !q.subject || !q.mode) {
+                        setStep(isOnboardingMode ? 3 : 0);
+                        alert("Please fill all qualification fields (Qualification, Institution, Subject, Mode of Degree) correctly."); return;
+                      }
+                      if (!q.certificateBlob && !q.certificateUrl) {
+                        setStep(isOnboardingMode ? 3 : 0);
+                        alert(`Please upload the Certificate for qualification: ${q.qualification || 'the required qualification'}.`); return;
                       }
                     }
                     if (!qrCodeBlob && !qrCodeUrl) {
-                      setStep(0);
+                      setStep(isOnboardingMode ? 3 : 0);
                       alert("Please upload your Payment QR Code."); return;
                     }
                     if (dynamicFields.length > 0) {
                       for (const f of dynamicFields) {
                         if (!extraDataState[f.name]) {
-                          setStep(0);
+                          setStep(isOnboardingMode ? 3 : 0);
                           alert(`Please fill the required field: ${f.name}`); return;
                         }
                       }
                     }
                     if (!/^\S+@\S+\.\S+$/.test(form.email)) {
-                      setStep(0);
+                      setStep(isOnboardingMode ? 3 : 0);
                       alert("Please enter a valid email address."); return;
                     }
                     if (!/^\d{10}$/.test(form.phone.replace(/\D/g, ''))) {
-                      setStep(0);
+                      setStep(isOnboardingMode ? 3 : 0);
                       alert("Please enter a valid 10-digit phone number."); return;
                     }
                     if (!/^\d{12}$/.test(form.aadharNumber)) {
-                      setStep(0);
+                      setStep(isOnboardingMode ? 3 : 0);
                       alert("Please enter a valid 12-digit Aadhar number."); return;
                     }
 
@@ -1437,17 +1812,17 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     const hasFirstBook = form.title && form.genre && form.mrp && (coverBlob || coverFileUrl) && (backCoverBlob || backCoverFileUrl) && form.purposeOfWriting && form.pages && form.isbn && form.synopsis.split(/\s+/).filter(Boolean).length <= 100;
                     const hasBook = books.length > 0 || hasFirstBook;
                     if (!hasBook) {
-                      setStep(1);
+                      setStep(isOnboardingMode ? 4 : 1);
                       alert("Please fill all compulsory fields for at least one book (including ISBN, Pages, purpose of writing) and upload both front and back covers."); return;
                     }
 
                     // Step 2 Validations
                     if (!form.whyJoining || !form.whyJoining.trim()) {
-                      setStep(2);
+                      setStep(isOnboardingMode ? 5 : 2);
                       alert("Please explain why you are joining this group."); return;
                     }
                     if (!form.conflictOfInterestSignature || !form.agreedToGuidelines || !form.agreedToInfoDoc) {
-                      setStep(2);
+                      setStep(isOnboardingMode ? 5 : 2);
                       alert("Please agree to the declarations and sign the conflict of interest statement."); return;
                     }
 
@@ -1460,12 +1835,6 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       return;
                     }
 
-                    // Qualification Validation
-                    if (!qualifications[0]?.certificateBlob && !qualifications[0]?.certificateUrl) {
-                      setStep(0); // Assuming qualifications are on step 0
-                      alert("Please upload the required Qualification Certificate.");
-                      return;
-                    }
 
                     setIsSubmitting(true);
                     try {

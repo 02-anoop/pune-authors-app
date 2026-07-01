@@ -82,11 +82,16 @@ export function AuthorDashboardPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDashboardData(dashRes.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('Failed to load dashboard data');
-      localStorage.removeItem('token');
-      navigate('/login');
+      if (err.response && err.response.status === 404) {
+        // Author profile doesn't exist yet, redirect to complete registration
+        navigate('/register');
+      } else {
+        toast.error('Failed to load dashboard data');
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }

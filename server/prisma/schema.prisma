@@ -20,6 +20,27 @@ model User {
   queries   Query[]
 }
 
+model AuthorDraft {
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  step            Int      @default(0)
+  form            Json
+  books           Json
+  qualifications  Json
+  extraDataState  Json
+  skillInput      String?
+  hobbyInput      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completed       Boolean  @default(false)
+}
+
+model OtpVerification {
+  email     String   @id
+  otp       String
+  expiresAt DateTime
+}
+
 model Author {
   id                 Int                 @id @default(autoincrement())
   name               String

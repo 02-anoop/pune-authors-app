@@ -10,35 +10,76 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [signupError, setSignupError] = useState("");
+  const [otpStep, setOtpStep] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(false);
+  
   const navigate = useNavigate();
 
   useEffect(() => {
     const role = searchParams.get("role") as "CUSTOMER" | "AUTHOR";
     if (role) setRoleSelection(role);
-  }, [searchParams, type]);
+    setOtpStep(false);
+    setForgotPasswordStep(false);
+    setSignupError("");
+  }, [searchParams, type, roleSelection]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSignupError("");
-    if (type === "signup" && roleSelection === "AUTHOR") {
-      navigate("/register");
-      return;
-    }
 
     try {
+      if (forgotPasswordStep) {
+        if (otpStep) {
+          if (password !== confirmPassword) {
+            setSignupError("Passwords do not match.");
+            setLoading(false);
+            return;
+          }
+          await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/reset-password`, { email, otp, password });
+          alert("Password reset successfully. Please log in.");
+          window.location.href = `/login?role=${roleSelection}`;
+        } else {
+          await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/forgot-password`, { email });
+          setOtpStep(true);
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (type === "signup" && roleSelection === "AUTHOR") {
+        if (!otpStep) {
+          if (password !== confirmPassword) {
+            setSignupError("Passwords do not match.");
+            setLoading(false);
+            return;
+          }
+          await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/send-otp`, { email });
+          setOtpStep(true);
+        } else {
+          const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/verify-otp`, { email, otp, password });
+          localStorage.setItem("token", res.data.token);
+          localStorage.setItem("userRole", res.data.role);
+          navigate("/register");
+        }
+        setLoading(false);
+        return;
+      }
+
       if (type === "signup") {
-        await axios.post(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/auth/register`, { name, email, phone, address, password, role: roleSelection });
+        await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/register`, { name, email, phone, address, password, role: roleSelection });
         alert("Registration successful! Please login.");
         navigate(`/login?role=${roleSelection}`);
       } else {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || "http://localhost:3001")}/api/auth/login`, { email, password });
+        const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/login`, { email, password });
         
         if (res.data.role !== "ADMIN" && res.data.role !== roleSelection) {
           alert(`Error: Invalid credentials for ${roleSelection} login. This account belongs to a ${res.data.role}.`);
@@ -50,7 +91,13 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
         localStorage.setItem("userRole", res.data.role);
         
         if (res.data.role === "ADMIN") navigate("/operations");
-        else if (res.data.role === "AUTHOR") navigate("/dashboard");
+        else if (res.data.role === "AUTHOR") {
+          if (res.data.hasCompletedRegistration === false) {
+             navigate("/register");
+          } else {
+             navigate("/dashboard");
+          }
+        }
         else navigate("/profile");
       }
     } catch (err: any) {
@@ -58,7 +105,7 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
       if (type === "signup" && errorMsg === 'Email already exists') {
         setSignupError("An account with this email already exists.");
       } else {
-        alert(errorMsg);
+        setSignupError(errorMsg);
       }
     } finally {
       setLoading(false);
@@ -134,11 +181,78 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
               <div className="py-4">
                 <div className="bg-paa-gold/10 border border-paa-gold/20 rounded-2xl p-6 mb-8">
                   <p className="text-sm text-paa-navy leading-relaxed font-normal">
-                    Authors must complete a comprehensive application process to publish and sell their books with us. This includes portfolio review and a registration fee.
+                    Authors must verify their email before beginning the application process. Your progress will be saved automatically.
                   </p>
                 </div>
-                <button type="button" onClick={() => navigate("/register")} className="dash-btn dash-btn-primary w-full flex justify-between items-center px-6 py-4 rounded-full text-xs">
-                  Begin Application <ArrowRight size={14} />
+                
+                {otpStep ? (
+                  <>
+                    <div className="mb-4 text-sm font-medium text-emerald-600">OTP sent to {email}. Please enter it below.</div>
+                    <div className="mb-4">
+                      <input required type="text" placeholder="6-digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-4">
+                      <input required type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400" />
+                    </div>
+                    <div className="relative mb-4">
+                      <input required type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400 pr-10" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-0 bottom-3 flex items-center justify-center text-gray-400 hover:text-paa-navy transition-colors">
+                        {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
+                      </button>
+                    </div>
+                    <div className="mb-4">
+                      <input required type={showPassword ? "text" : "password"} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400" />
+                    </div>
+                  </>
+                )}
+
+                {signupError && (
+                  <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-xs font-medium mb-4">
+                    {signupError}
+                  </div>
+                )}
+                
+                <button type="submit" disabled={loading} className="dash-btn dash-btn-primary w-full flex justify-between items-center px-6 py-4 rounded-full text-xs">
+                  {loading ? "Processing..." : otpStep ? "Verify & Continue" : "Verify Email"} <ArrowRight size={14} />
+                </button>
+              </div>
+            ) : forgotPasswordStep ? (
+              <div className="py-4">
+                <div className="mb-8">
+                  <h3 className="text-xl font-serif text-paa-navy mb-2">Reset Password</h3>
+                  <p className="text-sm text-paa-gray-text">Enter your email to receive an OTP to reset your password.</p>
+                </div>
+                {otpStep ? (
+                  <>
+                    <div className="mb-4 text-sm font-medium text-emerald-600">OTP sent to {email}.</div>
+                    <div className="mb-4">
+                      <input required type="text" placeholder="6-digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400" />
+                    </div>
+                    <div className="relative mb-4">
+                      <input required type={showPassword ? "text" : "password"} placeholder="New Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400 pr-10" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-0 bottom-3 flex items-center justify-center text-gray-400 hover:text-paa-navy transition-colors">
+                        {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
+                      </button>
+                    </div>
+                    <div className="mb-4">
+                      <input required type={showPassword ? "text" : "password"} placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="mb-4">
+                    <input required type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pb-3 border-b border-paa-navy/10 bg-transparent text-sm text-paa-navy outline-none focus:border-paa-navy transition-colors placeholder:text-gray-400" />
+                  </div>
+                )}
+                {signupError && <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-xs font-medium mb-4">{signupError}</div>}
+                
+                <button type="submit" disabled={loading} className="dash-btn dash-btn-primary w-full py-3.5 rounded-full">
+                  {loading ? "Processing..." : otpStep ? "Reset Password" : "Send OTP"}
+                </button>
+                <button type="button" onClick={() => { setForgotPasswordStep(false); setOtpStep(false); setSignupError(""); }} className="w-full text-xs text-gray-500 hover:text-paa-navy font-medium mt-4">
+                  Back to Sign In
                 </button>
               </div>
             ) : (
@@ -167,13 +281,16 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
                     {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
                 </div>
+                
+                {type === "login" && (
+                  <div className="flex justify-end -mt-2">
+                    <button type="button" onClick={() => { setForgotPasswordStep(true); setOtpStep(false); setSignupError(""); }} className="text-xs font-medium text-gray-500 hover:text-paa-navy">Forgot Password?</button>
+                  </div>
+                )}
 
                 {signupError && (
                   <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-xs font-medium">
                     {signupError}
-                    <div className="mt-2">
-                      <button type="button" onClick={() => navigate(`/login?role=${roleSelection}`)} className="text-paa-navy font-bold hover:underline transition-all">Sign in instead</button>
-                    </div>
                   </div>
                 )}
 

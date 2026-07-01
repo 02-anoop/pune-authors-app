@@ -9,14 +9,35 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   mailTransporter = nodemailer.createTransport({ streamTransport: true, newline: 'windows' });
 }
 const sendNotificationEmail = async (to, subject, htmlBody) => {
-  if (!mailTransporter || !to) return;
+  if (!to) return;
   try {
-    let info = await mailTransporter.sendMail({
-      from: '"Pune Authors\' Association" <noreply@puneauthors.com>',
-      to, subject, html: htmlBody,
-      text: htmlBody.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
-    });
-    console.log(`[EMAIL SENT] to ${to}: ${subject}`);
+    const textBody = htmlBody.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    
+    if (process.env.BREVO_API_KEY) {
+      const axios = require('axios');
+      await axios.post('https://api.brevo.com/v3/smtp/email', {
+        sender: { name: "Pune Authors' Association", email: "noreply@puneauthors.com" },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: htmlBody,
+        textContent: textBody
+      }, {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      });
+      console.log(`[BREVO EMAIL SENT] to ${to}: ${subject}`);
+    } else if (mailTransporter) {
+      await mailTransporter.sendMail({
+        from: '"Pune Authors\' Association" <noreply@puneauthors.com>',
+        to, subject, html: htmlBody, text: textBody,
+      });
+      console.log(`[EMAIL SENT] to ${to}: ${subject}`);
+    } else {
+      console.warn('No email transport configured.');
+    }
+    
     const otpMatch = htmlBody.match(/<h2[^>]*>(\d{6})<\/h2>/);
     if (otpMatch) {
       console.log(`\n========================================`);
@@ -24,7 +45,7 @@ const sendNotificationEmail = async (to, subject, htmlBody) => {
       console.log(`========================================\n`);
     }
   } catch (err) {
-    console.error('Email failed:', err.message);
+    console.error('Email failed:', err.response?.data || err.message);
   }
 };
 const emailWrap = (heading, content) => `

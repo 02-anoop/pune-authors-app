@@ -27,7 +27,7 @@ import { useLocation } from "react-router";
 
 function AppContent() {
   const location = useLocation();
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/operations') || location.pathname === '/register';
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/operations');
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "var(--font-body)" }}>

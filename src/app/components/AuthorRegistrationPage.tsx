@@ -566,7 +566,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       // Save files to localForage using base64
       (async () => {
         try {
-          const getB64 = async (blob: any) => blob ? await toBase64(blob) : null;
+          const getB64 = async (blob: any) => {
+            if (blob instanceof Blob || blob instanceof File) {
+              return await toBase64(blob);
+            }
+            return null;
+          };
           const filesDraft = {
             authorBlob: await getB64(authorBlob),
             paymentBlob: await getB64(paymentBlob),

@@ -253,7 +253,6 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
         name: name || "NA",
         email: email || "NA",
         phone: phone || "NA",
-        password: finalHashedPassword,
         bio: bio || "NA",
         penName: penName || "NA",
         city: city || "NA",

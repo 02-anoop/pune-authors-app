@@ -716,6 +716,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     setCoverFileUrl(bookToEdit.coverFileUrl || (bookToEdit.coverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${bookToEdit.coverUrl}` : null));
     setBackCoverFileUrl(bookToEdit.backCoverFileUrl || (bookToEdit.backCoverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${bookToEdit.backCoverUrl}` : null));
     setBooks(books.filter((_, i) => i !== idx));
+    setShowAddBookForm(true);
   };
 
   const handledTargetAction = useRef(false);

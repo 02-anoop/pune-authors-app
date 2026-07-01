@@ -29,7 +29,7 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
     setOtpStep(false);
     setForgotPasswordStep(false);
     setSignupError("");
-  }, [searchParams, type, roleSelection]);
+  }, [searchParams, type]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,14 +161,24 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
           <div className="flex gap-6 border-b border-paa-navy/10 mb-10">
             <button 
               type="button" 
-              onClick={() => setRoleSelection("CUSTOMER")}
+              onClick={() => {
+                setRoleSelection("CUSTOMER");
+                setOtpStep(false);
+                setForgotPasswordStep(false);
+                setSignupError("");
+              }}
               className={`pb-3 text-xs font-bold uppercase tracking-widest transition-all duration-300 mb-[-1px] ${roleSelection === "CUSTOMER" ? "text-paa-navy border-b-2 border-paa-navy" : "text-gray-400 border-b-2 border-transparent hover:text-paa-navy/70"}`}
             >
               Reader
             </button>
             <button 
               type="button" 
-              onClick={() => setRoleSelection("AUTHOR")}
+              onClick={() => {
+                setRoleSelection("AUTHOR");
+                setOtpStep(false);
+                setForgotPasswordStep(false);
+                setSignupError("");
+              }}
               className={`pb-3 text-xs font-bold uppercase tracking-widest transition-all duration-300 mb-[-1px] ${roleSelection === "AUTHOR" ? "text-paa-navy border-b-2 border-paa-navy" : "text-gray-400 border-b-2 border-transparent hover:text-paa-navy/70"}`}
             >
               Author

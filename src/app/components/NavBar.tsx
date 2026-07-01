@@ -190,35 +190,7 @@ export function NavBar() {
               >
                 Sign In
               </Link>
-              <Link
-                to="/register"
-                style={{
-                  padding: "0.6rem 1.25rem",
-                  fontFamily: "var(--font-body)",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "#111",
-                  background: "transparent",
-                  border: "1px solid #111",
-                  transition: "all 0.3s ease",
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#111";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#111";
-                }}
-              >
-                Join as Author
-              </Link>
+
             </>
           )}
         </div>
@@ -318,23 +290,7 @@ export function NavBar() {
               >
                 Sign In
               </Link>
-              <Link
-                to="/register"
-                style={{
-                  padding: "0.8rem",
-                  fontFamily: "var(--font-body)",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: "#fff",
-                  background: "#111",
-                  textDecoration: "none",
-                  textAlign: "center",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Join as Author
-              </Link>
+
             </div>
           )}
       </div>

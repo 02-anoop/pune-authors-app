@@ -709,7 +709,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       edition: bookToEdit.edition || "",
       format: bookToEdit.format || "",
       printFormat: bookToEdit.printFormat || "",
-      purposeOfWriting: bookToEdit.purposeOfWriting || ""
+      purposeOfWriting: bookToEdit.purposeOfWriting || bookToEdit.purpose || ""
     });
     setCoverBlob(bookToEdit.coverBlob || null);
     setBackCoverBlob(bookToEdit.backCoverBlob || null);

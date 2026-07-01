@@ -229,15 +229,17 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
 
     // Handle login user
     let user = existingUser;
+    let finalHashedPassword;
     if (!existingUser) {
       if (!password) {
          return res.status(400).json({ error: 'Password is required for new registration' });
       }
-      const hashedPassword = await bcrypt.hash(password, 10);
+      finalHashedPassword = await bcrypt.hash(password, 10);
       user = await prisma.user.create({
-        data: { name, email, password: hashedPassword, role: 'AUTHOR', address }
+        data: { name, email, password: finalHashedPassword, role: 'AUTHOR', address }
       });
     } else {
+      finalHashedPassword = existingUser.password;
       await prisma.user.update({
         where: { email },
         data: { name, address, role: 'AUTHOR' }
@@ -251,7 +253,7 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
         name: name || "NA",
         email: email || "NA",
         phone: phone || "NA",
-        password: hashedPassword,
+        password: finalHashedPassword,
         bio: bio || "NA",
         penName: penName || "NA",
         city: city || "NA",

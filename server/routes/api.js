@@ -3152,7 +3152,7 @@ router.get('/api/events/:eventId/catalogue', async (req, res) => {
 
 router.post('/api/admin/events', verifyToken, isAdmin, upload.single('banner'), validate(eventSchema), async (req, res) => {
   try {
-    const { name, location, date, duration, eventType, registrationFee, feeType, description, livePosEnabled } = req.body;
+    const { name, location, date, duration, startTime, endTime, eventType, registrationFee, feeType, description, livePosEnabled } = req.body;
     
     const existingEvent = await prisma.event.findFirst({
       where: { name, location, date }
@@ -3172,6 +3172,8 @@ router.post('/api/admin/events', verifyToken, isAdmin, upload.single('banner'), 
         location, 
         date, 
         duration, 
+        startTime: startTime || null,
+        endTime: endTime || null,
         description: description || null,
         bannerUrl,
         status: 'Upcoming',
@@ -3211,9 +3213,11 @@ router.get('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
 router.put('/api/admin/events/:id', verifyToken, isAdmin, upload.single('banner'), async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
-    const { name, location, date, duration, status, eventType, registrationFee, feeType, description, livePosEnabled } = req.body;
+    const { name, location, date, duration, startTime, endTime, status, eventType, registrationFee, feeType, description, livePosEnabled } = req.body;
     
     let updateData = { name, location, date, duration, status };
+    if (startTime !== undefined) updateData.startTime = startTime || null;
+    if (endTime !== undefined) updateData.endTime = endTime || null;
     if (description !== undefined) updateData.description = description;
     if (eventType !== undefined) updateData.eventType = eventType;
     if (registrationFee !== undefined) updateData.registrationFee = parseFloat(registrationFee);
@@ -3246,7 +3250,7 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
     
     const eventAuthors = await prisma.eventAuthor.findMany({
       where: { eventId },
-      include: { author: true, reviews: { select: { rating: true } } }
+      include: { author: true }
     });
 
     const authorsData = [];

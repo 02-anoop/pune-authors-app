@@ -7,6 +7,8 @@ const eventSchema = z.object({
   location: z.string().min(2, "Location is required"),
   duration: z.string().min(1, "Duration is required"),
   eventType: z.string().min(2, "Event type is required"),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
   registrationFee: z.coerce.number().min(0, "Registration fee cannot be negative"),
   feeType: z.string().min(2, "Fee type is required")
 });

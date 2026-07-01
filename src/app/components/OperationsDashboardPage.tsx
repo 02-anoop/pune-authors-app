@@ -66,7 +66,7 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'reviews' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'reviews' | 'late_authors' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
@@ -318,7 +318,9 @@ export function OperationsDashboardPage() {
       status: event.status,
       eventType: event.eventType || 'Book Fair',
       registrationFee: event.registrationFee || 0,
-      feeType: event.feeType || 'Per Author'
+      feeType: event.feeType || 'Per Author',
+      startTime: event.startTime || '',
+      endTime: event.endTime || ''
     });
     setIsEditEventModalOpen(true);
   };
@@ -329,16 +331,14 @@ export function OperationsDashboardPage() {
     try {
       const form = e.target as HTMLFormElement;
 
-      const eType = (form.elements.namedItem('eventType') as HTMLSelectElement).value === 'Other'
-        ? (form.elements.namedItem('customEventType') as HTMLInputElement).value
-        : editingEvent.eventType;
-
       const fd = new FormData();
       fd.append('name', editingEvent.name);
       fd.append('date', editingEvent.date);
       fd.append('location', editingEvent.location);
       fd.append('duration', editingEvent.duration);
-      fd.append('eventType', eType);
+      fd.append('startTime', editingEvent.startTime || '');
+      fd.append('endTime', editingEvent.endTime || '');
+      fd.append('eventType', editingEvent.eventType);
       fd.append('registrationFee', editingEvent.registrationFee.toString());
       fd.append('feeType', editingEvent.feeType);
       fd.append('status', editingEvent.status);
@@ -838,6 +838,34 @@ export function OperationsDashboardPage() {
     localStorage.removeItem('userRole');
     navigate('/login');
   };
+  const handleRejectEdits = async () => {
+    if (!editingAuthor) return;
+    setLoadingAction('rejectEdits');
+    try {
+      await axios.post(`${API}/api/admin/authors/${editingAuthor.id}/reject-edits`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Author edits rejected (reverted)');
+      setIsEditAuthorModalOpen(false);
+      fetchAuthors();
+    } catch (err) {
+      toast.error('Failed to reject edits');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleRejectEditsDirect = async (id: number) => {
+    setLoadingAction('rejectEdits_' + id);
+    try {
+      await axios.post(`${API}/api/admin/authors/${id}/reject-edits`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Author edits rejected (reverted)');
+      fetchAuthors();
+    } catch (err) {
+      toast.error('Failed to reject edits');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
 
   const OverviewTab = ({ refreshTrigger }: { refreshTrigger: number }) => {
     const [localDismissed, setLocalDismissed] = useState<string[]>(() => {
@@ -889,34 +917,6 @@ export function OperationsDashboardPage() {
         try {
           await axios.post(`${API}/api/admin/authors/${b.authorId}/notify-low-stock`, { bookId: b.id || b.dbId, title: b.title }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
         } catch (e) { }
-      }
-    };
-
-    const handleRejectEdits = async () => {
-      if (!editingAuthor) return;
-      setLoadingAction('rejectEdits');
-      try {
-        await axios.post(`${API}/api/admin/authors/${editingAuthor.id}/reject-edits`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-        toast.success('Author edits rejected (reverted)');
-        setIsEditAuthorModalOpen(false);
-        fetchDashboardData();
-      } catch (err) {
-        toast.error('Failed to reject edits');
-      } finally {
-        setLoadingAction(null);
-      }
-    };
-
-    const handleRejectEditsDirect = async (id: number) => {
-      setLoadingAction('rejectEdits_' + id);
-      try {
-        await axios.post(`${API}/api/admin/authors/${id}/reject-edits`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-        toast.success('Author edits rejected (reverted)');
-        fetchDashboardData();
-      } catch (err) {
-        toast.error('Failed to reject edits');
-      } finally {
-        setLoadingAction(null);
       }
     };
 
@@ -1497,8 +1497,8 @@ export function OperationsDashboardPage() {
                     key={period}
                     onClick={() => setReportPeriod(period)}
                     className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-full transition-all border ${reportPeriod === period
-                        ? 'bg-paa-navy text-white border-paa-navy shadow-md'
-                        : 'bg-white text-gray-500 border-gray-200 hover:border-paa-navy/30'
+                      ? 'bg-paa-navy text-white border-paa-navy shadow-md'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-paa-navy/30'
                       }`}
                   >
                     {period === 'lifelong' ? 'Lifetime' : period}
@@ -1592,7 +1592,7 @@ export function OperationsDashboardPage() {
             { label: 'Avg Order Value', value: `₹${avgOrderValueWeb}`, icon: DollarSign, colorClass: 'text-emerald-600 bg-emerald-100', bgClass: 'border-emerald-100' },
             { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'text-orange-600 bg-orange-100', bgClass: 'border-orange-100' },
             { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'text-blue-600 bg-blue-100', bgClass: 'border-blue-100' },
-            { label: 'Avg Delivery Time', value: avgDeliveryDays > 0 ? `${avgDeliveryDays} Days` : 'N/A', icon: TrendingUp, colorClass: 'text-teal-600 bg-teal-100', bgClass: 'border-teal-100' },
+            { label: 'Avg Delivery Time', value: Number(avgDeliveryDays) > 0 ? `${avgDeliveryDays} Days` : 'N/A', icon: TrendingUp, colorClass: 'text-teal-600 bg-teal-100', bgClass: 'border-teal-100' },
             { label: 'Returns & Cancels', value: returnedOrdersCount, icon: XCircle, colorClass: 'text-red-600 bg-red-100', bgClass: 'border-red-100' },
           ].map((kpi, i) => (
             <div key={i} className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col justify-center items-start gap-3 hover:-translate-y-1 hover:shadow-md transition-all`}>
@@ -2295,8 +2295,7 @@ export function OperationsDashboardPage() {
                         {author.paymentScreenshot ? (
                           <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + author.paymentScreenshot : "http://localhost:3001" + author.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline font-medium mt-1 inline-block hover:text-blue-800">View Receipt</a>
                         ) : (
-                          <span classN
-                            ame="text-[10px] text-red-500 font-bold uppercase block mt-1">No Receipt</span>
+                          <span className="text-[10px] text-red-500 font-bold uppercase block mt-1">No Receipt</span>
                         )}
                       </div>
                     ) : (
@@ -3224,8 +3223,8 @@ export function OperationsDashboardPage() {
                 setSidebarOpen(false);
               }}
               className={`w-full flex items-center justify-start text-left gap-3 px-4 py-3 text-xs font-bold tracking-widest uppercase transition-all duration-300 rounded-xl border ${activeTab === item.id
-                  ? 'bg-paa-navy text-paa-cream border-paa-navy shadow-premium'
-                  : 'text-paa-navy border-[transparent] hover:bg-black/5 hover:border-black/5'
+                ? 'bg-paa-navy text-paa-cream border-paa-navy shadow-premium'
+                : 'text-paa-navy border-[transparent] hover:bg-black/5 hover:border-black/5'
                 }`}
             >
               <item.icon className="w-4 h-4 shrink-0" />
@@ -3546,18 +3545,18 @@ export function OperationsDashboardPage() {
           const target = e.target as any;
           setIsSubmittingEvent(true);
           try {
-            const eType = target.eventType.value === 'Other' ? target.customEventType.value : target.eventType.value;
-
             const fd = new FormData();
             fd.append('name', target.name.value);
             fd.append('date', target.date.value);
             fd.append('location', target.location.value);
             fd.append('duration', target.duration.value);
-            fd.append('eventType', eType);
+            if (target.startTime?.value) fd.append('startTime', target.startTime.value);
+            if (target.endTime?.value) fd.append('endTime', target.endTime.value);
+            fd.append('eventType', target.eventType.value);
             fd.append('registrationFee', target.registrationFee.value);
             fd.append('feeType', target.feeType.value);
             if (target.description.value) fd.append('description', target.description.value);
-            fd.append('livePosEnabled', target.livePosEnabled.checked ? 'true' : 'false');
+            fd.append('livePosEnabled', target.livePosEnabled?.checked ? 'true' : 'false');
             if (target.banner.files[0]) fd.append('banner', target.banner.files[0]);
 
             await axios.post(`${API}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
@@ -3575,52 +3574,53 @@ export function OperationsDashboardPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <label className="dash-label">From Timing</label>
+              <input name="startTime" type="time" className="dash-input" />
+            </div>
+            <div>
+              <label className="dash-label">To Timing</label>
+              <input name="endTime" type="time" className="dash-input" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label className="dash-label">Event Type</label>
-              <select name="eventType" className="dash-input" onChange={(e) => {
-                const customInput = document.getElementById('customEventTypeContainer');
-                if (customInput) customInput.style.display = e.target.value === 'Other' ? 'block' : 'none';
-              }}>
+              <select name="eventType" className="dash-input">
                 <option value="Book Fair">Book Fair</option>
-                <option value="Literature Festival">Literature Festival</option>
-                <option value="Book Launch">Book Launch</option>
-                <option value="Workshop">Workshop</option>
-                <option value="Online Event">Online Event</option>
-                <option value="Other">Other</option>
+                <option value="Literary Event">Literary Event</option>
               </select>
             </div>
-            <div id="customEventTypeContainer" style={{ display: 'none' }}>
-              <label className="dash-label">Specify Type</label>
-              <input name="customEventType" type="text" placeholder="Enter custom type" className="dash-input" />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="dash-label">Date (e.g. 15 Aug 2026)</label><input required name="date" type="date" className="dash-input" /></div>
-            <div><label className="dash-label">Duration (e.g. 3 days)</label><input required name="duration" type="text" className="dash-input" /></div>
-          </div>
-          <div><label className="dash-label">Location</label><input required name="location" type="text" className="dash-input" /></div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="dash-label">Registration Fee (₹)</label>
-              <input required name="registrationFee" type="number" min="0" step="0.01" defaultValue="0" className="dash-input" />
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="dash-label">Date (e.g. 15 Aug 2026)</label><input required name="date" type="date" className="dash-input" /></div>
+              <div><label className="dash-label">Duration (e.g. 3 days)</label><input required name="duration" type="text" className="dash-input" /></div>
             </div>
-            <div>
-              <label className="dash-label">Fee Type</label>
-              <select name="feeType" className="dash-input">
-                <option value="Per Author">Per Author</option>
-                <option value="Per Title">Per Title</option>
-                <option value="Flat Fee">Flat Fee</option>
-              </select>
-            </div>
-          </div>
+            <div><label className="dash-label">Location</label><input required name="location" type="text" className="dash-input" /></div>
 
-          <div className="pt-4 mt-4 border-t border-paa-navy/5 flex justify-end">
-            <button type="submit" disabled={isSubmittingEvent} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
-              {isSubmittingEvent ? "Creating Event..." : "Create Event"}
-            </button>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="dash-label">Registration Fee (₹)</label>
+                <input required name="registrationFee" type="number" min="0" step="0.01" defaultValue="0" className="dash-input" />
+              </div>
+              <div>
+                <label className="dash-label">Fee Type</label>
+                <select name="feeType" className="dash-input">
+                  <option value="Per Author">Per Author</option>
+                  <option value="Per Title">Per Title</option>
+                  <option value="Flat Fee">Flat Fee</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-paa-navy/5 flex justify-end">
+              <button type="submit" disabled={isSubmittingEvent} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+                {isSubmittingEvent ? "Creating Event..." : "Create Event"}
+              </button>
+            </div>
           </div>
         </form>
+
       </Modal>
 
       <Modal isOpen={isEditEventModalOpen} onClose={() => setIsEditEventModalOpen(false)} title="Edit Event">
@@ -3632,22 +3632,23 @@ export function OperationsDashboardPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <label className="dash-label">From Timing</label>
+                <input type="time" className="dash-input" value={editingEvent.startTime} onChange={e => setEditingEvent({ ...editingEvent, startTime: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">To Timing</label>
+                <input type="time" className="dash-input" value={editingEvent.endTime} onChange={e => setEditingEvent({ ...editingEvent, endTime: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <label className="dash-label">Event Type</label>
                 <select name="eventType" className="dash-input" value={editingEvent.eventType} onChange={e => setEditingEvent({ ...editingEvent, eventType: e.target.value })}>
                   <option value="Book Fair">Book Fair</option>
-                  <option value="Literature Festival">Literature Festival</option>
-                  <option value="Book Launch">Book Launch</option>
-                  <option value="Workshop">Workshop</option>
-                  <option value="Online Event">Online Event</option>
-                  <option value="Other">Other</option>
+                  <option value="Literary Event">Literary Event</option>
                 </select>
               </div>
-              {editingEvent.eventType === 'Other' && (
-                <div>
-                  <label className="dash-label">Specify Type</label>
-                  <input required name="customEventType" type="text" placeholder="Enter custom type" className="dash-input" />
-                </div>
-              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

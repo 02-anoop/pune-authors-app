@@ -597,7 +597,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     }
   }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, authorBlob, paymentBlob, qrCodeBlob, coverBlob, backCoverBlob, isAdminEdit, isReapply, isAuthorEdit]);
 
-  const validateField = (key: string, value: string | boolean) => {
+  const validateField = (key: string, value: any) => {
     let error = "";
     if (key === "name" && !value) error = "Name is required.";
     if (key === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value as string)) error = "Invalid email address.";
@@ -685,7 +685,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     setErrors((prev) => ({ ...prev, [key]: error }));
   };
 
-  const update = (key: string, val: string | boolean) => {
+  const update = (key: string, val: any) => {
     setForm((prev) => ({ ...prev, [key]: val }));
     validateField(key, val);
   };

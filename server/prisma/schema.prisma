@@ -21,18 +21,18 @@ model User {
 }
 
 model AuthorDraft {
-  id              Int      @id @default(autoincrement())
-  email           String   @unique
-  step            Int      @default(0)
-  form            Json
-  books           Json
-  qualifications  Json
-  extraDataState  Json
-  skillInput      String?
-  hobbyInput      String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  completed       Boolean  @default(false)
+  id             Int      @id @default(autoincrement())
+  email          String   @unique
+  step           Int      @default(0)
+  form           Json
+  books          Json
+  qualifications Json
+  extraDataState Json
+  skillInput     String?
+  hobbyInput     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  completed      Boolean  @default(false)
 }
 
 model OtpVerification {
@@ -49,61 +49,60 @@ model Author {
   bio                String
   photoUrl           String?
   status             String              @default("Pending")
-  rejectionReason    String?
-  transactionId      String?
-  paymentScreenshot  String?
   createdAt          DateTime            @default(now())
   whatsapp           String?
-  penName            String?
-  city               String?
-  state              String?
-  instagram          String?
-  facebook           String?
+  rejectionReason    String?
+  paymentScreenshot  String?
+  transactionId      String?
   extraData          Json?
-  qualificationsJson Json?
-  skillsJson         Json?
-  hobbiesJson        Json?
   qrCodeUrl          String?
-  qualification      String?
-  institution        String?
-  subject            String?
-  certificateUrl     String?
-  age                String?
-  experience         String?
-  skills             String?
-  hobbies            String?
-  whyJoining         String?
+  city               String?
+  facebook           String?
+  instagram          String?
+  penName            String?
+  state              String?
   aadharNumber       String?
   address            String?
+  qualification      String?
+  age                String?
+  experience         String?
+  hobbies            String?
+  skills             String?
+  whyJoining         String?
+  certificateUrl     String?
   district           String?
-  pincode            String?
   dob                String?
+  hobbiesJson        Json?
+  institution        String?
+  pincode            String?
+  qualificationsJson Json?
+  skillsJson         Json?
+  subject            String?
   books              Book[]
-  eventRegistrations EventRegistration[]
-  formResponses      FormResponse[]
   eventAuthors       EventAuthor[]
   eventBooks         EventBook[]
-  queries            Query[]
+  eventRegistrations EventRegistration[]
+  formResponses      FormResponse[]
   posOrders          PosOrder[]
+  queries            Query[]
 }
 
 model Query {
-  id          Int      @id @default(autoincrement())
-  authorId    Int?
-  userId      Int?
-  subject     String
-  message     String
-  status      String   @default("Pending") // Pending, Answered
-  reply       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  author      Author?   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        Int      @id @default(autoincrement())
+  authorId  Int?
+  subject   String
+  message   String
+  status    String   @default("Pending")
+  reply     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int?
+  author    Author?  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Book {
-  id              Int         @id @default(autoincrement())
+  id              Int            @id @default(autoincrement())
   title           String
   genre           String
   subGenre        String?
@@ -111,29 +110,28 @@ model Book {
   pages           Int?
   mrp             Float
   coverUrl        String?
-  backCoverUrl    String?
-  status          String      @default("Pending")
-  rejectionReason String?
+  status          String         @default("Pending")
   authorId        Int
-  createdAt       DateTime    @default(now())
-  overpriced      Boolean     @default(false)
-  stock           Int         @default(0)
-  airportStock    Int         @default(0)
-  fairStock       Int         @default(0)
-  
-  subtitle        String?
-  language        String?
-  isbn            String?
-  purpose         String?
-  publisher       String?
-  publicationDate String?
+  createdAt       DateTime       @default(now())
+  overpriced      Boolean        @default(false)
+  stock           Int            @default(0)
+  airportStock    Int            @default(0)
+  fairStock       Int            @default(0)
+  rejectionReason String?
   edition         String?
   format          String?
+  isbn            String?
+  language        String?
+  publicationDate String?
+  publisher       String?
+  subtitle        String?
+  backCoverUrl    String?
   printFormat     String?
-  author          Author      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  orderItems      OrderItem[]
+  purpose         String?
+  author          Author         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   reviews         BookReview[]
   eventBooks      EventBook[]
+  orderItems      OrderItem[]
   posOrderItems   PosOrderItem[]
 }
 
@@ -145,29 +143,29 @@ model Order {
   address           String?
   amount            Float
   paymentScreenshot String?
-  transactionId     String?
   createdAt         DateTime    @default(now())
   status            String      @default("Pending Verification")
+  transactionId     String?
   items             OrderItem[]
 }
 
 model OrderItem {
-  id             Int      @id @default(autoincrement())
-  orderId        Int
-  bookId         Int
-  quantity       Int      @default(1)
-  status         String   @default("Pending Verification")
-  createdAt      DateTime @default(now())
-  acceptedAt     DateTime?
-  dispatchedAt   DateTime?
-  deliveredAt    DateTime?
-  trackingNumber  String?
-  rejectionReason String?
+  id                Int       @id @default(autoincrement())
+  orderId           Int
+  bookId            Int
+  quantity          Int       @default(1)
+  status            String    @default("Pending Verification")
+  createdAt         DateTime  @default(now())
+  trackingNumber    String?
+  rejectionReason   String?
+  deliveredAt       DateTime?
+  dispatchedAt      DateTime?
+  acceptedAt        DateTime?
+  feedbackComments  String?
   feedbackCondition String?
   feedbackRating    Int?
-  feedbackComments  String?
-  book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  book              Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model ContactInquiry {
@@ -179,7 +177,7 @@ model ContactInquiry {
 }
 
 model GalleryEvent {
-  id          Int      @id @default(autoincrement())
+  id          Int            @id @default(autoincrement())
   location    String
   place       String
   city        String
@@ -190,22 +188,21 @@ model GalleryEvent {
   type        String
   description String
   photoUrl    String
-  eventId     Int?     @unique
-  event       Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  createdAt   DateTime       @default(now())
+  eventId     Int?           @unique
+  event       Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   images      GalleryImage[]
 }
 
 model GalleryImage {
-  id              Int      @id @default(autoincrement())
-  galleryEventId  Int
-  url             String
-  caption         String?
-  dateTaken       DateTime?
-  createdAt       DateTime @default(now())
-  status          String   @default("Pending")
-  
-  galleryEvent    GalleryEvent @relation(fields: [galleryEventId], references: [id], onDelete: Cascade)
+  id             Int          @id @default(autoincrement())
+  galleryEventId Int
+  url            String
+  caption        String?
+  dateTaken      DateTime?
+  createdAt      DateTime     @default(now())
+  status         String       @default("Pending")
+  galleryEvent   GalleryEvent @relation(fields: [galleryEventId], references: [id], onDelete: Cascade)
 }
 
 model Activity {
@@ -257,7 +254,7 @@ model BookReview {
   id           Int      @id @default(autoincrement())
   bookId       Int
   reviewerName String
-  rating       Int      // 1-5
+  rating       Int
   comment      String
   createdAt    DateTime @default(now())
   book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
@@ -269,51 +266,49 @@ model Event {
   location          String
   date              String
   duration          String
-  description       String?
-  brochureUrl       String?
-  bannerUrl         String?
-  status            String        @default("Upcoming") // Upcoming, Ongoing, Past
-  commissionPercent Float?
-  commissionFlat    Float?
+  status            String        @default("Upcoming")
   createdAt         DateTime      @default(now())
-  broadcastStatus   String        @default("None")     // None, AuthorsOnly, CustomersAlso
-  
-  eventType         String        @default("Book Fair") // Book Fair, Literature Festival, Book Launch, Workshop, Online Event, Other
+  broadcastStatus   String        @default("None")
+  brochureUrl       String?
+  description       String?
+  commissionFlat    Float?
+  commissionPercent Float?
+  eventType         String        @default("Book Fair")
+  feeType           String        @default("Per Author")
   registrationFee   Float         @default(0)
-  feeType           String        @default("Per Author") // Per Author, Per Title
+  bannerUrl         String?
   livePosEnabled    Boolean       @default(true)
-  
-  eventAuthors    EventAuthor[]
-  eventBooks      EventBook[]
-  posOrders       PosOrder[]
-  galleryEvent    GalleryEvent?
+  endTime           String?
+  startTime         String?
+  eventAuthors      EventAuthor[]
+  eventBooks        EventBook[]
+  galleryEvent      GalleryEvent?
+  posOrders         PosOrder[]
 }
 
 model EventAuthor {
-  id              Int       @id @default(autoincrement())
-  eventId         Int
-  authorId        Int
-  optInStatus     String    @default("Pending") // Pending, Opted-In, Opted-Out
+  id                Int      @id @default(autoincrement())
+  eventId           Int
+  authorId          Int
+  optInStatus       String   @default("Pending")
+  createdAt         DateTime @default(now())
   paymentScreenshot String?
-  createdAt       DateTime  @default(now())
-  
-  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  author          Author    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author            Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model EventBook {
-  id              Int       @id @default(autoincrement())
-  eventId         Int
-  bookId          Int
-  authorId        Int
-  listedStock     Int       @default(0) // Stock committed for this event
-  soldStock       Int       @default(0) // Stock sold during the event
-  returnedStock   Int       @default(0) // Listed - Sold
-  createdAt       DateTime  @default(now())
-  
-  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  book            Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  author          Author    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id            Int      @id @default(autoincrement())
+  eventId       Int
+  bookId        Int
+  authorId      Int
+  listedStock   Int      @default(0)
+  soldStock     Int      @default(0)
+  returnedStock Int      @default(0)
+  createdAt     DateTime @default(now())
+  author        Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model PosOrder {
@@ -321,26 +316,24 @@ model PosOrder {
   authorId         Int
   eventId          Int
   totalAmount      Float
-  paymentMethod    String         @default("UPI") // UPI, Cash
-  paymentStatus    String         @default("CONFIRMED")
-  paymentReference String?
-  saleSource       String         @default("BOOK_FAIR")
+  paymentMethod    String         @default("UPI")
   createdAt        DateTime       @default(now())
-  
+  paymentReference String?
+  paymentStatus    String         @default("CONFIRMED")
+  saleSource       String         @default("BOOK_FAIR")
   author           Author         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event            Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   items            PosOrderItem[]
 }
 
 model PosOrderItem {
-  id          Int       @id @default(autoincrement())
-  posOrderId  Int
-  bookId      Int
-  quantity    Int
-  price       Float
-  
-  posOrder    PosOrder  @relation(fields: [posOrderId], references: [id], onDelete: Cascade)
-  book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  id         Int      @id @default(autoincrement())
+  posOrderId Int
+  bookId     Int
+  quantity   Int
+  price      Float
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  posOrder   PosOrder @relation(fields: [posOrderId], references: [id], onDelete: Cascade)
 }
 
 model Notification {

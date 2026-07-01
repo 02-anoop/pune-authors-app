@@ -1291,7 +1291,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       <label className="dash-label">Category *</label>
                       <select value={form.genre} onChange={(e) => { update("genre", e.target.value); update("subcategory", ""); update("subSubcategory", ""); }} className={`dash-input w-full ${errors.genre ? '!border-red-500' : ''}`}>
                         <option value="">Select Category</option>
-                        {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
+                        {Object.keys(bookCategories).sort((a, b) => a.localeCompare(b)).map(c => <option key={c} value={c}>{c}</option>)}
 <option value="Other">Other</option>
                       </select>
                       {errors.genre && <div className="text-red-500 text-xs mt-1 font-medium">{errors.genre}</div>}
@@ -1301,7 +1301,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         <label className="dash-label">Subcategory</label>
                         <select value={form.subcategory} onChange={(e) => { update("subcategory", e.target.value); update("subSubcategory", ""); }} className="dash-input w-full">
                           <option value="">Select Subcategory</option>
-                          {Object.keys(bookCategories[form.genre as keyof typeof bookCategories] || {}).map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                          {Object.keys(bookCategories[form.genre as keyof typeof bookCategories] || {}).sort((a, b) => a.localeCompare(b)).map(sc => <option key={sc} value={sc}>{sc}</option>)}
                         </select>
                       </div>
                     )}
@@ -1310,7 +1310,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         <label className="dash-label">Specific Genre</label>
                         <select value={form.subSubcategory} onChange={(e) => update("subSubcategory", e.target.value)} className="dash-input w-full">
                           <option value="">Select Specific Genre</option>
-                          {((bookCategories[form.genre as keyof typeof bookCategories] as any)[form.subcategory] || []).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
+                          {[...((bookCategories[form.genre as keyof typeof bookCategories] as any)[form.subcategory] || [])].sort((a, b) => a.localeCompare(b)).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
                         </select>
                       </div>
                     )}

@@ -237,7 +237,7 @@ const genreOptions = [
   { code: "C", label: "Children's", color: "#16a34a" },
 ];
 
-export function AuthorRegistrationPage({ initialData, isReapply = false, onReapplySuccess, isAdminEdit = false, onAdminSave, onAdminReject, onAdminCancel, hideNavbar = false }: any = {}) {
+export function AuthorRegistrationPage({ initialData, isReapply = false, onReapplySuccess, isAdminEdit = false, isAuthorEdit = false, onAdminSave, onAdminReject, onAdminCancel, hideNavbar = false, targetAction, targetBookId }: any = {}) {
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -265,9 +265,32 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   const hasInitialized = useRef(false);
   const hasLoadedDraft = useRef(false);
 
-  const isOnboardingMode = !isReapply && !isAdminEdit;
+  const isOnboardingMode = !isReapply && !isAdminEdit && !isAuthorEdit;
   const currentSteps = isOnboardingMode ? [...onboardingInfoSteps, ...formSteps] : formSteps;
   const formStepIndex = isOnboardingMode ? step - 3 : step;
+  
+  const getDiffUi = (key: string) => {
+    if (!isAdminEdit || !initialData?.extraData?.originalProfileData) return null;
+    const origData = initialData.extraData.originalProfileData;
+    const origVal = origData[key] !== undefined ? String(origData[key]) : "";
+    const curVal = form[key] !== undefined ? String(form[key]) : "";
+    if (origVal !== curVal) {
+       return <div className="text-xs text-blue-600 mt-1 font-bold bg-blue-50 px-2 py-1 rounded inline-block shadow-sm border border-blue-100">Original: {origVal || '(empty)'}</div>;
+    }
+    return null;
+  };
+  
+  const getDiffClass = (key: string) => {
+    if (!isAdminEdit || !initialData?.extraData?.originalProfileData) return "";
+    const origData = initialData.extraData.originalProfileData;
+    const origVal = origData[key] !== undefined ? String(origData[key]) : "";
+    const curVal = form[key] !== undefined ? String(form[key]) : "";
+    if (origVal !== curVal) {
+       return "!border-blue-500 ring-2 ring-blue-500/20";
+    }
+    return "";
+  };
+
   const topRef = useRef<HTMLDivElement>(null);
 
   // Scroll to top of stepper when changing steps
@@ -279,7 +302,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   }, [step]);
 
   useEffect(() => {
-    if (!isReapply && !isAdminEdit && !hasLoadedDraft.current && localStorage.getItem('token')) {
+    if (!isReapply && !isAdminEdit && !isAuthorEdit && !hasLoadedDraft.current && localStorage.getItem('token')) {
       hasLoadedDraft.current = true;
       axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/get-draft`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -308,7 +331,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       })
       .catch(console.error);
       
-    if ((isReapply || isAdminEdit) && initialData && !hasInitialized.current) {
+    if ((isReapply || isAdminEdit || isAuthorEdit) && initialData && !hasInitialized.current) {
        hasInitialized.current = true;
        let parsedQuals = [];
        try { parsedQuals = JSON.parse(initialData.qualification); } catch(e) {}
@@ -333,91 +356,42 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
        }
 
        if (initialData.books && initialData.books.length > 0) {
-          const firstBook = initialData.books[0];
-          setForm(prev => ({
-             ...prev,
-             name: initialData.name || "",
-             email: initialData.email || "",
-             phone: initialData.phone || "",
-
-             address: initialData.address || "",
-             pincode: initialData.pincode || "",
-             aadharNumber: initialData.aadharNumber || "",
-             dob: initialData.dob || initialData.age || "",
-             experience: initialData.experience || "",
-             skills: parseArray(initialData.skillsJson, initialData.skills),
-             hobbies: parseArray(initialData.hobbiesJson, initialData.hobbies),
-             whyJoining: initialData.whyJoining || "",
-             bio: initialData.bio || "",
-             penName: initialData.penName || "",
-             city: initialData.city || "",
-             state: initialData.state || "",
-             instagram: initialData.instagram || "",
-             facebook: initialData.facebook || "",
-             linkedin: (extra as any).linkedin || "",
-             youtube: (extra as any).youtube || "",
-             transactionId: initialData.transactionId || "",
-             conflictOfInterestSignature: (extra as any).conflictOfInterestSignature || "",
-             agreedToGuidelines: (extra as any).agreedToGuidelines || false,
-             agreedToInfoDoc: (extra as any).agreedToInfoDoc || false,
-             
-             // book 1 prefill
-             title: firstBook.title || "",
-             subtitle: firstBook.subtitle || "",
-             genre: firstBook.genre || "",
-             subcategory: firstBook.subGenre ? firstBook.subGenre.split(' > ')[0] : "",
-             subSubcategory: firstBook.subGenre && firstBook.subGenre.includes(' > ') ? firstBook.subGenre.split(' > ')[1] : "",
-             synopsis: firstBook.synopsis || "",
-             pages: firstBook.pages || "",
-             mrp: firstBook.mrp || "",
-             stock: firstBook.stock || "",
-             language: firstBook.language || "",
-             isbn: firstBook.isbn || "",
-             publisher: firstBook.publisher || "",
-             publicationDate: firstBook.publicationDate || "",
-             edition: firstBook.edition || "",
-             format: firstBook.format || "",
-             printFormat: firstBook.printFormat || "",
-             purposeOfWriting: firstBook.purpose || ""
-          }));
-          if (initialData.books.length > 1) {
-             setBooks(initialData.books.slice(1).map((b: any) => ({
-                ...b,
-                subcategory: b.subGenre ? b.subGenre.split(' > ')[0] : "",
-                subSubcategory: b.subGenre && b.subGenre.includes(' > ') ? b.subGenre.split(' > ')[1] : ""
-             })));
-          }
-          if (firstBook.coverUrl) setCoverFileUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${firstBook.coverUrl}`);
-          if (firstBook.backCoverUrl) setBackCoverFileUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${firstBook.backCoverUrl}`);
-       } else {
-          setForm(prev => ({
-             ...prev,
-             name: initialData.name || "",
-             email: initialData.email || "",
-             phone: initialData.phone || "",
-
-             address: initialData.address || "",
-             pincode: initialData.pincode || "",
-             aadharNumber: initialData.aadharNumber || "",
-             dob: initialData.dob || initialData.age || "",
-             experience: initialData.experience || "",
-             skills: parseArray(initialData.skillsJson, initialData.skills),
-             hobbies: parseArray(initialData.hobbiesJson, initialData.hobbies),
-             whyJoining: initialData.whyJoining || "",
-             bio: initialData.bio || "",
-             penName: initialData.penName || "",
-             city: initialData.city || "",
-             state: initialData.state || "",
-             instagram: initialData.instagram || "",
-             facebook: initialData.facebook || "",
-             linkedin: (extra as any).linkedin || "",
-             youtube: (extra as any).youtube || "",
-             transactionId: initialData.transactionId || "",
-             conflictOfInterestSignature: (extra as any).conflictOfInterestSignature || "",
-             agreedToGuidelines: (extra as any).agreedToGuidelines || false,
-             agreedToInfoDoc: (extra as any).agreedToInfoDoc || false
-          }));
+          setBooks(initialData.books.map((b: any) => ({
+             ...b,
+             subcategory: b.subGenre ? b.subGenre.split(' > ')[0] : '',
+             subSubcategory: b.subGenre && b.subGenre.includes(' > ') ? b.subGenre.split(' > ')[1] : '',
+             coverFileUrl: b.coverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${b.coverUrl}` : null,
+             backCoverFileUrl: b.backCoverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${b.backCoverUrl}` : null
+          })));
        }
+       
+       setForm(prev => ({
+          ...prev,
+          name: initialData.name || '',
+          email: initialData.email || '',
+          phone: initialData.phone || '',
+          address: initialData.address || '',
+          pincode: initialData.pincode || '',
+          aadharNumber: initialData.aadharNumber || '',
+          dob: initialData.dob || initialData.age || '',
+          experience: initialData.experience || '',
+          skills: parseArray(initialData.skillsJson, initialData.skills),
+          hobbies: parseArray(initialData.hobbiesJson, initialData.hobbies),
+          whyJoining: initialData.whyJoining || '',
+          bio: initialData.bio || '',
+          penName: initialData.penName || '',
+          city: initialData.city || '',
+          state: initialData.state || '',
+          instagram: initialData.instagram || '',
+          facebook: initialData.facebook || '',
+          linkedin: (extra as any).linkedin || '',
+          youtube: (extra as any).youtube || '',
+          transactionId: initialData.transactionId || '',
+          conflictOfInterestSignature: (extra as any).conflictOfInterestSignature || '',
+          agreedToGuidelines: (extra as any).agreedToGuidelines || false,
+          agreedToInfoDoc: (extra as any).agreedToInfoDoc || false
+       }));
+
        if (initialData.extraData) {
           setExtraDataState(initialData.extraData);
        }
@@ -425,7 +399,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
        if (initialData.paymentScreenshot) setPaymentScreenshotUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.paymentScreenshot}`);
        if (initialData.qrCodeUrl) setQrCodeUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.qrCodeUrl}`);
     }
-  }, [isReapply, isAdminEdit, initialData]);
+  }, [isReapply, isAdminEdit, isAuthorEdit, initialData]);
 
 
   const [form, setForm] = useState<any>({
@@ -478,7 +452,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   });
 
   useEffect(() => {
-    if (isReapply || isAdminEdit || !hasLoadedDraft.current || !localStorage.getItem('token')) return;
+    if (isReapply || isAdminEdit || isAuthorEdit || !hasLoadedDraft.current || !localStorage.getItem('token')) return;
     const timeoutId = setTimeout(() => {
       axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/save-draft`, {
         step, form, books, qualifications, extraDataState, skillInput, hobbyInput
@@ -487,13 +461,13 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
       }).catch(err => console.log('Failed to save draft'));
     }, 1500);
     return () => clearTimeout(timeoutId);
-  }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, isReapply, isAdminEdit]);
+  }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, isReapply, isAdminEdit, isAuthorEdit]);
 
   const [showAddBookForm, setShowAddBookForm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isAdminEdit && !isReapply && !hasLoadedDraft.current) {
+    if (!isAdminEdit && !isReapply && !isAuthorEdit && !hasLoadedDraft.current) {
       hasLoadedDraft.current = true;
       try {
         const draftStr = localStorage.getItem("authorRegistrationDraft");
@@ -577,7 +551,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   }, [isAdminEdit, isReapply]);
 
   useEffect(() => {
-    if (!isAdminEdit && !isReapply && hasLoadedDraft.current) {
+    if (!isAdminEdit && !isReapply && !isAuthorEdit && hasLoadedDraft.current) {
       const draft = {
         step,
         form,
@@ -613,7 +587,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
         }
       })();
     }
-  }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, authorBlob, paymentBlob, qrCodeBlob, coverBlob, backCoverBlob, isAdminEdit, isReapply]);
+  }, [step, form, books, qualifications, extraDataState, skillInput, hobbyInput, authorBlob, paymentBlob, qrCodeBlob, coverBlob, backCoverBlob, isAdminEdit, isReapply, isAuthorEdit]);
 
   const validateField = (key: string, value: string | boolean) => {
     let error = "";
@@ -736,8 +710,31 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     setBooks(books.filter((_, i) => i !== idx));
   };
 
+  const handledTargetAction = useRef(false);
+  useEffect(() => {
+    if (hasInitialized.current && targetAction && !handledTargetAction.current) {
+       handledTargetAction.current = true;
+       if (targetAction === 'add_book' || targetAction === 'edit_book') {
+          setStep(1);
+          setShowAddBookForm(true);
+          if (targetAction === 'edit_book' && targetBookId) {
+             const idx = books.findIndex(b => b.id === targetBookId);
+             if (idx !== -1) {
+                handleEditAddedBook(idx);
+             }
+          } else if (targetAction === 'add_book') {
+             setForm(prev => ({ ...prev, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" }));
+             setCoverBlob(null);
+             setBackCoverBlob(null);
+             setCoverFileUrl(null);
+             setBackCoverFileUrl(null);
+          }
+       }
+    }
+  }, [targetAction, targetBookId, books, form]);
+
   return (
-    <main className="font-sans min-h-screen bg-[#F8FAFC] text-paa-navy">
+    <main className={`font-sans text-paa-navy ${isAuthorEdit ? 'bg-transparent' : 'min-h-screen bg-[#F8FAFC]'}`}>
       {/* Scrollable Header Banner */}
       {!hideNavbar && (isAdminEdit ? (
         <section className="bg-paa-navy py-6 md:py-8 px-6 text-center text-white relative">
@@ -763,7 +760,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
 
       {/* Sticky Stepper Only */}
       <div className={`z-40 w-full sticky ${isAdminEdit ? 'top-0' : 'top-[72px]'} pt-0`}>
-        <div className="w-full px-6 md:px-12 lg:px-20">
+        <div className="w-full px-2 sm:px-6 md:px-12 lg:px-20 mt-2 sm:mt-0">
           <div className="max-w-5xl mx-auto">
             <div className={`bg-white rounded-2xl shadow-premium ${hideNavbar ? 'border border-gray-200' : 'border border-paa-navy/5'}`}>
               <div className="px-1 sm:px-2 md:px-6 py-3 md:py-4">
@@ -798,10 +795,10 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
         </div>
       </div>
 
-      <div className="w-full px-6 md:px-12 lg:px-20 mt-6 mb-12 pb-20">
+      <div className="w-full px-2 sm:px-6 md:px-12 lg:px-20 mt-3 sm:mt-6 mb-12 pb-20">
         <div className="max-w-5xl mx-auto">
         {!submitted ? (
-          <div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-8 md:p-12 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out">
+          <div className="bg-white rounded-2xl sm:rounded-3xl-2xl border border-paa-navy/5 p-5 sm:p-8 md:p-12 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out">
             {isOnboardingMode && step === 0 && <WizardAboutStep />}
             {isOnboardingMode && step === 1 && <WizardEventsStep />}
             {isOnboardingMode && step === 2 && <WizardServicesStep />}
@@ -816,8 +813,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <div className={`grid grid-cols-1 ${isAdminEdit ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
                     <div>
                       <label className="dash-label">Full Name *</label>
-                      <input type="text" value={form.name} onChange={(e) => update("name", e.target.value.replace(/[^a-zA-Z\s]/g, ''))} className={`dash-input w-full ${errors.name ? '!border-red-500' : ''}`} placeholder="e.g. Jane Doe" />
+                      <input type="text" value={form.name} onChange={(e) => update("name", e.target.value.replace(/[^a-zA-Z\s]/g, ''))} className={`dash-input w-full ${errors.name ? '!border-red-500' : ''} ${getDiffClass("name")}`} placeholder="e.g. Jane Doe" />
                       {errors.name && <div className="text-red-500 text-xs mt-1 font-medium">{errors.name}</div>}
+                      {getDiffUi("name")}
                     </div>
                     <div>
                       <label className="dash-label">Pen Name</label>
@@ -826,8 +824,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     {isAdminEdit && (
                       <div>
                         <label className="dash-label">Email Address *</label>
-                        <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className={`dash-input w-full ${errors.email ? '!border-red-500' : ''}`} placeholder="jane@example.com" />
+                        <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className={`dash-input w-full ${errors.email ? '!border-red-500' : ''} ${getDiffClass("email")}`} placeholder="jane@example.com" />
                         {errors.email && <div className="text-red-500 text-xs mt-1 font-medium">{errors.email}</div>}
+                      {getDiffUi("email")}
                       </div>
                     )}
                   </div>
@@ -836,8 +835,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="dash-label">Phone Number *</label>
-                      <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''}`} placeholder="10-digit mobile number" />
+                      <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.phone ? '!border-red-500' : ''} ${getDiffClass("phone")}`} placeholder="10-digit mobile number" />
                       {errors.phone && <div className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</div>}
+                      {getDiffUi("phone")}
                     </div>
                     {!isReapply && !isAdminEdit && !localStorage.getItem('token') ? (
                       <div>
@@ -859,8 +859,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     ) : (
                       <div>
                         <label className="dash-label">Aadhar Number *</label>
-                        <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
+                        <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''} ${getDiffClass("aadharNumber")}`} placeholder="12-digit Aadhar number" />
                         {errors.aadharNumber && <div className="text-red-500 text-xs mt-1 font-medium">{errors.aadharNumber}</div>}
+                      {getDiffUi("aadharNumber")}
                       </div>
                     )}
                   </div>
@@ -869,8 +870,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <div className={`grid grid-cols-1 ${!isReapply && !isAdminEdit && !localStorage.getItem('token') ? "md:grid-cols-2" : ""} gap-6`}>
                     <div>
                       <label className="dash-label">Full Address *</label>
-                      <input type="text" value={form.address} onChange={(e) => update("address", e.target.value)} className={`dash-input w-full ${errors.address ? '!border-red-500' : ''}`} placeholder="House No./Flat No., Building, Street, Area" />
+                      <input type="text" value={form.address} onChange={(e) => update("address", e.target.value)} className={`dash-input w-full ${errors.address ? '!border-red-500' : ''} ${getDiffClass("address")}`} placeholder="House No./Flat No., Building, Street, Area" />
                       {errors.address && <div className="text-red-500 text-xs mt-1 font-medium">{errors.address}</div>}
+                      {getDiffUi("address")}
                     </div>
                     {!isReapply && !isAdminEdit && !localStorage.getItem('token') && (
                       <div>
@@ -885,13 +887,15 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <label className="dash-label">Pincode *</label>
-                      <input type="text" value={form.pincode} onChange={(e) => update("pincode", e.target.value.replace(/\D/g, ''))} maxLength={6} className={`dash-input w-full ${errors.pincode ? '!border-red-500' : ''}`} placeholder="6-digit Pincode" />
+                      <input type="text" value={form.pincode} onChange={(e) => update("pincode", e.target.value.replace(/\D/g, ''))} maxLength={6} className={`dash-input w-full ${errors.pincode ? '!border-red-500' : ''} ${getDiffClass("pincode")}`} placeholder="6-digit Pincode" />
                       {errors.pincode && <div className="text-red-500 text-xs mt-1 font-medium">{errors.pincode}</div>}
+                      {getDiffUi("pincode")}
                     </div>
                     <div>
                       <label className="dash-label">City *</label>
-                      <input type="text" value={form.city} onChange={(e) => update("city", e.target.value)} className={`dash-input w-full ${errors.city ? '!border-red-500' : ''}`} placeholder="e.g. Pune" />
+                      <input type="text" value={form.city} onChange={(e) => update("city", e.target.value)} className={`dash-input w-full ${errors.city ? '!border-red-500' : ''} ${getDiffClass("city")}`} placeholder="e.g. Pune" />
                       {errors.city && <div className="text-red-500 text-xs mt-1 font-medium">{errors.city}</div>}
+                      {getDiffUi("city")}
                     </div>
                     <div>
                       <label className="dash-label">State *</label>
@@ -1114,7 +1118,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       value={form.bio}
                       onChange={(e) => update("bio", e.target.value)}
                       rows={5}
-                      className={`dash-input w-full resize-y ${errors.bio ? '!border-red-500' : ''}`}
+                      className={`dash-input w-full resize-y ${errors.bio ? '!border-red-500' : ''} ${getDiffClass("bio")}`}
                     />
                     <div className="flex justify-between items-start mt-1">
                       {errors.bio ? <div className="text-red-500 text-xs font-medium">{errors.bio}</div> : <div></div>}
@@ -1568,8 +1572,9 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                 <div className="space-y-8">
                   <div>
                     <label className="dash-label">If you are published by a publisher, why are you joining this group and what priority will you give to this group? *</label>
-                    <textarea value={form.whyJoining} onChange={(e) => update("whyJoining", e.target.value)} rows={3} className={`dash-input w-full resize-y ${errors.whyJoining ? '!border-red-500' : ''}`} placeholder="Please explain your reasons..." />
+                    <textarea value={form.whyJoining} onChange={(e) => update("whyJoining", e.target.value)} rows={3} className={`dash-input w-full resize-y ${errors.whyJoining ? '!border-red-500' : ''} ${getDiffClass("whyJoining")}`} placeholder="Please explain your reasons..." />
                     {errors.whyJoining && <div className="text-red-500 text-xs mt-1 font-medium">{errors.whyJoining}</div>}
+                    {getDiffUi("whyJoining")}
                   </div>
 
                   <div className="p-5 bg-gray-50 border border-paa-navy/10 rounded-2xl space-y-4">
@@ -1673,7 +1678,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                 >
                   <ChevronLeft size={14} /> Back
                 </button>
-                {localStorage.getItem('token') && !isAdminEdit && (
+                {localStorage.getItem('token') && !isAdminEdit && !isAuthorEdit && (
                   <button type="button" onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }} className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all duration-300 text-red-600 hover:bg-red-50 border border-red-100">
                     <LogOut size={14} /> Logout
                   </button>
@@ -1908,6 +1913,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/admin/authors/${initialData.id}/full-update-and-approve`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
                         if (onAdminSave) onAdminSave();
                         return;
+                      } else if (isAuthorEdit) {
+                        res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author/edit-profile-full`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
                       } else if (isReapply) {
                         res = await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/author/reapply-full`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
                       } else {
@@ -1930,7 +1937,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   }}
                   className={`dash-btn px-6 py-2.5 rounded-full flex items-center gap-2 ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-premium hover:-translate-y-0.5"}`}
                 >
-                  {isSubmitting ? <span className="animate-pulse">{isAdminEdit ? "Approving..." : "Submitting..."}</span> : <><CheckCircle size={14} /> {isAdminEdit ? "Approve Application" : "Submit Application"}</>}
+                  {isSubmitting ? <span className="animate-pulse">{isAdminEdit ? "Approving..." : isAuthorEdit ? "Saving Changes..." : "Submitting..."}</span> : <><CheckCircle size={14} /> {isAdminEdit ? "Approve Application" : isAuthorEdit ? "Submit for Review" : "Submit Application"}</>}
                 </button>
                 {isAdminEdit && (
                   <button
@@ -1982,11 +1989,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
             </div>
 
             <div className="flex justify-center gap-4">
-              <a href="/" className="dash-btn px-8 py-3 rounded-full bg-gray-100 text-paa-navy hover:bg-gray-200">
-                Go to Homepage
-              </a>
+
+
+
               <a href="/login" className="dash-btn dash-btn-primary rounded-full px-8 py-3">
-                Go to Login
+                Go to Author Dashboard
               </a>
             </div>
           </div>

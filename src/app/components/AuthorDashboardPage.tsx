@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -992,9 +992,6 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           <button onClick={() => navigate('/dashboard/bundle-offers')} className="dash-btn dash-btn-primary bg-indigo-600 hover:bg-indigo-700 !border-indigo-600">
             Bundle Offers
           </button>
-          <button onClick={() => setShowAddBook(true)} className="dash-btn dash-btn-primary">
-            + Add New Book
-          </button>
         </div>
       </div>
 
@@ -1417,7 +1414,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       <div className="dash-panel overflow-hidden mb-7">
         <div className="dash-panel-header">
           <h2 className="dash-panel-title">Your Titles</h2>
-          <span className="dash-badge info">{filteredTitles.length} titles</span>
+          <div className="flex items-center gap-4">
+            <span className="dash-badge info">{filteredTitles.length} titles</span>
+            <button onClick={() => navigate('/dashboard/profile', { state: { action: 'add_book' } })} className="dash-btn dash-btn-primary py-1 px-3 text-xs">Add new Book</button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="dash-table">
@@ -1451,7 +1451,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   <td className="text-paa-gray-text text-xs whitespace-nowrap">{row.date}</td>
                   <td>
                     <div className="flex items-center justify-center">
-                      <button onClick={() => handleEditBookOpen(row.id)} className="p-2 text-paa-navy hover:text-paa-gold bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" title="Edit Details">
+                      <button onClick={() => navigate('/dashboard/profile', { state: { action: 'edit_book', bookId: row.id } })} className="p-2 text-paa-navy hover:text-paa-gold bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" title="Edit Details">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
                     </div>
@@ -3782,6 +3782,8 @@ function AuthorSalesReport({ data }: { data: any }) {
 export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }: { data: any, onRefresh: () => void, buttonStates: any, setButtonStates: any }) {
   const authorProfile = data.authorProfile;
   const authorOrders = data.authorOrders || [];
+  const location = useLocation();
+  const { action: targetAction, bookId: targetBookId } = location.state || {};
 
   const [editProfileForm, setEditProfileForm] = useState({
     name: authorProfile.name || '',
@@ -3839,177 +3841,56 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
     }
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors: string[] = [];
-    if (!editProfileForm.name?.trim()) errors.push('Name is required');
-    if (!editProfileForm.phone?.trim()) errors.push('Phone is required');
-    if (editProfileForm.phone && !/^\d{10}$/.test(editProfileForm.phone.replace(/\D/g, ''))) errors.push('Phone must be 10 digits');
-    const bioWc = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
-    if (bioWc < 100 || bioWc > 150) errors.push(`Bio must be 100-150 words (currently ${bioWc})`);
-    if (errors.length > 0) { toast.error(`Please fix: ${errors.join(', ')}`); return; }
-    try {
-      setButtonStates(prev => ({...prev, editProfile: true}));
-      const formData = new FormData();
-      Object.entries(editProfileForm).forEach(([key, val]) => {
-        formData.append(key, val as string);
-      });
-      if (editPhoto) formData.append('photo', editPhoto);
-      const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/bio`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Profile updated and submitted for admin review!');
-      onRefresh();
-    } catch (err) {
-      toast.error('Failed to update profile');
-    } finally {
-      setButtonStates(prev => ({...prev, editProfile: false}));
-    }
-  };
-
   return (
     <>
     <div className="animate-fade-in-up">
       <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
         <div>
           <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Edit My Profile</h2>
-          <p className="text-sm text-paa-gray-text mt-1">Keep your author bio and details up to date.</p>
+          <p className="text-sm text-paa-gray-text mt-1">Keep your author bio, books, and details up to date.</p>
         </div>
       </div>
       
-      <form onSubmit={handleSaveProfile} className="flex flex-col gap-6 max-w-4xl bg-white p-6 rounded-xl border border-paa-navy/5 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Name</label>
-            <input className="dash-input w-full" value={editProfileForm.name} onChange={e => setEditProfileForm({...editProfileForm, name: e.target.value})} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pen Name</label>
-            <input className="dash-input w-full" value={editProfileForm.penName} onChange={e => setEditProfileForm({...editProfileForm, penName: e.target.value})} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
-            <input className="dash-input w-full" value={editProfileForm.phone} onChange={e => setEditProfileForm({...editProfileForm, phone: e.target.value})} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
-            <input className="dash-input w-full" value={editProfileForm.whatsapp} onChange={e => setEditProfileForm({...editProfileForm, whatsapp: e.target.value})} />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Address</label>
-          <input className="dash-input w-full" value={editProfileForm.address} onChange={e => setEditProfileForm({...editProfileForm, address: e.target.value})} />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">City</label>
-            <input className="dash-input w-full" value={editProfileForm.city} onChange={e => setEditProfileForm({...editProfileForm, city: e.target.value})} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">State</label>
-            <input className="dash-input w-full" value={editProfileForm.state} onChange={e => setEditProfileForm({...editProfileForm, state: e.target.value})} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
-            <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({...editProfileForm, aadharNumber: e.target.value})} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Instagram</label>
-            <input className="dash-input w-full" value={editProfileForm.instagram} onChange={e => setEditProfileForm({...editProfileForm, instagram: e.target.value})} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Facebook</label>
-            <input className="dash-input w-full" value={editProfileForm.facebook} onChange={e => setEditProfileForm({...editProfileForm, facebook: e.target.value})} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Qualifications</label>
-            {(() => {
-              let qArr: any[] = [];
-              try { qArr = JSON.parse(editProfileForm.qualification || '[]'); } catch(e) {}
-              if (!Array.isArray(qArr)) qArr = [{ qualification: editProfileForm.qualification || '', institution: '', subject: '' }];
-              return (
-                <>
-                  {qArr.map((q: any, i: number) => (
-                    <div key={i} className="grid grid-cols-3 gap-2 mb-2 bg-gray-50 p-3 rounded-lg border border-gray-100 relative group">
-                      {qArr.length > 1 && (
-                        <button type="button" onClick={() => {
-                          const newQ = qArr.filter((_: any, idx: number) => idx !== i);
-                          setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                        }} className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full border border-red-200 w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs">✕</button>
-                      )}
-                      <div>
-                        <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Degree / Title</span>
-                        <input type="text" className="dash-input w-full text-xs" value={q.qualification || ''} onChange={ev => {
-                          const newQ = [...qArr]; newQ[i] = {...newQ[i], qualification: ev.target.value};
-                          setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                        }} />
-                      </div>
-                      <div>
-                        <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Institution</span>
-                        <input type="text" className="dash-input w-full text-xs" value={q.institution || ''} onChange={ev => {
-                          const newQ = [...qArr]; newQ[i] = {...newQ[i], institution: ev.target.value};
-                          setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                        }} />
-                      </div>
-                      <div>
-                        <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Subject</span>
-                        <input type="text" className="dash-input w-full text-xs" value={q.subject || ''} onChange={ev => {
-                          const newQ = [...qArr]; newQ[i] = {...newQ[i], subject: ev.target.value};
-                          setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                        }} />
-                      </div>
-                    </div>
-                  ))}
-                  <button type="button" onClick={() => {
-                    const newQ = [...qArr, { qualification: '', institution: '', subject: '' }];
-                    setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                  }} className="text-[10px] font-bold text-paa-navy uppercase tracking-widest hover:text-paa-gold mt-1">+ Add Qualification</button>
-                </>
-              );
-            })()}
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Date of Birth</label>
-            <input type="date" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({...editProfileForm, age: e.target.value})} />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>
-            <input className="dash-input w-full" value={editProfileForm.experience} onChange={e => setEditProfileForm({...editProfileForm, experience: e.target.value})} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Skills</label>
-            <input className="dash-input w-full" value={editProfileForm.skills} onChange={e => setEditProfileForm({...editProfileForm, skills: e.target.value})} />
-          </div>
-          <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
-                  <input className="dash-input w-full" value={editProfileForm.hobbies} onChange={e => setEditProfileForm({...editProfileForm, hobbies: e.target.value})} />
-                </div>
+      {(() => {
+        let hasPending = authorProfile.status === 'Edited';
+        if (!hasPending && authorProfile.extraData) {
+          try {
+            const ed = typeof authorProfile.extraData === 'string' ? JSON.parse(authorProfile.extraData) : authorProfile.extraData;
+            if (ed.hasPendingEdits) hasPending = true;
+          } catch(e) {}
+        }
+        
+        if (hasPending) {
+          return (
+            <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-12 text-center">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-blue-100">
+                <Clock className="w-8 h-8 text-blue-500" />
               </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Why did you join the group? (Published Authors)</label>
-                <textarea className="dash-input w-full resize-y" rows={2} value={editProfileForm.whyJoining} onChange={e => setEditProfileForm({...editProfileForm, whyJoining: e.target.value})} />
-              </div>
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (150 words)</label>
-          <textarea required className="dash-input w-full" rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({...editProfileForm, bio: e.target.value})} />
-        </div>
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Update Profile Photo</label>
-          <input type="file" accept="image/*" className="border border-paa-navy/20 p-2 text-xs w-full rounded-lg" onChange={e => setEditPhoto(e.target.files?.[0] || null)} />
-        </div>
-        <div className="flex justify-end gap-3 mt-6 border-t pt-6">
-          <button type="submit" disabled={buttonStates.editProfile} className="dash-btn dash-btn-primary px-8 disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save & Submit for Review'}</button>
-        </div>
-      </form>
+              <h3 className="text-xl font-serif text-paa-navy font-medium mb-3">Edits Pending Approval</h3>
+              <p className="text-gray-500 max-w-md mx-auto text-sm leading-relaxed">
+                You have already submitted profile updates that are currently under review by our editorial team. 
+                You will be able to edit your profile again once these changes are approved.
+              </p>
+            </div>
+          );
+        }
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <AuthorRegistrationPage 
+              initialData={authorProfile}
+              isAuthorEdit={true}
+              hideNavbar={true}
+              targetAction={targetAction}
+              targetBookId={targetBookId}
+              onReapplySuccess={() => {
+                alert("Profile updated successfully! It is now pending admin approval.");
+                onRefresh();
+              }}
+            />
+          </div>
+        );
+      })()}
     </div>
 
     </>

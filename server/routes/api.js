@@ -251,7 +251,7 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
         name: name || "NA",
         email: email || "NA",
         phone: phone || "NA",
-        whatsapp: whatsapp || "NA",
+        password: hashedPassword,
         bio: bio || "NA",
         penName: penName || "NA",
         city: city || "NA",
@@ -344,6 +344,137 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
 });
 
 // Full re-application endpoint
+// Author: Edit Profile (Full)
+router.put('/api/author/edit-profile-full', verifyToken, upload.any(), async (req, res) => {
+  try {
+    const author = await prisma.author.findUnique({ where: { email: req.user.email }, include: { books: true } });
+    if (!author) return res.status(404).json({ error: 'Author not found' });
+
+    let currentExtraData = author.extraData || {};
+    if (typeof currentExtraData === 'string') {
+        try { currentExtraData = JSON.parse(currentExtraData); } catch(e) { currentExtraData = {}; }
+    }
+    
+    // We snapshot the entire author record so admin can diff it!
+    if (!currentExtraData.hasPendingEdits) {
+        const { extraData: _extraData, ...authorWithoutExtra } = author;
+        currentExtraData.originalProfileData = authorWithoutExtra;
+    }
+    currentExtraData.hasPendingEdits = true;
+
+    const { 
+      name, phone, whatsapp, bio, penName, city, state, instagram, facebook, linkedin, youtube, 
+      qualification, qualifications, institution, subject, dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, extraData, transactionId, conflictOfInterestSignature, agreedToGuidelines, agreedToInfoDoc
+    } = req.body;
+
+    let booksArray = [];
+    if (req.body.books) {
+      try { booksArray = JSON.parse(req.body.books); } catch(e) {}
+    }
+    if (booksArray.length === 0 && req.body.title) {
+       booksArray.push({
+         title: req.body.title, subtitle: req.body.subtitle, genre: req.body.genre, subGenre: req.body.subGenre,
+         synopsis: req.body.synopsis, pages: req.body.pages, mrp: req.body.mrp, stock: req.body.stock,
+         language: req.body.language, isbn: req.body.isbn, publisher: req.body.publisher,
+         publicationDate: req.body.publicationDate, edition: req.body.edition, format: req.body.format, purpose: req.body.purposeOfWriting, printFormat: req.body.printFormat
+       });
+    }
+
+    let qualificationsArray = [];
+    if (qualifications) {
+       try { qualificationsArray = JSON.parse(qualifications); } catch(e) {}
+    } else if (qualification) {
+       qualificationsArray.push({ qualification, institution, subject });
+    }
+
+    let photoUrl = author.photoUrl, paymentScreenshotUrl = author.paymentScreenshot, qrCodeUrl = author.qrCodeUrl;
+    let covers = {};
+    let backCovers = {};
+    
+    let existingQuals = [];
+    try { existingQuals = JSON.parse(author.qualification || '[]'); } catch(e) {}
+    qualificationsArray.forEach(q => {
+       const eq = existingQuals.find(ex => ex.id === q.id);
+       if (eq && eq.certificateUrl) q.certificateUrl = eq.certificateUrl;
+    });
+
+    if (Array.isArray(req.files)) {
+       for (const file of req.files) {
+          if (file.fieldname === 'photo') photoUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'paymentScreenshot') paymentScreenshotUrl = `/uploads/${file.filename}`;
+          if (file.fieldname === 'qrCode') qrCodeUrl = `/uploads/${file.filename}`;
+          if (file.fieldname.startsWith('cover_')) {
+             const idx = file.fieldname.split('_')[1];
+             covers[idx] = `/uploads/${file.filename}`;
+          }
+          if (file.fieldname.startsWith('backCover_')) {
+             const idx = file.fieldname.split('_')[1];
+             backCovers[idx] = `/uploads/${file.filename}`;
+          }
+          if (file.fieldname.startsWith('certificate_')) {
+             const id = file.fieldname.split('_')[1];
+             const q = qualificationsArray.find(q => q.id == id);
+             if (q) q.certificateUrl = `/uploads/${file.filename}`;
+          }
+       }
+    }
+    
+    const finalQualificationString = JSON.stringify(qualificationsArray);
+
+    if (extraData) {
+        let incomingExtra = JSON.parse(extraData);
+        currentExtraData = { ...currentExtraData, ...incomingExtra, hasPendingEdits: true, originalProfileData: currentExtraData.originalProfileData };
+    }
+    
+    if (linkedin) currentExtraData.linkedin = linkedin;
+    if (youtube) currentExtraData.youtube = youtube;
+    if (conflictOfInterestSignature) currentExtraData.conflictOfInterestSignature = conflictOfInterestSignature;
+    if (agreedToGuidelines !== undefined) currentExtraData.agreedToGuidelines = agreedToGuidelines === 'true' || agreedToGuidelines === true;
+    if (agreedToInfoDoc !== undefined) currentExtraData.agreedToInfoDoc = agreedToInfoDoc === 'true' || agreedToInfoDoc === true;
+
+    await prisma.author.update({
+      where: { id: author.id },
+      data: {
+        name, phone, bio, penName, city, state, instagram, facebook,
+        photoUrl, qrCodeUrl, transactionId, paymentScreenshot: paymentScreenshotUrl,
+        qualification: finalQualificationString,
+        age: dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, dob, skillsJson: (() => { try { return JSON.parse(skills) } catch(e) { return [] } })(), hobbiesJson: (() => { try { return JSON.parse(hobbies) } catch(e) { return [] } })(), qualificationsJson: qualificationsArray, 
+        status: 'Edited',
+        extraData: currentExtraData
+      }
+    });
+
+    for (let i = 0; i < booksArray.length; i++) {
+       const b = booksArray[i];
+       const existingBook = author.books[i];
+       const bookData = {
+         title: b.title, subtitle: b.subtitle, genre: b.genre, subGenre: b.subGenre,
+         synopsis: b.synopsis,
+         purpose: b.purpose, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
+         stock: parseInt(b.stock) || 0, language: b.language, isbn: b.isbn,
+         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat
+       };
+       if (covers[i] || (i === 0 && covers[0])) {
+          bookData.coverUrl = covers[i] || covers[0];
+       }
+       if (backCovers[i] || (i === 0 && backCovers[0])) {
+          bookData.backCoverUrl = backCovers[i] || backCovers[0];
+       }
+       if (existingBook) {
+          await prisma.book.update({ where: { id: existingBook.id }, data: bookData });
+       } else {
+          await prisma.book.create({ data: { ...bookData, authorId: author.id } });
+       }
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    require('fs').writeFileSync('last_error.log', err.stack || err.toString());
+    res.status(500).json({ error: 'Failed to update profile', details: err.message });
+  }
+});
+
 router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, res) => {
   try {
     const author = await prisma.author.findUnique({ where: { email: req.user.email }, include: { books: true } });
@@ -412,7 +543,7 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
     await prisma.author.update({
       where: { id: author.id },
       data: {
-        name, phone, whatsapp, bio, penName, city, state, instagram, facebook,
+        name, phone, bio, penName, city, state, instagram, facebook,
         photoUrl, qrCodeUrl, transactionId, paymentScreenshot: paymentScreenshotUrl,
         qualification: finalQualificationString,
         age: dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, dob, skillsJson: (() => { try { return JSON.parse(skills) } catch(e) { return [] } })(), hobbiesJson: (() => { try { return JSON.parse(hobbies) } catch(e) { return [] } })(), qualificationsJson: qualificationsArray, status: 'Pending',
@@ -596,7 +727,7 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
     await prisma.author.update({
       where: { id },
       data: {
-        name, phone, whatsapp, bio, penName, city, state, instagram, facebook,
+        name, phone, bio, penName, city, state, instagram, facebook,
         photoUrl, qrCodeUrl, transactionId, paymentScreenshot: paymentScreenshotUrl,
         qualification: finalQualificationString,
         age: dob, experience, skills, hobbies, whyJoining, aadharNumber, address, district, pincode, dob, skillsJson: (() => { try { return JSON.parse(skills) } catch(e) { return [] } })(), hobbiesJson: (() => { try { return JSON.parse(hobbies) } catch(e) { return [] } })(), qualificationsJson: qualificationsArray,
@@ -640,14 +771,19 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
     }
 
     // Send approval email
-    const emailContent = `
+    const wasEditing = author.status === 'Edited' || (author.extraData && author.extraData.hasPendingEdits);
+    const emailContent = wasEditing ? `
+      <p>Dear ${author.name},</p>
+      <p>Your recent profile updates have been officially <strong>approved</strong> by the Pune Authors' Association editorial team.</p>
+      <p>Your updated information is now live on the platform.</p>
+    ` : `
       <p>Dear ${author.name},</p>
       <p>Congratulations! Your author profile has been officially approved by the Pune Authors' Association editorial team.</p>
       <p>Your books are now live in the catalogue. You can log in to your dashboard to manage your inventory, track orders, and participate in upcoming events.</p>
       <p>Welcome to the community!</p>
     `;
     if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
-      sendNotificationEmail(author.email, "Welcome to PAA - Your Profile is Approved!", emailWrap("Profile Approved", emailContent));
+      sendNotificationEmail(author.email, wasEditing ? "PAA Profile Updates Approved!" : "Welcome to PAA - Your Profile is Approved!", emailWrap(wasEditing ? "Updates Approved" : "Profile Approved", emailContent));
     }
 
     res.json({ success: true });
@@ -659,9 +795,22 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
 
 router.post('/api/admin/authors/:id/approve', verifyToken, isAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
+  const existingAuthor = await prisma.author.findUnique({ where: { id } });
+  
+  let extraData = {};
+  if (existingAuthor.extraData) {
+    extraData = typeof existingAuthor.extraData === 'string' ? JSON.parse(existingAuthor.extraData) : existingAuthor.extraData;
+  }
+  const wasEdited = extraData.hasPendingEdits || existingAuthor.status === 'Edited';
+  const wasReapplied = extraData.isReapplied;
+  
+  extraData.hasPendingEdits = false;
+  extraData.originalProfileData = {};
+  extraData.isReapplied = false;
+
   const author = await prisma.author.update({
     where: { id },
-    data: { status: 'Active', rejectionReason: null }
+    data: { status: 'Active', rejectionReason: null, extraData: JSON.stringify(extraData) }
   });
   // Approve their books too
   await prisma.book.updateMany({
@@ -670,15 +819,25 @@ router.post('/api/admin/authors/:id/approve', verifyToken, isAdmin, async (req, 
   });
   
   // Send approval email
-  const emailContent = `
-    <p>Dear ${author.name},</p>
-    <p>Congratulations! Your author profile has been officially approved by the Pune Authors' Association editorial team.</p>
-    <p>Your books are now live in the catalogue. You can log in to your dashboard to manage your inventory, track orders, and participate in upcoming events.</p>
-    <p>Welcome to the community!</p>
-  `;
-  // Assuming emailWrap is available globally in index.js
-  if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
-    sendNotificationEmail(author.email, "Welcome to PAA - Your Profile is Approved!", emailWrap("Profile Approved", emailContent));
+  if (wasEdited) {
+    const emailContent = `
+      <p>Dear ${author.name},</p>
+      <p>Your recent profile updates have been officially approved by the Pune Authors' Association editorial team.</p>
+      <p>Your changes are now live. You can log in to your dashboard to manage your inventory and profile.</p>
+    `;
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      sendNotificationEmail(author.email, "Profile Edits Approved!", emailWrap("Edits Approved", emailContent));
+    }
+  } else {
+    const emailContent = `
+      <p>Dear ${author.name},</p>
+      <p>Congratulations! Your author profile has been officially approved by the Pune Authors' Association editorial team.</p>
+      <p>Your books are now live in the catalogue. You can log in to your dashboard to manage your inventory, track orders, and participate in upcoming events.</p>
+      <p>Welcome to the community!</p>
+    `;
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      sendNotificationEmail(author.email, "Welcome to PAA - Your Profile is Approved!", emailWrap("Profile Approved", emailContent));
+    }
   }
   
   res.json(author);
@@ -720,7 +879,7 @@ router.post('/api/admin/authors/:id/reject', verifyToken, isAdmin, async (req, r
 router.post('/api/admin/authors/:id/reject-edits', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const existingAuthor = await prisma.author.findUnique({ where: { id } });
+    const existingAuthor = await prisma.author.findUnique({ where: { id }, include: { books: true } });
     if (!existingAuthor) return res.status(404).json({ error: 'Not found' });
 
     let currentExtraData = existingAuthor.extraData || {};
@@ -730,7 +889,13 @@ router.post('/api/admin/authors/:id/reject-edits', verifyToken, isAdmin, async (
     
     let updateData = {};
     if (currentExtraData.originalProfileData) {
-       updateData = { ...currentExtraData.originalProfileData };
+       // Only restore specific top-level fields
+       const fieldsToRestore = ['name', 'phone', 'bio', 'penName', 'city', 'state', 'instagram', 'facebook', 'photoUrl', 'qrCodeUrl', 'qualification', 'age', 'experience', 'skills', 'hobbies', 'whyJoining', 'aadharNumber', 'address', 'district', 'pincode', 'skillsJson', 'hobbiesJson', 'qualificationsJson'];
+       for (const f of fieldsToRestore) {
+           if (currentExtraData.originalProfileData[f] !== undefined) {
+               updateData[f] = currentExtraData.originalProfileData[f];
+           }
+       }
     }
     
     currentExtraData.hasPendingEdits = false;
@@ -741,9 +906,23 @@ router.post('/api/admin/authors/:id/reject-edits', verifyToken, isAdmin, async (
       where: { id },
       data: {
         ...updateData,
+        status: 'Active',
         extraData: currentExtraData
       }
     });
+
+    const { reason } = req.body || {};
+    
+    // Email notification
+    const emailContent = `
+      <p>Dear ${author.name},</p>
+      <p>Your recent profile edits could not be approved and have been reverted to their previous state.</p>
+      ${reason ? `<p><strong>Admin Note:</strong> ${reason}</p>` : ''}
+      <p>Please review your information and try submitting again if needed.</p>
+    `;
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      sendNotificationEmail(author.email, "Profile Edits Rejected", emailWrap("Edits Rejected", emailContent));
+    }
 
     res.json(author);
   } catch (err) {
@@ -772,7 +951,7 @@ router.put('/api/admin/authors/:id', verifyToken, isAdmin, async (req, res) => {
         ...(name !== undefined && { name }),
         ...(bio !== undefined && { bio }),
         ...(phone !== undefined && { phone }),
-        ...(whatsapp !== undefined && { whatsapp }),
+        // whatsapp field removed
         ...(penName !== undefined && { penName }),
         ...(city !== undefined && { city }),
         ...(state !== undefined && { state }),
@@ -1174,7 +1353,7 @@ router.post('/api/author/reapply', verifyToken, async (req, res) => {
     if (name !== undefined) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;
     if (bio !== undefined) updateData.bio = bio;
-    if (whatsapp !== undefined) updateData.whatsapp = whatsapp;
+    // whatsapp field removed
     if (penName !== undefined) updateData.penName = penName;
     if (city !== undefined) updateData.city = city;
     if (state !== undefined) updateData.state = state;
@@ -1316,7 +1495,7 @@ router.put('/api/author/profile/bio', verifyToken, upload.single('photo'), async
     const updateData = {
       ...(bio !== undefined && { bio }),
       ...(phone !== undefined && { phone }),
-      ...(whatsapp !== undefined && { whatsapp }),
+      // whatsapp field removed
       ...(name !== undefined && { name }),
       ...(penName !== undefined && { penName }),
       ...(city !== undefined && { city }),

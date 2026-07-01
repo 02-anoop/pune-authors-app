@@ -1,271 +1,259 @@
 export const bookCategories = {
   "Fiction": {
-    "Literary Fiction": [],
+    "Action": [],
+    "Adventure": [],
     "Contemporary Fiction": [],
+    "Drama": [],
+    "Fantasy": [
+      "Dark Fantasy",
+      "Epic Fantasy",
+      "Fairy Tale Retellings",
+      "Mythological Fantasy",
+      "Urban Fantasy"
+    ],
     "Historical Fiction": [
       "Ancient History",
-      "Medieval",
       "Colonial Era",
-      "World Wars",
-      "Indian Historical Fiction"
-    ],
-    "Mystery & Thriller": [
-      "Crime",
-      "Detective",
-      "Psychological Thriller",
-      "Legal Thriller",
-      "Spy Thriller",
-      "Suspense"
-    ],
-    "Fantasy": [
-      "Epic Fantasy",
-      "Urban Fantasy",
-      "Dark Fantasy",
-      "Mythological Fantasy",
-      "Fairy Tale Retellings"
-    ],
-    "Science Fiction": [
-      "Dystopian",
-      "Cyberpunk",
-      "Time Travel",
-      "Space Opera",
-      "Post-Apocalyptic"
-    ],
-    "Romance": [
-      "Contemporary Romance",
-      "Historical Romance",
-      "Romantic Suspense",
-      "Paranormal Romance",
-      "Young Adult Romance"
+      "Indian Historical Fiction",
+      "Medieval",
+      "World Wars"
     ],
     "Horror": [
       "Gothic Horror",
+      "Monster Horror",
       "Psychological Horror",
-      "Supernatural Horror",
-      "Monster Horror"
+      "Supernatural Horror"
     ],
-    "Adventure": [],
-    "Action": [],
-    "Drama": [],
     "Humor & Satire": [],
+    "Literary Fiction": [],
+    "Mystery & Thriller": [
+      "Crime",
+      "Detective",
+      "Legal Thriller",
+      "Psychological Thriller",
+      "Spy Thriller",
+      "Suspense"
+    ],
+    "New Adult Fiction": [],
+    "Romance": [
+      "Contemporary Romance",
+      "Historical Romance",
+      "Paranormal Romance",
+      "Romantic Suspense",
+      "Young Adult Romance"
+    ],
+    "Science Fiction": [
+      "Cyberpunk",
+      "Dystopian",
+      "Post-Apocalyptic",
+      "Space Opera",
+      "Time Travel"
+    ],
     "Short Stories": [],
     "Women's Fiction": [],
-    "Young Adult Fiction": [],
-    "New Adult Fiction": []
+    "Young Adult Fiction": []
   },
-
   "Non-Fiction": {
     "Biography & Memoir": [
       "Autobiography",
-      "Memoir",
+      "Celebrity Biography",
       "Historical Biography",
-      "Celebrity Biography"
-    ],
-    "Self-Help": [
-      "Motivation",
-      "Productivity",
-      "Habits",
-      "Mindfulness",
-      "Personal Growth"
+      "Memoir"
     ],
     "Business & Economics": [
-      "Leadership",
       "Entrepreneurship",
       "Finance",
-      "Marketing",
+      "Leadership",
       "Management",
+      "Marketing",
       "Startups"
     ],
+    "Education": [],
     "Health & Wellness": [
+      "Alternative Medicine",
       "Fitness",
-      "Nutrition",
       "Mental Health",
-      "Yoga",
-      "Alternative Medicine"
+      "Nutrition",
+      "Yoga"
     ],
     "History": [
+      "Cultural History",
       "Indian History",
-      "World History",
       "Military History",
-      "Cultural History"
+      "World History"
     ],
+    "Law": [],
+    "Mythology": [],
+    "Parenting & Family": [],
+    "Philosophy": [],
+    "Politics & Current Affairs": [],
+    "Psychology": [],
     "Science": [
-      "Physics",
-      "Chemistry",
-      "Biology",
       "Astronomy",
-      "Environmental Science"
+      "Biology",
+      "Chemistry",
+      "Environmental Science",
+      "Physics"
     ],
+    "Self-Help": [
+      "Habits",
+      "Mindfulness",
+      "Motivation",
+      "Personal Growth",
+      "Productivity"
+    ],
+    "Society & Philosophy": [
+      "Gender Issue",
+      "Workplace Culture"
+    ],
+    "Spirituality": [],
     "Technology": [
-      "Programming",
       "Artificial Intelligence",
+      "Blockchain",
       "Cybersecurity",
       "Data Science",
-      "Blockchain"
-    ],
-    "Politics & Current Affairs": [],
-    "Spirituality": [],
-    "Mythology": [],
-    "Society & Philosophy": [
-      "Workplace Culture",
-      "Gender Issue"
+      "Programming"
     ],
     "Travel": [],
-    "Education": [],
-    "True Crime": [],
-    "Philosophy": [],
-    "Psychology": [],
-    "Parenting & Family": [],
-    "Law": []
+    "True Crime": []
   },
-
   "Children's Books": {
     "0-2 Years": [
+      "Bedtime Stories",
       "Board Books",
-      "Touch & Feel Books",
       "First Words",
       "Rhymes",
-      "Bedtime Stories"
+      "Touch & Feel Books"
+    ],
+    "13-18 Years (Young Adult)": [
+      "Career Development",
+      "Coming of Age",
+      "Fantasy",
+      "Science Fiction",
+      "YA Fiction",
+      "YA Romance"
     ],
     "3-5 Years": [
-      "Picture Books",
+      "Activity Books",
       "Alphabet Learning",
-      "Numbers & Counting",
       "Animal Stories",
       "Fairy Tales",
-      "Activity Books"
+      "Numbers & Counting",
+      "Picture Books"
     ],
     "6-8 Years": [
-      "Early Readers",
       "Adventure Stories",
+      "Comics",
+      "Early Readers",
       "Fantasy Stories",
-      "Science for Kids",
       "Mythology for Kids",
-      "Comics"
+      "Science for Kids"
     ],
     "9-12 Years": [
       "Adventure",
+      "Biographies for Kids",
       "Fantasy",
-      "Science Fiction",
-      "Mystery",
       "Historical Fiction",
-      "Biographies for Kids"
-    ],
-    "13-18 Years (Young Adult)": [
-      "YA Fiction",
-      "YA Romance",
-      "Fantasy",
-      "Science Fiction",
-      "Coming of Age",
-      "Career Development"
-    ],
-    "Educational Books": [
-      "Math",
-      "Science",
-      "General Knowledge",
-      "Coding",
-      "Language Learning"
+      "Mystery",
+      "Science Fiction"
     ],
     "Activity Books": [
+      "Brain Teasers",
       "Coloring",
-      "Drawing",
       "Crafts",
-      "Puzzles",
-      "Brain Teasers"
+      "Drawing",
+      "Puzzles"
+    ],
+    "Educational Books": [
+      "Coding",
+      "General Knowledge",
+      "Language Learning",
+      "Math",
+      "Science"
     ]
   },
-
   "Poetry": {
-    "Classic Poetry": [],
-    "Modern Poetry": [],
-    "Love Poetry": [],
-    "Spiritual Poetry": [],
-    "Nature Poetry": [],
     "Children's Poetry": [],
+    "Classic Poetry": [],
     "Free Verse": [],
-    "Haiku": []
+    "Haiku": [],
+    "Love Poetry": [],
+    "Modern Poetry": [],
+    "Nature Poetry": [],
+    "Spiritual Poetry": []
   },
-
   "Academic & Educational": {
-    "School Textbooks": [],
-    "Higher Education": [],
-    "Engineering": [],
-    "Medical": [],
-    "Management": [],
-    "Law": [],
-    "Research & Journals": [],
     "Competitive Exams": [
-      "UPSC",
-      "SSC",
-      "JEE",
-      "NEET",
+      "Banking",
       "CAT",
       "GATE",
-      "Banking"
-    ]
+      "JEE",
+      "NEET",
+      "SSC",
+      "UPSC"
+    ],
+    "Engineering": [],
+    "Higher Education": [],
+    "Law": [],
+    "Management": [],
+    "Medical": [],
+    "Research & Journals": [],
+    "School Textbooks": []
   },
-
   "Comics & Graphic Novels": {
-    "Superhero Comics": [],
-    "Manga": [],
-    "Graphic Novels": [],
-    "Web Comics": [],
     "Children's Comics": [],
     "Fantasy Comics": [],
-    "Science Fiction Comics": []
+    "Graphic Novels": [],
+    "Manga": [],
+    "Science Fiction Comics": [],
+    "Superhero Comics": [],
+    "Web Comics": []
   },
-
   "Reference": {
+    "Atlas": [],
     "Dictionary": [],
     "Encyclopedia": [],
-    "Atlas": [],
-    "Handbook": [],
     "Guidebook": [],
+    "Handbook": [],
     "Manual": []
   },
-
-
-
   "Arts & Entertainment": {
+    "Dance": [],
+    "Fashion": [],
+    "Film & Cinema": [],
+    "Music": [],
     "Painting": [],
     "Photography": [],
-    "Music": [],
-    "Dance": [],
-    "Film & Cinema": [],
-    "Theatre": [],
-    "Fashion": []
+    "Theatre": []
   },
-
   "Lifestyle": {
     "Cooking & Recipes": [],
-    "Food & Nutrition": [],
-    "Home Improvement": [],
-    "Gardening": [],
     "Crafts & Hobbies": [],
+    "Food & Nutrition": [],
+    "Gardening": [],
+    "Home Improvement": [],
     "Pets & Animals": [],
     "Relationships": []
   },
-
   "Sports & Outdoors": {
-    "Cricket": [],
-    "Football": [],
-    "Tennis": [],
-    "Athletics": [],
     "Adventure Sports": [],
+    "Athletics": [],
+    "Cricket": [],
     "Fitness": [],
-    "Outdoor Activities": []
+    "Football": [],
+    "Outdoor Activities": [],
+    "Tennis": []
   },
-
   "Regional & Language Literature": {
+    "Bengali Literature": [],
+    "Gujarati Literature": [],
     "Hindi Literature": [],
+    "Malayalam Literature": [],
     "Marathi Literature": [],
     "Punjabi Literature": [],
     "Tamil Literature": [],
     "Telugu Literature": [],
-    "Malayalam Literature": [],
-    "Bengali Literature": [],
-    "Gujarati Literature": [],
-    "Urdu Literature": [],
-    "Translated Works": []
+    "Translated Works": [],
+    "Urdu Literature": []
   }
 };

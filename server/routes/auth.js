@@ -63,8 +63,10 @@ router.post('/send-otp', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
-    const existing = await prisma.author.findUnique({ where: { email } });
-    if (existing) return res.status(400).json({ error: 'Email is already registered as an author' });
+    
+    // Prevent signing up again if the user account already exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) return res.status(400).json({ error: 'Email already exists' });
     
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins

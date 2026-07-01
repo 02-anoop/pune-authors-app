@@ -220,8 +220,17 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
                 )}
 
                 {signupError && (
-                  <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-xs font-medium mb-4">
-                    {signupError}
+                  <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-xs font-medium mb-4 flex flex-col items-start gap-2">
+                    <div>{signupError}</div>
+                    {signupError === "An account with this email already exists." && (
+                      <button 
+                        type="button" 
+                        onClick={() => navigate(`/login?role=${roleSelection}`)} 
+                        className="bg-white border border-red-200 px-3 py-1.5 rounded-md text-red-700 hover:bg-red-100 transition-colors shadow-sm font-bold"
+                      >
+                        Go to Log In
+                      </button>
+                    )}
                   </div>
                 )}
                 
@@ -299,8 +308,17 @@ export function AuthPage({ type }: { type: "login" | "signup" }) {
                 )}
 
                 {signupError && (
-                  <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-xs font-medium">
-                    {signupError}
+                  <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-xs font-medium mb-4 flex flex-col items-start gap-2">
+                    <div>{signupError}</div>
+                    {signupError === "An account with this email already exists." && (
+                      <button 
+                        type="button" 
+                        onClick={() => navigate(`/login?role=${roleSelection}`)} 
+                        className="bg-white border border-red-200 px-3 py-1.5 rounded-md text-red-700 hover:bg-red-100 transition-colors shadow-sm font-bold"
+                      >
+                        Go to Log In
+                      </button>
+                    )}
                   </div>
                 )}
 

@@ -280,6 +280,10 @@ model Event {
   livePosEnabled    Boolean       @default(true)
   endTime           String?
   startTime         String?
+  aggAuthors        Int?
+  aggSent           Int?
+  aggSold           Int?
+  aggRevenue        Float?
   eventAuthors      EventAuthor[]
   eventBooks        EventBook[]
   galleryEvent      GalleryEvent?
@@ -292,8 +296,11 @@ model EventAuthor {
   authorId          Int
   optInStatus       String   @default("Pending")
   createdAt         DateTime @default(now())
-  paymentScreenshot String?
-  author            Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  paymentScreenshot  String?
+  transactionId      String?
+  manualTotalSold    Int?
+  manualTotalRevenue Float?
+  author             Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 

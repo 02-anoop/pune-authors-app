@@ -12,7 +12,6 @@ import {
 } from 'recharts';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import pastEventsData from './data/past_events.json';
 
 // Automatically attach token to all admin requests
 axios.interceptors.request.use((config) => {
@@ -121,6 +120,11 @@ export function OperationsDashboardPage() {
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+
+  const [showAuthorDataModal, setShowAuthorDataModal] = useState(false);
+  const [selectedEventForData, setSelectedEventForData] = useState<any>(null);
+  const [selectedAuthorForData, setSelectedAuthorForData] = useState('');
+
   const [reportEventId, setReportEventId] = useState<number | null>(null);
   const [eventReportData, setEventReportData] = useState<any>(null);
   const [pendingReportStatus, setPendingReportStatus] = useState<any>(null);
@@ -149,6 +153,21 @@ export function OperationsDashboardPage() {
   const [selectedGalleryEvent, setSelectedGalleryEvent] = useState<any>(null);
   const [isEditGalleryModalOpen, setIsEditGalleryModalOpen] = useState(false);
   const [editingGalleryEvent, setEditingGalleryEvent] = useState<any>(null);
+
+  // Events tab lifted state
+  const [selectedEventBreakdown, setSelectedEventBreakdown] = useState<any>(null);
+  const [hasGranularData, setHasGranularData] = useState(false);
+  const [authorSearch, setAuthorSearch] = useState('');
+  const [expandedAuthorId, setExpandedAuthorId] = useState<number | null>(null);
+  const [eventSearch, setEventSearch] = useState('');
+  const [createEventDate, setCreateEventDate] = useState('');
+  const [manageAuthorBooks, setManageAuthorBooks] = useState<any[]>([]);
+  const [manageRegStatus, setManageRegStatus] = useState('Registered');
+  const [managePaymentStatus, setManagePaymentStatus] = useState('Paid');
+  const [isPublishingData, setIsPublishingData] = useState(false);
+  const [useGlobalOverride, setUseGlobalOverride] = useState(false);
+  const [globalSold, setGlobalSold] = useState(0);
+  const [globalRevenue, setGlobalRevenue] = useState(0);
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
   const [viewingRegistrationsEventId, setViewingRegistrationsEventId] = useState<number | null>(null);
   const [eventRegistrations, setEventRegistrations] = useState<any[]>([]);
@@ -163,7 +182,6 @@ export function OperationsDashboardPage() {
 
   const fetchEventRegistrations = async (eventId: number) => {
     setLoadingRegistrations(true);
-    setViewingRegistrationsEventId(eventId);
     try {
       const res = await axios.get(`${API}/api/admin/events/${eventId}/registrations`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -189,6 +207,18 @@ export function OperationsDashboardPage() {
     }
   };
 
+  const updateTransactionId = async (eventId: number, authorId: number, txnId: string) => {
+    if (!txnId.trim()) return;
+    try {
+      await axios.put(`${API}/api/admin/events/${eventId}/author/${authorId}/transaction`, { transactionId: txnId }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Transaction ID updated');
+    } catch (err) {
+      toast.error('Failed to update Transaction ID');
+    }
+  };
+
   const handleRejectRegistration = async (eventId: number, authorId: number) => {
     try {
       await axios.post(`${API}/api/admin/events/${eventId}/author/${authorId}/reject`, {}, {
@@ -205,38 +235,38 @@ export function OperationsDashboardPage() {
 
   const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-  const fetchOverview = async () => {
-    setIsRefreshing(true);
+  const fetchOverview = async (isBackground = false) => {
+    if (!isBackground) setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/dashboard-stats`);
       setStats(res.data); sessionStorage.setItem('adminStats', JSON.stringify(res.data));
-    } catch (err) { } finally { setIsRefreshing(false); }
+    } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
-  const fetchAuthors = async () => {
-    setIsRefreshing(true);
+  const fetchAuthors = async (isBackground = false) => {
+    if (!isBackground) setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/authors`);
       setAuthors(res.data); sessionStorage.setItem('adminAuthors', JSON.stringify(res.data));
       const c = res.data.filter((a: any) => a.status === 'Pending').length; if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true })); prevCountsRef.current.authors = c;
-    } catch (err) { } finally { setIsRefreshing(false); }
+    } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
-  const fetchBooks = async () => {
-    setIsRefreshing(true);
+  const fetchBooks = async (isBackground = false) => {
+    if (!isBackground) setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/books`);
       setBooks(res.data); sessionStorage.setItem('adminBooks', JSON.stringify(res.data));
       const c = res.data.filter((b: any) => b.status === 'Pending').length; if (c > prevCountsRef.current.books) setPendingAlerts(prev => ({ ...prev, books: true })); prevCountsRef.current.books = c;
-    } catch (err) { } finally { setIsRefreshing(false); }
+    } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
-  const fetchEvents = async () => {
-    setIsRefreshing(true);
+  const fetchEvents = async (isBackground = false) => {
+    if (!isBackground) setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       setEvents(res.data); sessionStorage.setItem('adminEvents', JSON.stringify(res.data));
-    } catch (err) { } finally { setIsRefreshing(false); }
+    } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
 
@@ -253,20 +283,7 @@ export function OperationsDashboardPage() {
   };
 
   const fetchEventReport = async (eventId: any) => {
-    if (typeof eventId === 'string' && eventId.startsWith('legacy_')) {
-      const legacyId = parseInt(eventId.split('_')[1]);
-      const legacyEvt = pastEventsData.find(e => e.id === legacyId);
-      if (!legacyEvt) return;
-
-      // Only show existing data for legacy events
-      setEventReportData([{
-        isLegacySummary: true,
-        authorsParticipated: legacyEvt.authorsParticipated,
-        booksSold: legacyEvt.booksSold
-      }]);
-      setReportEventId(Number(eventId));
-      return;
-    }
+    if (typeof eventId === 'string' && eventId.startsWith('legacy_')) return;
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${eventId}/report`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -392,21 +409,21 @@ export function OperationsDashboardPage() {
     } catch (err) { }
   };
 
-  const fetchForms = async () => {
-    setIsRefreshing(true);
+  const fetchForms = async (isBackground = false) => {
+    if (!isBackground) setIsRefreshing(true);
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get(`${API}/api/admin/forms`, { headers: { Authorization: `Bearer ${token}` } });
       setForms(res.data);
-    } catch (err) { } finally { setIsRefreshing(false); }
+    } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
-  const fetchGallery = async () => {
-    setIsRefreshing(true);
+  const fetchGallery = async (isBackground = false) => {
+    if (!isBackground) setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/gallery`);
       setGallery(res.data);
-    } catch (err) { } finally { setIsRefreshing(false); }
+    } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
   const handleUploadGalleryImage = async (e: React.FormEvent) => {
@@ -445,28 +462,28 @@ export function OperationsDashboardPage() {
   };
 
   useEffect(() => {
-    const fetchCurrentTabData = async () => {
-      setIsRefreshing(true);
+    const fetchCurrentTabData = async (isBackground = false) => {
+      if (!isBackground) setIsRefreshing(true);
       try {
         // Optimized data fetching: Only fetch what is necessary for the active tab
         const promises = [];
         if (activeTab === 'overview') {
-          promises.push(fetchOverview());
+          promises.push(fetchOverview(isBackground));
           promises.push(fetchOrders(true));
-          promises.push(fetchAuthors());
-          promises.push(fetchBooks());
+          promises.push(fetchAuthors(isBackground));
+          promises.push(fetchBooks(isBackground));
         } else if (activeTab === 'authors' || activeTab === 'author_data') {
-          promises.push(fetchAuthors());
+          promises.push(fetchAuthors(isBackground));
         } else if (activeTab === 'books') {
-          promises.push(fetchBooks());
+          promises.push(fetchBooks(isBackground));
         } else if (activeTab === 'events') {
-          promises.push(fetchEvents());
+          promises.push(fetchEvents(isBackground));
         } else if (activeTab === 'orders' || activeTab === 'web_orders') {
           promises.push(fetchOrders(true));
         } else if (activeTab === 'forms') {
-          promises.push(fetchForms());
+          promises.push(fetchForms(isBackground));
         } else if (activeTab === 'gallery') {
-          promises.push(fetchGallery());
+          promises.push(fetchGallery(isBackground));
         } else if (activeTab === 'helpdesk') {
           promises.push(fetchQueriesAlert(true));
         }
@@ -476,14 +493,14 @@ export function OperationsDashboardPage() {
         await Promise.all(promises);
         setLastRefreshTime(Date.now());
       } finally {
-        setTimeout(() => setIsRefreshing(false), 800);
-        setLoading(false);
+        if (!isBackground) setTimeout(() => setIsRefreshing(false), 800);
+        if (!isBackground) setLoading(false);
       }
     };
 
-    fetchCurrentTabData();
+    fetchCurrentTabData(false);
 
-    const interval = setInterval(fetchCurrentTabData, 30000);
+    const interval = setInterval(() => fetchCurrentTabData(true), 30000);
     return () => clearInterval(interval);
   }, [activeTab]);
 
@@ -949,8 +966,8 @@ export function OperationsDashboardPage() {
     const sortedEventsForAdoption = [...events].sort((a: any, b: any) => new Date(b.date || b.startDate).getTime() - new Date(a.date || a.startDate).getTime());
     const last3Events = sortedEventsForAdoption.slice(0, 3).map(ev => {
       let p = 0;
-      if (ev.registrations) p = ev.registrations.filter((r: any) => r.optInStatus === 'Opted-In').length;
-      else p = authors.filter((a: any) => a.eventParticipation?.some((ep: any) => ep.eventId === ev.id && (ep.status === 'Approved' || ep.optInStatus === 'Opted-In'))).length;
+      if (ev.registrations) p = ev.registrations.filter((r: any) => r.optInStatus === 'Registered').length;
+      else p = authors.filter((a: any) => a.eventParticipation?.some((ep: any) => ep.eventId === ev.id && (ep.status === 'Approved' || ep.optInStatus === 'Registered'))).length;
       return { name: ev.name || ev.title, rate: totalAuthorsCount ? Math.round((p / totalAuthorsCount) * 100) : 0 };
     });
     const latestEventRate = last3Events.length > 0 ? last3Events[0].rate : 0;
@@ -2524,7 +2541,12 @@ export function OperationsDashboardPage() {
     );
   };
 
-  const EventsTab = () => {
+
+
+
+
+  const renderEventsTab = () => {
+
     const handleExportEventRegistrations = () => {
       let csv = 'S.No,Author Name,City,Date Registered,Included in the Catalogue,Included in the Database,Donating Books to the Airport,Participating in Website,';
       events.forEach(e => csv += `Participated in ${e.name.replace(/,/g, '')},`);
@@ -2557,6 +2579,606 @@ export function OperationsDashboardPage() {
       document.body.removeChild(link);
     };
 
+    const handleOpenBreakdown = (evt: any) => {
+      setSelectedEventBreakdown(evt);
+      if (!evt.isLegacy) {
+         fetchEventRegistrations(evt.id);
+      }
+      const slug = evt.name.replace(/\s+/g, '-').toLowerCase();
+      window.history.pushState(null, '', `/operations/events/${slug}`);
+    };
+
+    const handleCloseBreakdown = () => {
+      setSelectedEventBreakdown(null);
+      setSelectedAuthorForData(null);
+      window.history.pushState(null, '', `/operations`);
+    };
+
+    if (isEventModalOpen) {
+        const isPastEvent = createEventDate && new Date(createEventDate) < new Date();
+        return (
+          <div className="bg-white rounded-xl shadow-premium p-8 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between mb-6 border-b pb-4">
+               <h3 className="text-2xl font-serif text-paa-navy">Create New Event</h3>
+               <button onClick={() => setIsEventModalOpen(false)} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">Cancel & Go Back</button>
+            </div>
+            <form className="space-y-4" onSubmit={async (e) => {
+              e.preventDefault();
+              const target = e.target as any;
+              setIsSubmittingEvent(true);
+              try {
+                const fd = new FormData();
+                fd.append('name', target.name.value);
+                fd.append('date', target.date.value);
+                fd.append('location', target.location.value);
+                fd.append('duration', target.duration.value);
+                if (target.startTime?.value) fd.append('startTime', target.startTime.value);
+                if (target.endTime?.value) fd.append('endTime', target.endTime.value);
+                fd.append('eventType', target.eventType.value === 'Other' ? (target.otherEventType?.value || 'Other') : target.eventType.value);
+                fd.append('registrationFee', target.registrationFee.value);
+                fd.append('feeType', target.feeType.value);
+                if (target.description.value) fd.append('description', target.description.value);
+                fd.append('livePosEnabled', target.livePosEnabled?.checked ? 'true' : 'false');
+                if (target.banner.files[0]) fd.append('banner', target.banner.files[0]);
+                
+                if (!hasGranularData) {
+                    fd.append('aggAuthors', target.aggAuthors?.value || '0');
+                    fd.append('aggSent', target.aggSent?.value || '0');
+                    fd.append('aggSold', target.aggSold?.value || '0');
+                    fd.append('aggRevenue', target.aggRevenue?.value || '0');
+                }
+    
+                await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                toast.success('Event Created Successfully!');
+                setIsEventModalOpen(false);
+              } catch (err: any) {
+                toast.error(err.response?.data?.error || err.message);
+              } finally {
+                setIsSubmittingEvent(false);
+              }
+            }}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2"><label className="dash-label">Event Name</label><input required name="name" type="text" className="dash-input" /></div>
+                  <div><label className="dash-label">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="dash-input" /></div>
+                </div>
+                
+                <div><label className="dash-label">Event Description</label><textarea name="description" rows={3} className="dash-input resize-y" placeholder="Short details about the event..."></textarea></div>
+      
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="dash-label">Event Type</label>
+                    <select name="eventType" className="dash-input" onChange={(e) => {
+                        const el = document.getElementById('otherEventTypeInput');
+                        if (el) el.style.display = e.target.value === 'Other' ? 'block' : 'none';
+                    }}>
+                      <option value="Book Fair">Book Fair</option>
+                      <option value="Literary Event">Literary Event</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <input id="otherEventTypeInput" name="otherEventType" type="text" className="dash-input mt-2" placeholder="Specify event type" style={{ display: 'none' }} />
+                  </div>
+                  <div><label className="dash-label">Location (Venue)</label><input required name="location" type="text" className="dash-input" /></div>
+                  <div>
+                    <label className="dash-label">Date</label>
+                    <input required name="date" type="date" className="dash-input" value={createEventDate} onChange={(e) => setCreateEventDate(e.target.value)} />
+                    {createEventDate && (
+                      <div className={`text-[10px] mt-1 font-bold ${isPastEvent ? 'text-orange-500' : 'text-emerald-500'}`}>
+                        {isPastEvent ? '✓ Past Event' : '✓ Upcoming Event'}
+                      </div>
+                    )}
+                  </div>
+                  <div><label className="dash-label">Duration</label><input required name="duration" type="text" className="dash-input" placeholder="e.g. 3 days" /></div>
+                </div>
+      
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div><label className="dash-label">From Timing</label><input name="startTime" type="time" className="dash-input" /></div>
+                  <div><label className="dash-label">To Timing</label><input name="endTime" type="time" className="dash-input" /></div>
+                  <div><label className="dash-label">Registration Fee (₹)</label><input required name="registrationFee" type="number" defaultValue={0} className="dash-input" /></div>
+                  <div>
+                    <label className="dash-label">Fee Type</label>
+                    <select name="feeType" className="dash-input">
+                      <option value="Per Author">Per Author</option>
+                      <option value="Per Title">Per Title</option>
+                      <option value="Flat Fee">Flat Fee</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+    
+              <div className="flex items-center gap-2 mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                <input type="checkbox" name="livePosEnabled" id="livePosEnabled" className="w-4 h-4 text-paa-navy focus:ring-paa-navy rounded border-gray-300" defaultChecked={!isPastEvent} />
+                <label htmlFor="livePosEnabled" className="text-sm font-medium text-paa-navy">Enable Live POS tracking for this event</label>
+              </div>
+              
+              <div className="border-t border-gray-200 pt-6 mt-6">
+                  {isPastEvent && (
+                      <label className="flex items-center gap-3 font-semibold text-paa-navy mb-4 cursor-pointer">
+                          <input type="checkbox" className="w-5 h-5 rounded text-paa-navy" checked={hasGranularData} onChange={(e) => setHasGranularData(e.target.checked)} />
+                          I have granular author-specific data for this event (manage authors individually)
+                      </label>
+                  )}
+                  {(!hasGranularData && isPastEvent) && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+                          <div>
+                              <label className="dash-label">Total Authors Participated</label>
+                              <input type="number" name="aggAuthors" className="dash-input font-mono" defaultValue={0} />
+                          </div>
+                          <div>
+                              <label className="dash-label">Total Books Sent</label>
+                              <input type="number" name="aggSent" className="dash-input font-mono" defaultValue={0} />
+                          </div>
+                          <div>
+                              <label className="dash-label">Total Books Sold</label>
+                              <input type="number" name="aggSold" className="dash-input font-mono" defaultValue={0} />
+                          </div>
+                          <div>
+                              <label className="dash-label">Total Revenue (₹)</label>
+                              <input type="number" name="aggRevenue" className="dash-input font-mono text-emerald-600" defaultValue={0} />
+                          </div>
+                          <div className="col-span-full mt-2 text-xs text-gray-500">
+                             * This aggregate data will be shown in the master table.
+                          </div>
+                      </div>
+                  )}
+                  {(hasGranularData || !isPastEvent) && (
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm text-blue-800">
+                         * You can manage granular data for each author from the Event Breakdown view after creating this event.
+                      </div>
+                  )}
+              </div>
+    
+              <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+                <button type="button" onClick={() => setIsEventModalOpen(false)} className="dash-btn dash-btn-ghost">Cancel</button>
+                <button type="submit" disabled={isSubmittingEvent} className="dash-btn dash-btn-primary min-w-[120px]">
+                  {isSubmittingEvent ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span> : 'Save Event Details'}
+                </button>
+              </div>
+            </form>
+          </div>
+        );
+    }
+
+    const allCombinedEvents = events.map((e: any) => ({ ...e, isLegacy: e.status === 'Legacy Archive' })).sort((a: any, b: any) => {
+       const da = new Date(a.date).getTime();
+       const db = new Date(b.date).getTime();
+       return (isNaN(db) ? 0 : db) - (isNaN(da) ? 0 : da);
+    });
+
+
+    const handleEditAuthorData = (author: any) => {
+        setSelectedAuthorForData(author);
+        setUseGlobalOverride(false);
+        setGlobalSold(0);
+        setGlobalRevenue(0);
+        setManageAuthorBooks((author.books || []).map((b: any) => {
+            const isEventBook = b.bookId !== undefined;
+            const bookData = isEventBook ? b.book : b;
+            return {
+                bookId: isEventBook ? b.bookId : b.id,
+                title: bookData?.title || 'Unknown Book',
+                mrp: parseFloat(bookData?.mrp) || 0,
+                isSelected: isEventBook ? true : false,
+                listedStock: isEventBook ? (b.listedStock || 0) : 0,
+                soldStock: isEventBook ? (b.soldStock || 0) : 0,
+                returnedStock: isEventBook ? (b.returnedStock || 0) : 0
+            };
+        }));
+    };
+
+    const handlePublishData = async () => {
+        try {
+            setIsPublishingData(true);
+            await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/author/${selectedAuthorForData.id}/publish`, {
+                registrationStatus: manageRegStatus,
+                paymentStatus: managePaymentStatus,
+                booksData: manageAuthorBooks,
+                useGlobalOverride,
+                globalSold,
+                globalRevenue
+            }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+            fetchEventRegistrations(selectedEventBreakdown.id);
+            toast.success('Data Published! The author will now see these metrics in their dashboard.');
+            setIsPublishingData(false);
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || 'Failed to publish data.');
+            if (err.response?.data?.stack) console.error(err.response.data.stack);
+            setIsPublishingData(false);
+        }
+    };
+        const handleDownloadEventReport = () => {
+        if (!selectedEventBreakdown) return;
+        let csv = 'Author Name,Total Books Listed,Total Books Sold,Total Revenue (INR)\n';
+        authors.forEach((a: any) => {
+            const listed = a.books?.reduce((s:number, b:any) => s + (b.listedStock || 0), 0) || 0;
+            const sold = a.books?.reduce((s:number, b:any) => s + (b.soldStock || 0), 0) || 0;
+            const rev = a.books?.reduce((s:number, b:any) => s + ((b.soldStock || 0) * (b.book?.mrp || 0)), 0) || 0;
+            csv += `"${a.name}",${listed},${sold},${rev}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Event_Report_${selectedEventBreakdown.name.replace(/\s+/g, '_')}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
+
+    if (selectedEventBreakdown) {
+       const totalAuthors = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.authorsParticipated || selectedEventBreakdown.aggAuthors || 0) : eventRegistrations.length;
+       const totalListed = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSent || 0) : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
+       const totalSold = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.booksSold || selectedEventBreakdown.aggSold || 0) : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) || 0), 0);
+       const totalSale = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggRevenue || (totalSold * 200) || 0) : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.mrp || b.book?.mrp || 0)), 0) || 0), 0);
+       
+       let maxSold = -1;
+       let bestSellingBook = '-';
+       if (!selectedEventBreakdown.isLegacy) {
+          eventRegistrations.forEach((a: any) => {
+             (a.books || []).forEach((b: any) => {
+                 if ((b.soldStock || 0) > maxSold) {
+                     maxSold = b.soldStock;
+                     bestSellingBook = b.title || b.book?.title || '';
+                 }
+             });
+          });
+       }
+
+       return (
+           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <div className="flex items-center justify-between mb-6 border-b pb-4">
+                 <div>
+                    <h3 className="text-2xl font-serif text-paa-navy mb-1">{selectedEventBreakdown.name}</h3>
+                    <p className="text-sm text-gray-500 font-medium">{selectedEventBreakdown.date} &bull; {selectedEventBreakdown.location || selectedEventBreakdown.address || 'Location TBA'}</p>
+                 </div>
+                 <div className="flex gap-2">
+                   {!selectedAuthorForData && (
+                     <button onClick={handleDownloadEventReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm font-bold flex items-center gap-2">
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download Report
+                     </button>
+                   )}
+                   <button onClick={() => {
+                     if (selectedAuthorForData) {
+                         setSelectedAuthorForData(null);
+                     } else {
+                         handleCloseBreakdown();
+                     }
+                 }} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">
+                    {selectedAuthorForData ? 'Back to Authors List' : 'Back to Events'}
+                 </button>
+               </div>
+               </div>
+               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                   <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>
+                      <div className="text-xl font-serif text-paa-navy font-bold">{totalAuthors}</div>
+                   </div>
+                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+                      <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Listed</div>
+                      <div className="text-xl font-serif text-blue-800 font-bold">{totalListed}</div>
+                   </div>
+                   <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 shadow-sm">
+                      <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Sold</div>
+                      <div className="text-xl font-serif text-indigo-800 font-bold">{totalSold}</div>
+                   </div>
+                   <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+                      <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
+                      <div className="text-xl font-serif text-emerald-800 font-bold">₹{totalSale}</div>
+                   </div>
+                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 shadow-sm">
+                      <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Best Selling Book</div>
+                      <div className="text-sm font-bold text-purple-900 truncate">
+                         {bestSellingBook}
+                      </div>
+                   </div>
+               </div>
+               
+               {selectedAuthorForData ? (
+                  <div className="border border-gray-200 rounded-xl p-6 bg-gray-50 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
+                     <div className="flex items-center gap-3 mb-6">
+                         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                             {selectedAuthorForData.name.charAt(0)}
+                         </div>
+                         <div>
+                             <h4 className="font-bold text-paa-navy text-lg">{selectedAuthorForData.name}</h4>
+                             <p className="text-xs text-gray-500 font-medium">Managing Event Data</p>
+                         </div>
+                     </div>
+                     
+                     <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Author Registration & Logistics</h4>
+                     <div className="grid grid-cols-2 gap-4 mb-8">
+                        <div>
+                           <label className="block text-xs font-bold text-gray-600 mb-1">Registration Status</label>
+                           <select className="w-full border border-gray-300 rounded p-2 text-sm" value={manageRegStatus} onChange={(e) => setManageRegStatus(e.target.value)}>
+                         <option>Registered</option>
+                         <option>Declined</option>
+                      </select>
+                        </div>
+                        <div>
+                           <label className="block text-xs font-bold text-gray-600 mb-1">Payment Status</label>
+                           <select className="w-full border border-gray-300 rounded p-2 text-sm"><option>Paid</option><option>Unpaid</option><option>-</option></select>
+                        </div>
+                     </div>
+                     
+                     <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Book Sales & Metrics</h4>
+
+                     <div className="mb-4">
+                        <label className="flex items-center gap-2 text-sm font-bold text-paa-navy cursor-pointer bg-paa-gold/10 p-3 rounded-lg border border-paa-gold/30">
+                           <input type="checkbox" className="w-4 h-4 rounded text-paa-navy" checked={useGlobalOverride} onChange={(e) => setUseGlobalOverride(e.target.checked)} />
+                           Use Global Override (No book-wise breakdown available)
+                        </label>
+                     </div>
+                     
+                     {useGlobalOverride ? (
+                         <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
+                             <div>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Total Books Sold (Overall)</label>
+                                 <input type="number" className="w-full border border-gray-300 rounded p-2 font-mono" value={globalSold} onChange={(e) => setGlobalSold(parseInt(e.target.value) || 0)} />
+                             </div>
+                             <div>
+                                 <label className="block text-xs font-bold text-emerald-600 mb-1 uppercase tracking-wider">Total Revenue (₹)</label>
+                                 <input type="number" className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-2 font-mono font-bold" value={globalRevenue} onChange={(e) => setGlobalRevenue(parseInt(e.target.value) || 0)} />
+                             </div>
+                         </div>
+                     ) : (
+                     <div className="space-y-4">
+                        {/* Iterating over authors books */}
+
+                        {manageAuthorBooks.map((book: any, idx: number) => {
+                          const revenue = book.mrp * (book.soldStock || 0);
+                          return (
+                          <div key={idx} className="border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm hover:shadow transition-shadow">
+                             <div className="flex justify-between items-center p-4 bg-white border-b border-gray-100">
+                                <div className="font-medium text-sm text-gray-800">{book.title} <span className="text-xs text-gray-400 font-normal">(MRP: ₹{book.mrp})</span></div>
+                                <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
+                                   <input type="checkbox" checked={book.isSelected} onChange={(e) => {
+                                      const newBooks = [...manageAuthorBooks];
+                                      newBooks[idx].isSelected = e.target.checked;
+                                      setManageAuthorBooks(newBooks);
+                                   }} className="rounded text-paa-navy w-4 h-4" /> Listed for this event
+                                </label>
+                             </div>
+                             <div className="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div>
+                                   <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Quantities Listed</label>
+                                   <input type="number" value={book.listedStock} onChange={(e) => {
+                                      const newBooks = [...manageAuthorBooks];
+                                      newBooks[idx].listedStock = parseInt(e.target.value) || 0;
+                                      if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
+                                      setManageAuthorBooks(newBooks);
+                                   }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
+                                </div>
+                                <div>
+                                   <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Manual Sold</label>
+                                   <input type="number" value={book.soldStock} onChange={(e) => {
+                                      const newBooks = [...manageAuthorBooks];
+                                      newBooks[idx].soldStock = parseInt(e.target.value) || 0;
+                                      if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
+                                      setManageAuthorBooks(newBooks);
+                                   }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
+                                </div>
+                                <div>
+                                   <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Returned</label>
+                                   <input type="number" value={book.returnedStock} onChange={(e) => {
+                                      const newBooks = [...manageAuthorBooks];
+                                      newBooks[idx].returnedStock = parseInt(e.target.value) || 0;
+                                      setManageAuthorBooks(newBooks);
+                                   }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
+                                </div>
+                                <div>
+                                   <label className="block text-[10px] font-bold text-emerald-600 mb-1 uppercase tracking-wider">Revenue (₹)</label>
+                                   <div className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-2 text-sm font-mono font-bold">
+                                      ₹{revenue}
+                                   </div>
+                                </div>
+                                <div>
+                                   <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">POS Sold (Auto)</label>
+                                   <input type="number" defaultValue="0" disabled className="w-full border border-gray-200 bg-gray-100 text-gray-500 rounded p-2 text-sm font-mono" />
+                                </div>
+                             </div>
+                          </div>
+                        )})}
+                     </div>
+                     
+                     )}
+                     <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 items-center">
+                        <span className="text-xs text-gray-500 mr-auto font-medium">* Explicit publish required for authors to see past data in their dashboard.</span>
+                        <button onClick={() => toast.success('Draft Saved!')} className="px-6 py-2.5 text-sm text-paa-navy border border-paa-navy rounded-lg font-bold hover:bg-paa-navy hover:text-white transition-colors">Save Draft</button>
+                        <button onClick={handlePublishData} disabled={isPublishingData} className="px-8 py-2.5 text-sm bg-paa-gold text-paa-navy rounded-lg font-black hover:brightness-110 transition-all shadow-md">{isPublishingData ? 'PUBLISHING...' : 'PUBLISH TO AUTHOR'}</button>
+                     </div>
+                  </div>
+               ) : (
+                  <div>
+                     <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-bold text-gray-700">Authors Participated / Registered</h4>
+                        <input 
+                           type="text" 
+                           placeholder="Search authors..." 
+                           className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy"
+                           value={authorSearch}
+                           onChange={(e) => setAuthorSearch(e.target.value)}
+                        />
+                     </div>
+                     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                         <table className="w-full text-left border-collapse bg-white">
+                             <thead className="bg-gray-50 border-b border-gray-200">
+                                 <tr>
+                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Author Name</th>
+                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Listed</th>
+                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Quantities</th>
+                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Sold</th>
+                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Revenue</th>
+                                     {!(selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.isLegacy) && (
+                                        <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center">Payment</th>
+                                     )}
+                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Status</th>
+                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center">Actions</th>
+                                 </tr>
+                             </thead>
+                             <tbody className="divide-y divide-gray-100">
+                                 {(selectedEventBreakdown.isLegacy ? authors : eventRegistrations).filter((a: any) => (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase())).slice(0, 50).map((a: any, i: number) => {
+                                     const isLegacy = selectedEventBreakdown.isLegacy;
+                                     let m = a;
+                                     if (isLegacy) {
+                                         const reg = eventRegistrations.find(r => r.authorId === a.id);
+                                         if (reg) m = { ...a, ...reg, author: a, id: a.id };
+                                     }
+                                     const authorData = isLegacy ? m : m.author;
+                                     const listed = m.books?.reduce((s:number,b:any)=>s+(b.listedStock||0),0)||0;
+                                     const sold = (m.manualTotalSold !== null && m.manualTotalSold !== undefined) ? m.manualTotalSold : (m.books?.reduce((s:number,b:any)=>s+(b.soldStock||0),0)||0);
+                                     const rev = (m.manualTotalRevenue !== null && m.manualTotalRevenue !== undefined) ? m.manualTotalRevenue : (m.books?.reduce((s:number,b:any)=>s+((b.soldStock||0)*(b.mrp||b.book?.mrp||0)),0)||0);
+                                     const isExpanded = expandedAuthorId === (isLegacy ? m.id : m.authorId);
+                                     const status = m.optInStatus || 'Unpublished';
+                                     return (
+                                     <React.Fragment key={i}>
+                                     <tr className="hover:bg-gray-50/50 transition-colors">
+                                         <td className="p-3 font-semibold text-paa-navy">{authorData?.name || 'Unknown'}</td>
+                                         <td className="p-3 text-sm text-gray-600">{m.books?.length || 0} Books</td>
+                                         <td className="p-3 font-mono text-sm text-gray-600">{listed}</td>
+                                         <td className="p-3 font-mono text-sm text-gray-600">{sold}</td>
+                                         <td className="p-3 font-mono text-sm text-emerald-600 font-bold">₹{rev}</td>
+                                         {!(selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.isLegacy) && (
+                                            <td className="p-3 text-center align-middle">
+                                               <div className="flex flex-col items-center justify-center h-full">
+                                                 {a.paymentScreenshot ? (
+                                                     <a href={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} target="_blank" rel="noreferrer" className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80">
+                                                         <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
+                                                     </a>
+                                                 ) : <span className="text-[10px] text-gray-400 italic">N/A</span>}
+                                                 
+                                                 {status === 'Registered' && (
+                                                     <div className="mt-1">
+                                                         <input 
+                                                            type="text" 
+                                                            placeholder="Txn ID" 
+                                                            defaultValue={m.transactionId || ''} 
+                                                            onBlur={(e) => updateTransactionId(m.eventId, m.authorId, e.target.value)}
+                                                            className="w-20 text-[9px] text-center p-0.5 border border-gray-200 bg-gray-50 rounded outline-none focus:border-paa-navy font-mono"
+                                                         />
+                                                     </div>
+                                                 )}
+                                               </div>
+                                            </td>
+                                         )}
+                                         <td className="p-3">
+                                            {status === 'Registered' ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3"/> Registered</span>
+                                            ) : (status === 'Pending' || status === 'Pending Approval') ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase">Pending</span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold uppercase">{status}</span>
+                                            )}
+                                         </td>
+                                         <td className="p-3 text-center">
+                                             <div className="flex gap-2 justify-center items-center">
+                                                 <button onClick={() => setExpandedAuthorId(isExpanded ? null : (isLegacy ? m.id : m.authorId))} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-bold border border-gray-200 transition-colors shadow-sm">
+                                                     {isExpanded ? '▲' : '▼'}
+                                                 </button>
+                                                 {isLegacy || status === 'Registered' ? (
+                                                     <button onClick={() => {
+                                                         handleEditAuthorData(authorData);
+                                                         if (isLegacy && m.optInStatus) {
+                                                             setUseGlobalOverride(true);
+                                                             setGlobalSold(m.manualTotalSold || 0);
+                                                             setGlobalRevenue(m.manualTotalRevenue || 0);
+                                                             setManageRegStatus(m.optInStatus === 'Registered' ? 'Participated' : 'Pending');
+                                                         }
+                                                     }} className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-bold border border-indigo-200 transition-colors shadow-sm whitespace-nowrap">
+                                                         Manage Data
+                                                     </button>
+                                                 ) : null}
+                                             </div>
+                                         </td>
+                                     </tr>
+                                     {isExpanded && (
+                                         <tr>
+                                             <td colSpan={8} className="p-0 border-b border-gray-200">
+                                                 <div className="bg-gray-50 p-4 border-l-4 border-paa-navy m-2 rounded-r-lg">
+                                                     <div className="flex gap-4">
+                                                         <div className="flex-1 w-full">
+                                                             <div className="flex justify-between items-center mb-3">
+                                                                <h5 className="text-xs font-bold text-gray-500 uppercase">Individual Book Breakdown</h5>
+                                                                {!isLegacy && (status === 'Pending' || status === 'Pending Approval') && (
+                                                                   <div className="flex gap-2">
+                                                                       <button onClick={() => handleRejectRegistration(selectedEventBreakdown.id, m.authorId)} className="py-1 px-4 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors">Reject</button>
+                                                                       <button onClick={() => handleApproveRegistration(selectedEventBreakdown.id, m.authorId)} className="py-1 px-4 text-xs font-bold text-white bg-paa-navy hover:bg-paa-gold hover:text-paa-navy rounded transition-colors shadow-sm">Approve</button>
+                                                                   </div>
+                                                                )}
+                                                             </div>
+                                                             {m.books?.length > 0 ? (
+                                                                 <div className="flex flex-col gap-3">
+                                                                     {m.books.map((b:any, j:number) => (
+                                                                         <div key={j} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+                                                                             <div className="font-bold text-paa-navy flex-1 w-full text-base truncate" title={b.title || b.book?.title || 'Unknown Book'}>
+                                                                                 {b.title || b.book?.title || 'Unknown Book'}
+                                                                                 <span className="text-xs text-gray-400 font-medium ml-3 tracking-wider">(MRP: ₹{b.mrp || b.book?.mrp || 'N/A'})</span>
+                                                                             </div>
+                                                                             <div className="flex font-mono text-sm text-gray-600 gap-8 md:gap-12 bg-gray-50/80 px-6 py-2 rounded-lg border border-gray-100 w-full md:w-auto justify-between md:justify-end">
+                                                                                 <div className="flex flex-col items-center md:items-end">
+                                                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Listed</span>
+                                                                                    <span className="font-bold text-gray-700">{b.listedStock || 0}</span>
+                                                                                 </div>
+                                                                                 {!isLegacy && (
+                                                                                    <div className="flex flex-col items-center md:items-end">
+                                                                                        <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Fee</span>
+                                                                                        <span className="font-bold text-indigo-700">₹{selectedEventBreakdown.feeType === 'Per Title' ? selectedEventBreakdown.registrationFee : (j === 0 ? selectedEventBreakdown.registrationFee : 0)}</span>
+                                                                                    </div>
+                                                                                 )}
+                                                                                 <div className="flex flex-col items-center md:items-end">
+                                                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Sold</span>
+                                                                                    <span className="font-bold text-indigo-700">{b.soldStock || 0}</span>
+                                                                                 </div>
+                                                                                 <div className="flex flex-col items-center md:items-end">
+                                                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Rev</span>
+                                                                                    <span className="font-bold text-emerald-600">{b.soldStock ? `₹${(b.soldStock) * (b.mrp || b.book?.mrp || 0)}` : '₹0'}</span>
+                                                                                 </div>
+                                                                             </div>
+                                                                         </div>
+                                                                     ))}
+                                                                 </div>
+                                                             ) : (
+                                                                 <p className="text-xs text-gray-500">No books found for this author in this event.</p>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                     )}
+                                     </React.Fragment>
+                                 )})}
+                             </tbody>
+                         </table>
+                         {authors.length > 50 && (
+                             <div className="p-3 text-center text-xs text-gray-500 bg-gray-50 border-t border-gray-100">
+                                 Showing top 50 results. Use search to find specific authors.
+                             </div>
+                         )}
+                     </div>
+                  </div>
+               )}
+           </div>
+       );
+    }
+
+    if (isRefreshing) return (
+       <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
+             <div className="h-6 w-48 bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-10 w-32 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+             {[1,2,3,4].map(n => <div key={n} className="h-24 bg-gray-100 animate-pulse rounded-xl"></div>)}
+          </div>
+          <div className="h-64 bg-gray-100 animate-pulse rounded-xl mb-6"></div>
+          <div className="h-10 w-64 bg-gray-200 animate-pulse rounded mb-4"></div>
+          <div className="space-y-4">
+             {[1,2,3,4].map(n => <div key={n} className="h-14 bg-gray-100 animate-pulse rounded-xl w-full"></div>)}
+          </div>
+       </div>
+    );
+
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
@@ -2564,154 +3186,144 @@ export function OperationsDashboardPage() {
           <div className="flex gap-3">
             <button onClick={handleExportEventRegistrations} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
               <Download className="w-4 h-4" /> Export Authors/Events CSV
+
             </button>
-            <button onClick={() => setIsEventModalOpen(true)} className="dash-btn dash-btn-primary">
-              <Plus className="w-4 h-4" /> Create Event
+            <button onClick={() => setIsEventModalOpen(true)} className="dash-btn dash-btn-primary bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
+              <Plus className="w-4 h-4" /> Create New Event
             </button>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2">Active / Upcoming Events</h4>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {events.filter(e => e.status === 'Upcoming').map((evt) => (
-              <div key={evt.id} className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out hover:shadow-md flex flex-col relative overflow-hidden h-full">
-                <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative`}>
-                  <span>{evt.status}</span>
-                  <div className="flex gap-2 items-center">
-                    {evt.broadcastStatus === 'AuthorsOnly' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Authors Notified</span>}
-                    {evt.broadcastStatus === 'CustomersAlso' && <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">Public</span>}
-                    {!evt.isLegacy && <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>}
-                    {!evt.isLegacy && <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>}
-                  </div>
-                </div>
-                <div className="p-6 flex-1 flex flex-col">
-                  {evt.bannerUrl ? (
-                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 bg-gray-100">
-                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
-                    </div>
-                  ) : (
-                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 flex items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100">
-                      <CalendarIcon className="w-8 h-8 text-gray-300" />
-                    </div>
-                  )}
-                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
-                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-paa-gray-text">
-                    <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50" /> {evt.date} &bull; {evt.duration}</p>
-                    <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-paa-navy/50" /> {evt.location}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="bg-gray-50 p-2 text-center rounded-3xl-2xl border border-gray-100">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Authors</p>
-                      <p className="text-lg font-black text-paa-navy">{evt._count?.eventAuthors || 0}</p>
-                    </div>
-                    <div className="bg-gray-50 p-2 text-center rounded-3xl-2xl border border-gray-100">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Linked</p>
-                      <p className="text-lg font-black text-paa-navy">{evt._count?.eventBooks || 0}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-paa-navy/5 flex flex-col gap-2 mt-auto">
-                    <button onClick={() => fetchEventRegistrations(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800">
-                      View Author Registrations
-                    </button>
-                    <button onClick={() => fetchEventReport(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
-                      View Live Event Report
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {events.filter(e => e.status === 'Upcoming').length === 0 && (
-              <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-3xl-2xl border border-dashed border-gray-200">
-                No upcoming events.
-              </div>
-            )}
-          </div>
-
-          <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 border-b pb-2 mt-12">Past Events Archive</h4>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pastEventsData.map((evt: any) => (
-              <div key={'legacy_' + evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90">
-                <div className="bg-gray-800 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center">
-                  <span>Legacy Archive</span>
-                </div>
-                <div className="p-6 flex-1">
-                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
-                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-gray-500">
-                    <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-gray-400" /> {evt.date} &bull; {evt.duration}</p>
-                    <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400" /> {evt.address || evt.location}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
-                      <p className="text-lg font-black text-gray-700">{evt.authorsParticipated || 0}</p>
-                    </div>
-                    <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Sold</p>
-                      <p className="text-lg font-black text-gray-700">{evt.booksSold || 0}</p>
-                    </div>
-                  </div>
-                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2 mt-auto">
-                    <button onClick={() => fetchEventReport('legacy_' + evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
-                      View Legacy Settlement Report
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {[...pastEventsData.map((evt: any) => ({ ...evt, id: 'legacy_' + evt.id, isLegacy: true, status: 'Legacy Archive', _count: { eventAuthors: evt.authorsParticipated, eventBooks: evt.booksSold } })), ...events.filter(e => e.status === 'Past')].map((evt: any) => (
-              <div key={evt.id} className="bg-gray-50 border border-gray-200 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden opacity-90 h-full">
-                <div className="bg-gray-500 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative">
-                  <span>{evt.status}</span>
-                  <div className="flex gap-2 items-center">
-                    {!evt.isLegacy && <button onClick={() => handleEditEventClick(evt)} className="p-1 hover:bg-white/20 rounded-3xl-2xl transition-colors" title="Edit Event"><Edit className="w-3 h-3" /></button>}
-                    {!evt.isLegacy && <button onClick={() => handleDeleteEvent(evt.id)} className="p-1 hover:bg-white/20 text-red-200 hover:text-red-100 rounded-3xl-2xl transition-colors" title="Delete Event"><Trash2 className="w-3 h-3" /></button>}
-                  </div>
-                </div>
-                <div className="p-6 flex-1 flex flex-col">
-                  {evt.bannerUrl ? (
-                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 bg-gray-100">
-                      <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
-                    </div>
-                  ) : (
-                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center bg-gradient-to-r from-gray-100 to-gray-50">
-                      <CalendarIcon className="w-8 h-8 text-gray-300" />
-                    </div>
-                  )}
-                  <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
-                  <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-gray-500">
-                    <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-gray-400" /> {evt.date} &bull; {evt.duration}</p>
-                    <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-gray-400" /> {evt.location || evt.address}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Authors</p>
-                      <p className="text-lg font-black text-gray-700">{evt._count?.eventAuthors || (evt.isLegacy ? "NA" : 0)}</p>
-                    </div>
-                    <div className="bg-white p-2 text-center rounded-3xl-2xl border border-gray-100">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Books Linked</p>
-                      <p className="text-lg font-black text-gray-700">{evt._count?.eventBooks || (evt.isLegacy ? "NA" : 0)}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-200 flex flex-col gap-2 mt-auto">
-                    <button onClick={() => fetchEventReport(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
-                      View Sales & Settlement Report
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {events.filter(e => e.status === 'Past').length === 0 && (
-              <div className="col-span-full py-8 text-center text-gray-400 bg-gray-50 rounded-3xl-2xl border border-dashed border-gray-200">
-                No past events archived yet.
-              </div>
-            )}
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Events Organized</p>
+                <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.length}</div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Books Sold</p>
+                <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggSold : evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0), 0)}</div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Authors Participated</p>
+                <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggAuthors : evt._count?.eventAuthors) || 0), 0)}</div>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+                <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Gross Revenue</p>
+                <div className="text-2xl font-serif text-emerald-800 font-bold">₹{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? (evt.aggRevenue || ((evt.aggSold || 0) * 200) || 0) : evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0)) || 0), 0).toLocaleString()}</div>
+            </div>
         </div>
+
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h4 className="font-bold text-paa-navy">Events Performance Overview</h4>
+                    <p className="text-xs text-gray-500 font-medium mt-1">Comparing book sales and author participation across all events.</p>
+                </div>
+                <div className="flex items-center gap-4 text-xs font-bold">
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-paa-navy"></div> Books Sold</div>
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-300"></div> Authors Participated</div>
+                </div>
+            </div>
+            <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={allCombinedEvents.map(e => ({ name: e.name, booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0, authors: (e.isLegacy ? e.aggAuthors : e._count?.eventAuthors) || 0 }))} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
+                        <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                        <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                        <RechartsTooltip 
+                            cursor={{ fill: '#F3F4F6' }}
+                            contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
+                        />
+                        <Bar yAxisId="left" dataKey="booksSold" name="Books Sold" fill="var(--color-paa-navy, #1e3a8a)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar yAxisId="right" dataKey="authors" name="Authors" fill="#818CF8" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+        <div className="flex justify-between items-center mb-4 mt-8">
+            <h4 className="font-bold text-gray-700">Events Registry</h4>
+            <input 
+                type="text" 
+                placeholder="Search events..." 
+                className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy shadow-sm"
+                value={eventSearch}
+                onChange={(e) => setEventSearch(e.target.value)}
+            />
+        </div>
+        <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm animate-in fade-in duration-500">
+          <div className="overflow-x-auto">
+            <table className="dash-table w-full text-left min-w-[600px]">
+              <thead className="bg-[#f0f4f8]">
+                <tr>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Event Name</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Date</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Location</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Duration</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Charges</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Status</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-center">POS</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Authors</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Books</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Revenue</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-paa-navy/5 bg-white">
+               {allCombinedEvents.filter(evt => evt.name.toLowerCase().includes(eventSearch.toLowerCase())).map((evt: any, i: number) => {
+                  const authors = evt.isLegacy ? (evt.aggAuthors || 0) : (evt._count?.eventAuthors || evt.aggAuthors || 0);
+                  const books = evt.isLegacy ? (evt.aggSold || 0) : (evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0) || 0);
+                  const revenue = evt.isLegacy ? (evt.aggRevenue || (books * 200)) : (evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0);
+                  return (
+                      <tr key={i} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{evt.name}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{evt.date}</td>
+                        <td className="px-4 py-3 text-sm text-paa-gray-text">{evt.location || evt.address || 'TBA'}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{evt.durationDays ? `${evt.durationDays} Days` : 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">₹{evt.registrationFee || 0}</td>
+                        <td className="px-4 py-3">
+                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
+                              {evt.isLegacy ? 'Legacy Archive' : evt.status}
+                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-center">{evt.livePosEnabled && !evt.isPast ? <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Enabled</span> : <span className="text-gray-400">-</span>}</td>
+                                                <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
+                           <div className="flex items-center justify-end gap-2">
+                               {authors}
+                           </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{books}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{revenue}</td>
+                        <td className="px-4 py-3 text-right">
+                           <div className="flex gap-2 justify-center">
+                               <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
+                                  <Eye className="w-4 h-4" />
+                                  {evt.registrations?.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length > 0 && (
+                                      <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse shadow-sm">
+                                          {evt.registrations.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length}
+                                      </span>
+                                  )}
+                               </button>
+                               {!evt.isLegacy && (
+                                 <>
+                                   <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
+                                      <Edit2 className="w-4 h-4" />
+                                   </button>
+                                   <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors shadow-sm">
+                                      <Trash2 className="w-4 h-4" />
+                                   </button>
+                                 </>
+                               )}
+                           </div>
+                        </td>
+                      </tr>
+                  );
+               })}
+               {allCombinedEvents.length === 0 && <tr><td colSpan={10} className="text-center py-6 text-sm text-paa-gray-text italic">No events found.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
       </div>
     );
   };
@@ -3380,7 +3992,7 @@ export function OperationsDashboardPage() {
           {activeTab === 'sales_report' && <SalesReportTab refreshTrigger={lastRefreshTime} />}
           {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
           {activeTab === 'books' && <BooksTab />}
-          {activeTab === 'events' && <EventsTab />}
+          {activeTab === 'events' && renderEventsTab()}
           {activeTab === 'forms' && <FormsTab />}
           {activeTab === 'gallery' && <GalleryTab />}
           {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
@@ -3395,114 +4007,7 @@ export function OperationsDashboardPage() {
         </div>
       </main>
 
-      {/* Event Registrations Modal */}
-      <Modal isOpen={viewingRegistrationsEventId !== null} onClose={() => { setViewingRegistrationsEventId(null); setEventRegistrations([]); setRegistrationsFilter('All'); setRegistrationsPage(1); }} title="Author Event Registrations">
-        {loadingRegistrations ? (
-          <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-paa-navy" /></div>
-        ) : (
-          <div className="space-y-6 max-h-[70vh] min-h-[60vh] overflow-y-auto pr-2 flex flex-col">
 
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2 shrink-0">
-              {['All', 'Awaiting Approval', 'Opted-In', 'Rejected'].map(status => {
-                const count = status === 'All' ? eventRegistrations.length : eventRegistrations.filter(r => r.optInStatus === status).length;
-                return (
-                  <button key={status} onClick={() => { setRegistrationsFilter(status); setRegistrationsPage(1); }} className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap rounded-full border transition-colors ${registrationsFilter === status ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-500 border-gray-200 hover:border-paa-navy'}`}>
-                    {status} ({count})
-                  </button>
-                )
-              })}
-            </div>
-
-            {(() => {
-              const filteredRegistrations = eventRegistrations.filter(r => registrationsFilter === 'All' || r.optInStatus === registrationsFilter);
-              const PAGE_SIZE = 5;
-              const totalPages = Math.ceil(filteredRegistrations.length / PAGE_SIZE);
-              const paginatedRegistrations = filteredRegistrations.slice((registrationsPage - 1) * PAGE_SIZE, registrationsPage * PAGE_SIZE);
-
-              if (filteredRegistrations.length === 0) {
-                return <div className="flex-1 flex items-center justify-center"><p className="text-gray-500 text-center py-8">No registrations found for this filter.</p></div>;
-              }
-
-              return (
-                <>
-                  <div className="space-y-4">
-                    {paginatedRegistrations.map((reg) => (
-                      <div key={reg.id} className="bg-white border border-paa-navy/5 p-4 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col gap-4">
-
-                        <div className="flex justify-between items-start border-b pb-3">
-                          <div>
-                            <h4 className="font-bold text-paa-navy text-lg">{reg.author.name}</h4>
-                            <p className="text-xs text-gray-500">{reg.author.email} | {reg.author.phone}</p>
-                          </div>
-                          <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest text-white ${reg.optInStatus === 'Awaiting Approval' ? 'bg-orange-500' : reg.optInStatus === 'Opted-In' ? 'bg-green-500' : 'bg-red-500'}`}>
-                            {reg.optInStatus}
-                          </span>
-                        </div>
-
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Books Registered</p>
-                            <ul className="space-y-1">
-                              {reg.books.map((b: any) => (
-                                <li key={b.id} className="text-sm flex justify-between bg-white px-2 py-1 border border-gray-100">
-                                  <span className="truncate pr-2">{b.book.title}</span>
-                                  <span className="font-bold whitespace-nowrap">{b.listedStock} units</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Category Breakdown</p>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(reg.categoryCounts || {}).map(([cat, count]: [string, any]) => (
-                                <span key={cat} className="text-[10px] font-bold bg-white border border-gray-200 px-2 py-1 rounded-3xl-2xl">
-                                  {cat}: {count}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {reg.paymentScreenshot && (
-                          <div className="mt-2 border-t pt-3">
-                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Payment Screenshot</p>
-                            <a href={`${API}${reg.paymentScreenshot}`} target="_blank" rel="noopener noreferrer">
-                              <img src={`${API}${reg.paymentScreenshot}`} alt="Payment Proof" className="w-32 h-auto border shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out hover:opacity-80 transition-opacity" />
-                            </a>
-                          </div>
-                        )}
-
-                        {reg.optInStatus === 'Awaiting Approval' && (
-                          <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-black/5">
-                            <button onClick={() => handleRejectRegistration(reg.eventId, reg.authorId)} className="dash-btn dash-btn-danger">
-                              Reject
-                            </button>
-                            <button onClick={() => handleApproveRegistration(reg.eventId, reg.authorId)} className="dash-btn dash-btn-success">
-                              Approve Registration
-                            </button>
-                          </div>
-                        )}
-
-                      </div>
-                    ))}
-                  </div>
-
-                  {totalPages > 1 && (
-                    <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-                      <p className="text-xs text-gray-500 font-medium">Page {registrationsPage} of {totalPages}</p>
-                      <div className="flex gap-2">
-                        <button onClick={() => setRegistrationsPage(p => Math.max(1, p - 1))} disabled={registrationsPage === 1} className="px-3 py-1 bg-white border border-gray-300 text-xs font-bold uppercase disabled:opacity-50 hover:bg-gray-50 transition-colors">Prev</button>
-                        <button onClick={() => setRegistrationsPage(p => Math.min(totalPages, p + 1))} disabled={registrationsPage === totalPages} className="px-3 py-1 bg-white border border-gray-300 text-xs font-bold uppercase disabled:opacity-50 hover:bg-gray-50 transition-colors">Next</button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        )}
-      </Modal>
 
       <Modal isOpen={!!selectedBookDetails} onClose={() => setSelectedBookDetails(null)} title="Book Details">
         {selectedBookDetails && (
@@ -3539,89 +4044,10 @@ export function OperationsDashboardPage() {
         )}
       </Modal>
 
-      <Modal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} title="Create Event">
-        <form className="space-y-4" onSubmit={async (e) => {
-          e.preventDefault();
-          const target = e.target as any;
-          setIsSubmittingEvent(true);
-          try {
-            const fd = new FormData();
-            fd.append('name', target.name.value);
-            fd.append('date', target.date.value);
-            fd.append('location', target.location.value);
-            fd.append('duration', target.duration.value);
-            if (target.startTime?.value) fd.append('startTime', target.startTime.value);
-            if (target.endTime?.value) fd.append('endTime', target.endTime.value);
-            fd.append('eventType', target.eventType.value);
-            fd.append('registrationFee', target.registrationFee.value);
-            fd.append('feeType', target.feeType.value);
-            if (target.description.value) fd.append('description', target.description.value);
-            fd.append('livePosEnabled', target.livePosEnabled?.checked ? 'true' : 'false');
-            if (target.banner.files[0]) fd.append('banner', target.banner.files[0]);
 
-            await axios.post(`${API}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-            fetchEvents();
-            setIsEventModalOpen(false);
-          } catch (err: any) {
-            alert(err.response?.data?.error || err.message);
-          } finally {
-            setIsSubmittingEvent(false);
-          }
-        }}>
-          <div><label className="dash-label">Event Name</label><input required name="name" type="text" className="dash-input" /></div>
-          <div><label className="dash-label">Event Description</label><textarea name="description" rows={2} className="dash-input" placeholder="Short details about the event..."></textarea></div>
-          <div><label className="dash-label">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="dash-input" /></div>
+      
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="dash-label">From Timing</label>
-              <input name="startTime" type="time" className="dash-input" />
-            </div>
-            <div>
-              <label className="dash-label">To Timing</label>
-              <input name="endTime" type="time" className="dash-input" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="dash-label">Event Type</label>
-              <select name="eventType" className="dash-input">
-                <option value="Book Fair">Book Fair</option>
-                <option value="Literary Event">Literary Event</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="dash-label">Date (e.g. 15 Aug 2026)</label><input required name="date" type="date" className="dash-input" /></div>
-              <div><label className="dash-label">Duration (e.g. 3 days)</label><input required name="duration" type="text" className="dash-input" /></div>
-            </div>
-            <div><label className="dash-label">Location</label><input required name="location" type="text" className="dash-input" /></div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="dash-label">Registration Fee (₹)</label>
-                <input required name="registrationFee" type="number" min="0" step="0.01" defaultValue="0" className="dash-input" />
-              </div>
-              <div>
-                <label className="dash-label">Fee Type</label>
-                <select name="feeType" className="dash-input">
-                  <option value="Per Author">Per Author</option>
-                  <option value="Per Title">Per Title</option>
-                  <option value="Flat Fee">Flat Fee</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="pt-4 mt-4 border-t border-paa-navy/5 flex justify-end">
-              <button type="submit" disabled={isSubmittingEvent} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
-                {isSubmittingEvent ? "Creating Event..." : "Create Event"}
-              </button>
-            </div>
-          </div>
-        </form>
-
-      </Modal>
+      
 
       <Modal isOpen={isEditEventModalOpen} onClose={() => setIsEditEventModalOpen(false)} title="Edit Event">
         {editingEvent && (
@@ -3849,7 +4275,7 @@ export function OperationsDashboardPage() {
                             <div>
                               <p className="font-bold text-paa-navy flex items-center gap-2">
                                 {author.name}
-                                {author.optInStatus === 'Awaiting Approval' && <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-[10px] rounded-full">Pending</span>}
+                                {author.optInStatus === 'Pending Approval' && <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-[10px] rounded-full">Pending</span>}
                               </p>
                               <p className="text-[10px] text-gray-500">{author.email} â€¢ {author.phone}</p>
                             </div>

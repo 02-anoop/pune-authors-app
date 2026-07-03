@@ -43,7 +43,7 @@ export function AuthorDashboardPage() {
     facebook: ''
   });
   const [isSubmittingReapply, setIsSubmittingReapply] = useState(false);
-  const [buttonStates, setButtonStates] = useState<{[key: string]: boolean}>({});
+  const [buttonStates, setButtonStates] = useState<{ [key: string]: boolean }>({});
   const [showNotifications, setShowNotifications] = useState(false);
   const [dismissedToastId, setDismissedToastId] = useState<string | null>(() => localStorage.getItem('paa_dismissed_toast'));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -60,13 +60,13 @@ export function AuthorDashboardPage() {
 
   const fetchQueriesAlert = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/queries`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/queries`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       const answeredCount = res.data.filter((q: any) => q.status === 'Answered').length;
       if (prevQueryAnsCountRef.current > 0 && answeredCount > prevQueryAnsCountRef.current && !location.pathname.includes('/queries')) {
-         setHasNewQueries(true);
+        setHasNewQueries(true);
       }
       prevQueryAnsCountRef.current = answeredCount;
-    } catch(err) {}
+    } catch (err) { }
   };
 
   const fetchDashboardData = async (forceRefresh = false) => {
@@ -174,15 +174,15 @@ export function AuthorDashboardPage() {
 
   if (loading || !dashboardData) {
     return (
-      <div className="min-h-screen font-sans" style={{background:'#f5f5f3'}}>
+      <div className="min-h-screen font-sans" style={{ background: '#f5f5f3' }}>
         <div className="author-topnav">
           <div className="max-w-7xl mx-auto px-6 h-[60px] flex items-center gap-6">
-            {[...Array(6)].map((_,i) => <div key={i} className="h-5 w-20 dash-skeleton rounded-lg"></div>)}
+            {[...Array(6)].map((_, i) => <div key={i} className="h-5 w-20 dash-skeleton rounded-lg"></div>)}
           </div>
         </div>
         <div className="max-w-7xl mx-auto p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {[...Array(3)].map((_,i) => <div key={i} className="h-28 dash-skeleton rounded-2xl"></div>)}
+            {[...Array(3)].map((_, i) => <div key={i} className="h-28 dash-skeleton rounded-2xl"></div>)}
           </div>
           <div className="h-72 dash-skeleton rounded-2xl"></div>
         </div>
@@ -196,7 +196,7 @@ export function AuthorDashboardPage() {
   const missingFields = dynamicFields.filter((f: any) => !extraDataState[f.name]);
 
   const handleSaveExtraData = async () => {
-    setButtonStates(prev => ({...prev, saveExtra: true}));
+    setButtonStates(prev => ({ ...prev, saveExtra: true }));
     try {
       await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/extra`, { extraData: extraDataState }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -219,11 +219,11 @@ export function AuthorDashboardPage() {
               <div key={f.name}>
                 <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">{f.name}</label>
                 {f.type === 'number' ? (
-                  <input type="number" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                  <input type="number" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
                 ) : f.type === 'date' ? (
-                  <input type="date" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                  <input type="date" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
                 ) : (
-                  <input type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({...extraDataState, [f.name]: e.target.value})} />
+                  <input type="text" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-gray-50 focus:border-paa-navy" value={extraDataState[f.name] || ''} onChange={e => setExtraDataState({ ...extraDataState, [f.name]: e.target.value })} />
                 )}
               </div>
             ))}
@@ -239,14 +239,14 @@ export function AuthorDashboardPage() {
       return (
         <div className="flex flex-col min-h-screen">
           <NavBar />
-          <AuthorRegistrationPage 
-            initialData={dashboardData?.authorProfile} 
-            isReapply={true} 
+          <AuthorRegistrationPage
+            initialData={dashboardData?.authorProfile}
+            isReapply={true}
             onReapplySuccess={() => {
               setReapplyDone(true);
               setShowReapply(false);
               fetchDashboardData(true);
-            }} 
+            }}
           />
         </div>
       );
@@ -280,46 +280,46 @@ export function AuthorDashboardPage() {
 
             <div className="relative">
               <div className="flex justify-end mb-6">
-                <button onClick={handleLogout} className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-xs font-bold uppercase tracking-widest rounded-full transition-colors hover:bg-red-50 px-3 py-1.5"><LogOut size={14}/> Logout</button>
+                <button onClick={handleLogout} className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-xs font-bold uppercase tracking-widest rounded-full transition-colors hover:bg-red-50 px-3 py-1.5"><LogOut size={14} /> Logout</button>
               </div>
-          
-          <div className="mb-6 flex justify-center">
-            {status === 'Pending' ? (
-              <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center border border-yellow-200">
-                <AlertCircle className="w-10 h-10 text-yellow-500" />
-              </div>
-            ) : (
-              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center border border-red-200">
-                <AlertCircle className="w-10 h-10 text-red-500" />
-              </div>
-            )}
-          </div>
 
-          <h1 className="text-3xl font-serif text-paa-navy mb-4">
-            {status === 'Pending' ? 'Application Under Review' : 'Application Rejected'}
-          </h1>
-
-          <div className="mx-auto max-w-sm">
-            {status === 'Pending' ? (
-              <p className="text-sm text-gray-600 leading-relaxed">Your author application has been submitted and is currently pending review by the admin team. You will be notified via email once approved. Check back here for updates.</p>
-            ) : (
-              <div>
-                <p className="text-sm text-gray-600 mb-6 leading-relaxed">Unfortunately, your author application has been rejected.</p>
-                {rejectionReason && (
-                  <div className="bg-red-50 p-4 rounded-2xl border border-red-100 text-red-800 text-sm text-left mb-8 shadow-sm">
-                    <strong className="uppercase tracking-widest text-[10px] block mb-1 opacity-80">Reason for Rejection</strong>
-                    {rejectionReason}
+              <div className="mb-6 flex justify-center">
+                {status === 'Pending' ? (
+                  <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center border border-yellow-200">
+                    <AlertCircle className="w-10 h-10 text-yellow-500" />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center border border-red-200">
+                    <AlertCircle className="w-10 h-10 text-red-500" />
                   </div>
                 )}
-                <button 
-                  onClick={() => setShowReapply(true)} 
-                  className="bg-paa-navy text-white px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy shadow-premium hover:-translate-y-0.5 transition-all duration-300 w-full"
-                >
-                  Edit & Reapply Details
-                </button>
               </div>
-            )}
-          </div>
+
+              <h1 className="text-3xl font-serif text-paa-navy mb-4">
+                {status === 'Pending' ? 'Application Under Review' : 'Application Rejected'}
+              </h1>
+
+              <div className="mx-auto max-w-sm">
+                {status === 'Pending' ? (
+                  <p className="text-sm text-gray-600 leading-relaxed">Your author application has been submitted and is currently pending review by the admin team. You will be notified via email once approved. Check back here for updates.</p>
+                ) : (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-6 leading-relaxed">Unfortunately, your author application has been rejected.</p>
+                    {rejectionReason && (
+                      <div className="bg-red-50 p-4 rounded-2xl border border-red-100 text-red-800 text-sm text-left mb-8 shadow-sm">
+                        <strong className="uppercase tracking-widest text-[10px] block mb-1 opacity-80">Reason for Rejection</strong>
+                        {rejectionReason}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setShowReapply(true)}
+                      className="bg-paa-navy text-white px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy shadow-premium hover:-translate-y-0.5 transition-all duration-300 w-full"
+                    >
+                      Edit & Reapply Details
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </main>
@@ -332,219 +332,219 @@ export function AuthorDashboardPage() {
   const fineAmount = dashboardData?.authorProfile?.extraData?.lateFines || 0;
   let isFineOverdue = false;
   if (fineDateStr && fineAmount > 0) {
-     const diffDays = (new Date().getTime() - new Date(fineDateStr).getTime()) / (1000 * 3600 * 24);
-     if (diffDays > 3) isFineOverdue = true;
+    const diffDays = (new Date().getTime() - new Date(fineDateStr).getTime()) / (1000 * 3600 * 24);
+    if (diffDays > 3) isFineOverdue = true;
   }
 
   let hasLateOrders = false;
   if (dashboardData?.authorOrders) {
-     dashboardData.authorOrders.forEach((o: any) => {
-        if ((o.status === 'Pending Verification' || o.status === 'Pending' || o.status === 'Accepted') && o.createdAt) {
-           const hours = (new Date().getTime() - new Date(o.createdAt).getTime()) / (1000 * 3600);
-           if (hours > 24) hasLateOrders = true;
-        }
-     });
+    dashboardData.authorOrders.forEach((o: any) => {
+      if ((o.status === 'Pending Verification' || o.status === 'Pending' || o.status === 'Accepted') && o.createdAt) {
+        const hours = (new Date().getTime() - new Date(o.createdAt).getTime()) / (1000 * 3600);
+        if (hours > 24) hasLateOrders = true;
+      }
+    });
   }
 
   return (
     <>
       {/* Late Delivery Fine Overlay */}
       {(isFineOverdue || showFineModal) && fineAmount > 0 && (
-         <div className="fixed inset-0 bg-[#1a1a2e]/90 backdrop-blur-md z-[9999] flex items-center justify-center p-4 pointer-events-auto">
-           <div className="bg-white p-8 rounded-3xl-2xl shadow-premium max-w-md w-full border border-red-100 text-center relative overflow-hidden animate-fade-in-up">
-             {!isFineOverdue && (
-                <button onClick={() => setShowFineModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
-                  <X size={16} />
-                </button>
-             )}
-             <div className="absolute top-0 left-0 w-full h-2 bg-red-600"></div>
-             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-             <h2 className="text-2xl font-serif text-paa-navy mb-2">{isFineOverdue ? 'Account Restricted' : 'Pay Late Fine'}</h2>
-             <p className="text-sm text-gray-600 mb-6">You have an outstanding late delivery fine of <strong className="text-red-600">₹{dashboardData.authorProfile.extraData.lateFines}</strong>. {isFineOverdue ? 'Your dashboard access has been temporarily suspended until the fine is cleared.' : 'Please pay it to avoid dashboard suspension.'}</p>
-             
-             <div className="bg-orange-50 p-6 rounded-xl border border-orange-200 mb-6 relative">
-                <img src={qrCode} alt="Payment QR" className="w-40 h-40 mx-auto rounded-xl shadow-sm mb-3 border border-orange-300" />
-                <p className="text-xs font-bold text-orange-900 uppercase tracking-widest">Scan to pay ₹{dashboardData.authorProfile.extraData.lateFines}</p>
-             </div>
+        <div className="fixed inset-0 bg-[#1a1a2e]/90 backdrop-blur-md z-[9999] flex items-center justify-center p-4 pointer-events-auto">
+          <div className="bg-white p-8 rounded-3xl-2xl shadow-premium max-w-md w-full border border-red-100 text-center relative overflow-hidden animate-fade-in-up">
+            {!isFineOverdue && (
+              <button onClick={() => setShowFineModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                <X size={16} />
+              </button>
+            )}
+            <div className="absolute top-0 left-0 w-full h-2 bg-red-600"></div>
+            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-serif text-paa-navy mb-2">{isFineOverdue ? 'Account Restricted' : 'Pay Late Fine'}</h2>
+            <p className="text-sm text-gray-600 mb-6">You have an outstanding late delivery fine of <strong className="text-red-600">₹{dashboardData.authorProfile.extraData.lateFines}</strong>. {isFineOverdue ? 'Your dashboard access has been temporarily suspended until the fine is cleared.' : 'Please pay it to avoid dashboard suspension.'}</p>
 
-             <div className="text-left mb-6">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-paa-navy mb-2 block">Upload Payment Screenshot *</label>
-                <input type="file" accept="image/*" className="w-full border border-gray-300 rounded-lg p-2 text-xs outline-none focus:border-paa-navy bg-white" onChange={(e) => {
-                   if (e.target.files && e.target.files[0]) {
-                      setFineScreenshot(e.target.files[0]);
-                   } else {
-                      setFineScreenshot(null);
-                   }
-                }} />
-             </div>
-             
-             <button onClick={handlePayFine} disabled={isSubmittingFine || !fineScreenshot} className="w-full dash-btn dash-btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white border-none py-3">
-               {isSubmittingFine ? 'Submitting...' : 'Submit Payment Screenshot'}
-             </button>
-           </div>
-         </div>
+            <div className="bg-orange-50 p-6 rounded-xl border border-orange-200 mb-6 relative">
+              <img src={qrCode} alt="Payment QR" className="w-40 h-40 mx-auto rounded-xl shadow-sm mb-3 border border-orange-300" />
+              <p className="text-xs font-bold text-orange-900 uppercase tracking-widest">Scan to pay ₹{dashboardData.authorProfile.extraData.lateFines}</p>
+            </div>
+
+            <div className="text-left mb-6">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-paa-navy mb-2 block">Upload Payment Screenshot *</label>
+              <input type="file" accept="image/*" className="w-full border border-gray-300 rounded-lg p-2 text-xs outline-none focus:border-paa-navy bg-white" onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setFineScreenshot(e.target.files[0]);
+                } else {
+                  setFineScreenshot(null);
+                }
+              }} />
+            </div>
+
+            <button onClick={handlePayFine} disabled={isSubmittingFine || !fineScreenshot} className="w-full dash-btn dash-btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white border-none py-3">
+              {isSubmittingFine ? 'Submitting...' : 'Submit Payment Screenshot'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Mandatory Settlement Overlay Blackout */}
-      {dashboardData?.eventInvites?.some((inv: any) => inv.optInStatus === 'Opted-In' && inv.event.status === 'Past' && dashboardData?.listedBooks?.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) && location.pathname !== '/dashboard/events' && (
-         <div className="fixed inset-0 bg-white z-[65] flex items-center justify-center pointer-events-auto">
-            <div className="text-center">
-               <Loader2 className="w-12 h-12 animate-spin text-paa-navy mx-auto mb-4" />
-               <h2 className="text-2xl font-serif text-paa-navy">Action Required</h2>
-               <p className="text-gray-500 mt-2 mb-6">Please settle your past event inventory to access your dashboard.</p>
-               <button onClick={() => navigate('/dashboard/events')} className="bg-paa-navy text-paa-cream px-6 py-3 font-bold uppercase tracking-widest text-xs hover:bg-paa-gold hover:text-paa-navy transition-colors">Go to Events Tab</button>
-            </div>
-         </div>
+      {dashboardData?.eventInvites?.some((inv: any) => inv.optInStatus === 'Registered' && inv.event.status === 'Past' && dashboardData?.listedBooks?.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) && location.pathname !== '/dashboard/events' && (
+        <div className="fixed inset-0 bg-white z-[65] flex items-center justify-center pointer-events-auto">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-paa-navy mx-auto mb-4" />
+            <h2 className="text-2xl font-serif text-paa-navy">Action Required</h2>
+            <p className="text-gray-500 mt-2 mb-6">Please settle your past event inventory to access your dashboard.</p>
+            <button onClick={() => navigate('/dashboard/events')} className="bg-paa-navy text-paa-cream px-6 py-3 font-bold uppercase tracking-widest text-xs hover:bg-paa-gold hover:text-paa-navy transition-colors">Go to Events Tab</button>
+          </div>
+        </div>
       )}
 
-    <div className="min-h-screen font-sans" style={{background:'#f5f5f3'}}>
-      {/* TOP NAV */}
-      <div className="author-topnav">
-        <div className="max-w-[1600px] mx-auto px-4 md:px-6 flex items-center h-[60px] justify-between w-full">
-          {/* Brand */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden mr-2 p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
-               {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-            <img 
-              src="/logo.png" 
-              alt="PAA Logo" 
-              className="h-8 w-auto object-contain" 
-              onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} 
-            />
-            <div className="hidden w-8 h-8 rounded-full bg-[#b44d28] flex items-center justify-center text-white text-sm font-bold">
-              P
+      <div className="min-h-screen font-sans" style={{ background: '#f5f5f3' }}>
+        {/* TOP NAV */}
+        <div className="author-topnav">
+          <div className="max-w-[1600px] mx-auto px-4 md:px-6 flex items-center h-[60px] justify-between w-full">
+            {/* Brand */}
+            <div className="flex items-center gap-2">
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden mr-2 p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
+                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+              <img
+                src="/logo.png"
+                alt="PAA Logo"
+                className="h-8 w-auto object-contain"
+                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
+              />
+              <div className="hidden w-8 h-8 rounded-full bg-[#b44d28] flex items-center justify-center text-white text-sm font-bold">
+                P
+              </div>
+              <span className="font-serif font-bold text-lg tracking-tight hidden sm:block text-paa-navy ml-1">Author Portal</span>
             </div>
-            <span className="font-serif font-bold text-lg tracking-tight hidden sm:block text-paa-navy ml-1">Author Portal</span>
-          </div>
 
-          {/* Right items */}
-          <div className="flex items-center gap-2 relative shrink-0">
-             <button onClick={() => { setShowNotifications(!showNotifications); }} className={`relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 text-paa-gray-text hover:text-paa-navy transition-colors ${hasUnread && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') ? 'animate-pulse' : ''}`}>
+            {/* Right items */}
+            <div className="flex items-center gap-2 relative shrink-0">
+              <button onClick={() => { setShowNotifications(!showNotifications); }} className={`relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 text-paa-gray-text hover:text-paa-navy transition-colors ${hasUnread && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') ? 'animate-pulse' : ''}`}>
                 <Bell size={16} />
                 {hasUnread && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
-             </button>
-             {/* Auto-open Blinking Toast */}
-             {hasUnread && !showNotifications && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') && (
+              </button>
+              {/* Auto-open Blinking Toast */}
+              {hasUnread && !showNotifications && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') && (
                 <div className="animate-pulse" style={{ position: 'absolute', top: '100%', right: '100%', marginRight: 12, marginTop: -8, width: 280, background: '#1a1a2e', borderRadius: 12, padding: '12px 16px', color: '#fff', zIndex: 9999, display: 'flex', gap: 12, alignItems: 'flex-start', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
-                   <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => { setShowNotifications(true); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }}>
-                      <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: 2 }}>New Message</p>
-                      <p style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.4 }}>{notifications[0]?.message || (unreadEventInvites.length > 0 ? `New Event: ${unreadEventInvites[0].event.name}` : 'You have unread notifications.')}</p>
-                   </div>
-                   <button onClick={(e) => { e.stopPropagation(); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14}/></button>
-                   <div style={{ position: 'absolute', top: 12, right: -6, width: 0, height: 0, borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '6px solid #1a1a2e' }}></div>
+                  <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => { setShowNotifications(true); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }}>
+                    <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: 2 }}>New Message</p>
+                    <p style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.4 }}>{notifications[0]?.message || (unreadEventInvites.length > 0 ? `New Event: ${unreadEventInvites[0].event.name}` : 'You have unread notifications.')}</p>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14} /></button>
+                  <div style={{ position: 'absolute', top: 12, right: -6, width: 0, height: 0, borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '6px solid #1a1a2e' }}></div>
                 </div>
-             )}
-             {showNotifications && (
+              )}
+              {showNotifications && (
                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 12, width: 340, background: '#fff', borderRadius: 16, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', zIndex: 9999, overflow: 'hidden', transformOrigin: 'top right', animation: 'scaleIn 0.2s ease-out' }}>
-                   <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>Notifications</p>
-                     <button onClick={() => setShowNotifications(false)} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14}/></button>
-                   </div>
-                   <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                      {hasUnread ? (
-                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            {unreadEventInvites.map((inv: any) => (
-                               <button key={`inv-${inv.id}`} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6', marginTop: 6, flexShrink: 0 }}></div>
-                                  <div>
-                                     <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>New Event: {inv.event.name}</p>
-                                     <p style={{ fontSize: 12, color: '#6b6b80', lineHeight: 1.4 }}>You are invited to participate!</p>
-                                  </div>
-                               </button>
-                            ))}
-                            {notifications.map((notif: any) => (
-                               <div key={`notif-${notif.id}`} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', marginTop: 6, flexShrink: 0 }}></div>
-                                  <div>
-                                     <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', lineHeight: 1.4 }}>{notif.message}</p>
-                                     <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 4 }}>{new Date(notif.createdAt).toLocaleString()}</p>
-                                  </div>
-                               </div>
-                            ))}
-                         </div>
-                      ) : (
-                         <div style={{ padding: '32px 20px', textAlign: 'center', color: '#6b6b80', fontSize: 12 }}>No new notifications.</div>
-                      )}
-                   </div>
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>Notifications</p>
+                    <button onClick={() => setShowNotifications(false)} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14} /></button>
+                  </div>
+                  <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                    {hasUnread ? (
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {unreadEventInvites.map((inv: any) => (
+                          <button key={`inv-${inv.id}`} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6', marginTop: 6, flexShrink: 0 }}></div>
+                            <div>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>New Event: {inv.event.name}</p>
+                              <p style={{ fontSize: 12, color: '#6b6b80', lineHeight: 1.4 }}>You are invited to participate!</p>
+                            </div>
+                          </button>
+                        ))}
+                        {notifications.map((notif: any) => (
+                          <div key={`notif-${notif.id}`} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', marginTop: 6, flexShrink: 0 }}></div>
+                            <div>
+                              <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', lineHeight: 1.4 }}>{notif.message}</p>
+                              <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 4 }}>{new Date(notif.createdAt).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '32px 20px', textAlign: 'center', color: '#6b6b80', fontSize: 12 }}>No new notifications.</div>
+                    )}
+                  </div>
                 </div>
-             )}
-             <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap">
-               <LogOut size={13}/> Logout
-             </button>
+              )}
+              <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap">
+                <LogOut size={13} /> Logout
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* GLOBAL 3-DAY WARNING BANNER */}
+        {(() => {
+          const notifyDateStr = dashboardData?.authorProfile?.extraData?.lateNotificationDate;
+          const fineAmt = dashboardData?.authorProfile?.extraData?.lateFines || 0;
+
+          if (fineAmt === 0 && notifyDateStr && hasLateOrders) {
+            const diffDays = (new Date().getTime() - new Date(notifyDateStr).getTime()) / (1000 * 3600 * 24);
+            if (diffDays >= 0 && diffDays <= 3) {
+              const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
+              return (
+                <div className="bg-[#b44d28] text-white px-6 py-2.5 flex items-center justify-center gap-2 shadow-sm relative z-[100] border-b border-[#963c1e]">
+                  <AlertCircle size={14} className="text-white/90" />
+                  <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/90">
+                    Action Required: You have unaccepted late orders. {daysLeft} day(s) remaining to dispatch before catalogue suspension.
+                  </span>
+                </div>
+              );
+            }
+          } else if (fineAmt > 0 && dashboardData?.authorProfile?.extraData?.fineDate) {
+            const diffDays = (new Date().getTime() - new Date(dashboardData.authorProfile.extraData.fineDate).getTime()) / (1000 * 3600 * 24);
+            if (diffDays >= 0 && diffDays <= 3) {
+              const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
+              return (
+                <div className="bg-[#1a1a2e] text-white px-6 py-2 flex items-center justify-between shadow-sm relative z-[100] border-b border-[#0f0f1c]">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={14} className="text-red-400" />
+                    <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-100">
+                      Urgent: Outstanding late fine of ₹{fineAmt}. {daysLeft} day(s) remaining before account suspension.
+                    </span>
+                  </div>
+                  <button onClick={() => setShowFineModal(true)} className="bg-red-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 transition-colors shrink-0">
+                    Pay Fine Now
+                  </button>
+                </div>
+              );
+            }
+          }
+          return null;
+        })()}
+
+        <div className="max-w-[1600px] mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-6 relative">
+          <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-30 ${isMobileMenuOpen ? 'flex fixed inset-0 top-[80px] z-[500] bg-white md:static md:shadow-premium' : 'hidden md:flex'}`}>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname === '/dashboard' ? 'active' : ''}`}><BarChart3 className="w-4 h-4" /> Overview</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/orders" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/orders') ? 'active' : ''}`}><ShoppingCart className="w-4 h-4" /> Web Orders</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/sales" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/sales') ? 'active' : ''}`}><TrendingUp className="w-4 h-4" /> Sales Report</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/inventory" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/inventory') ? 'active' : ''}`}><BookOpen className="w-4 h-4" /> Inventory & Distribution</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/events" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/events') ? 'active' : ''}`}><CalendarIcon className="w-4 h-4" /> Events Ecosystem</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/reviews" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/reviews') ? 'active' : ''}`}><Star className="w-4 h-4" /> Reviews & Ratings</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/gallery" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/gallery') ? 'active' : ''}`}><ImageIcon className="w-4 h-4" /> Event Gallery</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/profile" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/profile') ? 'active' : ''}`}><User className="w-4 h-4" /> Profile Settings</Link>
+          </div>
+
+          <div className="flex-1 bg-white border border-paa-navy/5 shadow-premium p-6 md:p-8 min-h-[calc(100vh-160px)] relative">
+            <Routes>
+              <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
+              <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
+              <Route path="/sales" element={<AuthorSalesReport data={dashboardData} />} />
+              <Route path="/forms/*" element={<FormsWrapper />} />
+              <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
+              <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
+              <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
+              <Route path="/gallery" element={<AuthorGallery />} />
+              <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
+              <Route path="/pos/:eventId" element={<LivePosDashboard />} />
+              <Route path="/bundle-offers" element={<BundleOffersTab data={dashboardData} />} />
+            </Routes>
           </div>
         </div>
       </div>
-
-      {/* GLOBAL 3-DAY WARNING BANNER */}
-      {(() => {
-         const notifyDateStr = dashboardData?.authorProfile?.extraData?.lateNotificationDate;
-         const fineAmt = dashboardData?.authorProfile?.extraData?.lateFines || 0;
-         
-         if (fineAmt === 0 && notifyDateStr && hasLateOrders) {
-           const diffDays = (new Date().getTime() - new Date(notifyDateStr).getTime()) / (1000 * 3600 * 24);
-           if (diffDays >= 0 && diffDays <= 3) {
-             const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
-             return (
-               <div className="bg-[#b44d28] text-white px-6 py-2.5 flex items-center justify-center gap-2 shadow-sm relative z-[100] border-b border-[#963c1e]">
-                 <AlertCircle size={14} className="text-white/90" />
-                 <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/90">
-                   Action Required: You have unaccepted late orders. {daysLeft} day(s) remaining to dispatch before catalogue suspension.
-                 </span>
-               </div>
-             );
-           }
-         } else if (fineAmt > 0 && dashboardData?.authorProfile?.extraData?.fineDate) {
-           const diffDays = (new Date().getTime() - new Date(dashboardData.authorProfile.extraData.fineDate).getTime()) / (1000 * 3600 * 24);
-           if (diffDays >= 0 && diffDays <= 3) {
-             const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
-             return (
-               <div className="bg-[#1a1a2e] text-white px-6 py-2 flex items-center justify-between shadow-sm relative z-[100] border-b border-[#0f0f1c]">
-                 <div className="flex items-center gap-2">
-                   <AlertCircle size={14} className="text-red-400" />
-                   <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-100">
-                     Urgent: Outstanding late fine of ₹{fineAmt}. {daysLeft} day(s) remaining before account suspension.
-                   </span>
-                 </div>
-                 <button onClick={() => setShowFineModal(true)} className="bg-red-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 transition-colors shrink-0">
-                   Pay Fine Now
-                 </button>
-               </div>
-             );
-           }
-         }
-         return null;
-      })()}
-
-      <div className="max-w-[1600px] mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-6 relative">
-        <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-30 ${isMobileMenuOpen ? 'flex fixed inset-0 top-[80px] z-[500] bg-white md:static md:shadow-premium' : 'hidden md:flex'}`}>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname === '/dashboard' ? 'active' : ''}`}><BarChart3 className="w-4 h-4"/> Overview</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/orders" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/orders') ? 'active' : ''}`}><ShoppingCart className="w-4 h-4"/> Web Orders</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/sales" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/sales') ? 'active' : ''}`}><TrendingUp className="w-4 h-4"/> Sales Report</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/inventory" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/inventory') ? 'active' : ''}`}><BookOpen className="w-4 h-4"/> Inventory & Distribution</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/events" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/events') ? 'active' : ''}`}><CalendarIcon className="w-4 h-4"/> Events Ecosystem</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/reviews" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/reviews') ? 'active' : ''}`}><Star className="w-4 h-4"/> Reviews & Ratings</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/gallery" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/gallery') ? 'active' : ''}`}><ImageIcon className="w-4 h-4"/> Event Gallery</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/profile" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/profile') ? 'active' : ''}`}><User className="w-4 h-4"/> Profile Settings</Link>
-        </div>
-
-        <div className="flex-1 bg-white border border-paa-navy/5 shadow-premium p-6 md:p-8 min-h-[calc(100vh-160px)] relative">
-          <Routes>
-            <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
-            <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
-            <Route path="/sales" element={<AuthorSalesReport data={dashboardData} />} />
-            <Route path="/forms/*" element={<FormsWrapper />} />
-            <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
-            <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
-            <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
-            <Route path="/gallery" element={<AuthorGallery />} />
-            <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
-            <Route path="/pos/:eventId" element={<LivePosDashboard />} />
-            <Route path="/bundle-offers" element={<BundleOffersTab data={dashboardData} />} />
-          </Routes>
-        </div>
-      </div>
-    </div>
     </>
   );
 }
@@ -568,7 +568,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     publicationDate: '',
     edition: '',
     format: '',
-    printFormat: '', 
+    printFormat: '',
     purpose: ''
   });
   const [cover, setCover] = useState<File | null>(null);
@@ -620,7 +620,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const webOrdersPieData = titlesData.filter((t: any) => t.sold.web > 0).map((t: any) => ({ name: t.title.substring(0, 15) + '...', value: t.sold.web }));
 
   const activityData = [
-    { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Opted-In').length || 0 },
+    { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Registered').length || 0 },
     { name: 'Total Web Orders', count: authorOrders.length || 0 },
     { name: 'Completed Orders', count: authorOrders.filter((o: any) => o.status === 'Completed').length || 0 },
   ];
@@ -629,9 +629,9 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const webSalesAmount = completedOrders.reduce((acc: number, curr: any) => acc + curr.amount, 0);
   const posSalesAmount = (data.posOrders || []).reduce((acc: number, o: any) => acc + (o.totalAmount || 0), 0);
   const grossSales = webSalesAmount + posSalesAmount;
-  
+
   const lowStockCount = authorBooks.filter((b: any) => b.stock < 5).length;
-  
+
 
   const successfulOrders = completedOrders.length;
   const avgOrderValue = completedOrders.length > 0 ? (webSalesAmount / completedOrders.length).toFixed(0) : '0';
@@ -649,7 +649,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const toApproveOrders = authorOrders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
   const underDeliveryOrders = authorOrders.filter((o: any) => o.status === 'Dispatched').length;
 
-    const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Opted-In').reduce((acc: number, inv: any) => {
+  const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered').reduce((acc: number, inv: any) => {
     const evt = inv.event;
     if (!evt) return acc;
     if (evt.feeType === 'Flat Fee' || evt.feeType === 'Per Author') {
@@ -663,7 +663,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const totalFeesPaid = 1000 + totalEventFees;
 
   const actionItems: any[] = [];
-  
+
   const unapprovedOrders = toApproveOrders;
   if (unapprovedOrders > 0 && !dismissedActions.includes('act-orders')) {
     actionItems.push({ id: 'act-orders', text: `Approve and fulfill ${unapprovedOrders} new web order${unapprovedOrders > 1 ? 's' : ''}`, icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-[#eef2f6]', link: '/dashboard/orders' });
@@ -674,7 +674,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     actionItems.push({ id: 'act-events', text: `You have been invited to ${unreadEventInvites.length} new event${unreadEventInvites.length > 1 ? 's' : ''}. Register now!`, icon: CalendarIcon, color: 'text-purple-600', bg: 'bg-purple-100', link: '/dashboard/events' });
   }
 
-  const unsettledEvents = data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Opted-In' && inv.event.status === 'Past' && data.listedBooks?.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) || [];
+  const unsettledEvents = data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Registered' && inv.event.status === 'Past' && data.listedBooks?.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) || [];
   if (unsettledEvents.length > 0 && !dismissedActions.includes('act-settle')) {
     actionItems.push({ id: 'act-settle', text: `Settle your inventory for ${unsettledEvents.length} past event${unsettledEvents.length > 1 ? 's' : ''}`, icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-100', link: '/dashboard/events' });
   }
@@ -682,7 +682,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const lowStockAlerts = authorProfile.extraData?.lowStockAlerts || [];
   const activeAlerts = lowStockAlerts.filter((a: any) => !a.read && (Date.now() - a.timestamp < 24 * 60 * 60 * 1000));
   if (activeAlerts.length > 0 && !dismissedActions.includes('act-lowstock')) {
-     actionItems.push({ id: 'act-lowstock', text: `Admin Notification: ${activeAlerts.length} of your books have critically low stock!`, icon: Package, color: 'text-red-600', bg: 'bg-red-100', link: '/dashboard/inventory' });
+    actionItems.push({ id: 'act-lowstock', text: `Admin Notification: ${activeAlerts.length} of your books have critically low stock!`, icon: Package, color: 'text-red-600', bg: 'bg-red-100', link: '/dashboard/inventory' });
   }
 
   if (actionItems.length === 0) {
@@ -732,7 +732,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       formData.append('publicationDate', newBook.publicationDate);
       formData.append('printFormat', newBook.printFormat || '');
       formData.append('purpose', newBook.purpose || '');
-      
+
       let maxFairPrice = 0;
       if (newBook.pages && newBook.printFormat) {
         const pages = parseInt(newBook.pages, 10);
@@ -753,7 +753,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       });
       toast.success('Book added successfully! Pending admin approval.');
       onRefresh();
-      
+
       if (addAnother) {
         setNewBook({
           title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: '', printFormat: ''
@@ -765,7 +765,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     } catch (err) {
       toast.error('Failed to add book');
     } finally {
-      setButtonStates(prev => ({...prev, addBook: false}));
+      setButtonStates(prev => ({ ...prev, addBook: false }));
     }
   };
 
@@ -773,7 +773,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     navigate('/dashboard/profile');
   };
 
-  
+
   const handleUploadGalleryImage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGalleryEvent || !galleryUploadFile) return;
@@ -783,7 +783,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       const formData = new FormData();
       formData.append('photo', galleryUploadFile);
       formData.append('caption', galleryUploadCaption);
-      
+
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/${selectedGalleryEvent.id}/images`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -797,7 +797,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       } else {
         alert('Failed to upload image.');
       }
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     } finally {
       setIsUploadingGallery(false);
@@ -821,7 +821,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           if (!q.institution?.trim()) errors.push(`Qualification ${i + 1}: Institution is required`);
         });
       }
-    } catch(e) {}
+    } catch (e) { }
     if (errors.length > 0) {
       toast.error(`Please fix: ${errors.join(', ')}`);
       return;
@@ -829,9 +829,9 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     try {
       const formData = new FormData();
       Object.entries(editProfileForm).forEach(([key, val]) => {
-        if(key === 'age') formData.append('dob', val);
-        else if(key === 'skills') formData.append('skills', JSON.stringify(val.split(',').map((s:any)=>s.trim()).filter(Boolean)));
-        else if(key === 'hobbies') formData.append('hobbies', JSON.stringify(val.split(',').map((s:any)=>s.trim()).filter(Boolean)));
+        if (key === 'age') formData.append('dob', val);
+        else if (key === 'skills') formData.append('skills', JSON.stringify(val.split(',').map((s: any) => s.trim()).filter(Boolean)));
+        else if (key === 'hobbies') formData.append('hobbies', JSON.stringify(val.split(',').map((s: any) => s.trim()).filter(Boolean)));
         else formData.append(key, val);
       });
       if (editPhoto) formData.append('photo', editPhoto);
@@ -845,7 +845,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     } catch (err) {
       toast.error('Failed to update profile');
     } finally {
-      setButtonStates(prev => ({...prev, editProfile: false}));
+      setButtonStates(prev => ({ ...prev, editProfile: false }));
     }
   };
 
@@ -865,7 +865,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     } catch (err) {
       toast.error('Failed to update cover');
     } finally {
-      setButtonStates(prev => ({...prev, updateCover: false}));
+      setButtonStates(prev => ({ ...prev, updateCover: false }));
     }
   };
 
@@ -917,7 +917,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       toast.error('Synopsis cannot exceed 100 words.');
       return;
     }
-    setButtonStates(prev => ({...prev, updateBook: true}));
+    setButtonStates(prev => ({ ...prev, updateBook: true }));
     try {
       const token = localStorage.getItem('token');
       await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/books/${editingBook.id}`, {
@@ -940,7 +940,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (newCoverFile) {
         const formData = new FormData();
         formData.append('cover', newCoverFile);
@@ -956,7 +956,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     } catch (err) {
       toast.error('Failed to update book');
     } finally {
-      setButtonStates(prev => ({...prev, updateBook: false}));
+      setButtonStates(prev => ({ ...prev, updateBook: false }));
     }
   };
 
@@ -969,24 +969,24 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       <div className="flex justify-between items-start mb-7 flex-wrap gap-3">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-white shadow-sm shrink-0">
-             {authorProfile.photoUrl ? (
-                <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorProfile.photoUrl}`} alt="Profile" className="w-full h-full object-cover" />
-             ) : (
-                <User size={24} className="text-gray-400" />
-             )}
+            {authorProfile.photoUrl ? (
+              <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorProfile.photoUrl}`} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={24} className="text-gray-400" />
+            )}
           </div>
           <div>
             <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-paa-gray-text mb-1">Author Portal &middot; Dashboard</p>
             <h1 className="text-3xl font-serif font-bold text-paa-navy tracking-tight mb-1">{authorProfile.name || 'My Dashboard'}</h1>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 font-medium">
-              <span className="flex items-center gap-1.5"><Mail size={12}/> {authorProfile.email}</span>
-              <span className="flex items-center gap-1.5"><Phone size={12}/> {authorProfile.phone}</span>
+              <span className="flex items-center gap-1.5"><Mail size={12} /> {authorProfile.email}</span>
+              <span className="flex items-center gap-1.5"><Phone size={12} /> {authorProfile.phone}</span>
             </div>
           </div>
         </div>
         <div className="flex gap-2">
           <button onClick={handleEditProfileOpen} className="dash-btn dash-btn-ghost">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{display:'inline',marginRight:5}}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ display: 'inline', marginRight: 5 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
             Edit Profile
           </button>
           <button onClick={() => navigate('/dashboard/bundle-offers')} className="dash-btn dash-btn-primary bg-indigo-600 hover:bg-indigo-700 !border-indigo-600">
@@ -1021,36 +1021,37 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       {/* ── Pending Actions ── */}
       <div className="dash-panel flex flex-col mb-6">
         <div className="dash-panel-header">
-           <h3 className="dash-panel-title">Pending Actions</h3>
+          <h3 className="dash-panel-title">Pending Actions</h3>
         </div>
         <div className="p-5 space-y-5 overflow-auto max-h-[300px]">
           {actionItems.map((action) => {
             const Icon = action.icon;
             return (
-            <div key={action.id} className="flex gap-4 items-center group">
-              <div className="flex-1 flex items-center gap-4 cursor-pointer" onClick={() => { if (action.link) navigate(action.link); }}>
-                <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${action.bg} ${action.color} border border-paa-navy/5 rounded-full transition-transform group-hover:scale-110`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-paa-navy group-hover:underline">{action.text}</p>
+              <div key={action.id} className="flex gap-4 items-center group">
+                <div className="flex-1 flex items-center gap-4 cursor-pointer" onClick={() => { if (action.link) navigate(action.link); }}>
+                  <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${action.bg} ${action.color} border border-paa-navy/5 rounded-full transition-transform group-hover:scale-110`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-paa-navy group-hover:underline">{action.text}</p>
+                  </div>
+                  {action.id !== 'act-none' && (
+                    <ChevronDown className="w-4 h-4 text-paa-gray-text -rotate-90 group-hover:text-paa-navy transition-colors mr-2" />
+                  )}
                 </div>
                 {action.id !== 'act-none' && (
-                  <ChevronDown className="w-4 h-4 text-paa-gray-text -rotate-90 group-hover:text-paa-navy transition-colors mr-2" />
+                  <button onClick={(e) => {
+                    e.stopPropagation();
+                    const next = [...dismissedActions, action.id];
+                    setDismissedActions(next);
+                    localStorage.setItem('paa_author_dismissed', JSON.stringify(next));
+                  }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Dismiss">
+                    <X className="w-4 h-4" />
+                  </button>
                 )}
               </div>
-              {action.id !== 'act-none' && (
-                <button onClick={(e) => { 
-                   e.stopPropagation(); 
-                   const next = [...dismissedActions, action.id];
-                   setDismissedActions(next);
-                   localStorage.setItem('paa_author_dismissed', JSON.stringify(next)); 
-                }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Dismiss">
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          )})}
+            )
+          })}
         </div>
       </div>
 
@@ -1073,156 +1074,156 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
               <button onClick={() => setShowEditProfile(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">&#x2715;</button>
             </div>
             <div className="dash-modal-body">
-            <h2 className="sr-only">Edit My Profile</h2>
-            <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto px-1 pb-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Name</label>
-                  <input className="dash-input w-full" value={editProfileForm.name} onChange={e => setEditProfileForm({...editProfileForm, name: e.target.value})} />
+              <h2 className="sr-only">Edit My Profile</h2>
+              <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto px-1 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Name</label>
+                    <input className="dash-input w-full" value={editProfileForm.name} onChange={e => setEditProfileForm({ ...editProfileForm, name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pen Name</label>
+                    <input className="dash-input w-full" value={editProfileForm.penName} onChange={e => setEditProfileForm({ ...editProfileForm, penName: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
+                    <input className="dash-input w-full" value={editProfileForm.phone} onChange={e => setEditProfileForm({ ...editProfileForm, phone: e.target.value.replace(/\D/g, '') })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
+                    <input className="dash-input w-full" value={editProfileForm.whatsapp} onChange={e => setEditProfileForm({ ...editProfileForm, whatsapp: e.target.value.replace(/\D/g, '') })} />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pen Name</label>
-                  <input className="dash-input w-full" value={editProfileForm.penName} onChange={e => setEditProfileForm({...editProfileForm, penName: e.target.value})} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Phone</label>
-                  <input className="dash-input w-full" value={editProfileForm.phone} onChange={e => setEditProfileForm({...editProfileForm, phone: e.target.value.replace(/\D/g, '')})} />
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Address</label>
+                  <input className="dash-input w-full" value={editProfileForm.address} onChange={e => setEditProfileForm({ ...editProfileForm, address: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">WhatsApp</label>
-                  <input className="dash-input w-full" value={editProfileForm.whatsapp} onChange={e => setEditProfileForm({...editProfileForm, whatsapp: e.target.value.replace(/\D/g, '')})} />
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pincode</label>
+                  <input className="dash-input w-full" value={editProfileForm.pincode} onChange={e => setEditProfileForm({ ...editProfileForm, pincode: e.target.value.replace(/\D/g, '') })} maxLength={6} />
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Full Address</label>
-                <input className="dash-input w-full" value={editProfileForm.address} onChange={e => setEditProfileForm({...editProfileForm, address: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Pincode</label>
-                <input className="dash-input w-full" value={editProfileForm.pincode} onChange={e => setEditProfileForm({...editProfileForm, pincode: e.target.value.replace(/\D/g, '')})} maxLength={6} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">City</label>
-                  <input className="dash-input w-full" value={editProfileForm.city} onChange={e => setEditProfileForm({...editProfileForm, city: e.target.value})} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">City</label>
+                    <input className="dash-input w-full" value={editProfileForm.city} onChange={e => setEditProfileForm({ ...editProfileForm, city: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">State</label>
+                    <input className="dash-input w-full" value={editProfileForm.state} onChange={e => setEditProfileForm({ ...editProfileForm, state: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
+                    <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({ ...editProfileForm, aadharNumber: e.target.value.replace(/\D/g, '') })} />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">State</label>
-                  <input className="dash-input w-full" value={editProfileForm.state} onChange={e => setEditProfileForm({...editProfileForm, state: e.target.value})} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Instagram</label>
+                    <input className="dash-input w-full" value={editProfileForm.instagram} onChange={e => setEditProfileForm({ ...editProfileForm, instagram: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Facebook</label>
+                    <input className="dash-input w-full" value={editProfileForm.facebook} onChange={e => setEditProfileForm({ ...editProfileForm, facebook: e.target.value })} />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
-                  <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({...editProfileForm, aadharNumber: e.target.value.replace(/\D/g, '')})} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Instagram</label>
-                  <input className="dash-input w-full" value={editProfileForm.instagram} onChange={e => setEditProfileForm({...editProfileForm, instagram: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Facebook</label>
-                  <input className="dash-input w-full" value={editProfileForm.facebook} onChange={e => setEditProfileForm({...editProfileForm, facebook: e.target.value})} />
-                </div>
-              </div>
-              <div className="mb-3">
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Qualifications</label>
-                {(() => {
-                  let qArr: any[] = [];
-                  try { qArr = JSON.parse(editProfileForm.qualification || '[]'); } catch(e) {}
-                  if (!Array.isArray(qArr)) qArr = [{ qualification: editProfileForm.qualification || '', institution: '', subject: '' }];
-                  return (
-                    <>
-                      {qArr.map((q: any, i: number) => (
-                        <div key={i} className="grid grid-cols-3 gap-2 mb-2 bg-gray-50 p-3 rounded-lg border border-gray-100 relative group">
-                          {qArr.length > 1 && (
-                            <button type="button" onClick={() => {
-                              const newQ = qArr.filter((_: any, idx: number) => idx !== i);
-                              setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                            }} className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full border border-red-200 w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs">✕</button>
-                          )}
-                          <div>
-                            <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Degree / Title</span>
-                            <input type="text" className="dash-input w-full text-xs" value={q.qualification || ''} onChange={ev => {
-                              const newQ = [...qArr]; newQ[i] = {...newQ[i], qualification: ev.target.value};
-                              setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                            }} />
+                <div className="mb-3">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Qualifications</label>
+                  {(() => {
+                    let qArr: any[] = [];
+                    try { qArr = JSON.parse(editProfileForm.qualification || '[]'); } catch (e) { }
+                    if (!Array.isArray(qArr)) qArr = [{ qualification: editProfileForm.qualification || '', institution: '', subject: '' }];
+                    return (
+                      <>
+                        {qArr.map((q: any, i: number) => (
+                          <div key={i} className="grid grid-cols-3 gap-2 mb-2 bg-gray-50 p-3 rounded-lg border border-gray-100 relative group">
+                            {qArr.length > 1 && (
+                              <button type="button" onClick={() => {
+                                const newQ = qArr.filter((_: any, idx: number) => idx !== i);
+                                setEditProfileForm({ ...editProfileForm, qualification: JSON.stringify(newQ) });
+                              }} className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full border border-red-200 w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs">✕</button>
+                            )}
+                            <div>
+                              <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Degree / Title</span>
+                              <input type="text" className="dash-input w-full text-xs" value={q.qualification || ''} onChange={ev => {
+                                const newQ = [...qArr]; newQ[i] = { ...newQ[i], qualification: ev.target.value };
+                                setEditProfileForm({ ...editProfileForm, qualification: JSON.stringify(newQ) });
+                              }} />
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Institution</span>
+                              <input type="text" className="dash-input w-full text-xs" value={q.institution || ''} onChange={ev => {
+                                const newQ = [...qArr]; newQ[i] = { ...newQ[i], institution: ev.target.value };
+                                setEditProfileForm({ ...editProfileForm, qualification: JSON.stringify(newQ) });
+                              }} />
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Subject</span>
+                              <input type="text" className="dash-input w-full text-xs" value={q.subject || ''} onChange={ev => {
+                                const newQ = [...qArr]; newQ[i] = { ...newQ[i], subject: ev.target.value };
+                                setEditProfileForm({ ...editProfileForm, qualification: JSON.stringify(newQ) });
+                              }} />
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Institution</span>
-                            <input type="text" className="dash-input w-full text-xs" value={q.institution || ''} onChange={ev => {
-                              const newQ = [...qArr]; newQ[i] = {...newQ[i], institution: ev.target.value};
-                              setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                            }} />
-                          </div>
-                          <div>
-                            <span className="text-[10px] uppercase text-gray-500 font-bold block mb-1">Subject</span>
-                            <input type="text" className="dash-input w-full text-xs" value={q.subject || ''} onChange={ev => {
-                              const newQ = [...qArr]; newQ[i] = {...newQ[i], subject: ev.target.value};
-                              setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                            }} />
-                          </div>
-                        </div>
-                      ))}
-                      <button type="button" onClick={() => {
-                        const newQ = [...qArr, { qualification: '', institution: '', subject: '' }];
-                        setEditProfileForm({...editProfileForm, qualification: JSON.stringify(newQ)});
-                      }} className="text-[10px] font-bold text-paa-navy uppercase tracking-widest hover:text-paa-gold mt-1">+ Add Qualification</button>
-                    </>
-                  );
-                })()}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Date of Birth</label>
-                  <input type="date" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({...editProfileForm, age: e.target.value})} />
+                        ))}
+                        <button type="button" onClick={() => {
+                          const newQ = [...qArr, { qualification: '', institution: '', subject: '' }];
+                          setEditProfileForm({ ...editProfileForm, qualification: JSON.stringify(newQ) });
+                        }} className="text-[10px] font-bold text-paa-navy uppercase tracking-widest hover:text-paa-gold mt-1">+ Add Qualification</button>
+                      </>
+                    );
+                  })()}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Date of Birth</label>
+                    <input type="date" className="dash-input w-full" value={editProfileForm.age} onChange={e => setEditProfileForm({ ...editProfileForm, age: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>
+                    <input className="dash-input w-full" value={editProfileForm.experience} onChange={e => setEditProfileForm({ ...editProfileForm, experience: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Skills</label>
+                    <input className="dash-input w-full" value={editProfileForm.skills} onChange={e => setEditProfileForm({ ...editProfileForm, skills: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
+                    <input className="dash-input w-full" value={editProfileForm.hobbies} onChange={e => setEditProfileForm({ ...editProfileForm, hobbies: e.target.value })} />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Experience</label>
-                  <input className="dash-input w-full" value={editProfileForm.experience} onChange={e => setEditProfileForm({...editProfileForm, experience: e.target.value})} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Skills</label>
-                  <input className="dash-input w-full" value={editProfileForm.skills} onChange={e => setEditProfileForm({...editProfileForm, skills: e.target.value})} />
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Why did you join the group? (Published Authors)</label>
+                  <textarea className="dash-input w-full resize-y" rows={2} value={editProfileForm.whyJoining} onChange={e => setEditProfileForm({ ...editProfileForm, whyJoining: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Hobbies</label>
-                  <input className="dash-input w-full" value={editProfileForm.hobbies} onChange={e => setEditProfileForm({...editProfileForm, hobbies: e.target.value})} />
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (100-150 words)</label>
+                  <textarea required className={`dash-input w-full ${(() => {
+                    const c = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
+                    return (c > 0 && (c < 100 || c > 150)) ? '!border-red-500' : '';
+                  })()}`} rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({ ...editProfileForm, bio: e.target.value })} />
+                  {(() => {
+                    const count = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
+                    if (count > 0 && count < 100) return <div className="text-red-500 text-xs mt-1 font-medium">Bio must be at least 100 words.</div>;
+                    if (count > 150) return <div className="text-red-500 text-xs mt-1 font-medium">Bio cannot exceed 150 words.</div>;
+                    return null;
+                  })()}
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
+                    {editProfileForm.bio.split(/\s+/).filter(Boolean).length} / 150 words (min 100)
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Why did you join the group? (Published Authors)</label>
-                <textarea className="dash-input w-full resize-y" rows={2} value={editProfileForm.whyJoining} onChange={e => setEditProfileForm({...editProfileForm, whyJoining: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Author Bio (100-150 words)</label>
-                <textarea required className={`dash-input w-full ${(() => {
-                   const c = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
-                   return (c > 0 && (c < 100 || c > 150)) ? '!border-red-500' : '';
-                })()}`} rows={5} value={editProfileForm.bio} onChange={e => setEditProfileForm({...editProfileForm, bio: e.target.value})} />
-                {(() => {
-                  const count = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
-                  if (count > 0 && count < 100) return <div className="text-red-500 text-xs mt-1 font-medium">Bio must be at least 100 words.</div>;
-                  if (count > 150) return <div className="text-red-500 text-xs mt-1 font-medium">Bio cannot exceed 150 words.</div>;
-                  return null;
-                })()}
-                <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
-                  {editProfileForm.bio.split(/\s+/).filter(Boolean).length} / 150 words (min 100)
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Update Profile Photo</label>
+                  <input type="file" accept="image/*" className="border border-paa-navy/20 p-2 text-xs w-full rounded-lg" onChange={e => setEditPhoto(e.target.files?.[0] || null)} />
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Update Profile Photo</label>
-                <input type="file" accept="image/*" className="border border-paa-navy/20 p-2 text-xs w-full rounded-lg" onChange={e => setEditPhoto(e.target.files?.[0] || null)} />
-              </div>
-              <div className="flex justify-end gap-2 mt-4 border-t pt-4 sticky bottom-0 bg-white">
-                <button type="button" onClick={() => setShowEditProfile(false)} className="dash-btn dash-btn-ghost">Cancel</button>
-                <button type="submit" disabled={buttonStates.editProfile} className="dash-btn dash-btn-primary disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save & Submit for Review'}</button>
-              </div>
-            </form>
+                <div className="flex justify-end gap-2 mt-4 border-t pt-4 sticky bottom-0 bg-white">
+                  <button type="button" onClick={() => setShowEditProfile(false)} className="dash-btn dash-btn-ghost">Cancel</button>
+                  <button type="submit" disabled={buttonStates.editProfile} className="dash-btn dash-btn-primary disabled:opacity-50">{buttonStates.editProfile ? 'Saving...' : 'Save & Submit for Review'}</button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -1230,7 +1231,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
       {editCoverBookId !== null && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setEditCoverBookId(null)}>
-          <div className="dash-modal" style={{maxWidth:400}}>
+          <div className="dash-modal" style={{ maxWidth: 400 }}>
             <div className="dash-modal-header">
               <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Update Book Cover</h3>
               <button onClick={() => { setEditCoverBookId(null); setNewCoverFile(null); }} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">&#x2715;</button>
@@ -1246,7 +1247,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           </div>
         </div>
       )}
-      
+
       {showAddBook && (
         <div className="absolute inset-0 z-50 bg-white p-6 md:p-8 overflow-y-auto animate-fade-in-up">
           <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
@@ -1259,153 +1260,153 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
             </button>
           </div>
           <form onSubmit={handleAddBook} className="flex flex-col gap-6 max-w-4xl">
-                
-                {/* Book Title & Subtitle */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="dash-label">Book Title *</label>
-                    <input required className="dash-input" placeholder="Title" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Subtitle</label>
-                    <input className="dash-input" placeholder="Subtitle" value={newBook.subtitle} onChange={e => setNewBook({...newBook, subtitle: e.target.value})} />
-                  </div>
-                </div>
 
-                {/* Category, Subcategory, Specific Genre */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="dash-label">Category *</label>
-                    <select required className="dash-input" value={newBook.genre} onChange={e => setNewBook({...newBook, genre: e.target.value, subcategory: '', subSubcategory: ''})}>
-                      <option value="">Select Category</option>
-                      {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="dash-label">Subcategory</label>
-                    <select className="dash-input" disabled={!newBook.genre || Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).length === 0} value={newBook.subcategory} onChange={e => setNewBook({...newBook, subcategory: e.target.value, subSubcategory: ''})}>
-                      <option value="">Select Sub</option>
-                      {newBook.genre && Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).map(sc => <option key={sc} value={sc}>{sc}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="dash-label">Specific Genre</label>
-                    <select className="dash-input" disabled={!newBook.subcategory || !((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).length} value={newBook.subSubcategory} onChange={e => setNewBook({...newBook, subSubcategory: e.target.value})}>
-                      <option value="">Select Genre</option>
-                      {newBook.genre && newBook.subcategory && ((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
-                    </select>
-                  </div>
-                </div>
+            {/* Book Title & Subtitle */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="dash-label">Book Title *</label>
+                <input required className="dash-input" placeholder="Title" value={newBook.title} onChange={e => setNewBook({ ...newBook, title: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Subtitle</label>
+                <input className="dash-input" placeholder="Subtitle" value={newBook.subtitle} onChange={e => setNewBook({ ...newBook, subtitle: e.target.value })} />
+              </div>
+            </div>
 
-                {/* Synopsis */}
-                <div>
-                  <label className="dash-label">Synopsis (Max 100 words) *</label>
-                  <textarea required className={`dash-input ${newBook.synopsis.split(/\s+/).filter(Boolean).length > 100 ? '!border-red-500' : ''}`} rows={3} placeholder="Brief description of the book" value={newBook.synopsis} onChange={e => setNewBook({...newBook, synopsis: e.target.value})} />
-                  {newBook.synopsis.split(/\s+/).filter(Boolean).length > 100 && (
-                    <div className="text-red-500 text-xs mt-1 font-medium">Synopsis cannot exceed 100 words.</div>
-                  )}
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
-                    {newBook.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
-                  </div>
-                </div>
+            {/* Category, Subcategory, Specific Genre */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="dash-label">Category *</label>
+                <select required className="dash-input" value={newBook.genre} onChange={e => setNewBook({ ...newBook, genre: e.target.value, subcategory: '', subSubcategory: '' })}>
+                  <option value="">Select Category</option>
+                  {Object.keys(bookCategories).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="dash-label">Subcategory</label>
+                <select className="dash-input" disabled={!newBook.genre || Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).length === 0} value={newBook.subcategory} onChange={e => setNewBook({ ...newBook, subcategory: e.target.value, subSubcategory: '' })}>
+                  <option value="">Select Sub</option>
+                  {newBook.genre && Object.keys(bookCategories[newBook.genre as keyof typeof bookCategories] || {}).map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="dash-label">Specific Genre</label>
+                <select className="dash-input" disabled={!newBook.subcategory || !((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).length} value={newBook.subSubcategory} onChange={e => setNewBook({ ...newBook, subSubcategory: e.target.value })}>
+                  <option value="">Select Genre</option>
+                  {newBook.genre && newBook.subcategory && ((bookCategories[newBook.genre as keyof typeof bookCategories] as any)[newBook.subcategory] || []).map((ssc: string) => <option key={ssc} value={ssc}>{ssc}</option>)}
+                </select>
+              </div>
+            </div>
 
-                {/* Language, Publisher, Publication Date */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="dash-label">Language *</label>
-                    <input required className="dash-input" placeholder="e.g. English" value={newBook.language} onChange={e => setNewBook({...newBook, language: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Publisher *</label>
-                    <input required className="dash-input" placeholder="e.g. Self-Published" value={newBook.publisher} onChange={e => setNewBook({...newBook, publisher: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Pub Date *</label>
-                    <input required type="date" className="dash-input text-xs" value={newBook.publicationDate} onChange={e => setNewBook({...newBook, publicationDate: e.target.value})} />
-                  </div>
-                </div>
+            {/* Synopsis */}
+            <div>
+              <label className="dash-label">Synopsis (Max 100 words) *</label>
+              <textarea required className={`dash-input ${newBook.synopsis.split(/\s+/).filter(Boolean).length > 100 ? '!border-red-500' : ''}`} rows={3} placeholder="Brief description of the book" value={newBook.synopsis} onChange={e => setNewBook({ ...newBook, synopsis: e.target.value })} />
+              {newBook.synopsis.split(/\s+/).filter(Boolean).length > 100 && (
+                <div className="text-red-500 text-xs mt-1 font-medium">Synopsis cannot exceed 100 words.</div>
+              )}
+              <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
+                {newBook.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
+              </div>
+            </div>
 
-                {/* ISBN, Edition, Format */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div>
-                    <label className="dash-label">ISBN *</label>
-                    <input required className="dash-input" placeholder="e.g. 978..." value={newBook.isbn} onChange={e => setNewBook({...newBook, isbn: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Edition</label>
-                    <input className="dash-input" placeholder="e.g. 1st Edition" value={newBook.edition} onChange={e => setNewBook({...newBook, edition: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Format *</label>
-                    <select required className="dash-input" value={newBook.format} onChange={e => setNewBook({...newBook, format: e.target.value})}>
-                      <option value="">Select Format</option>
-                      <option value="Paperback">Paperback</option>
-                      <option value="Hardcover">Hardcover</option>
-                      <option value="Ebook">Ebook</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="dash-label">Print Format *</label>
-                    <select required className="dash-input" value={(newBook as any).printFormat || ''} onChange={e => setNewBook({...newBook, printFormat: e.target.value})}>
-                      <option value="">Select Print Format</option>
-                      <option value="Black & White">Black & White</option>
-                      <option value="Colored">Colored</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="dash-label">Purpose of Writing *</label>
-                    <select required className="dash-input" value={(newBook as any).purpose || ''} onChange={e => setNewBook({...newBook, purpose: e.target.value})}>
-                      <option value="">Select Purpose</option>
-                      <option value="Hobby">Hobby</option>
-                      <option value="Professional/Academic">Professional/Academic</option>
-                      <option value="Commercial/Revenue">Commercial/Revenue</option>
-                      <option value="Social Cause/Awareness">Social Cause/Awareness</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
+            {/* Language, Publisher, Publication Date */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="dash-label">Language *</label>
+                <input required className="dash-input" placeholder="e.g. English" value={newBook.language} onChange={e => setNewBook({ ...newBook, language: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Publisher *</label>
+                <input required className="dash-input" placeholder="e.g. Self-Published" value={newBook.publisher} onChange={e => setNewBook({ ...newBook, publisher: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Pub Date *</label>
+                <input required type="date" className="dash-input text-xs" value={newBook.publicationDate} onChange={e => setNewBook({ ...newBook, publicationDate: e.target.value })} />
+              </div>
+            </div>
 
-                {/* Pages, MRP, Initial Stock */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="dash-label">Pages *</label>
-                    <input required type="number" className="dash-input" placeholder="250" value={newBook.pages} onChange={e => setNewBook({...newBook, pages: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">MRP (₹) *</label>
-                    <input required type="number" className="dash-input" placeholder="Price" value={newBook.mrp} onChange={e => setNewBook({...newBook, mrp: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Initial Stock *</label>
-                    <input required type="number" className="dash-input" placeholder="Qty" value={newBook.stock} onChange={e => setNewBook({...newBook, stock: e.target.value})} />
-                  </div>
-                </div>
+            {/* ISBN, Edition, Format */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label className="dash-label">ISBN *</label>
+                <input required className="dash-input" placeholder="e.g. 978..." value={newBook.isbn} onChange={e => setNewBook({ ...newBook, isbn: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Edition</label>
+                <input className="dash-input" placeholder="e.g. 1st Edition" value={newBook.edition} onChange={e => setNewBook({ ...newBook, edition: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Format *</label>
+                <select required className="dash-input" value={newBook.format} onChange={e => setNewBook({ ...newBook, format: e.target.value })}>
+                  <option value="">Select Format</option>
+                  <option value="Paperback">Paperback</option>
+                  <option value="Hardcover">Hardcover</option>
+                  <option value="Ebook">Ebook</option>
+                </select>
+              </div>
+              <div>
+                <label className="dash-label">Print Format *</label>
+                <select required className="dash-input" value={(newBook as any).printFormat || ''} onChange={e => setNewBook({ ...newBook, printFormat: e.target.value })}>
+                  <option value="">Select Print Format</option>
+                  <option value="Black & White">Black & White</option>
+                  <option value="Colored">Colored</option>
+                </select>
+              </div>
+              <div>
+                <label className="dash-label">Purpose of Writing *</label>
+                <select required className="dash-input" value={(newBook as any).purpose || ''} onChange={e => setNewBook({ ...newBook, purpose: e.target.value })}>
+                  <option value="">Select Purpose</option>
+                  <option value="Hobby">Hobby</option>
+                  <option value="Professional/Academic">Professional/Academic</option>
+                  <option value="Commercial/Revenue">Commercial/Revenue</option>
+                  <option value="Social Cause/Awareness">Social Cause/Awareness</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
 
-                {/* Cover upload */}
-                <div>
-                  <label className="dash-label">Cover Image *</label>
-                  <input required type="file" accept="image/*" className="dash-input text-xs" onChange={e => setCover(e.target.files?.[0] || null)} />
-                </div>
+            {/* Pages, MRP, Initial Stock */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="dash-label">Pages *</label>
+                <input required type="number" className="dash-input" placeholder="250" value={newBook.pages} onChange={e => setNewBook({ ...newBook, pages: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">MRP (₹) *</label>
+                <input required type="number" className="dash-input" placeholder="Price" value={newBook.mrp} onChange={e => setNewBook({ ...newBook, mrp: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Initial Stock *</label>
+                <input required type="number" className="dash-input" placeholder="Qty" value={newBook.stock} onChange={e => setNewBook({ ...newBook, stock: e.target.value })} />
+              </div>
+            </div>
 
-                {(() => {
-                   const pages = Number(newBook.pages);
-                   const mrp = Number(newBook.mrp);
-                   if (pages > 0 && newBook.printFormat && mrp > 0) {
-                      const rate = newBook.printFormat === 'Colored' ? 2.40 : 0.50;
-                      const maxPrice = (pages * rate) + 250;
-                      if (mrp > maxPrice) {
-                         return <div className="text-yellow-700 text-xs font-bold bg-yellow-50 p-2 rounded border border-yellow-200 mt-3 mb-2">Warning: Your MRP (₹{mrp}) exceeds the recommended max price of ₹{maxPrice} based on your pages and format.</div>;
-                      }
-                   }
-                   return null;
-                })()}
+            {/* Cover upload */}
+            <div>
+              <label className="dash-label">Cover Image *</label>
+              <input required type="file" accept="image/*" className="dash-input text-xs" onChange={e => setCover(e.target.files?.[0] || null)} />
+            </div>
 
-                <div className="flex justify-end gap-2 pt-6 border-t mt-4">
-                  <button type="button" onClick={() => setShowAddBook(false)} className="dash-btn dash-btn-ghost">Cancel</button>
-                  <button type="button" onClick={(e) => { const f = e.currentTarget.closest('form'); if (f && f.checkValidity()) { handleAddBook(null, true); } else if (f) { f.reportValidity(); } }} className="dash-btn dash-btn-ghost">Save &amp; Add Another</button>
-                  <button type="submit" disabled={buttonStates.addBook} className="dash-btn dash-btn-primary disabled:opacity-50 px-8">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
-                </div>
-              </form>
+            {(() => {
+              const pages = Number(newBook.pages);
+              const mrp = Number(newBook.mrp);
+              if (pages > 0 && newBook.printFormat && mrp > 0) {
+                const rate = newBook.printFormat === 'Colored' ? 2.40 : 0.50;
+                const maxPrice = (pages * rate) + 250;
+                if (mrp > maxPrice) {
+                  return <div className="text-yellow-700 text-xs font-bold bg-yellow-50 p-2 rounded border border-yellow-200 mt-3 mb-2">Warning: Your MRP (₹{mrp}) exceeds the recommended max price of ₹{maxPrice} based on your pages and format.</div>;
+                }
+              }
+              return null;
+            })()}
+
+            <div className="flex justify-end gap-2 pt-6 border-t mt-4">
+              <button type="button" onClick={() => setShowAddBook(false)} className="dash-btn dash-btn-ghost">Cancel</button>
+              <button type="button" onClick={(e) => { const f = e.currentTarget.closest('form'); if (f && f.checkValidity()) { handleAddBook(null, true); } else if (f) { f.reportValidity(); } }} className="dash-btn dash-btn-ghost">Save &amp; Add Another</button>
+              <button type="submit" disabled={buttonStates.addBook} className="dash-btn dash-btn-primary disabled:opacity-50 px-8">{buttonStates.addBook ? 'Adding...' : 'Add Book'}</button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -1444,15 +1445,15 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   <td><span className={`font-bold ${row.stock < 10 ? 'text-red-500' : 'text-paa-navy'}`}>{row.stock}</span>{row.stock < 10 && <div className="text-[9px] text-red-400 font-bold">LOW</div>}</td>
                   <td>
                     <div className="flex flex-col">
-                       <span className="font-semibold text-emerald-700 text-sm">{row.sold.total} Total</span>
-                       <span className="text-[10px] text-paa-gray-text font-bold uppercase tracking-widest">{row.sold.events} Events | {row.sold.web} Web</span>
+                      <span className="font-semibold text-emerald-700 text-sm">{row.sold.total} Total</span>
+                      <span className="text-[10px] text-paa-gray-text font-bold uppercase tracking-widest">{row.sold.events} Events | {row.sold.web} Web</span>
                     </div>
                   </td>
                   <td className="text-paa-gray-text text-xs whitespace-nowrap">{row.date}</td>
                   <td>
                     <div className="flex items-center justify-center">
                       <button onClick={() => navigate('/dashboard/profile', { state: { action: 'edit_book', bookId: row.id } })} className="p-2 text-paa-navy hover:text-paa-gold bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" title="Edit Details">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                       </button>
                     </div>
                   </td>
@@ -1471,10 +1472,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" fontSize={10} tick={{fill:'#71717A'}} />
-                <YAxis fontSize={10} tick={{fill:'#71717A'}} />
-                <Tooltip cursor={{fill:'rgba(24,24,27,0.03)'}} contentStyle={{borderRadius:10,border:'1px solid rgba(24,24,27,0.08)',fontSize:12}} />
-                <Bar dataKey="sold" fill="#18181B" radius={[4,4,0,0]} />
+                <XAxis dataKey="name" fontSize={10} tick={{ fill: '#71717A' }} />
+                <YAxis fontSize={10} tick={{ fill: '#71717A' }} />
+                <Tooltip cursor={{ fill: 'rgba(24,24,27,0.03)' }} contentStyle={{ borderRadius: 10, border: '1px solid rgba(24,24,27,0.08)', fontSize: 12 }} />
+                <Bar dataKey="sold" fill="#18181B" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1487,9 +1488,9 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
               {webOrdersPieData.length > 0 ? (
                 <PieChart>
                   <Pie data={webOrdersPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
-                     {webOrdersPieData.map((entry: any, index: number) => (
-                       <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][index % 5]} />
-                     ))}
+                    {webOrdersPieData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][index % 5]} />
+                    ))}
                   </Pie>
                   <Tooltip wrapperClassName="shadow-premium border-none rounded-lg" />
                 </PieChart>
@@ -1506,10 +1507,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={activityData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" fontSize={10} tick={{fill:'#71717A'}} />
-                <YAxis dataKey="name" type="category" width={90} fontSize={10} tick={{fill:'#71717A'}} />
-                <Tooltip cursor={{fill:'rgba(24,24,27,0.03)'}} contentStyle={{borderRadius:10,border:'1px solid rgba(24,24,27,0.08)',fontSize:12}} />
-                <Bar dataKey="count" fill="#C0A062" radius={[0,4,4,0]} />
+                <XAxis type="number" fontSize={10} tick={{ fill: '#71717A' }} />
+                <YAxis dataKey="name" type="category" width={90} fontSize={10} tick={{ fill: '#71717A' }} />
+                <Tooltip cursor={{ fill: 'rgba(24,24,27,0.03)' }} contentStyle={{ borderRadius: 10, border: '1px solid rgba(24,24,27,0.08)', fontSize: 12 }} />
+                <Bar dataKey="count" fill="#C0A062" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1529,124 +1530,124 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
             </button>
           </div>
           <form onSubmit={handleEditBookSubmit} className="space-y-6 max-w-4xl">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-between gap-4">
-                    <div>
-                      <label className="dash-label mb-1">Update Book Cover (Optional)</label>
-                      <p className="text-[10px] text-paa-gray-text">Upload a new image to replace the current cover.</p>
-                    </div>
-                    <input type="file" accept="image/*" className="dash-input bg-white w-64 text-xs" onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setNewCoverFile(e.target.files[0]);
-                      }
-                    }} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Title</label>
-                    <input required type="text" className="dash-input" value={editingBook.title} onChange={e => setEditingBook({...editingBook, title: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Subtitle (Optional)</label>
-                    <input type="text" className="dash-input" value={editingBook.subtitle} onChange={e => setEditingBook({...editingBook, subtitle: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Genre</label>
-                    <select required className="dash-input" value={editingBook.genre} onChange={e => setEditingBook({...editingBook, genre: e.target.value})}>
-                      <option value="">Select Genre</option>
-                      <option value="Fiction">Fiction</option>
-                      <option value="Non-Fiction">Non-Fiction</option>
-                      <option value="Poetry">Poetry</option>
-                      <option value="Children">Children</option>
-                      <option value="Academic">Academic</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="dash-label">Sub-Genre</label>
-                    <input type="text" className="dash-input" value={editingBook.subGenre} onChange={e => setEditingBook({...editingBook, subGenre: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Pages *</label>
-                    <input required type="number" className="dash-input" value={editingBook.pages} onChange={e => setEditingBook({...editingBook, pages: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">MRP (₹)</label>
-                    <input required type="number" className="dash-input" value={editingBook.mrp} onChange={e => setEditingBook({...editingBook, mrp: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Initial Stock</label>
-                    <input required type="number" className="dash-input" value={editingBook.stock} onChange={e => setEditingBook({...editingBook, stock: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Language *</label>
-                    <select required className="dash-input" value={editingBook.language} onChange={e => setEditingBook({...editingBook, language: e.target.value})}>
-                      <option value="">Select Language</option>
-                      <option value="ENG">ENG</option>
-                      <option value="MAR">MAR</option>
-                      <option value="HIN">HIN</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="dash-label">ISBN *</label>
-                    <input required type="text" className="dash-input" value={editingBook.isbn} onChange={e => setEditingBook({...editingBook, isbn: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Publisher</label>
-                    <input type="text" className="dash-input" value={editingBook.publisher} onChange={e => setEditingBook({...editingBook, publisher: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Publication Date</label>
-                    <input type="date" className="dash-input" value={editingBook.publicationDate} onChange={e => setEditingBook({...editingBook, publicationDate: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Edition</label>
-                    <input type="text" className="dash-input" value={editingBook.edition} onChange={e => setEditingBook({...editingBook, edition: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="dash-label">Format *</label>
-                    <select required className="dash-input" value={editingBook.format} onChange={e => setEditingBook({...editingBook, format: e.target.value})}>
-                      <option value="">Select Format</option>
-                      <option value="Paperback">Paperback</option>
-                      <option value="Hardcover">Hardcover</option>
-                      <option value="Ebook">Ebook</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="dash-label">Print Format *</label>
-                    <select required className="dash-input" value={editingBook.printFormat || ''} onChange={e => setEditingBook({...editingBook, printFormat: e.target.value})}>
-                      <option value="">Select Format</option>
-                      <option value="Black & White">Black & White (₹1/page)</option>
-                      <option value="Colored">Colored (₹3/page)</option>
-                    </select>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-between gap-4">
                 <div>
-                  <label className="dash-label">Synopsis (Max 100 words) *</label>
-                  <textarea required className={`dash-input ${editingBook.synopsis.split(/\s+/).filter(Boolean).length > 100 ? '!border-red-500' : ''}`} rows={4} value={editingBook.synopsis} onChange={e => setEditingBook({...editingBook, synopsis: e.target.value})}></textarea>
-                  {editingBook.synopsis.split(/\s+/).filter(Boolean).length > 100 && (
-                    <div className="text-red-500 text-xs mt-1 font-medium">Synopsis cannot exceed 100 words.</div>
-                  )}
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
-                    {editingBook.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
-                  </div>
+                  <label className="dash-label mb-1">Update Book Cover (Optional)</label>
+                  <p className="text-[10px] text-paa-gray-text">Upload a new image to replace the current cover.</p>
                 </div>
-                {(() => {
-                   const pages = Number(editingBook.pages);
-                   const mrp = Number(editingBook.mrp);
-                   const isColored = editingBook.printFormat === 'Colored';
-                   const rate = isColored ? 2.40 : 0.50;
-                   const maxPrice = (pages * rate) + 250;
-                   if (pages > 0 && mrp > maxPrice) {
-                     return <div className="text-yellow-700 text-xs font-bold bg-yellow-50 p-2 rounded border border-yellow-200 mt-3">Warning: Your MRP (₹{mrp}) exceeds the recommended max price of ₹{maxPrice} based on your pages and format.</div>;
-                   }
-                   return null;
-                })()}
-                <div className="flex justify-end gap-3 pt-6 border-t mt-6">
-                  <button type="button" onClick={() => setEditingBook(null)} className="dash-btn dash-btn-ghost">Cancel</button>
-                  <button type="submit" disabled={buttonStates.updateBook} className="dash-btn dash-btn-primary bg-paa-gold hover:bg-yellow-500 text-paa-navy px-8 disabled:opacity-50">
-                    {buttonStates.updateBook ? 'Submitting...' : 'Submit & Reapply'}
-                  </button>
-                </div>
-              </form>
+                <input type="file" accept="image/*" className="dash-input bg-white w-64 text-xs" onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setNewCoverFile(e.target.files[0]);
+                  }
+                }} />
+              </div>
+              <div>
+                <label className="dash-label">Title</label>
+                <input required type="text" className="dash-input" value={editingBook.title} onChange={e => setEditingBook({ ...editingBook, title: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Subtitle (Optional)</label>
+                <input type="text" className="dash-input" value={editingBook.subtitle} onChange={e => setEditingBook({ ...editingBook, subtitle: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Genre</label>
+                <select required className="dash-input" value={editingBook.genre} onChange={e => setEditingBook({ ...editingBook, genre: e.target.value })}>
+                  <option value="">Select Genre</option>
+                  <option value="Fiction">Fiction</option>
+                  <option value="Non-Fiction">Non-Fiction</option>
+                  <option value="Poetry">Poetry</option>
+                  <option value="Children">Children</option>
+                  <option value="Academic">Academic</option>
+                </select>
+              </div>
+              <div>
+                <label className="dash-label">Sub-Genre</label>
+                <input type="text" className="dash-input" value={editingBook.subGenre} onChange={e => setEditingBook({ ...editingBook, subGenre: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Pages *</label>
+                <input required type="number" className="dash-input" value={editingBook.pages} onChange={e => setEditingBook({ ...editingBook, pages: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">MRP (₹)</label>
+                <input required type="number" className="dash-input" value={editingBook.mrp} onChange={e => setEditingBook({ ...editingBook, mrp: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Initial Stock</label>
+                <input required type="number" className="dash-input" value={editingBook.stock} onChange={e => setEditingBook({ ...editingBook, stock: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Language *</label>
+                <select required className="dash-input" value={editingBook.language} onChange={e => setEditingBook({ ...editingBook, language: e.target.value })}>
+                  <option value="">Select Language</option>
+                  <option value="ENG">ENG</option>
+                  <option value="MAR">MAR</option>
+                  <option value="HIN">HIN</option>
+                </select>
+              </div>
+              <div>
+                <label className="dash-label">ISBN *</label>
+                <input required type="text" className="dash-input" value={editingBook.isbn} onChange={e => setEditingBook({ ...editingBook, isbn: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Publisher</label>
+                <input type="text" className="dash-input" value={editingBook.publisher} onChange={e => setEditingBook({ ...editingBook, publisher: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Publication Date</label>
+                <input type="date" className="dash-input" value={editingBook.publicationDate} onChange={e => setEditingBook({ ...editingBook, publicationDate: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Edition</label>
+                <input type="text" className="dash-input" value={editingBook.edition} onChange={e => setEditingBook({ ...editingBook, edition: e.target.value })} />
+              </div>
+              <div>
+                <label className="dash-label">Format *</label>
+                <select required className="dash-input" value={editingBook.format} onChange={e => setEditingBook({ ...editingBook, format: e.target.value })}>
+                  <option value="">Select Format</option>
+                  <option value="Paperback">Paperback</option>
+                  <option value="Hardcover">Hardcover</option>
+                  <option value="Ebook">Ebook</option>
+                </select>
+              </div>
+              <div>
+                <label className="dash-label">Print Format *</label>
+                <select required className="dash-input" value={editingBook.printFormat || ''} onChange={e => setEditingBook({ ...editingBook, printFormat: e.target.value })}>
+                  <option value="">Select Format</option>
+                  <option value="Black & White">Black & White (₹1/page)</option>
+                  <option value="Colored">Colored (₹3/page)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="dash-label">Synopsis (Max 100 words) *</label>
+              <textarea required className={`dash-input ${editingBook.synopsis.split(/\s+/).filter(Boolean).length > 100 ? '!border-red-500' : ''}`} rows={4} value={editingBook.synopsis} onChange={e => setEditingBook({ ...editingBook, synopsis: e.target.value })}></textarea>
+              {editingBook.synopsis.split(/\s+/).filter(Boolean).length > 100 && (
+                <div className="text-red-500 text-xs mt-1 font-medium">Synopsis cannot exceed 100 words.</div>
+              )}
+              <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mt-1 text-right">
+                {editingBook.synopsis.split(/\s+/).filter(Boolean).length} / 100 words
+              </div>
+            </div>
+            {(() => {
+              const pages = Number(editingBook.pages);
+              const mrp = Number(editingBook.mrp);
+              const isColored = editingBook.printFormat === 'Colored';
+              const rate = isColored ? 2.40 : 0.50;
+              const maxPrice = (pages * rate) + 250;
+              if (pages > 0 && mrp > maxPrice) {
+                return <div className="text-yellow-700 text-xs font-bold bg-yellow-50 p-2 rounded border border-yellow-200 mt-3">Warning: Your MRP (₹{mrp}) exceeds the recommended max price of ₹{maxPrice} based on your pages and format.</div>;
+              }
+              return null;
+            })()}
+            <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+              <button type="button" onClick={() => setEditingBook(null)} className="dash-btn dash-btn-ghost">Cancel</button>
+              <button type="submit" disabled={buttonStates.updateBook} className="dash-btn dash-btn-primary bg-paa-gold hover:bg-yellow-500 text-paa-navy px-8 disabled:opacity-50">
+                {buttonStates.updateBook ? 'Submitting...' : 'Submit & Reapply'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
@@ -1654,7 +1655,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 }
 
 function InventoryPage({ books, onRefresh, dashboardData }: { books: any[], onRefresh: () => void, dashboardData: any }) {
-  const [newStocks, setNewStocks] = useState<{[key: number]: string}>({});
+  const [newStocks, setNewStocks] = useState<{ [key: number]: string }>({});
   const orders = dashboardData?.authorOrders || [];
   const listedBooks = dashboardData?.listedBooks || [];
 
@@ -1663,13 +1664,13 @@ function InventoryPage({ books, onRefresh, dashboardData }: { books: any[], onRe
       const token = localStorage.getItem('token');
       const book = books.find(b => b.id === id);
       const updatedStock = book.stock + parseInt(newStocks[id] || '0');
-      
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/inventory/${id}`, 
+
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/inventory/${id}`,
         { stock: updatedStock },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success('Stock updated');
-      setNewStocks(prev => ({...prev, [id]: ''}));
+      setNewStocks(prev => ({ ...prev, [id]: '' }));
       onRefresh();
     } catch (err) {
       toast.error('Failed to update stock');
@@ -1693,64 +1694,64 @@ function InventoryPage({ books, onRefresh, dashboardData }: { books: any[], onRe
         return (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-               <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><TrendingUp size={24}/></div>
-               <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Total Copies Sold</p>
-                  <p className="text-2xl font-black text-paa-navy leading-none">{totalWebSold + totalEventSold}</p>
-               </div>
+              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><TrendingUp size={24} /></div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Total Copies Sold</p>
+                <p className="text-2xl font-black text-paa-navy leading-none">{totalWebSold + totalEventSold}</p>
+              </div>
             </div>
             <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-               <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600"><ShoppingCart size={24}/></div>
-               <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Web Channel Sales</p>
-                  <p className="text-2xl font-black text-paa-navy leading-none">{totalWebSold}</p>
-               </div>
+              <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600"><ShoppingCart size={24} /></div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Web Channel Sales</p>
+                <p className="text-2xl font-black text-paa-navy leading-none">{totalWebSold}</p>
+              </div>
             </div>
             <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-               <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600"><CalendarIcon size={24}/></div>
-               <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Event Channel Sales</p>
-                  <p className="text-2xl font-black text-paa-navy leading-none">{totalEventSold}</p>
-               </div>
+              <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600"><CalendarIcon size={24} /></div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Event Channel Sales</p>
+                <p className="text-2xl font-black text-paa-navy leading-none">{totalEventSold}</p>
+              </div>
             </div>
             <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-               <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-600"><AlertCircle size={24}/></div>
-               <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Low Stock Alerts</p>
-                  <p className="text-2xl font-black text-paa-navy leading-none">{lowStockCount}</p>
-               </div>
+              <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-600"><AlertCircle size={24} /></div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Low Stock Alerts</p>
+                <p className="text-2xl font-black text-paa-navy leading-none">{lowStockCount}</p>
+              </div>
             </div>
           </div>
         );
       })()}
-      
+
       <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-             <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
-                <tr>
-                   <th className="px-4 py-3 font-bold">Title</th>
-                   <th className="px-4 py-3 font-bold text-center">Web Sold</th>
-                   <th className="px-4 py-3 font-bold text-center">Events Listed</th>
-                   <th className="px-4 py-3 font-bold text-center">Events Sold</th>
-                   <th className="px-4 py-3 font-bold text-center">Current Stock</th>
-                   <th className="px-4 py-3 font-bold">Manage Stock</th>
-                </tr>
-             </thead>
-             <tbody className="divide-y divide-gray-100">
-               {books.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500 italic">No books listed in your inventory yet.</td></tr> : books.map((item, index) => {
-                 const webSold = orders.filter((o: any) => o.bookTitle === item.title && (o.status === 'Completed' || o.status === 'Dispatched' || o.status === 'Accepted')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
-                 const bookEvents = listedBooks.filter((lb: any) => lb.bookId === item.id);
-                 const eventListed = bookEvents.reduce((acc: number, curr: any) => acc + curr.listedStock, 0);
-                 const eventSold = bookEvents.reduce((acc: number, curr: any) => acc + curr.soldStock, 0);
-                 const eventInvites = dashboardData?.eventInvites || [];
-                 const resolveEventName = (eventId: number) => {
-                    const inv = eventInvites.find((i: any) => i.eventId === eventId);
-                    return inv?.event?.name || `Event #${eventId}`;
-                 };
-                 
-                 return (
-                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+            <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
+              <tr>
+                <th className="px-4 py-3 font-bold">Title</th>
+                <th className="px-4 py-3 font-bold text-center">Web Sold</th>
+                <th className="px-4 py-3 font-bold text-center">Events Listed</th>
+                <th className="px-4 py-3 font-bold text-center">Events Sold</th>
+                <th className="px-4 py-3 font-bold text-center">Current Stock</th>
+                <th className="px-4 py-3 font-bold">Manage Stock</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {books.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500 italic">No books listed in your inventory yet.</td></tr> : books.map((item, index) => {
+                const webSold = orders.filter((o: any) => o.bookTitle === item.title && (o.status === 'Completed' || o.status === 'Dispatched' || o.status === 'Accepted')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
+                const bookEvents = listedBooks.filter((lb: any) => lb.bookId === item.id);
+                const eventListed = bookEvents.reduce((acc: number, curr: any) => acc + curr.listedStock, 0);
+                const eventSold = bookEvents.reduce((acc: number, curr: any) => acc + curr.soldStock, 0);
+                const eventInvites = dashboardData?.eventInvites || [];
+                const resolveEventName = (eventId: number) => {
+                  const inv = eventInvites.find((i: any) => i.eventId === eventId);
+                  return inv?.event?.name || `Event #${eventId}`;
+                };
+
+                return (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
                       <p className="font-bold text-paa-navy">{item.title}</p>
                       <p className="text-[10px] text-gray-400 uppercase tracking-widest">MRP: ₹{item.mrp}</p>
@@ -1758,100 +1759,101 @@ function InventoryPage({ books, onRefresh, dashboardData }: { books: any[], onRe
                     <td className="px-4 py-3 text-center font-bold text-green-700">{webSold}</td>
                     <td className="px-4 py-3 text-center text-gray-600 font-medium">{eventListed}</td>
                     <td className="px-4 py-3 text-center">
-                       <span className="font-bold text-blue-700 block">{eventSold}</span>
-                       {bookEvents.length > 0 && (
-                         <div className="text-[10px] text-left mt-2 border-t border-gray-100 pt-1 space-y-1">
-                           {bookEvents.map((be: any) => (
-                             <div key={be.id} className="flex justify-between text-gray-500 gap-4">
-                                <span className="truncate w-24 font-medium" title={resolveEventName(be.eventId)}>{resolveEventName(be.eventId)}</span>
-                                <span title="Sold / Listed">{be.soldStock}/{be.listedStock}</span>
-                             </div>
-                           ))}
-                         </div>
-                       )}
+                      <span className="font-bold text-blue-700 block">{eventSold}</span>
+                      {bookEvents.length > 0 && (
+                        <div className="text-[10px] text-left mt-2 border-t border-gray-100 pt-1 space-y-1">
+                          {bookEvents.map((be: any) => (
+                            <div key={be.id} className="flex justify-between text-gray-500 gap-4">
+                              <span className="truncate w-24 font-medium" title={resolveEventName(be.eventId)}>{resolveEventName(be.eventId)}</span>
+                              <span title="Sold / Listed">{be.soldStock}/{be.listedStock}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
-                       <div className="flex flex-col items-center">
-                         <span className="font-bold text-lg text-paa-navy">{item.stock}</span>
-                         {item.stock < 10 && (
-                           <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 mt-1 border border-red-200">LOW STOCK</span>
-                         )}
-                       </div>
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-lg text-paa-navy">{item.stock}</span>
+                        {item.stock < 10 && (
+                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 mt-1 border border-red-200">LOW STOCK</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
-                       <div className="flex items-center gap-2">
-                         <input 
-                           type="number" 
-                           min="1"
-                           className="dash-input w-20 text-center" 
-                           placeholder="Qty"
-                           value={newStocks[item.id] || ''}
-                           onChange={(e) => setNewStocks({...newStocks, [item.id]: e.target.value})}
-                         />
-                         <button 
-                           onClick={() => handleUpdateStock(item.id)}
-                           disabled={!newStocks[item.id]}
-                           className="dash-btn-primary px-4 py-2 disabled:opacity-50"
-                         >
-                           Add
-                         </button>
-                       </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          className="dash-input w-20 text-center"
+                          placeholder="Qty"
+                          value={newStocks[item.id] || ''}
+                          onChange={(e) => setNewStocks({ ...newStocks, [item.id]: e.target.value })}
+                        />
+                        <button
+                          onClick={() => handleUpdateStock(item.id)}
+                          disabled={!newStocks[item.id]}
+                          className="dash-btn-primary px-4 py-2 disabled:opacity-50"
+                        >
+                          Add
+                        </button>
+                      </div>
                     </td>
-                 </tr>
-               )})}
-             </tbody>
+                  </tr>
+                )
+              })}
+            </tbody>
           </table>
         </div>
       </div>
-      
+
       <div className="grid md:grid-cols-2 gap-6 mt-6">
-         <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Stock Distribution</h3>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={books}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="stock"
-                    nameKey="title"
-                    label={({ name, percent }) => `${name.substring(0,10)}... (${(percent * 100).toFixed(0)}%)`}
-                  >
-                    {books.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={['#C0A062', '#1a1a2e', '#e2e8f0', '#94a3b8'][index % 4]} />
-                    ))}
-                  </Pie>
-                  <Tooltip wrapperClassName="shadow-premium border-none rounded-lg" />
-                </PieChart>
-              </ResponsiveContainer>
+        <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Stock Distribution</h3>
+          <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={books}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="stock"
+                  nameKey="title"
+                  label={({ name, percent }) => `${name.substring(0, 10)}... (${(percent * 100).toFixed(0)}%)`}
+                >
+                  {books.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#C0A062', '#1a1a2e', '#e2e8f0', '#94a3b8'][index % 4]} />
+                  ))}
+                </Pie>
+                <Tooltip wrapperClassName="shadow-premium border-none rounded-lg" />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm flex items-center gap-5">
+            <div className="w-14 h-14 bg-red-50 text-red-600 border border-red-100 flex items-center justify-center font-bold text-2xl">
+              {books.filter(i => i.stock < 10).length}
             </div>
-         </div>
-         
-         <div className="flex flex-col gap-4">
-             <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm flex items-center gap-5">
-                 <div className="w-14 h-14 bg-red-50 text-red-600 border border-red-100 flex items-center justify-center font-bold text-2xl">
-                    {books.filter(i => i.stock < 10).length}
-                 </div>
-                 <div>
-                    <div className="font-bold text-paa-navy text-sm uppercase tracking-widest">Needs Restocking</div>
-                    <div className="text-xs text-gray-500 mt-1">Titles with less than 10 copies available</div>
-                 </div>
-             </div>
-             
-             <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm flex items-center gap-5">
-                 <div className="w-14 h-14 bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold text-2xl">
-                    {books.reduce((acc, curr) => acc + curr.stock, 0)}
-                 </div>
-                 <div>
-                    <div className="font-bold text-paa-navy text-sm uppercase tracking-widest">Total Copies</div>
-                    <div className="text-xs text-gray-500 mt-1">Available across all titles in inventory</div>
-                 </div>
-             </div>
-         </div>
+            <div>
+              <div className="font-bold text-paa-navy text-sm uppercase tracking-widest">Needs Restocking</div>
+              <div className="text-xs text-gray-500 mt-1">Titles with less than 10 copies available</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm flex items-center gap-5">
+            <div className="w-14 h-14 bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold text-2xl">
+              {books.reduce((acc, curr) => acc + curr.stock, 0)}
+            </div>
+            <div>
+              <div className="font-bold text-paa-navy text-sm uppercase tracking-widest">Total Copies</div>
+              <div className="text-xs text-gray-500 mt-1">Available across all titles in inventory</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1860,7 +1862,7 @@ function InventoryPage({ books, onRefresh, dashboardData }: { books: any[], onRe
 function ActivityRegistration({ activities, books, onRefresh, registrations }: { activities: any[], books: any[], onRefresh: () => void, registrations: any[] }) {
   const [showDialog, setShowDialog] = useState(false);
   const [selectedAct, setSelectedAct] = useState<any>(null);
-  const [selectedBooks, setSelectedBooks] = useState<{id: number, qty: number}[]>([]);
+  const [selectedBooks, setSelectedBooks] = useState<{ id: number, qty: number }[]>([]);
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1917,7 +1919,7 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
       }
     });
   };
-  
+
   const updateBookQty = (id: number, qty: number) => {
     setSelectedBooks(prev => prev.map(b => b.id === id ? { ...b, qty } : b));
   };
@@ -1930,57 +1932,57 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
       <h1 className="text-4xl font-serif text-paa-navy mb-8">Activity Announcements</h1>
       <div className="bg-white border border-paa-navy/5 overflow-hidden relative">
         {showDialog && (
-           <div className="fixed inset-0 bg-paa-navy/80 z-50 flex items-center justify-center p-4">
-              <div className="bg-white max-w-md w-full p-6 rounded-3xl-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-                 <h3 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Register for {selectedAct?.name}</h3>
-                 
-                 <div className="mb-4">
-                   <p className="text-sm font-bold text-paa-navy mb-2">1. Select Books and Quantity for this event:</p>
-                   <div className="flex flex-col gap-2 max-h-32 overflow-y-auto border p-2 bg-gray-50">
-                     {books.map(b => {
-                       const selected = selectedBooks.find(sb => sb.id === b.id);
-                       return (
-                         <div key={b.id} className="flex items-center justify-between gap-2 text-sm">
-                           <label className="flex items-center gap-2 cursor-pointer flex-1">
-                             <input type="checkbox" checked={!!selected} onChange={() => toggleBook(b.id)} />
-                             {b.title}
-                           </label>
-                           {selected && (
-                             <input type="number" min="1" placeholder="Qty" value={selected.qty} onChange={(e) => updateBookQty(b.id, parseInt(e.target.value) || 1)} className="w-16 p-1 text-xs border" />
-                           )}
-                         </div>
-                       )
-                     })}
-                   </div>
-                 </div>
+          <div className="fixed inset-0 bg-paa-navy/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-white max-w-md w-full p-6 rounded-3xl-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-serif text-paa-navy mb-4 border-b pb-2">Register for {selectedAct?.name}</h3>
 
-                 <div className="mb-6">
-                   <p className="text-sm font-bold text-paa-navy mb-2">2. Payment (₹{selectedAct?.charges})</p>
-                   {selectedAct?.charges > 0 ? (
-                     <div className="border border-paa-navy/20 p-4 bg-gray-50 text-center">
-                       <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=puneauthors@upi&pn=PuneAuthors&am=10" alt="QR Code" className="mx-auto mb-2 w-32 h-32" />
-                       <p className="text-xs text-gray-500 mb-4">Scan QR to pay ₹{selectedAct.charges}</p>
-                       <label className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-100">
-                         <div className="flex flex-col items-center justify-center">
-                           <Upload className="w-5 h-5 text-gray-400" />
-                           <p className="text-xs text-gray-500">{screenshot ? screenshot.name : 'Upload Screenshot'}</p>
-                         </div>
-                         <input type="file" className="hidden" accept="image/*" onChange={e => setScreenshot(e.target.files?.[0] || null)} />
-                       </label>
-                     </div>
-                   ) : (
-                     <p className="text-sm text-green-600 font-bold">This event is free.</p>
-                   )}
-                 </div>
-
-                 <div className="flex justify-end gap-4">
-                    <button onClick={() => setShowDialog(false)} className="text-sm font-bold text-gray-500 hover:text-paa-navy">Cancel</button>
-                    <button onClick={confirmParticipation} disabled={isSubmitting} className="bg-paa-gold text-paa-navy px-6 py-2 rounded-3xl-2xl text-sm font-bold disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
-                      {isSubmitting ? 'Submitting...' : 'Register & Pay'}
-                    </button>
-                 </div>
+              <div className="mb-4">
+                <p className="text-sm font-bold text-paa-navy mb-2">1. Select Books and Quantity for this event:</p>
+                <div className="flex flex-col gap-2 max-h-32 overflow-y-auto border p-2 bg-gray-50">
+                  {books.map(b => {
+                    const selected = selectedBooks.find(sb => sb.id === b.id);
+                    return (
+                      <div key={b.id} className="flex items-center justify-between gap-2 text-sm">
+                        <label className="flex items-center gap-2 cursor-pointer flex-1">
+                          <input type="checkbox" checked={!!selected} onChange={() => toggleBook(b.id)} />
+                          {b.title}
+                        </label>
+                        {selected && (
+                          <input type="number" min="1" placeholder="Qty" value={selected.qty} onChange={(e) => updateBookQty(b.id, parseInt(e.target.value) || 1)} className="w-16 p-1 text-xs border" />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-           </div>
+
+              <div className="mb-6">
+                <p className="text-sm font-bold text-paa-navy mb-2">2. Payment (₹{selectedAct?.charges})</p>
+                {selectedAct?.charges > 0 ? (
+                  <div className="border border-paa-navy/20 p-4 bg-gray-50 text-center">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=puneauthors@upi&pn=PuneAuthors&am=10" alt="QR Code" className="mx-auto mb-2 w-32 h-32" />
+                    <p className="text-xs text-gray-500 mb-4">Scan QR to pay ₹{selectedAct.charges}</p>
+                    <label className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-100">
+                      <div className="flex flex-col items-center justify-center">
+                        <Upload className="w-5 h-5 text-gray-400" />
+                        <p className="text-xs text-gray-500">{screenshot ? screenshot.name : 'Upload Screenshot'}</p>
+                      </div>
+                      <input type="file" className="hidden" accept="image/*" onChange={e => setScreenshot(e.target.files?.[0] || null)} />
+                    </label>
+                  </div>
+                ) : (
+                  <p className="text-sm text-green-600 font-bold">This event is free.</p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <button onClick={() => setShowDialog(false)} className="text-sm font-bold text-gray-500 hover:text-paa-navy">Cancel</button>
+                <button onClick={confirmParticipation} disabled={isSubmitting} className="bg-paa-gold text-paa-navy px-6 py-2 rounded-3xl-2xl text-sm font-bold disabled:opacity-50 rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+                  {isSubmitting ? 'Submitting...' : 'Register & Pay'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="overflow-x-auto">
@@ -2004,34 +2006,35 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
                 const statusColor = row.type.includes('Event') ? 'bg-[#4a90e2]' : row.type.includes('Fair') ? 'bg-[#e74c3c]' : 'bg-[#43a047]';
 
                 return (
-                <tr key={row.id} className="border-b border-paa-navy/5 even:bg-gray-100">
-                  <td className="p-3 border-r border-paa-navy/5 text-center bg-[#f0f4f8]">{index + 1}</td>
-                  <td className="p-3 border-r border-paa-navy/5 font-medium">{row.name}</td>
-                  <td className="p-3 border-r border-paa-navy/5 text-xs">{row.type}</td>
-                  <td className="p-3 border-r border-paa-navy/5">{row.date}</td>
-                  <td className="p-3 border-r border-paa-navy/5 text-center">
-                    <span className="font-bold text-xs">{row.status}</span>
-                  </td>
-                  <td className="p-3 border-r border-paa-navy/5">{row.city}</td>
-                  <td className="p-3 border-r border-paa-navy/5 text-center">â‚¹{row.charges}</td>
-                  <td className="p-3 border-r border-paa-navy/5 text-center">
-                    {isParticipating ? (
-                      <div className="flex flex-col items-center">
-                        <span className="bg-green-100 text-green-800 text-[10px] px-2 py-1 rounded-full font-bold mb-1 flex items-center gap-1"><Check size={12}/> Registered</span>
-                        <span className="text-[10px] text-gray-500">{reg.status}</span>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => handleParticipateClick(row)}
-                        disabled={row.status === 'CLOSED'}
-                        className={`${row.status === 'CLOSED' ? 'bg-gray-300' : statusColor} text-white px-4 py-1.5 rounded-full text-xs font-bold shadow disabled:cursor-not-allowed transition-colors w-24`}
-                      >
-                         {row.status === 'CLOSED' ? 'CLOSED' : 'REGISTER'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              )})}
+                  <tr key={row.id} className="border-b border-paa-navy/5 even:bg-gray-100">
+                    <td className="p-3 border-r border-paa-navy/5 text-center bg-[#f0f4f8]">{index + 1}</td>
+                    <td className="p-3 border-r border-paa-navy/5 font-medium">{row.name}</td>
+                    <td className="p-3 border-r border-paa-navy/5 text-xs">{row.type}</td>
+                    <td className="p-3 border-r border-paa-navy/5">{row.date}</td>
+                    <td className="p-3 border-r border-paa-navy/5 text-center">
+                      <span className="font-bold text-xs">{row.status}</span>
+                    </td>
+                    <td className="p-3 border-r border-paa-navy/5">{row.city}</td>
+                    <td className="p-3 border-r border-paa-navy/5 text-center">â‚¹{row.charges}</td>
+                    <td className="p-3 border-r border-paa-navy/5 text-center">
+                      {isParticipating ? (
+                        <div className="flex flex-col items-center">
+                          <span className="bg-green-100 text-green-800 text-[10px] px-2 py-1 rounded-full font-bold mb-1 flex items-center gap-1"><Check size={12} /> Registered</span>
+                          <span className="text-[10px] text-gray-500">{reg.status}</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleParticipateClick(row)}
+                          disabled={row.status === 'CLOSED'}
+                          className={`${row.status === 'CLOSED' ? 'bg-gray-300' : statusColor} text-white px-4 py-1.5 rounded-full text-xs font-bold shadow disabled:cursor-not-allowed transition-colors w-24`}
+                        >
+                          {row.status === 'CLOSED' ? 'CLOSED' : 'REGISTER'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -2156,7 +2159,7 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
 
     <!-- DATES -->
     <div style="display:flex;gap:12px;margin-bottom:20px;font-size:12px;color:#64748b">
-      <span>ðŸ“… Order Date: <strong style="color:#1a1a2e">${new Date(inv.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</strong></span>
+      <span>ðŸ“… Order Date: <strong style="color:#1a1a2e">${new Date(inv.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</strong></span>
       ${inv.trackingNumber ? `<span>ðŸšš Tracking: <strong style="color:#1a1a2e">${inv.trackingNumber}</strong></span>` : ''}
     </div>
 
@@ -2306,7 +2309,7 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
     const reasons = [...rejectReasons];
     if (otherRejectReason.trim()) reasons.push(otherRejectReason.trim());
     if (reasons.length === 0) { alert('Please select or enter at least one reason.'); return; }
-    
+
     const finalReason = reasons.join('; ');
     const itemIds = Array.isArray(rejectItemId) ? rejectItemId : [rejectItemId];
     setLoadingAction(String(itemIds[0]));
@@ -2326,20 +2329,20 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
     }
   };
 
-  
+
   const handleStatusChange = async (itemIds: number[], newStatus: string) => {
     setLoadingAction(String(itemIds[0]));
     try {
       const token = localStorage.getItem('token');
       if (newStatus === 'Dispatched') {
-         const trackingNumber = prompt("Enter tracking number for dispatch (optional):");
-         await Promise.all(itemIds.map(id => axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/dispatch`, { trackingNumber: trackingNumber || 'N/A' }, {
-           headers: { Authorization: `Bearer ${token}` }
-         })));
+        const trackingNumber = prompt("Enter tracking number for dispatch (optional):");
+        await Promise.all(itemIds.map(id => axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/dispatch`, { trackingNumber: trackingNumber || 'N/A' }, {
+          headers: { Authorization: `Bearer ${token}` }
+        })));
       } else {
-         await Promise.all(itemIds.map(id => axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/status`, { status: newStatus }, {
-           headers: { Authorization: `Bearer ${token}` }
-         })));
+        await Promise.all(itemIds.map(id => axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/status`, { status: newStatus }, {
+          headers: { Authorization: `Bearer ${token}` }
+        })));
       }
       toast.success('Order status updated to ' + newStatus);
       onRefresh();
@@ -2369,18 +2372,18 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
     }
   };
 
-  const filteredOrders = (filterStatus === 'All' 
-    ? orders 
-    : filterStatus === 'Pending' 
-      ? orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Pending' || o.status === 'Processing') 
+  const filteredOrders = (filterStatus === 'All'
+    ? orders
+    : filterStatus === 'Pending'
+      ? orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Pending' || o.status === 'Processing')
       : orders.filter((o: any) => o.status === filterStatus)).filter((o: any) => {
-         if (!searchQuery) return true;
-         const q = searchQuery.toLowerCase();
-         return o.customerName?.toLowerCase().includes(q) || 
-                o.customerEmail?.toLowerCase().includes(q) || 
-                String(o.orderId).includes(q) || 
-                o.bookTitle?.toLowerCase().includes(q) || 
-                o.title?.toLowerCase().includes(q);
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return o.customerName?.toLowerCase().includes(q) ||
+          o.customerEmail?.toLowerCase().includes(q) ||
+          String(o.orderId).includes(q) ||
+          o.bookTitle?.toLowerCase().includes(q) ||
+          o.title?.toLowerCase().includes(q);
       });
 
   const groupedOrdersObj: Record<string, any> = {};
@@ -2431,30 +2434,30 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
               <p className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-3">Order Timeline</p>
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-xs">
-                   <span className="text-gray-500">Placed On</span>
-                   <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).toLocaleString('en-IN')}</span>
+                  <span className="text-gray-500">Placed On</span>
+                  <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).toLocaleString('en-IN')}</span>
                 </div>
                 {viewBuyerInfoOrder.acceptedAt && (
                   <div className="flex justify-between items-center text-xs">
-                     <span className="text-gray-500">Accepted</span>
-                     <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.acceptedAt).toLocaleString('en-IN')}</span>
+                    <span className="text-gray-500">Accepted</span>
+                    <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.acceptedAt).toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 {viewBuyerInfoOrder.dispatchedAt && (
                   <div className="flex justify-between items-center text-xs">
-                     <span className="text-gray-500">Dispatched</span>
-                     <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.dispatchedAt).toLocaleString('en-IN')}</span>
+                    <span className="text-gray-500">Dispatched</span>
+                    <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.dispatchedAt).toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 {(viewBuyerInfoOrder.deliveredAt || viewBuyerInfoOrder.status === 'Completed' || viewBuyerInfoOrder.status === 'Delivered') && (
                   <div className="flex justify-between items-center text-xs">
-                     <span className="text-gray-500">Delivered</span>
-                     <span className="font-medium text-green-600">{viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).toLocaleString('en-IN') : 'Delivered'}</span>
+                    <span className="text-gray-500">Delivered</span>
+                    <span className="font-medium text-green-600">{viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).toLocaleString('en-IN') : 'Delivered'}</span>
                   </div>
                 )}
                 {(viewBuyerInfoOrder.deliveredAt || viewBuyerInfoOrder.status === 'Completed' || viewBuyerInfoOrder.status === 'Delivered') && (
                   <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-center font-bold text-green-600 bg-green-50 py-1.5 rounded">
-                     Took {Math.max(1, Math.ceil(((viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).getTime() : new Date().getTime()) - new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).getTime()) / (1000 * 3600 * 24)))} Days to Deliver
+                    Took {Math.max(1, Math.ceil(((viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).getTime() : new Date().getTime()) - new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).getTime()) / (1000 * 3600 * 24)))} Days to Deliver
                   </div>
                 )}
               </div>
@@ -2464,16 +2467,16 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                 <p className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-3">Customer Feedback</p>
                 <div className="space-y-3 bg-gray-50 p-3 rounded border border-gray-200 text-sm">
                   <div className="flex justify-between items-center text-xs">
-                     <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Condition</span>
-                     <span className={`font-medium ${viewBuyerInfoOrder.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-paa-navy'}`}>{viewBuyerInfoOrder.feedbackCondition}</span>
+                    <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Condition</span>
+                    <span className={`font-medium ${viewBuyerInfoOrder.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-paa-navy'}`}>{viewBuyerInfoOrder.feedbackCondition}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                     <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Delivery Rating</span>
-                     <span className="font-medium text-yellow-500">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                           <span key={i}>{i < (viewBuyerInfoOrder.feedbackRating || 0) ? '★' : '☆'}</span>
-                        ))}
-                     </span>
+                    <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Delivery Rating</span>
+                    <span className="font-medium text-yellow-500">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span key={i}>{i < (viewBuyerInfoOrder.feedbackRating || 0) ? '★' : '☆'}</span>
+                      ))}
+                    </span>
                   </div>
                   {viewBuyerInfoOrder.feedbackComments && (
                     <div className="text-xs italic text-gray-600 border-t border-gray-200 mt-2 pt-2">
@@ -2499,31 +2502,31 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
             <h2 className="text-xl font-serif text-paa-navy mb-3">Reason for Rejection</h2>
             <p className="text-sm text-gray-500 mb-4">Please provide a reason to inform the customer.</p>
             <div className="space-y-3 mb-4 max-h-60 overflow-y-auto bg-gray-50 p-3 border border-paa-navy/5">
-                {ORDER_REJECTION_REASONS.map((reason) => (
-                  <label key={reason} className="flex items-start gap-3 cursor-pointer text-sm font-medium text-paa-navy hover:text-paa-gold">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 accent-paa-navy"
-                      checked={rejectReasons.includes(reason)}
-                      onChange={(e) => {
-                        if (e.target.checked) setRejectReasons([...rejectReasons, reason]);
-                        else setRejectReasons(rejectReasons.filter(r => r !== reason));
-                      }}
-                    />
-                    {reason}
-                  </label>
-                ))}
-              </div>
-              <div className="mb-4">
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Other (specify):</label>
-                <input
-                  type="text"
-                  value={otherRejectReason}
-                  onChange={(e) => setOtherRejectReason(e.target.value)}
-                  placeholder="Enter additional reason..."
-                  className="w-full border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy"
-                />
-              </div>
+              {ORDER_REJECTION_REASONS.map((reason) => (
+                <label key={reason} className="flex items-start gap-3 cursor-pointer text-sm font-medium text-paa-navy hover:text-paa-gold">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 accent-paa-navy"
+                    checked={rejectReasons.includes(reason)}
+                    onChange={(e) => {
+                      if (e.target.checked) setRejectReasons([...rejectReasons, reason]);
+                      else setRejectReasons(rejectReasons.filter(r => r !== reason));
+                    }}
+                  />
+                  {reason}
+                </label>
+              ))}
+            </div>
+            <div className="mb-4">
+              <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Other (specify):</label>
+              <input
+                type="text"
+                value={otherRejectReason}
+                onChange={(e) => setOtherRejectReason(e.target.value)}
+                placeholder="Enter additional reason..."
+                className="w-full border border-paa-navy/20 p-2 text-sm outline-none focus:border-paa-navy"
+              />
+            </div>
             <div className="flex justify-end gap-3">
               <button onClick={() => { setRejectItemId(null); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }} className="px-4 py-2 text-sm text-gray-500 hover:text-paa-navy transition-colors font-bold uppercase tracking-widest">Cancel</button>
               <button onClick={handleRejectSubmit} disabled={loadingAction !== null} className="dash-btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50">Reject Order</button>
@@ -2538,29 +2541,29 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
           <p className="text-sm text-paa-gray-text mt-1">Manage pending orders and track dispatched shipments.</p>
         </div>
         <button onClick={() => {
-           const headers = ['Order ID', 'Date', 'Book', 'Customer Name', 'Customer Email', 'Customer Phone', 'Address', 'Status', 'Quantity', 'Amount'];
-           const rows = filteredOrders.map((o: any) => [
-             o.orderId,
-             `"${o.date}"`,
-             `"${o.title}"`,
-             `"${o.customerName}"`,
-             o.customerEmail,
-             o.customerPhone,
-             `"${o.address?.replace(/\n/g, ' ')}"`,
-             o.status,
-             o.quantity,
-             o.total
-           ]);
-           const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-           const encodedUri = encodeURI(csvContent);
-           const link = document.createElement('a');
-           link.setAttribute('href', encodedUri);
-           link.setAttribute('download', 'author_orders_export.csv');
-           document.body.appendChild(link);
-           link.click();
-           document.body.removeChild(link);
+          const headers = ['Order ID', 'Date', 'Book', 'Customer Name', 'Customer Email', 'Customer Phone', 'Address', 'Status', 'Quantity', 'Amount'];
+          const rows = filteredOrders.map((o: any) => [
+            o.orderId,
+            `"${o.date}"`,
+            `"${o.title}"`,
+            `"${o.customerName}"`,
+            o.customerEmail,
+            o.customerPhone,
+            `"${o.address?.replace(/\n/g, ' ')}"`,
+            o.status,
+            o.quantity,
+            o.total
+          ]);
+          const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement('a');
+          link.setAttribute('href', encodedUri);
+          link.setAttribute('download', 'author_orders_export.csv');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }} className="flex items-center gap-2 bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest shadow transition-colors shrink-0">
-           <Download size={14} /> Export CSV
+          <Download size={14} /> Export CSV
         </button>
       </div>
 
@@ -2628,17 +2631,16 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-colors ${
-                filterStatus === status ? 'bg-paa-navy text-paa-cream' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-colors ${filterStatus === status ? 'bg-paa-navy text-paa-cream' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               {status}
             </button>
           ))}
         </div>
         <div className="relative w-full sm:w-64 shrink-0">
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Search Orders..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -2651,23 +2653,23 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
       <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden mb-12">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs whitespace-nowrap">
-             <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-[10px] border-b border-paa-navy/5">
-                <tr>
-                   <th className="px-5 py-4 font-bold">Order Details</th>
-                   <th className="px-5 py-4 font-bold">Buyer Information</th>
-                   <th className="px-5 py-4 font-bold">Book Title</th>
-                   <th className="px-5 py-4 font-bold text-center">Qty</th>
-                   <th className="px-5 py-4 font-bold text-center">Amount</th>
-                   <th className="px-5 py-4 font-bold text-center">Payment</th>
-                   <th className="px-5 py-4 font-bold text-center">Status & Action</th>
-                </tr>
-             </thead>
-             <tbody className="divide-y divide-gray-100">
-               {groupedOrdersList.length === 0 ? <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500 italic">No orders found.</td></tr> : groupedOrdersList.map((ord: any, idx: number) => {
-                 const orderDate = new Date(ord.createdAt || ord.date);
-                 const isSlaBreached = (new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60) > 24 && ['Pending Verification', 'Pending', 'Accepted', 'Processing'].includes(ord.status);
-                 return (
-                 <tr key={idx} className="hover:bg-gray-50 transition-colors">
+            <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-[10px] border-b border-paa-navy/5">
+              <tr>
+                <th className="px-5 py-4 font-bold">Order Details</th>
+                <th className="px-5 py-4 font-bold">Buyer Information</th>
+                <th className="px-5 py-4 font-bold">Book Title</th>
+                <th className="px-5 py-4 font-bold text-center">Qty</th>
+                <th className="px-5 py-4 font-bold text-center">Amount</th>
+                <th className="px-5 py-4 font-bold text-center">Payment</th>
+                <th className="px-5 py-4 font-bold text-center">Status & Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {groupedOrdersList.length === 0 ? <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500 italic">No orders found.</td></tr> : groupedOrdersList.map((ord: any, idx: number) => {
+                const orderDate = new Date(ord.createdAt || ord.date);
+                const isSlaBreached = (new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60) > 24 && ['Pending Verification', 'Pending', 'Accepted', 'Processing'].includes(ord.status);
+                return (
+                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-4">
                       <p className="font-bold text-paa-navy tracking-wide text-xs">ORD-{ord.orderId}</p>
                       <p className="text-[9px] text-gray-400 uppercase tracking-widest mt-1">{ord.date}</p>
@@ -2691,13 +2693,13 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-col gap-2 max-w-[200px]">
-                         {ord.books.map((b: any, i: number) => (
-                           <div key={i} className="border-b border-gray-100 last:border-0 pb-1 last:pb-0">
-                             <p className="font-medium text-paa-navy text-xs truncate" title={b.title}>{b.title}</p>
-                             <p className="text-[9px] text-gray-500 uppercase tracking-widest mt-0.5">Qty: {b.quantity} &nbsp;&middot;&nbsp; ₹{b.amount}</p>
-                           </div>
-                         ))}
-                         {ord.order?.totalDiscount > 0 && <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded inline-block w-max mt-1">Discount Applied</span>}
+                        {ord.books.map((b: any, i: number) => (
+                          <div key={i} className="border-b border-gray-100 last:border-0 pb-1 last:pb-0">
+                            <p className="font-medium text-paa-navy text-xs truncate" title={b.title}>{b.title}</p>
+                            <p className="text-[9px] text-gray-500 uppercase tracking-widest mt-0.5">Qty: {b.quantity} &nbsp;&middot;&nbsp; ₹{b.amount}</p>
+                          </div>
+                        ))}
+                        {ord.order?.totalDiscount > 0 && <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded inline-block w-max mt-1">Discount Applied</span>}
                       </div>
                     </td>
                     <td className="px-5 py-4 text-center font-bold text-paa-navy">{ord.totalQuantity}</td>
@@ -2714,7 +2716,7 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                             View Receipt
                           </a>
                           {ord.paymentVerified && (
-                            <span className="text-[9px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1 bg-green-50 px-2.5 py-1 rounded-full border border-green-100"><Check size={10}/> Verified</span>
+                            <span className="text-[9px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1 bg-green-50 px-2.5 py-1 rounded-full border border-green-100"><Check size={10} /> Verified</span>
                           )}
                         </div>
                       ) : <span className="text-[9px] text-gray-400 italic">No receipt</span>}
@@ -2730,25 +2732,24 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                             {loadingAction === String(ord.itemIds[0]) ? '...' : 'Approve'}
                           </button>
                           <button
-                             onClick={() => { setRejectItemId(ord.itemIds); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }}
-                             disabled={loadingAction !== null}
-                             className="text-[9px] font-bold uppercase tracking-widest px-3 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 rounded shadow-sm"
-                           >
-                             Reject
-                           </button>
+                            onClick={() => { setRejectItemId(ord.itemIds); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }}
+                            disabled={loadingAction !== null}
+                            className="text-[9px] font-bold uppercase tracking-widest px-3 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 rounded shadow-sm"
+                          >
+                            Reject
+                          </button>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center gap-1">
                           {editingStatusOrderId === String(ord.orderId) ? (
-                            <select 
-                              className={`dash-input text-[9px] py-1.5 px-3 uppercase font-bold w-full max-w-[120px] text-center rounded-full border shadow-sm outline-none ${
-                                ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
-                                : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
-                                : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
-                                : 'bg-yellow-50 text-yellow-800 border-yellow-200'
-                              }`} 
-                              value={ord.status === 'Completed' ? 'Delivered' : ord.status} 
+                            <select
+                              className={`dash-input text-[9px] py-1.5 px-3 uppercase font-bold w-full max-w-[120px] text-center rounded-full border shadow-sm outline-none ${ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
+                                  : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                    : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
+                                      : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
+                                        : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                                }`}
+                              value={ord.status === 'Completed' ? 'Delivered' : ord.status}
                               disabled={loadingAction !== null}
                               onChange={(e) => {
                                 handleStatusChange(ord.itemIds, e.target.value);
@@ -2763,24 +2764,23 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                             </select>
                           ) : (
                             <div className="flex items-center justify-center gap-2">
-                               <span className={`inline-flex items-center justify-center px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full border ${
-                                 ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
-                                 : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                 : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
-                                 : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
-                                 : 'bg-yellow-50 text-yellow-800 border-yellow-200'
-                               }`}>
-                                 {ord.status}
-                               </span>
-                               {ord.status !== 'Rejected' && ord.status !== 'Completed' && ord.status !== 'Delivered' && (
-                                 <button
-                                   onClick={() => setEditingStatusOrderId(String(ord.orderId))}
-                                   className="text-gray-400 hover:text-paa-navy transition-colors shrink-0"
-                                   title="Edit Status"
-                                 >
-                                   <Edit2 size={12} />
-                                 </button>
-                               )}
+                              <span className={`inline-flex items-center justify-center px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full border ${ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
+                                  : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                    : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
+                                      : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
+                                        : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                                }`}>
+                                {ord.status}
+                              </span>
+                              {ord.status !== 'Rejected' && ord.status !== 'Completed' && ord.status !== 'Delivered' && (
+                                <button
+                                  onClick={() => setEditingStatusOrderId(String(ord.orderId))}
+                                  className="text-gray-400 hover:text-paa-navy transition-colors shrink-0"
+                                  title="Edit Status"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                              )}
                             </div>
                           )}
                           {ord.status === 'Rejected' && ord.rejectionReason && (
@@ -2789,11 +2789,12 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                         </div>
                       )}
                     </td>
-                 </tr>
-               )})}
-             </tbody>
+                  </tr>
+                )
+              })}
+            </tbody>
           </table>
-      </div>
+        </div>
       </div>
 
       {loadingAction !== null && (
@@ -2814,9 +2815,9 @@ function FormsWrapper() {
 
   const fetchForms = async () => {
     try {
-      const res = await axios.get(`${API}/api/author/forms`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+      const res = await axios.get(`${API}/api/author/forms`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       setForms(res.data);
-    } catch(err) {}
+    } catch (err) { }
   };
 
   useEffect(() => { fetchForms(); }, []);
@@ -2829,11 +2830,11 @@ function FormsWrapper() {
       answers[key] = value;
     }
     try {
-      await axios.post(`${API}/api/author/forms/${selectedForm.id}/submit`, { answers }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
+      await axios.post(`${API}/api/author/forms/${selectedForm.id}/submit`, { answers }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       alert("Form submitted successfully!");
       setSelectedForm(null);
       fetchForms();
-    } catch(err: any) {
+    } catch (err: any) {
       alert(err.response?.data?.error || "Error submitting form");
     }
   };
@@ -2852,12 +2853,11 @@ function FormsWrapper() {
       {!selectedForm && (
         <div className="flex gap-4 mb-8 border-b border-paa-navy/5 pb-4 overflow-x-auto">
           {tabs.map(tab => (
-            <button 
-              key={tab} 
+            <button
+              key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-xs font-bold tracking-widest uppercase transition-colors whitespace-nowrap ${
-                activeTab === tab ? 'bg-paa-navy text-paa-cream' : 'text-paa-navy border border-paa-navy hover:bg-paa-navy/5'
-              }`}
+              className={`px-4 py-2 text-xs font-bold tracking-widest uppercase transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-paa-navy text-paa-cream' : 'text-paa-navy border border-paa-navy hover:bg-paa-navy/5'
+                }`}
             >
               {tab}
             </button>
@@ -2868,8 +2868,8 @@ function FormsWrapper() {
       {selectedForm ? (
         <div className="bg-white p-8 border border-paa-navy/5 max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-             <h2 className="text-2xl font-bold text-paa-navy">{selectedForm.title}</h2>
-             <button onClick={() => setSelectedForm(null)} className="text-sm font-bold uppercase tracking-widest text-paa-gray-text hover:text-paa-navy">Cancel</button>
+            <h2 className="text-2xl font-bold text-paa-navy">{selectedForm.title}</h2>
+            <button onClick={() => setSelectedForm(null)} className="text-sm font-bold uppercase tracking-widest text-paa-gray-text hover:text-paa-navy">Cancel</button>
           </div>
           <p className="text-sm text-gray-500 mb-8">{selectedForm.description}</p>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -2897,20 +2897,20 @@ function FormsWrapper() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredForms.map((f: any) => (
             <div key={f.id} className="bg-white p-8 border border-paa-navy/5 flex flex-col items-start gap-4 hover:shadow-lg transition-shadow">
-               <h3 className="text-xl font-bold text-paa-navy">{f.title}</h3>
-               <p className="text-sm text-gray-500 flex-1">{f.description}</p>
-               {f.submitted ? (
-                 <span className="px-4 py-2 bg-green-50 text-green-700 text-xs font-bold uppercase tracking-widest border border-green-200">
-                   Submitted
-                 </span>
-               ) : (
-                 <button 
-                   onClick={() => setSelectedForm(f)}
-                   className="px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold transition-colors"
-                 >
-                   Fill Form
-                 </button>
-               )}
+              <h3 className="text-xl font-bold text-paa-navy">{f.title}</h3>
+              <p className="text-sm text-gray-500 flex-1">{f.description}</p>
+              {f.submitted ? (
+                <span className="px-4 py-2 bg-green-50 text-green-700 text-xs font-bold uppercase tracking-widest border border-green-200">
+                  Submitted
+                </span>
+              ) : (
+                <button
+                  onClick={() => setSelectedForm(f)}
+                  className="px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold transition-colors"
+                >
+                  Fill Form
+                </button>
+              )}
             </div>
           ))}
           {filteredForms.length === 0 && (
@@ -2924,23 +2924,64 @@ function FormsWrapper() {
   );
 }
 
+
 function EventsDashboard({ registrations }: any) {
+  const [isOptInModalOpen, setIsOptInModalOpen] = useState(false);
+  const [selectedInvite, setSelectedInvite] = useState<any>(null);
+  const [optInBooks, setOptInBooks] = useState<any[]>([]);
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const [expandedEventId, setExpandedEventId] = useState<string | number | null>(null);
+
+  const handleOpenOptIn = (evt: any) => {
+    setSelectedInvite(evt);
+    // Initialize all books as included with default stock 10
+    setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: 10, included: true })));
+    setPaymentScreenshot(null);
+    setIsOptInModalOpen(true);
+  };
+
+  const handleOptInSubmit = async (action: 'approve' | 'reject') => {
+    try {
+      if (action === 'approve') {
+        const fd = new FormData();
+        const includedBooks = optInBooks.filter(b => b.included);
+        fd.append('booksToLink', JSON.stringify(includedBooks));
+        if (paymentScreenshot) {
+          fd.append('paymentScreenshot', paymentScreenshot);
+        }
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${selectedInvite.id}/opt-in`, fd, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        toast.success('Successfully opted into event!');
+      } else {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${selectedInvite.id}/opt-out`, {}, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        toast.success('Event invite declined.');
+      }
+      setIsOptInModalOpen(false);
+      fetchAuthorEvents(); // refresh
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to process event invite');
+    }
+  };
+  const [activeTab, setActiveTab] = useState('events');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [eventFilter, setEventFilter] = useState('ALL');
   const [invites, setInvites] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
   const [listedBooks, setListedBooks] = useState<any[]>([]);
   const [pastEvents, setPastEvents] = useState<any[]>([]);
+  const [availableEvents, setAvailableEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-  
-  const [optInEventId, setOptInEventId] = useState<number | null>(null);
-  const [settleEventId, setSettleEventId] = useState<number | null>(null);
-  const [settlementData, setSettlementData] = useState<any[]>([]);
-  const [selectedBooksToLink, setSelectedBooksToLink] = useState<{bookId: string, stock: string}[]>([]);
-  const [paymentScreenshotBlob, setPaymentScreenshotBlob] = useState<File | null>(null);
-  const [catalogueEventData, setCatalogueEventData] = useState<any>(null);
-  const [buttonStates, setButtonStates] = useState<{[key: string]: boolean}>({});
+
+  // Tab 2 State
+  const [selectedEventId, setSelectedEventId] = useState<string>('ALL');
+
+  // Tab 3 State
+  const [t3EventFilter, setT3EventFilter] = useState('ALL');
+  const [t3YearFilter, setT3YearFilter] = useState('ALL');
+  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchAuthorEvents();
@@ -2948,500 +2989,658 @@ function EventsDashboard({ registrations }: any) {
 
   const fetchAuthorEvents = async () => {
     try {
-       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-       });
-       setInvites(res.data.eventInvites || []);
-       setBooks(res.data.books || []);
-       setListedBooks(res.data.listedBooks || []);
-       setPastEvents(res.data.pastEvents || []);
-    } catch(err) {
-       toast.error('Failed to load events');
-    } finally {
-       setLoading(false);
-    }
-  };
-  const handleViewCatalogue = async (eventId: number) => {
-     try {
-         const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/events/${eventId}/catalogue`);
-         
-         const event = res.data.event;
-         const listedBooks = res.data.catalogue;
-         
-         const authorsMap: any = {};
-         let totalBooksListed = 0;
-         
-         listedBooks.forEach((eb: any) => {
-             const aid = eb.authorId;
-             if (!authorsMap[aid]) {
-                 authorsMap[aid] = {
-                     id: aid,
-                     name: eb.author.name,
-                     bio: eb.author.bio,
-                     photoUrl: eb.author.photoUrl,
-                     books: []
-                 };
-             }
-             authorsMap[aid].books.push({
-                 title: eb.book.title,
-                 category: eb.book.genre || eb.book.category || 'Uncategorized',
-                 mrp: eb.book.mrp,
-                 listedStock: eb.listedStock
-             });
-             totalBooksListed += eb.listedStock;
-         });
-         
-         setCatalogueEventData({
-             event,
-             totalAuthorsRegistered: Object.keys(authorsMap).length,
-             totalBooksListed,
-             authors: Object.values(authorsMap)
-         });
-     } catch (e) {
-         toast.error("Failed to load catalogue");
-     }
-  };
-
-  const handleOpenSettlement = (eventId: number) => {
-     const relevantBooks = listedBooks.filter((lb: any) => lb.eventId === eventId);
-     setSettlementData(relevantBooks.map((lb: any) => ({
-        eventBookId: lb.id,
-        bookId: lb.bookId,
-        listedStock: lb.listedStock,
-        soldStock: lb.soldStock || 0,
-        returnedStock: lb.returnedStock || 0,
-        isSettled: lb.listedStock === (lb.soldStock || 0) + (lb.returnedStock || 0)
-     })));
-     setSettleEventId(eventId);
-  };
-
-  const [isSubmittingSettlement, setIsSubmittingSettlement] = useState(false);
-
-  const handleSubmitSettlement = async (e: React.FormEvent) => {
-     e.preventDefault();
-     if (isSubmittingSettlement) return;
-     setIsSubmittingSettlement(true);
-     try {
-        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${settleEventId}/settle`, {
-           settlements: settlementData
-        }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }});
-        toast.success("Inventory settled successfully! Remaining stock added back to your inventory.");
-        setSettleEventId(null);
-        fetchAuthorEvents(); // Reload to reflect settled status
-        setTimeout(() => window.location.reload(), 1500); // Reload the whole page to update the root dashboardData state!
-     } catch (err) {
-        toast.error("Failed to submit settlement");
-     } finally {
-        setIsSubmittingSettlement(false);
-     }
-  };
-
-  useEffect(() => {
-     const pending = invites.find((inv: any) => inv.optInStatus === 'Opted-In' && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0)));
-     if (pending && !settleEventId) {
-        handleOpenSettlement(pending.eventId);
-     }
-  }, [invites, listedBooks]);
-
-  const submitOptIn = async (eventId: number, evt: any) => {
-    let calculatedFee = 0;
-    if (evt.feeType === 'Flat Fee') calculatedFee = evt.registrationFee;
-    else if (evt.feeType === 'Per Author') calculatedFee = evt.registrationFee;
-    else if (evt.feeType === 'Per Title') calculatedFee = evt.registrationFee * selectedBooksToLink.length;
-
-    if (calculatedFee > 0 && !paymentScreenshotBlob) {
-      toast.error('Please upload your payment screenshot.');
-      return;
-    }
-
-    setButtonStates(prev => ({...prev, ['optIn_' + eventId]: true}));
-    try {
-      const formData = new FormData();
-      formData.append('booksToLink', JSON.stringify(selectedBooksToLink));
-      if (paymentScreenshotBlob) {
-        formData.append('paymentScreenshot', paymentScreenshotBlob);
-      }
-
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/opt-in`, formData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'multipart/form-data' }
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      toast.success("Successfully opted in to Event!");
-      setOptInEventId(null);
-      setPaymentScreenshotBlob(null);
-      fetchAuthorEvents();
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || 'Opt-in failed';
-      toast.error(msg);
+      setInvites(res.data.eventInvites || []);
+      setBooks(res.data.books || []);
+      setListedBooks(res.data.listedBooks || []);
+      setPastEvents(res.data.pastEvents || []);
+      setAvailableEvents(res.data.availableEvents || []);
+      if (res.data.books && res.data.books.length > 0) {
+        setSelectedBookIds(res.data.books.map((b: any) => b.id.toString()));
+      }
+    } catch (err) {
+      toast.error('Failed to load events');
     } finally {
-      setButtonStates(prev => ({...prev, ['optIn_' + eventId]: false}));
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="w-1/3 h-8 dash-skeleton rounded-lg mb-6"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-64 dash-skeleton rounded-2xl border border-gray-100 shadow-sm"></div>
-          ))}
-        </div>
+  // Combine invites and past events for the events list
+  const allEvents = [
+    ...(registrations || []).map((r: any) => ({
+      id: 'act_' + r.activityId,
+      name: r.activity?.name || 'Unknown Event',
+      startDate: r.activity?.date,
+      location: r.activity?.city,
+      type: r.activity?.type || 'Activity',
+      registration: r.status,
+      paymentStatus: r.amount > 0 ? 'Paid' : 'Unpaid',
+      amountPaid: r.amount || 0,
+      isActivity: true
+    })),
+    ...invites.map((inv: any) => ({
+      ...inv.event,
+      registration: inv.optInStatus,
+      paymentStatus: inv.paymentStatus,
+      manualTotalSold: inv.manualTotalSold,
+      manualTotalRevenue: inv.manualTotalRevenue,
+      isPast: inv.event?.status === 'Past' || (inv.event?.date && new Date(inv.event.date) < new Date()),
+      isInvite: true
+    })),
+    ...availableEvents.map((evt: any) => ({
+      ...evt,
+      registration: 'Pending',
+      paymentStatus: '-',
+      isPast: evt.status === 'Past' || (evt.date && new Date(evt.date) < new Date()),
+      isInvite: true
+    }))
+  ];
+
+  const getEventBooks = (eventId: number) => listedBooks.filter((lb: any) => lb.eventId === eventId);
+  const getPastEventBooks = (eventId: number) => {
+    const pe = pastEvents.find(p => p.eventId === eventId);
+    return pe?.books || [];
+  };
+
+  const filteredEvents = allEvents.filter((evt: any) => {
+    if (eventFilter === 'UPCOMING' && evt.isPast) return false;
+    if (eventFilter === 'PAST' && !evt.isPast) return false;
+    if (eventFilter === 'INVITES' && !evt.isInvite) return false;
+    if (searchTerm) {
+        return (evt.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+               (evt.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+    }
+    return true;
+  });
+
+  if (loading) return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[1,2,3,4].map(n => <div key={n} className="h-24 bg-gray-100 animate-pulse rounded-xl"></div>)}
       </div>
-    );
-  }
-
-
-
-
-  return (
-    <div>
-
-      {/* Settlement Modal */}
-      {settleEventId && (
-        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div className="p-8 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
-               <div>
-                 <h2 className="text-xl font-serif text-paa-navy">Settle Event Inventory</h2>
-                 <p className="text-xs text-gray-500 mt-1">Please enter the exact number of books sold and returned. (Sold + Returned must equal Listed)</p>
-               </div>
-               {invites.some((inv: any) => inv.eventId === settleEventId && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === settleEventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) ? null : (
-                  <button onClick={() => setSettleEventId(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
-               )}
-            </div>
-            <form onSubmit={handleSubmitSettlement} className="p-6 overflow-y-auto">
-               <div className="space-y-4">
-                  {settlementData.map((sd, idx) => {
-                     const bookName = books.find((b: any) => b.id === sd.bookId)?.title || "Unknown Book";
-                     return (
-                        <div key={sd.eventBookId} className="p-4 border border-paa-navy/5 rounded-3xl-2xl bg-gray-50 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                           <div className="flex-1">
-                              <h4 className="font-bold text-paa-navy text-sm">{bookName}</h4>
-                              <p className="text-xs text-gray-500 mt-1 font-bold tracking-widest uppercase">Listed: {sd.listedStock}</p>
-                           </div>
-                           {sd.isSettled ? (
-                              <div className="text-sm font-bold text-green-700 bg-green-50 px-4 py-2 border border-green-200">Already Settled</div>
-                           ) : (
-                              <div className="flex gap-4">
-                                 <div className="w-24">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Sold</label>
-                                    <input type="number" required min="0" max={sd.listedStock} value={sd.soldStock} onChange={e => {
-                                       const sold = parseInt(e.target.value) || 0;
-                                       if (sold > sd.listedStock) return;
-                                       const newSd = [...settlementData];
-                                       newSd[idx].soldStock = sold;
-                                       newSd[idx].returnedStock = newSd[idx].listedStock - sold;
-                                       setSettlementData(newSd);
-                                    }} className="w-full p-2 text-sm border border-paa-navy/20 focus:border-paa-navy outline-none" />
-                                 </div>
-                                 <div className="w-24">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Returned</label>
-                                    <input type="number" required min="0" max={sd.listedStock} value={sd.returnedStock} readOnly className="w-full p-2 text-sm border border-paa-navy/20 outline-none bg-gray-100 text-gray-500" />
-                                 </div>
-                              </div>
-                           )}
-                        </div>
-                     )
-                  })}
-               </div>
-               <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-paa-navy/5">
-                  {invites.some((inv: any) => inv.eventId === settleEventId && inv.event.status === 'Past' && listedBooks.some((lb: any) => lb.eventId === settleEventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) ? null : (
-                     <button type="button" onClick={() => setSettleEventId(null)} className="px-6 py-2 bg-gray-100 text-gray-600 text-xs font-bold uppercase tracking-widest hover:bg-gray-200">Cancel</button>
-                  )}
-                  <button type="submit" disabled={isSubmittingSettlement || settlementData.every(s => s.isSettled) || settlementData.some(s => s.listedStock !== s.soldStock + s.returnedStock)} className="px-6 py-2 bg-paa-navy text-paa-cream text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy disabled:opacity-50">{isSubmittingSettlement ? 'Submitting...' : 'Submit Settlement'}</button>
-               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <h1 className="text-4xl font-serif text-paa-navy mb-8 text-center uppercase">EVENTS ECOSYSTEM</h1>
-      
-      {invites.length === 0 ? (
-         <div className="p-8 text-center text-gray-500 bg-white border border-gray-100 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            You do not have any active event invitations right now.
-         </div>
-      ) : (
-         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...invites].sort((a: any, b: any) => {
-               if (a.event.status === 'Past' && b.event.status !== 'Past') return -1;
-               if (a.event.status !== 'Past' && b.event.status === 'Past') return 1;
-               return new Date(b.event.date).getTime() - new Date(a.event.date).getTime();
-            }).map((invite) => {
-               const evt = invite.event;
-               const isOptedIn = invite.optInStatus === 'Opted-In';
-               const isAwaitingApproval = invite.optInStatus === 'Awaiting Approval';
-               const myBooksForEvent = listedBooks.filter(lb => lb.eventId === evt.id);
-               
-               return (
-                 <div key={invite.id} className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col relative overflow-hidden h-full">
-                    <div className={`${evt.status === 'Upcoming' ? 'bg-blue-600' : 'bg-gray-500'} px-4 py-2 text-white font-bold text-xs uppercase tracking-widest flex justify-between items-center z-10 relative`}>
-                       <span>{evt.status}</span>
-                       <div className="flex gap-2 items-center">
-                         <span className="bg-white/20 px-2 py-0.5 rounded-3xl-2xl text-[10px]">
-                            {isOptedIn ? 'Opted In' : (isAwaitingApproval ? 'Awaiting Approval' : 'Action Required')}
-                         </span>
-                       </div>
-                    </div>
-
-                    <div className="p-6 flex-1 flex flex-col">
-                       {evt.bannerUrl ? (
-                         <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 bg-gray-100">
-                           <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Event Poster" className="w-full h-full object-cover opacity-85" />
-                         </div>
-                       ) : (
-                         <div className="w-full h-32 mb-4 rounded-xl overflow-hidden shrink-0 border border-paa-navy/5 flex items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100">
-                            <CalendarIcon className="w-8 h-8 text-gray-300" />
-                         </div>
-                       )}
-                       <h4 className="text-xl font-serif font-medium text-paa-navy mb-4">{evt.name}</h4>
-                       <div className="space-y-3 mb-6 flex-1 text-sm font-medium text-paa-gray-text">
-                          <p className="flex items-center gap-3"><CalendarIcon className="w-4 h-4 text-paa-navy/50"/> {evt.date} &bull; {evt.duration}</p>
-                          <p className="flex items-center gap-3"><MapPin className="w-4 h-4 text-paa-navy/50"/> {evt.location}</p>
-                       </div>
-
-                       <div className="pt-4 border-t border-paa-navy/5 flex flex-col gap-2 mt-auto">
-                          <button onClick={() => handleViewCatalogue(evt.id)} className="dash-btn dash-btn-ghost w-full justify-center border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                             View Participants Catalogue
-                          </button>
-                          
-                          {isOptedIn && evt.status !== 'Past' && evt.livePosEnabled !== false && (
-                             <button onClick={() => navigate(`/dashboard/pos/${evt.id}`)} className="dash-btn dash-btn-ghost w-full justify-center border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800 mt-2">
-                                Launch Live POS
-                             </button>
-                          )}
-                       </div>
-                       
-                       {isOptedIn ? (
-                          <div className="bg-green-50 p-4 border border-green-200 rounded-xl mt-4">
-                             <p className="text-xs font-bold uppercase tracking-widest text-green-800 mb-2 border-b border-green-200 pb-1">Your Listed Inventory</p>
-                             <ul className="space-y-1">
-                               {myBooksForEvent.map(mb => {
-                                  const bDetails = books.find(b => b.id === mb.bookId);
-                                  return (
-                                     <li key={mb.id} className="text-sm flex justify-between text-green-900">
-                                        <span>{bDetails?.title || 'Unknown Book'}</span>
-                                        <span className="font-bold">{mb.listedStock} units</span>
-                                     </li>
-                                  )
-                               })}
-                             </ul>
-                             {evt.status === 'Past' && (
-                                <button onClick={() => handleOpenSettlement(evt.id)} className="dash-btn dash-btn-primary w-full justify-center mt-4">Settle Inventory</button>
-                             )}
-                          </div>
-                       ) : (
-                          <div className="pt-4 border-t border-gray-100">
-                             {optInEventId === evt.id ? (
-                               <div className="space-y-4">
-                                  <p className="text-xs font-bold uppercase text-paa-navy mb-2">Select Books to List:</p>
-                                  {books.map(b => {
-                                     const isSelected = selectedBooksToLink.find(sb => sb.bookId === String(b.id));
-                                     const availableStock = b.stock ?? 0;
-                                     const enteredQty = isSelected ? parseInt(isSelected.stock) || 0 : 0;
-                                     const isOverStock = enteredQty > availableStock;
-                                     return (
-                                        <div key={b.id} className={`flex items-center gap-3 p-2 border rounded-lg ${isOverStock ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'}`}>
-                                           <input type="checkbox" checked={!!isSelected} onChange={(e) => {
-                                              if (e.target.checked) setSelectedBooksToLink([...selectedBooksToLink, {bookId: String(b.id), stock: String(Math.min(5, availableStock))}])
-                                              else setSelectedBooksToLink(selectedBooksToLink.filter(sb => sb.bookId !== String(b.id)))
-                                           }} disabled={availableStock === 0} />
-                                           <div className="flex-1 min-w-0">
-                                              <span className="text-sm block truncate">{b.title}</span>
-                                              <span className={`text-[10px] font-bold uppercase tracking-wider ${availableStock === 0 ? 'text-red-500' : availableStock < 10 ? 'text-orange-500' : 'text-green-600'}`}>
-                                                 {availableStock === 0 ? 'Out of stock' : `${availableStock} available`}
-                                              </span>
-                                           </div>
-                                           {isSelected && (
-                                              <div className="flex flex-col items-end gap-1">
-                                                 <input
-                                                    type="number" min="1" max={availableStock}
-                                                    className={`w-20 p-1 text-sm border outline-none rounded ${isOverStock ? 'border-red-400 bg-red-50 text-red-700' : 'border-gray-300'}`}
-                                                    value={isSelected.stock}
-                                                    onChange={(e) => {
-                                                       setSelectedBooksToLink(selectedBooksToLink.map(sb => sb.bookId === String(b.id) ? {...sb, stock: e.target.value} : sb))
-                                                    }}
-                                                    placeholder="Qty"
-                                                 />
-                                                 {isOverStock && (
-                                                    <span className="text-[10px] text-red-600 font-bold">Exceeds stock!</span>
-                                                 )}
-                                              </div>
-                                           )}
-                                        </div>
-                                     );
-                                  })}
-                                  {(() => {
-                                      let calculatedFee = 0;
-                                      if (evt.feeType === 'Flat Fee') calculatedFee = evt.registrationFee;
-                                      else if (evt.feeType === 'Per Author') calculatedFee = evt.registrationFee;
-                                      else if (evt.feeType === 'Per Title') calculatedFee = evt.registrationFee * selectedBooksToLink.length;
-
-                                      if (calculatedFee > 0) {
-                                         return (
-                                            <div className="bg-orange-50 p-4 border border-orange-200 rounded-3xl-2xl mt-4">
-                                               <p className="text-sm font-bold text-orange-900 mb-2">Registration Fee: ₹{calculatedFee}</p>
-                                               <p className="text-xs text-orange-800 mb-4">Please pay the registration fee using the QR code below and upload a screenshot of the successful payment.</p>
-                                               
-                                               <div className="flex flex-col items-center mb-4">
-                                                  <img src={qrCode} alt="Payment QR" className="w-32 h-32 rounded-3xl-2xl border shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out mb-2" />
-                                                  <p className="text-xs font-bold text-gray-600">Scan to pay ₹{calculatedFee}</p>
-                                               </div>
-
-                                               <div>
-                                                  <label className="text-[10px] font-bold uppercase tracking-widest text-paa-navy mb-1 block">Upload Payment Screenshot *</label>
-                                                  <input type="file" accept="image/*" className="w-full border border-gray-300 rounded-lg p-2 text-xs outline-none bg-white focus:border-paa-navy" onChange={(e) => {
-                                                     if (e.target.files && e.target.files[0]) {
-                                                        setPaymentScreenshotBlob(e.target.files[0]);
-                                                     } else {
-                                                        setPaymentScreenshotBlob(null);
-                                                     }
-                                                  }} />
-                                               </div>
-                                            </div>
-                                         );
-                                      }
-                                      return null;
-                                   })()}
-                                   <div className="flex gap-2 pt-2 mt-4">
-                                      <button onClick={() => { setOptInEventId(null); setPaymentScreenshotBlob(null); }} className="dash-btn dash-btn-ghost flex-1 justify-center border-gray-300 text-gray-600">Cancel</button>
-                                      <button
-                                         onClick={() => submitOptIn(evt.id, evt)}
-                                         disabled={buttonStates['optIn_' + evt.id] || selectedBooksToLink.length === 0 || selectedBooksToLink.some(sb => { const book = books.find(b => String(b.id) === sb.bookId); return parseInt(sb.stock) > (book?.stock ?? 0); })}
-                                         className="dash-btn dash-btn-primary flex-1 justify-center disabled:opacity-50"
-                                      >
-                                         {buttonStates['optIn_' + evt.id] ? 'Confirming...' : 'Confirm'}
-                                      </button>
-                                   </div>
-                               </div>
-                             ) : isAwaitingApproval ? (
-                               <div className="bg-orange-50 text-orange-800 text-sm p-3 rounded-lg text-center font-medium border border-orange-200">
-                                  Approval Pending
-                               </div>
-                             ) : (
-                               <button onClick={() => { setOptInEventId(evt.id); setSelectedBooksToLink([]); setPaymentScreenshotBlob(null); }} className="dash-btn dash-btn-primary w-full justify-center">
-                                  Opt-In & List Books
-                               </button>
-                             )}
-                          </div>
-                       )}
-                    </div>
-                 </div>
-               )
-            })}
-         </div>
-      )}
-
-      {/* Past Events History */}
-      {pastEvents.length > 0 && (
-        <div className="mt-10">
-          <h2 className="text-2xl font-serif text-paa-navy mb-6 tracking-tight">Past Events History</h2>
-          <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden mb-12">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
-                  <tr>
-                    <th className="px-4 py-3 font-bold">Event Name</th>
-                    <th className="px-4 py-3 font-bold">Date & Location</th>
-                    <th className="px-4 py-3 font-bold text-center">Authors Participated</th>
-                    <th className="px-4 py-3 font-bold text-center">Books Listed</th>
-                    <th className="px-4 py-3 font-bold text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {pastEvents.map((evt: any, idx: number) => (
-                    <tr key={evt.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <p className="font-bold text-paa-navy">{evt.name}</p>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">EVT-{evt.id}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-paa-navy">{evt.date}</p>
-                        <p className="text-xs text-gray-500 truncate max-w-[200px]" title={evt.location}>{evt.location}</p>
-                      </td>
-                      <td className="px-4 py-3 text-center font-bold text-paa-navy">{evt._count?.eventAuthors ?? 0}</td>
-                      <td className="px-4 py-3 text-center font-bold text-paa-navy">{evt._count?.eventBooks ?? 0}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="inline-flex items-center justify-center bg-gray-100 text-gray-700 px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border border-gray-200">Completed</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {catalogueEventData && (
-        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-white rounded-3xl-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div className="p-8 border-b border-paa-navy/5 flex justify-between items-center bg-[#f8fafc]">
-              <h2 className="text-2xl font-serif text-paa-navy">Event Participants Catalogue</h2>
-              <button onClick={() => setCatalogueEventData(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={24} className="text-gray-500" /></button>
-            </div>
-            <div className="p-6 overflow-y-auto flex-1">
-               <div className="text-center mb-6">
-                  <h3 className="text-2xl font-serif text-paa-navy">{catalogueEventData.event.name}</h3>
-                  <p className="text-sm font-medium text-gray-500">{catalogueEventData.event.date} • {catalogueEventData.event.location}</p>
-               </div>
-               
-               <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-blue-50 p-4 rounded-3xl-2xl text-center border border-blue-100">
-                     <p className="text-xs font-bold uppercase tracking-widest text-blue-800 mb-1">Authors Participating</p>
-                     <p className="text-3xl font-black text-paa-navy">{catalogueEventData.totalAuthorsRegistered}</p>
-                  </div>
-                  <div className="bg-green-50 p-4 rounded-3xl-2xl text-center border border-green-100">
-                     <p className="text-xs font-bold uppercase tracking-widest text-green-800 mb-1">Total Books Listed</p>
-                     <p className="text-3xl font-black text-paa-navy">{catalogueEventData.totalBooksListed}</p>
-                  </div>
-               </div>
-
-               <div>
-                  <h4 className="text-lg font-serif text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Author Catalogue</h4>
-                  <div className="space-y-6">
-                     {catalogueEventData.authors.map((author: any) => (
-                        <div key={author.id} className="border border-gray-200 rounded-3xl-2xl p-4 bg-white shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-                           <div className="flex items-center gap-4 mb-4">
-                              <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                                 {author.photoUrl ? <img src={author.photoUrl} alt={author.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><User size={24} /></div>}
-                              </div>
-                              <div>
-                                 <h5 className="font-bold text-paa-navy text-lg">{author.name}</h5>
-                                 <p className="text-xs text-gray-500 line-clamp-1">{author.bio || 'No bio available.'}</p>
-                              </div>
-                           </div>
-                           <div className="bg-gray-50 rounded-3xl-2xl border border-gray-200 p-3">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Books Showcased</p>
-                              <div className="space-y-2">
-                                 {author.books.map((b: any, idx: number) => (
-                                    <div key={idx} className="flex justify-between items-center text-sm">
-                                       <div>
-                                          <span className="font-medium text-paa-navy">{b.title}</span>
-                                          <span className="ml-2 text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded-3xl-2xl">{b.category}</span>
-                                       </div>
-                                       <span className="text-xs font-bold text-gray-400">{b.listedStock} Copies</span>
-                                    </div>
-                                 ))}
-                              </div>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
+      <div className="h-64 bg-gray-100 animate-pulse rounded-xl"></div>
+      <div className="space-y-4">
+        {[1,2,3].map(n => <div key={n} className="h-16 bg-gray-100 animate-pulse rounded-xl"></div>)}
+      </div>
     </div>
   );
+
+  return (
+    <div className="bg-white rounded-xl">
+      <div className="flex border-b border-gray-200 mb-6">
+        <button onClick={() => setActiveTab('events')} className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'events' ? 'border-paa-navy text-paa-navy' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Events Overview</button>
+        <button onClick={() => setActiveTab('performance')} className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'performance' ? 'border-paa-navy text-paa-navy' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Book Performance</button>
+      </div>
+
+      {activeTab === 'events' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Events</div>
+              <div className="text-2xl font-serif text-paa-navy font-bold">{allEvents.length}</div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
+              <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Books Sold</div>
+             <div className="text-2xl font-serif text-blue-800 font-bold">
+                 {allEvents.reduce((acc: number, evt: any) => {
+                    let sold = 0;
+                    if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
+                       sold = evt.manualTotalSold;
+                    } else if (evt.isPast && evt.isDataUpdated) {
+                       evt.books?.forEach((b: any) => sold += (b.soldStock || 0));
+                    } else if (evt.isInvite) {
+                       getEventBooks(evt.id).forEach((b: any) => sold += (b.soldStock || 0));
+                    }
+                    return acc + sold;
+                 }, 0)}
+              </div>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
+              <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Revenue</div>
+              <div className="text-2xl font-serif text-emerald-800 font-bold">
+                 ₹{allEvents.reduce((acc: number, evt: any) => {
+                    let rev = 0;
+                    if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
+                       rev = evt.manualTotalRevenue;
+                    } else if (evt.isPast && evt.isDataUpdated) {
+                       evt.books?.forEach((b: any) => rev += (b.revenue || 0));
+                    } else if (evt.isInvite) {
+                       getEventBooks(evt.id).forEach((b: any) => rev += (b.revenue || 0));
+                    }
+                    return acc + rev;
+                 }, 0).toLocaleString()}
+              </div>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
+              <div className="text-[10px] font-bold text-orange-700 uppercase tracking-wider mb-1">Total Payments Done</div>
+              <div className="text-2xl font-serif text-orange-800 font-bold">₹{(registrations || []).reduce((sum: number, r: any) => sum + (r.amount || 0), 0).toLocaleString()}</div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h4 className="font-bold text-paa-navy mb-4">Books Sold per Event</h4>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={allEvents.map((evt: any) => {
+                  let sold = 0;
+                  if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
+                    sold = evt.manualTotalSold;
+                  } else if (evt.isPast && evt.isDataUpdated) {
+                    evt.books?.forEach((b: any) => { sold += (b.soldStock || 0); });
+                  } else if (evt.isInvite) {
+                    const evtBooks = getEventBooks(evt.id);
+                    evtBooks.forEach((b: any) => { sold += (b.soldStock || 0); });
+                  }
+                  const evtName = evt.name || evt.title || 'Unknown Event';
+                  return { name: evtName, sold };
+                })} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                  <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }} />
+                  <Bar dataKey="sold" name="Books Sold" fill="#1e3a8a" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+             <div className="flex gap-2">
+               <button onClick={() => setEventFilter('ALL')} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${eventFilter === 'ALL' ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}>All</button>
+               <button onClick={() => setEventFilter('UPCOMING')} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${eventFilter === 'UPCOMING' ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}>Upcoming</button>
+               <button onClick={() => setEventFilter('PAST')} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${eventFilter === 'PAST' ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}>Past</button>
+               <button onClick={() => setEventFilter('INVITES')} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${eventFilter === 'INVITES' ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}>Invites</button>
+             </div>
+             <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input type="text" placeholder="Search events..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-paa-navy" />
+             </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                  <th className="p-4 font-semibold rounded-tl-lg">Event</th>
+                  <th className="p-4 font-semibold">Date</th>
+                  <th className="p-4 font-semibold">Location</th>
+                  <th className="p-4 font-semibold">Type</th>
+                  <th className="p-4 font-semibold text-right">Books Sold</th>
+                  <th className="p-4 font-semibold text-right">Revenue</th>
+                  <th className="p-4 font-semibold text-right">Payment Done</th>
+                  <th className="p-4 font-semibold text-center rounded-tr-lg">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredEvents.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-gray-500">No events found.</td></tr>}
+                {filteredEvents.map((evt: any, i: number) => {
+                  let sold = 0;
+                  let rev = 0;
+                  if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
+                    sold = evt.manualTotalSold;
+                    rev = evt.manualTotalRevenue || 0;
+                  } else if (evt.isPast && evt.isDataUpdated) {
+                    evt.books?.forEach((b: any) => {
+                      sold += (b.soldStock || 0);
+                      rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0);
+                    });
+                  } else if (evt.isInvite) {
+                    const evtBooks = getEventBooks(evt.id);
+                    evtBooks.forEach((b: any) => {
+                      sold += (b.soldStock || 0);
+                      rev += (b.soldStock || 0) * (b.book?.mrp || 0);
+                    });
+                  }
+
+                  return (
+                    <React.Fragment key={i}>
+                    <tr className="hover:bg-gray-50/50">
+                      <td className="p-4">
+                        <div className="font-semibold text-gray-900">{evt.name}</div>
+                      </td>
+                      <td className="p-4 text-sm text-gray-600">{new Date(evt.startDate || evt.date).toLocaleDateString()}</td>
+                      <td className="p-4 text-sm text-gray-600">{evt.location || evt.venue || 'TBA'}</td>
+                      <td className="p-4 text-sm font-semibold">
+                         <span className={`px-2 py-1 rounded-full text-[10px] uppercase tracking-wider ${evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                           {evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live')}
+                         </span>
+                      </td>
+                      <td className="p-4 text-sm font-mono text-right">{sold > 0 || (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) ? sold : '-'}</td>
+                      <td className="p-4 text-sm font-mono text-right">{rev > 0 || (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) ? `₹${rev}` : '-'}</td>
+                      <td className="p-4 text-sm font-mono text-right">{evt.amountPaid ? `₹${evt.amountPaid}` : '-'}</td>
+                      <td className="p-4 text-center">
+                        <div className="flex gap-2 justify-center items-center flex-wrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${evt.registration === 'Registered' ? 'bg-emerald-100 text-emerald-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {evt.registration}
+                          </span>
+
+                          {!(evt.isPast) && (
+                            <button onClick={() => { 
+                               setExpandedEventId(expandedEventId === evt.id ? null : evt.id);
+                               if (expandedEventId !== evt.id && evt.isInvite && evt.registration === 'Pending') {
+                                  setSelectedInvite(evt);
+                                  setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: 10, included: true })));
+                                  setPaymentScreenshot(null);
+                               }
+                            }} title="Toggle Inline Details" className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm">
+                               {expandedEventId === evt.id ? <ChevronDown className="w-4 h-4 transform rotate-180" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                          )}
+
+                          <button onClick={() => { setActiveTab('details'); setSelectedEventId(evt.id.toString()); }} title="View Full Details" className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors shadow-sm">
+                             <Eye className="w-4 h-4" />
+                          </button>
+
+                          {evt.livePosEnabled && !evt.isPast && (
+                            <button onClick={() => window.open('/pos/' + evt.id, '_blank')} className="text-[10px] bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2 py-1 rounded-full font-bold shadow flex items-center gap-1 inline-flex whitespace-nowrap">
+                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Launch POS
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedEventId === evt.id && (
+                       <tr className="bg-gray-50 border-b border-gray-200">
+                          <td colSpan={8} className="p-6">
+                             <div className="flex flex-col xl:flex-row gap-6 items-stretch w-full max-w-full">
+                                <div className="flex-1 min-w-[300px] border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col h-full">
+                                   <div className="bg-gray-100 p-4 border-b border-gray-200">
+                                      <h4 className="font-serif font-bold text-paa-navy text-base">{evt.name}</h4>
+                                      <p className="text-xs text-gray-500 font-medium">{evt.location}</p>
+                                   </div>
+                                   <div className="flex-1 flex flex-col h-full">
+                                      {evt.bannerUrl ? (
+                                         <div className="w-full flex-1 min-h-[200px] overflow-hidden bg-gray-50 relative">
+                                            <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+                                         </div>
+                                      ) : (
+                                         <div className="w-full flex-1 min-h-[200px] flex items-center justify-center bg-gray-50">
+                                            <div className="text-center text-gray-400">
+                                                <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                                                <span className="text-xs font-bold uppercase tracking-widest opacity-50">No Banner</span>
+                                            </div>
+                                         </div>
+                                      )}
+                                      <div className="p-4 grid grid-cols-3 gap-3 border-t border-gray-100 bg-white shrink-0">
+                                         <div>
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Date</div>
+                                            <div className="font-semibold text-paa-navy text-xs">{new Date(evt.startDate || evt.date).toLocaleDateString()}</div>
+                                         </div>
+                                         <div>
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Timings</div>
+                                            <div className="font-semibold text-paa-navy text-xs">{(evt.startTime && evt.endTime) ? `${evt.startTime} to ${evt.endTime}` : 'Not provided'}</div>
+                                         </div>
+                                         <div>
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fee</div>
+                                            <div className="font-semibold text-emerald-700 text-xs">₹{evt.registrationFee || 0}</div>
+                                         </div>
+                                      </div>
+                                   </div>
+                                </div>
+                                {evt.isInvite && evt.registration === 'Pending' ? (
+                                    <div className="flex-1 min-w-[300px] border border-gray-200 rounded-xl bg-white shadow-sm p-4 flex flex-col h-full animate-fade-in-up">
+                                        <h4 className="font-bold text-sm text-gray-700 mb-3 border-b pb-2">Opt-In: Select Books</h4>
+                                        <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-2">
+                                            {optInBooks.map((b, idx) => (
+                                              <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 rounded border border-gray-200">
+                                                <input type="checkbox" checked={b.included} onChange={e => { const newB = [...optInBooks]; newB[idx].included = e.target.checked; setOptInBooks(newB); }} className="text-paa-navy focus:ring-paa-navy rounded" />
+                                                <span className="flex-1 text-sm font-medium text-gray-800 truncate">{b.title}</span>
+                                                <input type="number" disabled={!b.included} value={b.stock} onChange={e => { const newB = [...optInBooks]; newB[idx].stock = parseInt(e.target.value) || 0; setOptInBooks(newB); }} className="w-16 p-1 text-xs border border-gray-300 rounded disabled:bg-gray-100 disabled:text-gray-400" min="0" />
+                                              </div>
+                                            ))}
+                                        </div>
+                                        {evt.registrationFee > 0 && (() => {
+                                          const selectedBooksCount = optInBooks.filter((b: any) => b.included).length;
+                                          const totalFee = evt.feeType === 'Per Title' ? evt.registrationFee * selectedBooksCount : evt.registrationFee;
+                                          return (
+                                          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800 shadow-sm">
+                                            <div className="flex justify-between items-center mb-1">
+                                              <div className="font-bold">Total Registration Fee:</div>
+                                              <div className="text-xl font-black text-paa-navy">₹{totalFee}</div>
+                                            </div>
+                                            {evt.feeType === 'Per Title' && <div className="text-xs text-yellow-700 mb-3">(₹{evt.registrationFee} per title × {selectedBooksCount} selected)</div>}
+                                            
+                                            {totalFee > 0 && (
+                                              <div className="flex flex-col sm:flex-row gap-4 mt-4 border-t border-yellow-200 pt-4">
+                                                <div>
+                                                   <div className="text-[10px] font-bold mb-2 uppercase tracking-widest text-yellow-900">Scan to Pay</div>
+                                                   <img src={qrCode} alt="Payment QR" className="w-24 h-24 object-contain bg-white p-1 border border-yellow-300 rounded shadow-sm" />
+                                                </div>
+                                                <div className="flex-1 flex flex-col justify-center">
+                                                   <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-yellow-900">Upload Screenshot</label>
+                                                   <input type="file" accept="image/*" onChange={(e) => setPaymentScreenshot(e.target.files?.[0] || null)} className="text-xs bg-white p-2 rounded border border-yellow-300 w-full" />
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                          );
+                                        })()}
+                                        <div className="flex gap-2 shrink-0">
+                                            <button onClick={() => handleOptInSubmit('reject')} className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">Decline</button>
+                                            <button onClick={() => handleOptInSubmit('approve')} className="flex-1 px-4 py-2 bg-paa-navy text-paa-cream rounded-lg text-sm font-bold hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-sm">Submit Opt-In</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                <div className="flex-1 min-w-[300px] border border-gray-200 rounded-xl bg-white shadow-sm p-4 flex flex-col h-full">
+                                   <h4 className="font-bold text-sm text-gray-700 mb-4 flex items-center gap-2 border-b pb-2"><BookOpen className="w-4 h-4" /> Book Inventory</h4>
+                                   <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+                                      {(() => {
+                                         const currentBooks = evt.isInvite ? getEventBooks(evt.id) : (evt.isPast ? getPastEventBooks(evt.id) : []);
+                                         if (currentBooks.length === 0) return <p className="text-sm text-gray-500 italic">No inventory recorded.</p>;
+                                         return currentBooks.map((b: any, j: number) => {
+                                            const bDetails = books.find(book => book.id === b.bookId);
+                                            return (
+                                              <React.Fragment key={j}>
+                                               <div className="flex justify-between items-center bg-gray-50 p-2 rounded text-sm border border-gray-100">
+                                                  <span className="font-medium text-gray-800">{b.title || bDetails?.title || 'Unknown'}</span>
+                                                  <div className="flex items-center gap-4 text-xs font-mono">
+                                                     <span className="text-gray-500" title="Listed">L: {b.listedStock}</span>
+                                                     <span className="text-indigo-600 font-bold" title="Sold">S: {b.soldStock || 0}</span>
+                                                  </div>
+                                               </div>
+                                              </React.Fragment>
+                                            )
+                                         });
+                                      })()}
+                                   </div>
+                                </div>
+                                )}
+                             </div>
+                          </td>
+                       </tr>
+                    )}
+                  </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+
+
+      {activeTab === 'details' && (
+        <div className="space-y-6">
+          <div className="flex justify-start">
+             <button onClick={() => setActiveTab('events')} className="dash-btn bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors shadow-sm font-bold flex items-center gap-2">
+                 ← Back to Events Overview
+             </button>
+          </div>
+          {(() => {
+            const evt = allEvents.find((e: any) => e.id.toString() === selectedEventId);
+            if (!evt) return <div className="p-8 text-center text-gray-500">Event not found.</div>;
+
+            const isPastPending = evt.isPast && !evt.isDataUpdated;
+
+            let displayBooks: any[] = [];
+            if (evt.isPast) {
+              displayBooks = evt.books || [];
+            } else {
+              displayBooks = getEventBooks(evt.id).map((lb: any) => ({
+                bookId: lb.bookId,
+                title: lb.book?.title || lb.title || books.find(b => b.id === lb.bookId)?.title || 'Unknown Title',
+                listedStock: lb.listedStock,
+                soldStock: lb.soldStock,
+                returnedStock: lb.returnedStock,
+                revenue: lb.revenue,
+                posSold: 0,
+                manualSold: lb.soldStock
+              }));
+            }
+
+            return (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm flex gap-6">
+                  {evt.bannerUrl ? (
+                     <div className="w-48 h-32 rounded-lg overflow-hidden shrink-0 border border-gray-100">
+                       <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Banner" className="w-full h-full object-cover" />
+                     </div>
+                  ) : null}
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 font-serif">{evt.name}</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Date</div>
+                        <div className="text-sm font-medium text-paa-navy">{new Date(evt.startDate || evt.date).toLocaleDateString()}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Location</div>
+                        <div className="text-sm font-medium text-paa-navy">{evt.location || evt.venue || 'TBA'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Type</div>
+                        <div className="text-sm font-medium text-paa-navy">{evt.type || (evt.isPast ? 'Past Event' : 'Live Event')}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Status</div>
+                        <div className="text-sm font-medium text-paa-navy">{evt.status || (evt.isPast ? 'Completed' : 'Active')}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {isPastPending ? (
+                  <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-700">Data Pending</h3>
+                    <p className="text-sm text-gray-500 max-w-md mx-auto mt-2">The sales data for this past event has not been published by the admin yet. Please check back later.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                       <h4 className="font-bold text-paa-navy flex items-center gap-2"><Package className="w-4 h-4" /> Inventory & Sales Breakdown</h4>
+                    </div>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50/50 text-gray-500 text-[10px] uppercase tracking-widest font-bold">
+                          <th className="p-4">Book Title</th>
+                          <th className="p-4 text-right">Sent / Listed</th>
+                          <th className="p-4 text-right">Sold</th>
+                          <th className="p-4 text-right">Returned</th>
+                          <th className="p-4 text-right">Revenue Generated</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {displayBooks.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-500">No books listed for this event.</td></tr>}
+                        {displayBooks.map((b: any, j: number) => (
+                          <tr key={j} className="hover:bg-blue-50/30 transition-colors">
+                            <td className="p-4 font-semibold text-gray-900">{b.title || books.find((ab: any) => ab.id === b.bookId)?.title || 'Unknown Book'}</td>
+                            <td className="p-4 text-sm font-mono text-right text-gray-600">{b.listedStock || b.sent || 0}</td>
+                            <td className="p-4 text-sm font-mono text-right text-paa-navy font-bold">{b.soldStock || b.sold || 0}</td>
+                            <td className="p-4 text-sm font-mono text-right text-gray-600">{b.returnedStock || b.returned || 0}</td>
+                            <td className="p-4 text-sm font-mono text-right text-emerald-600 font-bold bg-emerald-50/30">₹{b.revenue || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+
+      {activeTab === 'performance' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h4 className="font-bold text-paa-navy mb-4">Book Sales Performance Over Time</h4>
+            <div className="w-full overflow-x-auto pb-4">
+              <div className="h-64" style={{ minWidth: `${Math.max(100, allEvents.length * 80)}px` }}>
+                <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={allEvents.filter((evt: any) => evt.isDataUpdated || !evt.isPast).map((evt: any) => {
+                  let sold = 0;
+                  let evtBooks: any[] = [];
+                  if (evt.isPast) evtBooks = evt.books || [];
+                  else evtBooks = getEventBooks(evt.id);
+                  evtBooks.forEach((b: any) => {
+                    if (selectedBookIds.length === 0 || selectedBookIds.includes(b.bookId.toString())) {
+                      sold += (b.soldStock || b.sold || 0);
+                    }
+                  });
+                  return { name: evt.name.length > 15 ? evt.name.substring(0, 15) + '...' : evt.name, sold };
+                })} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                  <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }} />
+                  <Bar dataKey="sold" name="Copies Sold" fill="#1e3a8a" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                </BarChart>
+              </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="mb-4">
+              <label className="text-sm font-semibold text-gray-700 block mb-2">Select Books to Analyze:</label>
+              <div className="flex flex-wrap gap-4">
+                {books.map((b: any) => (
+                  <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedBookIds.includes(b.id.toString())}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedBookIds([...selectedBookIds, b.id.toString()]);
+                        else setSelectedBookIds(selectedBookIds.filter(id => id !== b.id.toString()));
+                      }}
+                      className="text-paa-navy focus:ring-paa-navy rounded"
+                    />
+                    {b.title}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto border border-gray-200 rounded-xl">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                  <th className="p-4 font-semibold">Event</th>
+                  <th className="p-4 font-semibold text-right">Copies Sent</th>
+                  <th className="p-4 font-semibold text-right">Copies Sold</th>
+                  <th className="p-4 font-semibold text-right">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {allEvents.filter((evt: any) => evt.isDataUpdated || !evt.isPast).map((evt: any, i: number) => {
+                  let sent = 0;
+                  let sold = 0;
+                  let rev = 0;
+
+                  let evtBooks: any[] = [];
+                  if (evt.isPast) evtBooks = evt.books || [];
+                  else evtBooks = getEventBooks(evt.id);
+
+                  evtBooks.forEach((b: any) => {
+                    if (selectedBookIds.includes(b.bookId?.toString() || b.id?.toString())) {
+                      sent += (b.listedStock || b.sent || 0);
+                      sold += (b.soldStock || b.sold || 0);
+                      rev += (b.revenue || 0);
+                    }
+                  });
+
+                  if (sent === 0 && sold === 0 && rev === 0) return null;
+
+                  return (
+                    <tr key={i} className="hover:bg-gray-50/50">
+                      <td className="p-4 font-medium text-gray-900">{evt.name}</td>
+                      <td className="p-4 text-sm font-mono text-right">{sent}</td>
+                      <td className="p-4 text-sm font-mono text-right">{sold}</td>
+                      <td className="p-4 text-sm font-mono text-right text-emerald-600 font-medium">₹{rev}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  <Modal isOpen={isOptInModalOpen} onClose={() => setIsOptInModalOpen(false)} title={`Review Invite: ${selectedInvite?.name}`}>
+    {selectedInvite && (
+      <div className="space-y-6">
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <h3 className="font-bold text-blue-900 mb-1">Event Invitation</h3>
+          <p className="text-sm text-blue-800 mb-3">You have been invited to participate in this event. Please select the books you want to bring.</p>
+          <details className="bg-white rounded-lg p-3 text-sm text-gray-700 border border-blue-200 cursor-pointer shadow-sm mb-4">
+            <summary className="font-bold text-paa-navy focus:outline-none">View Event Details ▼</summary>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div><span className="font-semibold">Date:</span> {new Date(selectedInvite.startDate || selectedInvite.date).toLocaleDateString()}</div>
+              <div><span className="font-semibold">Location:</span> {selectedInvite.location || selectedInvite.venue || 'TBA'}</div>
+              <div><span className="font-semibold">Duration:</span> {selectedInvite.durationDays ? `${selectedInvite.durationDays} Days` : 'N/A'}</div>
+              <div><span className="font-semibold">Type:</span> {selectedInvite.type || 'N/A'}</div>
+              {selectedInvite.description && <div className="col-span-2"><span className="font-semibold">Description:</span> {selectedInvite.description}</div>}
+            </div>
+          </details>
+          {selectedInvite.registrationFee > 0 && (
+            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800 font-medium">
+              Registration Fee: ₹{selectedInvite.registrationFee}
+              <div className="mt-2">
+                <label className="block text-xs font-bold mb-1">Upload Payment Screenshot</label>
+                <input type="file" accept="image/*" onChange={(e) => setPaymentScreenshot(e.target.files?.[0] || null)} className="text-xs" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h4 className="font-bold text-gray-800 mb-3 border-b pb-2">Select Books for Event</h4>
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {optInBooks.map((b, idx) => (
+              <div key={idx} className={`flex items-center justify-between p-3 rounded-lg border ${b.included ? 'border-paa-navy bg-paa-navy/5' : 'border-gray-200 bg-gray-50'}`}>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const newBooks = [...optInBooks];
+                      newBooks[idx].included = !newBooks[idx].included;
+                      setOptInBooks(newBooks);
+                    }}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg ${b.included ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}
+                  >
+                    {b.included ? '-' : '+'}
+                  </button>
+                  <div>
+                    <div className={`font-semibold ${b.included ? 'text-paa-navy' : 'text-gray-400 line-through'}`}>{b.title}</div>
+                    {b.included && <div className="text-xs text-gray-500">Status: Selected</div>}
+                  </div>
+                </div>
+                {b.included && (
+                  <div className="flex flex-col items-end">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Stock</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={b.stock}
+                      onChange={(e) => {
+                        const newBooks = [...optInBooks];
+                        newBooks[idx].stock = parseInt(e.target.value) || 0;
+                        setOptInBooks(newBooks);
+                      }}
+                      className="w-20 border border-gray-300 rounded p-1 text-center font-mono text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+            {optInBooks.length === 0 && <p className="text-sm text-gray-500 italic">No approved books found in your catalog.</p>}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <button onClick={() => handleOptInSubmit('reject')} className="px-6 py-2 rounded-lg font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors border border-red-200">Decline Invite</button>
+          <button onClick={() => handleOptInSubmit('approve')} className="px-6 py-2 rounded-lg font-bold text-white bg-paa-navy hover:brightness-110 transition-all shadow-md">Accept & Register</button>
+        </div>
+      </div>
+    )}
+  </Modal>
 }
-
-
-
-
-
 
 function AuthorSalesReport({ data }: { data: any }) {
   const [reportPeriod, setReportPeriod] = useState('today');
@@ -3455,7 +3654,7 @@ function AuthorSalesReport({ data }: { data: any }) {
     const day = date.getDay();
     const diff = date.getDate() - day + (day === 0 ? -6 : 1);
     date.setDate(diff);
-    date.setHours(0,0,0,0);
+    date.setHours(0, 0, 0, 0);
     return date;
   };
 
@@ -3494,30 +3693,30 @@ function AuthorSalesReport({ data }: { data: any }) {
   let rangeEnd: Date | null = null;
 
   if (reportPeriod === 'today') {
-     rangeStart = new Date(now);
-     rangeEnd = new Date(now);
+    rangeStart = new Date(now);
+    rangeEnd = new Date(now);
   } else if (reportPeriod === 'week') {
-     rangeStart = getStartOfWeek(now);
-     rangeEnd = new Date(rangeStart);
-     rangeEnd.setDate(rangeStart.getDate() + 6);
+    rangeStart = getStartOfWeek(now);
+    rangeEnd = new Date(rangeStart);
+    rangeEnd.setDate(rangeStart.getDate() + 6);
   } else if (reportPeriod === 'month') {
-     rangeStart = new Date(parseInt(customYear), parseInt(customMonth), 1);
-     rangeEnd = new Date(parseInt(customYear), parseInt(customMonth) + 1, 0);
+    rangeStart = new Date(parseInt(customYear), parseInt(customMonth), 1);
+    rangeEnd = new Date(parseInt(customYear), parseInt(customMonth) + 1, 0);
   } else if (reportPeriod === 'custom' && customStartDate && customEndDate) {
-     rangeStart = new Date(customStartDate);
-     rangeEnd = new Date(customEndDate);
+    rangeStart = new Date(customStartDate);
+    rangeEnd = new Date(customEndDate);
   }
 
   if (rangeStart && rangeEnd) {
-     const curr = new Date(rangeStart);
-     curr.setHours(0,0,0,0);
-     const end = new Date(rangeEnd);
-     end.setHours(23,59,59,999);
-     while (curr <= end) {
-        const d = curr.toLocaleDateString('en-GB');
-        salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
-        curr.setDate(curr.getDate() + 1);
-     }
+    const curr = new Date(rangeStart);
+    curr.setHours(0, 0, 0, 0);
+    const end = new Date(rangeEnd);
+    end.setHours(23, 59, 59, 999);
+    while (curr <= end) {
+      const d = curr.toLocaleDateString('en-GB');
+      salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
+      curr.setDate(curr.getDate() + 1);
+    }
   }
 
   webOrders.forEach((o: any) => {
@@ -3533,10 +3732,10 @@ function AuthorSalesReport({ data }: { data: any }) {
     if (!salesByDate[d]) salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
     salesByDate[d].posSales += o.totalAmount;
     salesByDate[d].totalRevenue += o.totalAmount;
-    
+
     const qty = o.items.reduce((acc: number, item: any) => acc + item.quantity, 0);
     salesByDate[d].totalBooks += qty;
-  });const chartData = Object.values(salesByDate).sort((a, b) => {
+  }); const chartData = Object.values(salesByDate).sort((a, b) => {
     const [d1, m1, y1] = a.date.split('/');
     const [d2, m2, y2] = b.date.split('/');
     return new Date(`${y1}-${m1}-${d1}`).getTime() - new Date(`${y2}-${m2}-${d2}`).getTime();
@@ -3546,8 +3745,8 @@ function AuthorSalesReport({ data }: { data: any }) {
   const totalPosRevenue = posOrders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
   const totalBooksSold = chartData.reduce((acc, curr) => acc + curr.totalBooks, 0);
   const totalRevenue = totalWebRevenue + totalPosRevenue;
-  
-  const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Opted-In').reduce((acc: number, inv: any) => {
+
+  const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered').reduce((acc: number, inv: any) => {
     const evt = inv.event;
     if (!evt) return acc;
     if (evt.feeType === 'Flat Fee' || evt.feeType === 'Per Author') {
@@ -3563,32 +3762,32 @@ function AuthorSalesReport({ data }: { data: any }) {
 
   const allTransactions = [
     ...webOrders.map((o: any) => ({
-       rawDate: new Date(o.createdAt).getTime(),
-       type: 'Web',
-       date: new Date(o.createdAt).toLocaleString('en-GB'),
-       id: `WEB-${o.orderId}`,
-       customer: o.customerName || 'N/A',
-       email: o.customerEmail || 'N/A',
-       phone: o.customerPhone || 'N/A',
-       address: (o.address || 'N/A').replace(/,/g, ' '),
-       items: `${o.bookTitle} (x${o.quantity})`,
-       quantity: o.quantity,
-       amount: o.amount,
-       status: o.status
+      rawDate: new Date(o.createdAt).getTime(),
+      type: 'Web',
+      date: new Date(o.createdAt).toLocaleString('en-GB'),
+      id: `WEB-${o.orderId}`,
+      customer: o.customerName || 'N/A',
+      email: o.customerEmail || 'N/A',
+      phone: o.customerPhone || 'N/A',
+      address: (o.address || 'N/A').replace(/,/g, ' '),
+      items: `${o.bookTitle} (x${o.quantity})`,
+      quantity: o.quantity,
+      amount: o.amount,
+      status: o.status
     })),
     ...posOrders.map((o: any) => ({
-       rawDate: new Date(o.createdAt).getTime(),
-       type: 'POS',
-       date: new Date(o.createdAt).toLocaleString('en-GB'),
-       id: `POS-${o.id}`,
-       customer: 'Walk-in',
-       email: 'N/A',
-       phone: 'N/A',
-       address: 'N/A',
-       items: o.items.map((i: any) => `${i.book.title} (x${i.quantity})`).join('; '),
-       quantity: o.items.reduce((acc: number, i: any) => acc + i.quantity, 0),
-       amount: o.totalAmount,
-       status: o.paymentMethod
+      rawDate: new Date(o.createdAt).getTime(),
+      type: 'POS',
+      date: new Date(o.createdAt).toLocaleString('en-GB'),
+      id: `POS-${o.id}`,
+      customer: 'Walk-in',
+      email: 'N/A',
+      phone: 'N/A',
+      address: 'N/A',
+      items: o.items.map((i: any) => `${i.book.title} (x${i.quantity})`).join('; '),
+      quantity: o.items.reduce((acc: number, i: any) => acc + i.quantity, 0),
+      amount: o.totalAmount,
+      status: o.paymentMethod
     }))
   ].sort((a, b) => b.rawDate - a.rawDate);
 
@@ -3609,11 +3808,11 @@ function AuthorSalesReport({ data }: { data: any }) {
     <div className="animate-fade-in-up">
       <div className="flex justify-between items-center mb-6">
         <div>
-           <h2 className="text-2xl font-serif text-paa-navy font-bold tracking-tight">Sales & Revenue Report</h2>
-           <p className="text-xs text-paa-gray-text font-bold uppercase tracking-widest mt-1">Track your earnings across platforms</p>
+          <h2 className="text-2xl font-serif text-paa-navy font-bold tracking-tight">Sales & Revenue Report</h2>
+          <p className="text-xs text-paa-gray-text font-bold uppercase tracking-widest mt-1">Track your earnings across platforms</p>
         </div>
         <button onClick={exportCSV} className="dash-btn dash-btn-primary flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
           Export CSV
         </button>
       </div>
@@ -3624,8 +3823,8 @@ function AuthorSalesReport({ data }: { data: any }) {
             {p === 'today' ? 'Today' : p === 'week' ? 'Week' : p === 'month' ? 'Month' : p === 'lifetime' ? 'Lifetime' : 'Custom'}
           </button>
         ))}
-        
-                {reportPeriod === 'custom' && (
+
+        {reportPeriod === 'custom' && (
           <div className="flex items-center gap-2 px-2 border-l border-gray-300 ml-2">
             <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
             <span className="text-gray-400">to</span>
@@ -3659,119 +3858,119 @@ function AuthorSalesReport({ data }: { data: any }) {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between">
-           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Revenue</p>
-           <div className="text-2xl font-bold text-paa-navy">₹{totalRevenue}</div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Revenue</p>
+          <div className="text-2xl font-bold text-paa-navy">₹{totalRevenue}</div>
         </div>
         <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between relative group">
-           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Fees Paid</p>
-           <div className="text-2xl font-bold text-red-600">₹{totalFeesPaid}</div>
-           <div className="hidden group-hover:block absolute bottom-full left-0 mb-2 w-max bg-gray-900 text-white text-xs p-2 rounded shadow-lg z-50">
-             Platform Fee: ₹{platformFeePaid}<br/>
-             Event Fees: ₹{totalEventFees}
-           </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Fees Paid</p>
+          <div className="text-2xl font-bold text-red-600">₹{totalFeesPaid}</div>
+          <div className="hidden group-hover:block absolute bottom-full left-0 mb-2 w-max bg-gray-900 text-white text-xs p-2 rounded shadow-lg z-50">
+            Platform Fee: ₹{platformFeePaid}<br />
+            Event Fees: ₹{totalEventFees}
+          </div>
         </div>
         <div className="bg-white p-4 rounded-xl border shadow-sm">
-           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Web Sales</p>
-           <div className="text-2xl font-bold text-blue-600">₹{totalWebRevenue}</div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Web Sales</p>
+          <div className="text-2xl font-bold text-blue-600">₹{totalWebRevenue}</div>
         </div>
         <div className="bg-white p-4 rounded-xl border shadow-sm">
-           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">POS Sales</p>
-           <div className="text-2xl font-bold text-purple-600">₹{totalPosRevenue}</div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">POS Sales</p>
+          <div className="text-2xl font-bold text-purple-600">₹{totalPosRevenue}</div>
         </div>
         <div className="bg-white p-4 rounded-xl border shadow-sm">
-           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Sold</p>
-           <div className="text-2xl font-bold text-paa-navy">{totalBooksSold}</div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Sold</p>
+          <div className="text-2xl font-bold text-paa-navy">{totalBooksSold}</div>
         </div>
       </div>
 
       <div className="bg-white border rounded-xl shadow-sm p-6 mb-8">
-         <h3 className="font-serif font-bold text-lg mb-6">Revenue Trend</h3>
-         <div className="h-[300px] w-full">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                    <XAxis dataKey="date" tick={{fontSize: 10}} tickLine={false} axisLine={false} />
-                    <YAxis tick={{fontSize: 10}} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
-                    <Tooltip cursor={{fill: '#f8f9fa'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
-                    <Bar dataKey="webSales" name="Web Sales" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
-                    <Bar dataKey="posSales" name="POS Sales" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                 </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-400 text-sm">No sales data for this period.</div>
-            )}
-         </div>
+        <h3 className="font-serif font-bold text-lg mb-6">Revenue Trend</h3>
+        <div className="h-[300px] w-full">
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
+                <Tooltip cursor={{ fill: '#f8f9fa' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <Bar dataKey="webSales" name="Web Sales" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
+                <Bar dataKey="posSales" name="POS Sales" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-400 text-sm">No sales data for this period.</div>
+          )}
+        </div>
       </div>
-      
+
       <div className="bg-white border rounded-xl shadow-sm overflow-hidden mb-8">
-         <div className="px-6 py-4 border-b">
-            <h3 className="font-serif font-bold text-lg">Daily Breakdown</h3>
-         </div>
-         <div className="overflow-x-auto">
-            <table className="dash-table">
-               <thead>
-                  <tr>
-                     <th>Date</th>
-                     <th>Web Sales</th>
-                     <th>POS Sales</th>
-                     <th>Total Revenue</th>
-                     <th>Books Sold</th>
-                  </tr>
-               </thead>
-               <tbody>
-                  {chartData.length === 0 && (
-                     <tr><td colSpan={5} className="text-center py-6 text-gray-400">No data available</td></tr>
-                  )}
-                  {chartData.reverse().map((row, i) => (
-                     <tr key={i}>
-                        <td className="font-semibold">{row.date}</td>
-                        <td className="text-blue-600 font-semibold">₹{row.webSales}</td>
-                        <td className="text-purple-600 font-semibold">₹{row.posSales}</td>
-                        <td className="font-bold text-paa-navy">₹{row.totalRevenue}</td>
-                        <td>{row.totalBooks}</td>
-                     </tr>
-                  ))}
-               </tbody>
-            </table>
-         </div>
+        <div className="px-6 py-4 border-b">
+          <h3 className="font-serif font-bold text-lg">Daily Breakdown</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="dash-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Web Sales</th>
+                <th>POS Sales</th>
+                <th>Total Revenue</th>
+                <th>Books Sold</th>
+              </tr>
+            </thead>
+            <tbody>
+              {chartData.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-6 text-gray-400">No data available</td></tr>
+              )}
+              {chartData.reverse().map((row, i) => (
+                <tr key={i}>
+                  <td className="font-semibold">{row.date}</td>
+                  <td className="text-blue-600 font-semibold">₹{row.webSales}</td>
+                  <td className="text-purple-600 font-semibold">₹{row.posSales}</td>
+                  <td className="font-bold text-paa-navy">₹{row.totalRevenue}</td>
+                  <td>{row.totalBooks}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-         <div className="px-6 py-4 border-b">
-            <h3 className="font-serif font-bold text-lg">Detailed Transactions</h3>
-         </div>
-         <div className="overflow-x-auto">
-            <table className="dash-table">
-               <thead>
-                  <tr>
-                     <th>Date</th>
-                     <th>Type</th>
-                     <th>Order ID</th>
-                     <th>Customer</th>
-                     <th>Books Included</th>
-                     <th>Amount</th>
-                     <th>Status / Mode</th>
-                  </tr>
-               </thead>
-               <tbody>
-                  {allTransactions.length === 0 && (
-                     <tr><td colSpan={7} className="text-center py-6 text-gray-400">No transactions found</td></tr>
-                  )}
-                  {allTransactions.map((tx, i) => (
-                     <tr key={i}>
-                        <td className="text-xs text-gray-500 whitespace-nowrap">{tx.date}</td>
-                        <td><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${tx.type === 'Web' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{tx.type}</span></td>
-                        <td className="font-mono text-xs">{tx.id}</td>
-                        <td className="font-semibold text-paa-navy">{tx.customer}</td>
-                        <td className="text-sm max-w-xs truncate" title={tx.items}>{tx.items}</td>
-                        <td className="font-bold text-emerald-600 whitespace-nowrap">₹{tx.amount}</td>
-                        <td><span className="text-xs text-gray-500 font-bold uppercase tracking-widest bg-gray-100 px-2 py-1 rounded">{tx.status}</span></td>
-                     </tr>
-                  ))}
-               </tbody>
-            </table>
-         </div>
+        <div className="px-6 py-4 border-b">
+          <h3 className="font-serif font-bold text-lg">Detailed Transactions</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="dash-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Books Included</th>
+                <th>Amount</th>
+                <th>Status / Mode</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allTransactions.length === 0 && (
+                <tr><td colSpan={7} className="text-center py-6 text-gray-400">No transactions found</td></tr>
+              )}
+              {allTransactions.map((tx, i) => (
+                <tr key={i}>
+                  <td className="text-xs text-gray-500 whitespace-nowrap">{tx.date}</td>
+                  <td><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${tx.type === 'Web' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{tx.type}</span></td>
+                  <td className="font-mono text-xs">{tx.id}</td>
+                  <td className="font-semibold text-paa-navy">{tx.customer}</td>
+                  <td className="text-sm max-w-xs truncate" title={tx.items}>{tx.items}</td>
+                  <td className="font-bold text-emerald-600 whitespace-nowrap">₹{tx.amount}</td>
+                  <td><span className="text-xs text-gray-500 font-bold uppercase tracking-widest bg-gray-100 px-2 py-1 rounded">{tx.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -3810,7 +4009,7 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
   const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
 
-  
+
   const handleUploadGalleryImage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGalleryEvent || !galleryUploadFile) return;
@@ -3820,7 +4019,7 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
       const formData = new FormData();
       formData.append('photo', galleryUploadFile);
       formData.append('caption', galleryUploadCaption);
-      
+
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/${selectedGalleryEvent.id}/images`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -3834,7 +4033,7 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
       } else {
         alert('Failed to upload image.');
       }
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     } finally {
       setIsUploadingGallery(false);
@@ -3843,55 +4042,55 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
 
   return (
     <>
-    <div className="animate-fade-in-up">
-      <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
-        <div>
-          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Edit My Profile</h2>
-          <p className="text-sm text-paa-gray-text mt-1">Keep your author bio, books, and details up to date.</p>
+      <div className="animate-fade-in-up">
+        <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+          <div>
+            <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Edit My Profile</h2>
+            <p className="text-sm text-paa-gray-text mt-1">Keep your author bio, books, and details up to date.</p>
+          </div>
         </div>
-      </div>
-      
-      {(() => {
-        let hasPending = authorProfile.status === 'Edited';
-        if (!hasPending && authorProfile.extraData) {
-          try {
-            const ed = typeof authorProfile.extraData === 'string' ? JSON.parse(authorProfile.extraData) : authorProfile.extraData;
-            if (ed.hasPendingEdits) hasPending = true;
-          } catch(e) {}
-        }
-        
-        if (hasPending) {
-          return (
-            <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-12 text-center">
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-blue-100">
-                <Clock className="w-8 h-8 text-blue-500" />
+
+        {(() => {
+          let hasPending = authorProfile.status === 'Edited';
+          if (!hasPending && authorProfile.extraData) {
+            try {
+              const ed = typeof authorProfile.extraData === 'string' ? JSON.parse(authorProfile.extraData) : authorProfile.extraData;
+              if (ed.hasPendingEdits) hasPending = true;
+            } catch (e) { }
+          }
+
+          if (hasPending) {
+            return (
+              <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-12 text-center">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-blue-100">
+                  <Clock className="w-8 h-8 text-blue-500" />
+                </div>
+                <h3 className="text-xl font-serif text-paa-navy font-medium mb-3">Edits Pending Approval</h3>
+                <p className="text-gray-500 max-w-md mx-auto text-sm leading-relaxed">
+                  You have already submitted profile updates that are currently under review by our editorial team.
+                  You will be able to edit your profile again once these changes are approved.
+                </p>
               </div>
-              <h3 className="text-xl font-serif text-paa-navy font-medium mb-3">Edits Pending Approval</h3>
-              <p className="text-gray-500 max-w-md mx-auto text-sm leading-relaxed">
-                You have already submitted profile updates that are currently under review by our editorial team. 
-                You will be able to edit your profile again once these changes are approved.
-              </p>
+            );
+          }
+
+          return (
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <AuthorRegistrationPage
+                initialData={authorProfile}
+                isAuthorEdit={true}
+                hideNavbar={true}
+                targetAction={targetAction}
+                targetBookId={targetBookId}
+                onReapplySuccess={() => {
+                  alert("Profile updated successfully! It is now pending admin approval.");
+                  onRefresh();
+                }}
+              />
             </div>
           );
-        }
-
-        return (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <AuthorRegistrationPage 
-              initialData={authorProfile}
-              isAuthorEdit={true}
-              hideNavbar={true}
-              targetAction={targetAction}
-              targetBookId={targetBookId}
-              onReapplySuccess={() => {
-                alert("Profile updated successfully! It is now pending admin approval.");
-                onRefresh();
-              }}
-            />
-          </div>
-        );
-      })()}
-    </div>
+        })()}
+      </div>
 
     </>
   );
@@ -3899,19 +4098,19 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
 
 function BundleOffersTab({ data }: { data: any }) {
   const authorProfile = data?.authorProfile || {};
-  
+
   const initialRules = authorProfile?.extraData?.bundleRules || [];
   if (initialRules.length === 0 && authorProfile?.extraData?.bundleRule) {
     initialRules.push({
-       id: 1,
-       buyCount: authorProfile.extraData.bundleRule.buyCount,
-       discount: authorProfile.extraData.bundleRule.discount,
-       enabled: authorProfile.extraData.bundleRule.enabled
+      id: 1,
+      buyCount: authorProfile.extraData.bundleRule.buyCount,
+      discount: authorProfile.extraData.bundleRule.discount,
+      enabled: authorProfile.extraData.bundleRule.enabled
     });
   }
-  
+
   const [bundleRules, setBundleRules] = useState<any[]>(initialRules.length > 0 ? initialRules : [
-     { id: Date.now(), buyCount: 3, discount: 50, enabled: false }
+    { id: Date.now(), buyCount: 3, discount: 50, enabled: false }
   ]);
   const [bundleSaving, setBundleSaving] = useState(false);
 
@@ -3921,7 +4120,7 @@ function BundleOffersTab({ data }: { data: any }) {
       const extraData = authorProfile?.extraData || {};
       extraData.bundleRules = bundleRules;
       if (bundleRules.length > 0) {
-         extraData.bundleRule = bundleRules[0];
+        extraData.bundleRule = bundleRules[0];
       }
       await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/profile/extra`, { extraData }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -3935,85 +4134,85 @@ function BundleOffersTab({ data }: { data: any }) {
   };
 
   const addRule = () => {
-     setBundleRules([...bundleRules, { id: Date.now(), buyCount: 2, discount: 20, enabled: true }]);
+    setBundleRules([...bundleRules, { id: Date.now(), buyCount: 2, discount: 20, enabled: true }]);
   };
-  
+
   const removeRule = (id: number) => {
-     setBundleRules(bundleRules.filter(r => r.id !== id));
+    setBundleRules(bundleRules.filter(r => r.id !== id));
   };
 
   const updateRule = (id: number, field: string, value: any) => {
-     setBundleRules(bundleRules.map(r => r.id === id ? { ...r, [field]: value } : r));
+    setBundleRules(bundleRules.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
   return (
     <div className="bg-white p-6 md:p-8 rounded-2xl border border-paa-navy/5 shadow-sm">
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
         <div>
-           <h2 className="text-xl font-serif font-bold text-paa-navy tracking-tight">Dynamic Bundle Offers</h2>
-           <p className="text-sm text-gray-500 mt-1">Configure automated discount rules for customers buying multiple books.</p>
+          <h2 className="text-xl font-serif font-bold text-paa-navy tracking-tight">Dynamic Bundle Offers</h2>
+          <p className="text-sm text-gray-500 mt-1">Configure automated discount rules for customers buying multiple books.</p>
         </div>
         <button onClick={addRule} className="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-colors uppercase tracking-widest flex items-center gap-1">
-           <Plus size={14} /> Add Offer
+          <Plus size={14} /> Add Offer
         </button>
       </div>
-      
+
       <div className="space-y-4">
         {bundleRules.length === 0 ? (
-           <div className="text-center py-8 text-sm text-gray-500 bg-gray-50 rounded-xl border border-gray-100">No active bundle offers. Click "Add Offer" to create one.</div>
+          <div className="text-center py-8 text-sm text-gray-500 bg-gray-50 rounded-xl border border-gray-100">No active bundle offers. Click "Add Offer" to create one.</div>
         ) : bundleRules.map((rule, idx) => (
-           <div key={rule.id} className="relative bg-white border border-gray-200 rounded-xl p-5 hover:border-paa-navy/20 transition-all">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                 <div className="flex items-center gap-3">
-                    <input 
-                      type="checkbox" 
-                      id={`bundleEnabled-${rule.id}`}
-                      checked={rule.enabled}
-                      onChange={e => updateRule(rule.id, 'enabled', e.target.checked)}
-                      className="w-5 h-5 accent-paa-navy cursor-pointer"
-                    />
-                    <label htmlFor={`bundleEnabled-${rule.id}`} className={`text-sm font-bold ${rule.enabled ? 'text-paa-navy' : 'text-gray-400'} cursor-pointer`}>
-                       {rule.enabled ? 'Active Offer' : 'Offer Disabled'}
-                    </label>
-                 </div>
-                 
-                 <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2">
-                       <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Buy Qty</label>
-                       <input 
-                         type="number" min="2"
-                         className="w-20 px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-paa-navy" 
-                         value={rule.buyCount} 
-                         onChange={e => updateRule(rule.id, 'buyCount', Number(e.target.value))} 
-                       />
-                    </div>
-                    <div className="flex items-center gap-2">
-                       <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Discount (₹)</label>
-                       <input 
-                         type="number" min="0"
-                         className="w-24 px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-paa-navy" 
-                         value={rule.discount} 
-                         onChange={e => updateRule(rule.id, 'discount', Number(e.target.value))} 
-                       />
-                    </div>
-                 </div>
+          <div key={rule.id} className="relative bg-white border border-gray-200 rounded-xl p-5 hover:border-paa-navy/20 transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id={`bundleEnabled-${rule.id}`}
+                  checked={rule.enabled}
+                  onChange={e => updateRule(rule.id, 'enabled', e.target.checked)}
+                  className="w-5 h-5 accent-paa-navy cursor-pointer"
+                />
+                <label htmlFor={`bundleEnabled-${rule.id}`} className={`text-sm font-bold ${rule.enabled ? 'text-paa-navy' : 'text-gray-400'} cursor-pointer`}>
+                  {rule.enabled ? 'Active Offer' : 'Offer Disabled'}
+                </label>
               </div>
-              
-              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                 <p className="text-xs text-gray-500 bg-blue-50 px-3 py-1.5 rounded-full text-blue-800 font-medium">
-                   <strong>Preview:</strong> "Buy {rule.buyCount}+ books by this author, get ₹{rule.discount} off!"
-                 </p>
-                 <button onClick={() => removeRule(rule.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors" title="Remove Offer">
-                    <Minus size={16} />
-                 </button>
+
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Buy Qty</label>
+                  <input
+                    type="number" min="2"
+                    className="w-20 px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-paa-navy"
+                    value={rule.buyCount}
+                    onChange={e => updateRule(rule.id, 'buyCount', Number(e.target.value))}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Discount (₹)</label>
+                  <input
+                    type="number" min="0"
+                    className="w-24 px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-paa-navy"
+                    value={rule.discount}
+                    onChange={e => updateRule(rule.id, 'discount', Number(e.target.value))}
+                  />
+                </div>
               </div>
-           </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+              <p className="text-xs text-gray-500 bg-blue-50 px-3 py-1.5 rounded-full text-blue-800 font-medium">
+                <strong>Preview:</strong> "Buy {rule.buyCount}+ books by this author, get ₹{rule.discount} off!"
+              </p>
+              <button onClick={() => removeRule(rule.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors" title="Remove Offer">
+                <Minus size={16} />
+              </button>
+            </div>
+          </div>
         ))}
 
         <div className="flex justify-end pt-6 mt-6 border-t border-gray-100">
-          <button 
+          <button
             onClick={handleSaveBundle}
-            disabled={bundleSaving} 
+            disabled={bundleSaving}
             className="dash-btn dash-btn-primary min-w-[200px]"
           >
             {bundleSaving ? 'Saving...' : 'Save Bundle Offers'}
@@ -4043,7 +4242,7 @@ function AuthorGallery() {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/gallery/events`);
       setGalleries(res.data);
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
@@ -4056,7 +4255,7 @@ function AuthorGallery() {
     try {
       setIsUploadingGallery(true);
       const token = localStorage.getItem('token');
-      
+
       const promises = galleryUploadFiles.map(file => {
         const formData = new FormData();
         formData.append('photo', file);
@@ -4067,15 +4266,15 @@ function AuthorGallery() {
           body: formData
         });
       });
-      
+
       await Promise.all(promises);
-      
+
       toast.success('Images uploaded successfully!');
       setGalleryUploadFiles([]);
       setGalleryUploadCaption('');
       setSelectedGalleryEvent(null);
       fetchGalleries();
-    } catch(err) {
+    } catch (err) {
       console.error(err);
       toast.error('Failed to upload image.');
     } finally {
@@ -4083,7 +4282,7 @@ function AuthorGallery() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy"/></div>;
+  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy" /></div>;
 
   return (
     <div className="space-y-6">
@@ -4095,27 +4294,27 @@ function AuthorGallery() {
           <p className="text-sm text-gray-500 mb-6">Select an event below to upload your photos. They will be shared in the public gallery instantly!</p>
           <div className="grid grid-cols-1 gap-6">
             {galleries.map(ge => (
-               <div key={ge.id} className="border border-paa-navy/10 rounded-xl overflow-hidden bg-gray-50 flex flex-col hover:shadow-premium-hover transition-all duration-300 ease-out">
-                  <div className="p-5 flex justify-between items-start border-b border-paa-navy/5 bg-white">
-                    <div>
-                      <h3 className="font-serif font-bold text-paa-navy text-xl">{ge.type} @ {ge.location}</h3>
-                      <p className="text-[11px] font-bold tracking-widest text-paa-gray-text uppercase mt-1">{new Date(ge.date).toLocaleDateString()} &bull; {ge.city}</p>
-                      <p className="text-sm text-gray-600 mt-3 max-w-2xl">{ge.description}</p>
-                    </div>
-                    <button onClick={() => setSelectedGalleryEvent(ge)} className="dash-btn dash-btn-primary shrink-0"><Upload className="w-4 h-4 inline-block mr-2" />Upload Photos</button>
+              <div key={ge.id} className="border border-paa-navy/10 rounded-xl overflow-hidden bg-gray-50 flex flex-col hover:shadow-premium-hover transition-all duration-300 ease-out">
+                <div className="p-5 flex justify-between items-start border-b border-paa-navy/5 bg-white">
+                  <div>
+                    <h3 className="font-serif font-bold text-paa-navy text-xl">{ge.type} @ {ge.location}</h3>
+                    <p className="text-[11px] font-bold tracking-widest text-paa-gray-text uppercase mt-1">{new Date(ge.date).toLocaleDateString()} &bull; {ge.city}</p>
+                    <p className="text-sm text-gray-600 mt-3 max-w-2xl">{ge.description}</p>
                   </div>
-                  {ge.images && ge.images.length > 0 ? (
-                    <div className="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                      {ge.images.filter((img: any) => img.status === 'Approved').map((img: any) => (
-                        <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-paa-navy/10 shadow-sm bg-white">
-                          <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={img.caption || 'Event image'} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-xs text-gray-400 font-medium italic text-center">No images uploaded for this event yet. Be the first!</div>
-                  )}
-               </div>
+                  <button onClick={() => setSelectedGalleryEvent(ge)} className="dash-btn dash-btn-primary shrink-0"><Upload className="w-4 h-4 inline-block mr-2" />Upload Photos</button>
+                </div>
+                {ge.images && ge.images.length > 0 ? (
+                  <div className="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                    {ge.images.filter((img: any) => img.status === 'Approved').map((img: any) => (
+                      <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-paa-navy/10 shadow-sm bg-white">
+                        <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={img.caption || 'Event image'} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-xs text-gray-400 font-medium italic text-center">No images uploaded for this event yet. Be the first!</div>
+                )}
+              </div>
             ))}
           </div>
           {galleries.length === 0 && <p className="text-gray-500 text-sm">No active galleries found.</p>}
@@ -4127,21 +4326,21 @@ function AuthorGallery() {
           <div className="bg-white rounded-3xl-2xl max-w-md w-full shadow-premium overflow-hidden animate-fade-in-up">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Upload to Gallery</h3>
-              <button onClick={() => setSelectedGalleryEvent(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-gray-500 transition-colors"><X size={16}/></button>
+              <button onClick={() => setSelectedGalleryEvent(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-gray-500 transition-colors"><X size={16} /></button>
             </div>
             <div className="p-6">
               <form onSubmit={handleUploadGalleryImage} className="flex flex-col gap-4">
                 <div>
-                   <label className="dash-label">Event</label>
-                   <input disabled className="dash-input bg-gray-100 w-full" value={selectedGalleryEvent.type + ' @ ' + selectedGalleryEvent.location} />
+                  <label className="dash-label">Event</label>
+                  <input disabled className="dash-input bg-gray-100 w-full" value={selectedGalleryEvent.type + ' @ ' + selectedGalleryEvent.location} />
                 </div>
                 <div>
-                   <label className="dash-label">Photos (Select Multiple) *</label>
-                   <input type="file" multiple required accept="image/*" className="dash-input text-xs w-full" onChange={e => setGalleryUploadFiles(Array.from(e.target.files || []))} />
+                  <label className="dash-label">Photos (Select Multiple) *</label>
+                  <input type="file" multiple required accept="image/*" className="dash-input text-xs w-full" onChange={e => setGalleryUploadFiles(Array.from(e.target.files || []))} />
                 </div>
                 <div>
-                   <label className="dash-label">Caption (Optional)</label>
-                   <input className="dash-input w-full" placeholder="e.g., Book signing moment..." value={galleryUploadCaption} onChange={e => setGalleryUploadCaption(e.target.value)} />
+                  <label className="dash-label">Caption (Optional)</label>
+                  <input className="dash-input w-full" placeholder="e.g., Book signing moment..." value={galleryUploadCaption} onChange={e => setGalleryUploadCaption(e.target.value)} />
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
                   <button type="button" onClick={() => { setSelectedGalleryEvent(null); setGalleryUploadFiles([]); }} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button>
@@ -4161,7 +4360,7 @@ function AuthorGallery() {
 
 function AuthorReviews({ books }: { books: any[] }) {
   const booksWithReviews = books.filter(b => b.reviews && b.reviews.length > 0);
-  
+
   if (booksWithReviews.length === 0) {
     return (
       <div className="text-center py-20 bg-white rounded-3xl-2xl border border-gray-100 border-dashed">
@@ -4178,7 +4377,7 @@ function AuthorReviews({ books }: { books: any[] }) {
         <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Customer Reviews & Ratings</h2>
         <p className="text-sm text-gray-500 mt-1">See what readers are saying about your published works.</p>
       </div>
-      
+
       {booksWithReviews.map(book => {
         const avgRating = book.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / book.reviews.length;
         return (

@@ -27,7 +27,7 @@ export function LivePosDashboard() {
     setIsAddingStock(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/add-stock`, {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/pos/events/${eventId}/add-stock`, {
         bookId: addStockBook.id,
         quantity: parseInt(addStockQty)
       }, { headers: { Authorization: `Bearer ${token}` }});
@@ -44,7 +44,7 @@ export function LivePosDashboard() {
 
   const fetchInventory = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/pos-inventory`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/pos/events/${eventId}/pos-inventory`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setAuthor(res.data.author);
@@ -58,7 +58,7 @@ export function LivePosDashboard() {
 
   const fetchSummary = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/pos-sales-summary`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/pos/events/${eventId}/pos-sales-summary`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setSalesSummary(res.data);
@@ -105,8 +105,8 @@ export function LivePosDashboard() {
     if (cart.length === 0) return;
     setIsProcessing(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${eventId}/pos-checkout`, {
-        cart: cart.map(c => ({ bookId: c.bookId, quantity: c.quantity, price: c.price })),
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/pos/events/${eventId}/pos-checkout`, {
+        items: cart.map(c => ({ bookId: c.bookId, quantity: c.quantity, price: c.price })),
         paymentMethod,
         totalAmount
       }, {

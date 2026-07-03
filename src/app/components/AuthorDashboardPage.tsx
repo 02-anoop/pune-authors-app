@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -2925,12 +2925,32 @@ function FormsWrapper() {
 }
 
 
+function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: React.ReactNode, children: React.ReactNode }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl-2xl max-w-2xl w-full shadow-premium overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <h3 className="text-lg font-bold text-paa-navy">{title}</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-gray-500 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EventsDashboard({ registrations }: any) {
   const [isOptInModalOpen, setIsOptInModalOpen] = useState(false);
   const [selectedInvite, setSelectedInvite] = useState<any>(null);
   const [optInBooks, setOptInBooks] = useState<any[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | number | null>(null);
+  const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
 
   const handleOpenOptIn = (evt: any) => {
     setSelectedInvite(evt);
@@ -2966,6 +2986,7 @@ function EventsDashboard({ registrations }: any) {
     }
   };
   const [activeTab, setActiveTab] = useState('events');
+  const [bpSort, setBpSort] = useState('revenue_desc');
   const [searchTerm, setSearchTerm] = useState('');
   const [eventFilter, setEventFilter] = useState('ALL');
   const [invites, setInvites] = useState<any[]>([]);
@@ -3020,15 +3041,31 @@ function EventsDashboard({ registrations }: any) {
       amountPaid: r.amount || 0,
       isActivity: true
     })),
-    ...invites.map((inv: any) => ({
-      ...inv.event,
-      registration: inv.optInStatus,
-      paymentStatus: inv.paymentStatus,
-      manualTotalSold: inv.manualTotalSold,
-      manualTotalRevenue: inv.manualTotalRevenue,
-      isPast: inv.event?.status === 'Past' || (inv.event?.date && new Date(inv.event.date) < new Date()),
-      isInvite: true
-    })),
+    ...invites.map((inv: any) => {
+      const eventBooks = listedBooks.filter((lb: any) => lb.eventId === (inv.eventId || inv.event?.id));
+      const hasGranular = eventBooks.some((lb: any) => (lb.soldStock > 0 || lb.returnedStock > 0));
+      let calcPaid = 0;
+      if (inv.optInStatus === 'Registered' || inv.optInStatus === 'Approved' || inv.optInStatus === 'Pending Approval') {
+         if (inv.event?.feeType === 'Per Title') {
+             calcPaid = (inv.event?.registrationFee || 0) * eventBooks.length;
+         } else {
+             calcPaid = (inv.event?.registrationFee || 0);
+         }
+      }
+      return {
+        ...inv.event,
+        amountPaid: calcPaid,
+        registration: inv.optInStatus,
+        paymentStatus: inv.paymentStatus,
+        transactionId: inv.transactionId,
+        paymentProofUrl: inv.paymentProofUrl || inv.paymentScreenshotUrl || inv.paymentProof,
+        manualTotalSold: inv.manualTotalSold,
+        manualTotalRevenue: inv.manualTotalRevenue,
+        isPast: inv.event?.status === 'Past' || inv.event?.status === 'Legacy Archive' || (inv.event?.date && new Date(inv.event.date) < new Date()),
+        isInvite: true,
+        isDataUpdated: inv.manualTotalSold !== null || hasGranular || inv.event?.broadcastStatus === 'Published'
+      };
+    }),
     ...availableEvents.map((evt: any) => ({
       ...evt,
       registration: 'Pending',
@@ -3051,14 +3088,28 @@ function EventsDashboard({ registrations }: any) {
 
   const getEventBooks = (eventId: number) => listedBooks.filter((lb: any) => lb.eventId === eventId);
   const getPastEventBooks = (eventId: number) => {
-    const pe = pastEvents.find(p => p.eventId === eventId);
+const pe = pastEvents.find(p => p.eventId === eventId);
     return pe?.books || [];
   };
 
+  const validParticipations = allEvents.filter((evt: any) => {
+    if (evt.status === 'Legacy Archive') return false;
+    if (evt.registration === 'Registered' || evt.registration === 'Approved' || evt.registration === 'Pending Approval') return true;
+    if (evt.isPast) {
+      if (evt.isDataUpdated && (evt.isInvite ? getEventBooks(evt.id).length > 0 : getPastEventBooks(evt.id).length > 0)) return true;
+    }
+    return false;
+  });
+
   const filteredEvents = allEvents.filter((evt: any) => {
-    if (eventFilter === 'UPCOMING' && evt.isPast) return false;
-    if (eventFilter === 'PAST' && !evt.isPast) return false;
-    if (eventFilter === 'INVITES' && !evt.isInvite) return false;
+    const isLegacy = evt.status === 'Legacy Archive';
+    
+    if (eventFilter === 'ALL' && isLegacy) return false;
+    if (eventFilter === 'UPCOMING' && (evt.isPast || isLegacy)) return false;
+    if (eventFilter === 'PAST' && (!evt.isPast || isLegacy)) return false;
+    if (eventFilter === 'INVITES' && (evt.isPast || isLegacy || evt.registration !== 'Pending')) return false;
+    if (eventFilter === 'LEGACY ARCHIVE' && !isLegacy) return false;
+    
     if (searchTerm) {
         return (evt.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                (evt.location || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -3083,222 +3134,316 @@ function EventsDashboard({ registrations }: any) {
       <div className="flex border-b border-gray-200 mb-6">
         <button onClick={() => setActiveTab('events')} className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'events' ? 'border-paa-navy text-paa-navy' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Events Overview</button>
         <button onClick={() => setActiveTab('performance')} className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'performance' ? 'border-paa-navy text-paa-navy' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Book Performance</button>
+        <button onClick={() => setActiveTab('payments')} className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'payments' ? 'border-paa-navy text-paa-navy' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Payments History</button>
       </div>
 
       {activeTab === 'events' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Events</div>
-              <div className="text-2xl font-serif text-paa-navy font-bold">{allEvents.length}</div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center">
+              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-indigo-500" /> Total Events</div>
+              <div className="text-3xl font-serif font-bold text-paa-navy">{validParticipations.length}</div>
+              <div className="text-xs text-gray-500 mt-2 font-mono font-medium">Fairs: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) === 'Book Fair').length} • Events: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) !== 'Book Fair').length}</div>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-              <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Books Sold</div>
-             <div className="text-2xl font-serif text-blue-800 font-bold">
-                 {allEvents.reduce((acc: number, evt: any) => {
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center">
+              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-500" /> Total Books Sold</div>
+             <div className="text-3xl font-serif font-bold text-emerald-700">
+                 {validParticipations.reduce((acc: number, evt: any) => {
                     let sold = 0;
                     if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
                        sold = evt.manualTotalSold;
-                    } else if (evt.isPast && evt.isDataUpdated) {
-                       evt.books?.forEach((b: any) => sold += (b.soldStock || 0));
                     } else if (evt.isInvite) {
                        getEventBooks(evt.id).forEach((b: any) => sold += (b.soldStock || 0));
+                    } else if (evt.isPast && evt.isDataUpdated) {
+                       evt.books?.forEach((b: any) => sold += (b.soldStock || 0));
                     }
                     return acc + sold;
                  }, 0)}
               </div>
             </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-              <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Revenue</div>
-              <div className="text-2xl font-serif text-emerald-800 font-bold">
-                 ₹{allEvents.reduce((acc: number, evt: any) => {
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center">
+              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><DollarSign className="w-4 h-4 text-blue-500" /> Total Revenue</div>
+              <div className="text-3xl font-serif font-bold text-blue-700">
+                 ₹{validParticipations.reduce((acc: number, evt: any) => {
                     let rev = 0;
                     if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
                        rev = evt.manualTotalRevenue;
-                    } else if (evt.isPast && evt.isDataUpdated) {
-                       evt.books?.forEach((b: any) => rev += (b.revenue || 0));
                     } else if (evt.isInvite) {
-                       getEventBooks(evt.id).forEach((b: any) => rev += (b.revenue || 0));
+                       getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                    } else if (evt.isPast && evt.isDataUpdated) {
+                       evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
                     }
                     return acc + rev;
                  }, 0).toLocaleString()}
               </div>
             </div>
-            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-              <div className="text-[10px] font-bold text-orange-700 uppercase tracking-wider mb-1">Total Payments Done</div>
-              <div className="text-2xl font-serif text-orange-800 font-bold">₹{(registrations || []).reduce((sum: number, r: any) => sum + (r.amount || 0), 0).toLocaleString()}</div>
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center cursor-pointer hover:border-orange-200 transition-all group" onClick={() => setActiveTab('payments')}>
+              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-orange-500 transition-colors"><CheckCircle2 className="w-4 h-4 text-orange-500" /> Total Payments Done</div>
+              <div className="text-3xl font-serif font-bold text-orange-700">₹{validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0).toLocaleString()}</div>
+              <div className="text-[10px] text-orange-400 mt-2 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to view details &rarr;</div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center">
+              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-500" /> Net Gain/Loss</div>
+              <div className="text-3xl font-serif font-bold text-indigo-700">
+                 {(() => {
+                    const totalRev = validParticipations.reduce((acc: number, evt: any) => {
+                       let rev = 0;
+                       if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
+                          rev = evt.manualTotalRevenue;
+                       } else if (evt.isInvite) {
+                          getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                       } else if (evt.isPast && evt.isDataUpdated) {
+                          evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                       }
+                       return acc + rev;
+                    }, 0);
+                    const totalPaid = validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0);
+                    const net = totalRev - totalPaid;
+                    return <span className={net >= 0 ? "text-emerald-700" : "text-red-600"}>{net >= 0 ? '+' : '-'}₹{Math.abs(net).toLocaleString()}</span>;
+                 })()}
+              </div>
             </div>
           </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <h4 className="font-bold text-paa-navy mb-4">Books Sold per Event</h4>
+          
+          <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium mt-6 mb-8">
+            <h4 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-500" /> Event Profitability (Net Gain/Loss)</h4>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={allEvents.map((evt: any) => {
-                  let sold = 0;
-                  if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
-                    sold = evt.manualTotalSold;
-                  } else if (evt.isPast && evt.isDataUpdated) {
-                    evt.books?.forEach((b: any) => { sold += (b.soldStock || 0); });
-                  } else if (evt.isInvite) {
-                    const evtBooks = getEventBooks(evt.id);
-                    evtBooks.forEach((b: any) => { sold += (b.soldStock || 0); });
-                  }
-                  const evtName = evt.name || evt.title || 'Unknown Event';
-                  return { name: evtName, sold };
-                })} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                  <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }} />
-                  <Bar dataKey="sold" name="Books Sold" fill="#1e3a8a" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                </BarChart>
+                {(() => {
+                   const profitData = allEvents
+                     .filter((evt: any) => evt.status !== 'Legacy Archive' && evt.name !== 'Unknown Event')
+                     .map((evt: any) => {
+                      let rev = 0;
+                      if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
+                          rev = evt.manualTotalRevenue;
+                      } else if (evt.isInvite) {
+                          getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                      } else if (evt.isPast && evt.isDataUpdated) {
+                          evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                      }
+                      const cost = evt.amountPaid || 0;
+                      return { name: evt.name || evt.title || 'Unknown', profit: rev - cost };
+                   });
+                   
+                   if (profitData.length === 0) return <div className="flex items-center justify-center h-full text-sm text-gray-400 italic">No profitability data available.</div>;
+                   
+                   return (
+                     <BarChart data={profitData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
+                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                       <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(value: number) => `₹${value.toLocaleString()}`} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
+                       <Bar dataKey="profit" name="Net Profit/Loss" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                         {profitData.map((entry: any, index: number) => (
+                           <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#059669' : '#dc2626'} />
+                         ))}
+                       </Bar>
+                     </BarChart>
+                   );
+                })()}
               </ResponsiveContainer>
             </div>
           </div>
-          
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
-             <div className="flex gap-2">
-               <button onClick={() => setEventFilter('ALL')} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${eventFilter === 'ALL' ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}>All</button>
-               <button onClick={() => setEventFilter('UPCOMING')} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${eventFilter === 'UPCOMING' ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}>Upcoming</button>
-               <button onClick={() => setEventFilter('PAST')} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${eventFilter === 'PAST' ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}>Past</button>
-               <button onClick={() => setEventFilter('INVITES')} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${eventFilter === 'INVITES' ? 'bg-paa-navy text-white border-paa-navy' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}>Invites</button>
+
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+             <div className="flex flex-wrap gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+               {['ALL', 'UPCOMING', 'PAST', 'INVITES', 'LEGACY ARCHIVE'].map((f) => (
+                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : 'Invites')))}</button>
+               ))}
              </div>
              <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input type="text" placeholder="Search events..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-paa-navy" />
+                <input type="text" placeholder="Search events..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm" />
              </div>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="flex justify-between items-end mb-4">
+            <h4 className="font-bold text-paa-navy text-lg flex items-center gap-2"><BarChart3 className="w-5 h-5 text-indigo-500" /> Event Performance Breakdown</h4>
+            <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Sort By:</span>
+                <select className="border border-gray-200 rounded-lg text-sm font-bold text-paa-navy p-2 outline-none cursor-pointer bg-white" value={bpSort} onChange={e => setBpSort(e.target.value)}>
+                    <option value="revenue_desc">Highest Revenue</option>
+                    <option value="revenue_asc">Lowest Revenue</option>
+                    <option value="sold_desc">Most Copies Sold</option>
+                    <option value="date_desc">Newest Events</option>
+                    <option value="date_asc">Oldest Events</option>
+                </select>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-premium border border-paa-navy/5 overflow-hidden mb-8">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-                  <th className="p-4 font-semibold rounded-tl-lg">Event</th>
-                  <th className="p-4 font-semibold">Date</th>
-                  <th className="p-4 font-semibold">Location</th>
-                  <th className="p-4 font-semibold">Type</th>
-                  <th className="p-4 font-semibold text-right">Books Sold</th>
-                  <th className="p-4 font-semibold text-right">Revenue</th>
-                  <th className="p-4 font-semibold text-right">Payment Done</th>
-                  <th className="p-4 font-semibold text-center rounded-tr-lg">Actions</th>
+                <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
+                  <th className="px-6 py-4 w-12 text-center"></th>
+                  <th className="px-4 py-4 w-1/4">Event Name</th>
+                  <th className="px-4 py-4 w-32">Date</th>
+                  <th className="px-4 py-4">Type</th>
+                  <th className="px-4 py-4 text-right">Books Sold</th>
+                  <th className="px-4 py-4 text-right">Revenue</th>
+                  {eventFilter === 'LEGACY ARCHIVE' ? (
+                    <th className="px-4 py-4 text-center">Authors</th>
+                  ) : (
+                    <>
+                      <th className="px-4 py-4 text-right">Payment</th>
+                      <th className="px-4 py-4 text-right">Gain/Loss</th>
+                    </>
+                  )}
+                  <th className="px-4 py-4 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredEvents.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-gray-500">No events found.</td></tr>}
+                {filteredEvents.length === 0 && <tr><td colSpan={10} className="p-8 text-center text-sm text-paa-gray-text italic">No events found.</td></tr>}
                 {filteredEvents.map((evt: any, i: number) => {
                   let sold = 0;
                   let rev = 0;
                   if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
                     sold = evt.manualTotalSold;
                     rev = evt.manualTotalRevenue || 0;
+                  } else if (evt.isInvite) {
+                    const evtBooks = getEventBooks(evt.id);
+                    evtBooks.forEach((b: any) => {
+                      sold += (b.soldStock || 0);
+                      rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0);
+                    });
                   } else if (evt.isPast && evt.isDataUpdated) {
                     evt.books?.forEach((b: any) => {
                       sold += (b.soldStock || 0);
                       rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0);
                     });
-                  } else if (evt.isInvite) {
-                    const evtBooks = getEventBooks(evt.id);
-                    evtBooks.forEach((b: any) => {
-                      sold += (b.soldStock || 0);
-                      rev += (b.soldStock || 0) * (b.book?.mrp || 0);
-                    });
                   }
 
                   return (
                     <React.Fragment key={i}>
-                    <tr className="hover:bg-gray-50/50">
-                      <td className="p-4">
-                        <div className="font-semibold text-gray-900">{evt.name}</div>
+                    <tr className={`hover:bg-gray-50 transition-colors ${expandedEventId === evt.id ? 'bg-gray-50' : ''}`}>
+                      <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => { 
+                         setExpandedEventId(expandedEventId === evt.id ? null : evt.id);
+                         if (expandedEventId !== evt.id && evt.isInvite && evt.registration === 'Pending' && !evt.isPast) {
+                            setSelectedInvite(evt);
+                            setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: 10, included: true })));
+                            setPaymentScreenshot(null);
+                         }
+                      }}>
+                         <button className="text-gray-400 hover:text-paa-navy transition-colors">
+                            {expandedEventId === evt.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                         </button>
                       </td>
-                      <td className="p-4 text-sm text-gray-600">{new Date(evt.startDate || evt.date).toLocaleDateString()}</td>
-                      <td className="p-4 text-sm text-gray-600">{evt.location || evt.venue || 'TBA'}</td>
-                      <td className="p-4 text-sm font-semibold">
+                      <td className="px-4 py-3">
+                         <div className="text-sm font-semibold text-paa-navy">{evt.name}</div>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{new Date(evt.startDate || evt.date).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-sm font-semibold">
                          <div className="flex flex-col items-start gap-1">
-                             <span className={`px-2 py-1 rounded-full text-[10px] uppercase tracking-wider ${evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                                {evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live')}
                              </span>
                              {evt.registration === 'Not Participated' && evt.aggAuthors > 0 && (
-                               <span className="text-[10px] text-gray-500 font-mono">{evt.aggAuthors} Authors Participated</span>
+                               <div className="text-[10px] text-gray-500 font-mono mt-1">{evt.aggAuthors} Authors</div>
                              )}
                          </div>
                       </td>
-                      <td className="p-4 text-sm font-mono text-right">{sold > 0 || (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) ? sold : '-'}</td>
-                      <td className="p-4 text-sm font-mono text-right">{rev > 0 || (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) ? `₹${rev}` : '-'}</td>
-                      <td className="p-4 text-sm font-mono text-right">{evt.amountPaid ? `₹${evt.amountPaid}` : '-'}</td>
-                      <td className="p-4 text-center">
-                        <div className="flex gap-2 justify-center items-center flex-wrap">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${evt.registration === 'Registered' ? 'bg-emerald-100 text-emerald-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {evt.registration}
-                          </span>
-
-                          {!(evt.isPast) && (
-                            <button onClick={() => { 
-                               setExpandedEventId(expandedEventId === evt.id ? null : evt.id);
-                               if (expandedEventId !== evt.id && evt.isInvite && evt.registration === 'Pending') {
-                                  setSelectedInvite(evt);
-                                  setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: 10, included: true })));
-                                  setPaymentScreenshot(null);
-                               }
-                            }} title="Toggle Inline Details" className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm">
-                               {expandedEventId === evt.id ? <ChevronDown className="w-4 h-4 transform rotate-180" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
-                          )}
-
-                          <button onClick={() => { setActiveTab('details'); setSelectedEventId(evt.id.toString()); }} title="View Full Details" className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors shadow-sm">
-                             <Eye className="w-4 h-4" />
-                          </button>
-
-                          {evt.livePosEnabled && !evt.isPast && (
-                            <button onClick={() => window.open('/pos/' + evt.id, '_blank')} className="text-[10px] bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2 py-1 rounded-full font-bold shadow flex items-center gap-1 inline-flex whitespace-nowrap">
-                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Launch POS
-                            </button>
-                          )}
-                        </div>
+                      <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{sold > 0 || (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) ? sold : '-'}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-emerald-700 text-right">{rev > 0 || (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) ? `₹${rev}` : '-'}</td>
+                      {eventFilter === 'LEGACY ARCHIVE' ? (
+                        <td className="px-4 py-3 text-sm font-bold text-paa-navy text-center">
+                           {evt.aggAuthors || '-'}
+                        </td>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 text-sm font-bold text-orange-700 text-right">
+                             {evt.amountPaid ? `₹${evt.amountPaid}` : (evt.isPast ? '-' : (evt.registrationFee ? `₹${evt.registrationFee}${evt.feeType === 'Per Title' ? '/title' : ''}` : '-'))}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-bold text-right">
+                             {(() => {
+                                 let gain = 0;
+                                 if (evt.isPast) {
+                                     let eventRev = 0;
+                                     if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
+                                         eventRev = evt.manualTotalRevenue;
+                                     } else {
+                                         (evt.isInvite ? getEventBooks(evt.id) : (evt.books || [])).forEach((b: any) => eventRev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                                     }
+                                     gain = eventRev - (evt.amountPaid || 0);
+                                     return <span className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm inline-block ${gain >= 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>{gain >= 0 ? '+' : '-'}₹{Math.abs(gain).toLocaleString()}</span>;
+                                 }
+                                 return <span className="text-gray-400">-</span>;
+                             })()}
+                          </td>
+                        </>
+                      )}
+                      <td className="px-4 py-3 text-center">
+                          {(() => {
+                              let statusText = evt.registration;
+                              let statusColors = 'bg-gray-100 text-gray-700';
+                              
+                              if (evt.isPast && !evt.isDataUpdated) {
+                                  statusText = 'Completed';
+                                  statusColors = 'bg-gray-100 text-gray-600 border border-gray-200';
+                              } else if (evt.registration === 'Registered' || evt.registration === 'Approved') {
+                                  statusText = 'Registered';
+                                  statusColors = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+                              } else if (evt.registration === 'Pending Approval') {
+                                  statusText = 'Wait for Approval';
+                                  statusColors = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+                              } else if (evt.registration === 'Pending') {
+                                  statusText = 'Pending Registration';
+                                  statusColors = 'bg-orange-100 text-orange-700 border border-orange-200';
+                              }
+                              
+                              return (
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${statusColors}`}>
+                                  {statusText}
+                                </span>
+                              );
+                          })()}
                       </td>
                     </tr>
                     {expandedEventId === evt.id && (
-                       <tr className="bg-gray-50 border-b border-gray-200">
-                          <td colSpan={8} className="p-6">
-                             <div className="flex flex-col xl:flex-row gap-6 items-stretch w-full max-w-full">
-                                <div className="flex-1 min-w-[300px] border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col h-full">
-                                   <div className="bg-gray-100 p-4 border-b border-gray-200">
-                                      <h4 className="font-serif font-bold text-paa-navy text-base">{evt.name}</h4>
-                                      <p className="text-xs text-gray-500 font-medium">{evt.location}</p>
-                                   </div>
-                                   <div className="flex-1 flex flex-col h-full">
-                                      {evt.bannerUrl ? (
-                                         <div className="w-full flex-1 min-h-[200px] overflow-hidden bg-gray-50 relative">
-                                            <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+                       <tr className="bg-[#f8fafc] border-b border-gray-100 shadow-inner">
+                          <td colSpan={10} className="p-0">
+                             <div className="flex flex-col xl:flex-row gap-8 px-8 py-6 border-l-4 border-indigo-400 ml-6 my-4 bg-white rounded-r-xl shadow-sm mr-6">
+                                <div className="flex-1 min-w-[300px] flex flex-col gap-5">
+                                   <div className="flex gap-6">
+                                      <div className="w-40 shrink-0">
+                                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><ImageIcon className="w-3 h-3"/> Event Banner</p>
+                                          {evt.bannerUrl ? (
+                                             <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-video relative group">
+                                               <img src={evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Banner" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                             </div>
+                                          ) : (
+                                             <div className="aspect-video bg-gray-50 rounded-lg border border-gray-200 border-dashed flex items-center justify-center text-[10px] text-gray-400 italic">No Banner</div>
+                                          )}
+                                      </div>
+                                      <div className="flex flex-col gap-4">
+                                         <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3"/> Location</p>
+                                            <p className="text-sm text-paa-navy font-semibold">{evt.location || evt.venue || 'TBA'}</p>
                                          </div>
-                                      ) : (
-                                         <div className="w-full flex-1 min-h-[200px] flex items-center justify-center bg-gray-50">
-                                            <div className="text-center text-gray-400">
-                                                <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                                                <span className="text-xs font-bold uppercase tracking-widest opacity-50">No Banner</span>
+                                         <div className="flex gap-6">
+                                            <div>
+                                               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><CalendarIcon className="w-3 h-3"/> Date & Timings</p>
+                                               <p className="text-sm text-paa-navy font-semibold">{new Date(evt.startDate || evt.date).toLocaleDateString()} • {(evt.startTime && evt.endTime) ? `${evt.startTime}-${evt.endTime}` : 'TBA'}</p>
                                             </div>
-                                         </div>
-                                      )}
-                                      <div className="p-4 grid grid-cols-3 gap-3 border-t border-gray-100 bg-white shrink-0">
-                                         <div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Date</div>
-                                            <div className="font-semibold text-paa-navy text-xs">{new Date(evt.startDate || evt.date).toLocaleDateString()}</div>
-                                         </div>
-                                         <div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Timings</div>
-                                            <div className="font-semibold text-paa-navy text-xs">{(evt.startTime && evt.endTime) ? `${evt.startTime} to ${evt.endTime}` : 'Not provided'}</div>
-                                         </div>
-                                         <div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fee</div>
-                                            <div className="font-semibold text-emerald-700 text-xs">₹{evt.registrationFee || 0}</div>
+                                            <div>
+                                               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1">Fee</p>
+                                               <p className="text-sm text-emerald-700 font-bold">₹{evt.amountPaid || 0}</p>
+                                            </div>
+
                                          </div>
                                       </div>
                                    </div>
+                                   <div className="flex gap-3 mt-auto pt-4 border-t border-gray-100">
+                                      {evt.livePosEnabled && !evt.isPast && (
+                                        <button onClick={() => window.open('/pos/' + evt.id, '_blank')} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-sm font-bold transition-colors shadow-sm whitespace-nowrap">
+                                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Launch POS
+                                        </button>
+                                      )}
+                                   </div>
                                 </div>
-                                {evt.isInvite && evt.registration === 'Pending' ? (
-                                    <div className="flex-1 min-w-[300px] border border-gray-200 rounded-xl bg-white shadow-sm p-4 flex flex-col h-full animate-fade-in-up">
-                                        <h4 className="font-bold text-sm text-gray-700 mb-3 border-b pb-2">Opt-In: Select Books</h4>
-                                        <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-2">
+                                <div className="w-px bg-gray-100 hidden xl:block"></div>
+                                {evt.isInvite && evt.registration === 'Pending' && !evt.isPast ? (
+                                    <div className="flex-1 min-w-[300px] flex flex-col animate-fade-in-up">
+                                        <h4 className="font-bold text-sm text-gray-700 mb-3 border-b pb-2 flex items-center gap-2"><BookOpen className="w-4 h-4"/> Opt-In: Select Books</h4>
+                                        <div className="flex-1 overflow-y-auto max-h-[250px] space-y-2 mb-4 pr-2">
                                             {optInBooks.map((b, idx) => (
                                               <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 rounded border border-gray-200">
                                                 <input type="checkbox" checked={b.included} onChange={e => { const newB = [...optInBooks]; newB[idx].included = e.target.checked; setOptInBooks(newB); }} className="text-paa-navy focus:ring-paa-navy rounded" />
@@ -3333,28 +3478,54 @@ function EventsDashboard({ registrations }: any) {
                                           </div>
                                           );
                                         })()}
-                                        <div className="flex gap-2 shrink-0">
+                                        <div className="flex gap-2 shrink-0 mt-auto">
                                             <button onClick={() => handleOptInSubmit('reject')} className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">Decline</button>
                                             <button onClick={() => handleOptInSubmit('approve')} className="flex-1 px-4 py-2 bg-paa-navy text-paa-cream rounded-lg text-sm font-bold hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-sm">Submit Opt-In</button>
                                         </div>
                                     </div>
                                 ) : (
-                                <div className="flex-1 min-w-[300px] border border-gray-200 rounded-xl bg-white shadow-sm p-4 flex flex-col h-full">
-                                   <h4 className="font-bold text-sm text-gray-700 mb-4 flex items-center gap-2 border-b pb-2"><BookOpen className="w-4 h-4" /> Book Inventory</h4>
-                                   <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+                                <div className="flex-1 min-w-[300px] flex flex-col">
+                                   <h4 className="font-bold text-sm text-gray-700 mb-4 flex items-center gap-2 border-b pb-2">
+                                      {evt.isPast ? <><Package className="w-4 h-4" /> Sales Breakdown</> : <><BookOpen className="w-4 h-4" /> Book Inventory</>}
+                                   </h4>
+                                   <div className="flex-1 overflow-y-auto max-h-[250px] pr-1 space-y-2">
                                       {(() => {
+                                         if (evt.status === 'Legacy Archive') {
+                                             return (
+                                                <div className="text-center p-4 bg-indigo-50/50 rounded-lg border border-dashed border-indigo-200">
+                                                   <AlertCircle className="w-6 h-6 text-indigo-400 mx-auto mb-2" />
+                                                   <p className="text-xs text-indigo-700 font-medium">This is a legacy event archive. The sales and revenue shown above are cumulative across all participating authors, not your individual sales.</p>
+                                                </div>
+                                             );
+                                         }
+                                         if (evt.isPast && !evt.isDataUpdated) {
+                                            return (
+                                               <div className="text-center p-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                                  <AlertCircle className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                                                  <p className="text-xs text-gray-500 font-medium">Data Pending. Sales records have not been published yet.</p>
+                                               </div>
+                                            );
+                                         }
                                          const currentBooks = evt.isInvite ? getEventBooks(evt.id) : (evt.isPast ? getPastEventBooks(evt.id) : []);
                                          if (currentBooks.length === 0) return <p className="text-sm text-gray-500 italic">No inventory recorded.</p>;
                                          return currentBooks.map((b: any, j: number) => {
                                             const bDetails = books.find(book => book.id === b.bookId);
                                             return (
                                               <React.Fragment key={j}>
-                                               <div className="flex justify-between items-center bg-gray-50 p-2 rounded text-sm border border-gray-100">
-                                                  <span className="font-medium text-gray-800">{b.title || bDetails?.title || 'Unknown'}</span>
-                                                  <div className="flex items-center gap-4 text-xs font-mono">
-                                                     <span className="text-gray-500" title="Listed">L: {b.listedStock}</span>
-                                                     <span className="text-indigo-600 font-bold" title="Sold">S: {b.soldStock || 0}</span>
-                                                  </div>
+                                               <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg text-sm border border-gray-100">
+                                                  <span className="font-semibold text-gray-800 line-clamp-1 flex-1 pr-2">{b.title || bDetails?.title || 'Unknown'}</span>
+                                                  {evt.isPast ? (
+                                                     <div className="flex items-center gap-3 text-[10px] font-mono shrink-0">
+                                                        <div className="flex flex-col items-center"><span className="text-gray-400 font-bold">SENT</span><span className="text-gray-600">{b.listedStock || b.sent || 0}</span></div>
+                                                        <div className="flex flex-col items-center"><span className="text-paa-navy font-bold">SOLD</span><span className="text-paa-navy text-xs font-black">{b.soldStock || b.sold || 0}</span></div>
+                                                        <div className="flex flex-col items-end"><span className="text-emerald-600 font-bold">REV</span><span className="text-emerald-600 font-bold bg-emerald-50 px-1 rounded">₹{(b.soldStock || b.sold || 0) * (b.mrp || b.book?.mrp || bDetails?.mrp || 0)}</span></div>
+                                                     </div>
+                                                  ) : (
+                                                     <div className="flex items-center gap-4 text-xs font-mono shrink-0">
+                                                        <span className="text-gray-500" title="Listed">L: {b.listedStock}</span>
+                                                        <span className="text-indigo-600 font-bold" title="Sold">S: {b.soldStock || 0}</span>
+                                                     </div>
+                                                  )}
                                                </div>
                                               </React.Fragment>
                                             )
@@ -3378,144 +3549,162 @@ function EventsDashboard({ registrations }: any) {
 
 
 
-      {activeTab === 'details' && (
+      {activeTab === 'payments' && (
         <div className="space-y-6">
-          <div className="flex justify-start">
-             <button onClick={() => setActiveTab('events')} className="dash-btn bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors shadow-sm font-bold flex items-center gap-2">
-                 ← Back to Events Overview
-             </button>
+          <div className="bg-white rounded-xl shadow-premium border border-paa-navy/5 overflow-hidden">
+             <div className="p-6 border-b border-gray-100 flex items-center gap-2">
+                 <CheckCircle2 className="w-5 h-5 text-orange-500" />
+                 <h3 className="text-lg font-bold text-paa-navy">Payments History</h3>
+             </div>
+             <div className="overflow-x-auto">
+                 <table className="w-full text-left border-collapse whitespace-nowrap">
+                    <thead>
+                      <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
+                        <th className="px-6 py-4 w-1/4">Event Name</th>
+                        <th className="px-4 py-4 w-48">Date & Location</th>
+                        <th className="px-4 py-4">Transaction ID</th>
+                        <th className="px-4 py-4 text-right">Amount Paid</th>
+                        <th className="px-4 py-4 text-center">Receipt</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {validParticipations.filter((e: any) => e.amountPaid > 0).length === 0 ? (
+                          <tr><td colSpan={5} className="p-8 text-center text-sm text-paa-gray-text italic">No payment records found.</td></tr>
+                      ) : (
+                          validParticipations.filter((e: any) => e.amountPaid > 0).map((evt: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-6 py-4">
+                                      <div className="text-sm font-semibold text-paa-navy">{evt.name}</div>
+                                  </td>
+                                  <td className="px-4 py-4">
+                                      <div className="text-sm font-medium text-paa-gray-text">{new Date(evt.startDate || evt.date).toLocaleDateString()}</div>
+                                      <div className="text-[10px] text-gray-400 mt-1 truncate max-w-[200px]">{evt.location || evt.venue || 'TBA'}</div>
+                                  </td>
+                                  <td className="px-4 py-4 text-sm font-mono text-indigo-600">
+                                      {evt.transactionId ? <span className="bg-indigo-50 px-2 py-1 rounded inline-block">{evt.transactionId}</span> : <span className="text-gray-400 italic text-[10px]">-</span>}
+                                  </td>
+                                  <td className="px-4 py-4 text-sm font-black text-orange-700 text-right">
+                                      ₹{evt.amountPaid.toLocaleString()}
+                                  </td>
+                                  <td className="px-4 py-4 text-center">
+                                      {(evt.paymentProofUrl || evt.paymentScreenshotUrl) ? (
+                                          <a href={(evt.paymentProofUrl || evt.paymentScreenshotUrl).startsWith('http') ? (evt.paymentProofUrl || evt.paymentScreenshotUrl) : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.paymentProofUrl || evt.paymentScreenshotUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-xs font-bold shadow-sm">
+                                              <ImageIcon className="w-3 h-3" /> View Proof
+                                          </a>
+                                      ) : (
+                                          <span className="text-xs text-gray-400 italic">No Screenshot</span>
+                                      )}
+                                  </td>
+                              </tr>
+                          ))
+                      )}
+                    </tbody>
+                 </table>
+             </div>
           </div>
-          {(() => {
-            const evt = allEvents.find((e: any) => e.id.toString() === selectedEventId);
-            if (!evt) return <div className="p-8 text-center text-gray-500">Event not found.</div>;
-
-            const isPastPending = evt.isPast && !evt.isDataUpdated;
-
-            let displayBooks: any[] = [];
-            if (evt.isPast) {
-              displayBooks = evt.books || [];
-            } else {
-              displayBooks = getEventBooks(evt.id).map((lb: any) => ({
-                bookId: lb.bookId,
-                title: lb.book?.title || lb.title || books.find(b => b.id === lb.bookId)?.title || 'Unknown Title',
-                listedStock: lb.listedStock,
-                soldStock: lb.soldStock,
-                returnedStock: lb.returnedStock,
-                revenue: lb.revenue,
-                posSold: 0,
-                manualSold: lb.soldStock
-              }));
-            }
-
-            return (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm flex gap-6">
-                  {evt.bannerUrl ? (
-                     <div className="w-48 h-32 rounded-lg overflow-hidden shrink-0 border border-gray-100">
-                       <img src={`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Banner" className="w-full h-full object-cover" />
-                     </div>
-                  ) : null}
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4 font-serif">{evt.name}</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Date</div>
-                        <div className="text-sm font-medium text-paa-navy">{new Date(evt.startDate || evt.date).toLocaleDateString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Location</div>
-                        <div className="text-sm font-medium text-paa-navy">{evt.location || evt.venue || 'TBA'}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Type</div>
-                        <div className="text-sm font-medium text-paa-navy">{evt.type || (evt.isPast ? 'Past Event' : 'Live Event')}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Status</div>
-                        <div className="text-sm font-medium text-paa-navy">{evt.status || (evt.isPast ? 'Completed' : 'Active')}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {isPastPending ? (
-                  <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-700">Data Pending</h3>
-                    <p className="text-sm text-gray-500 max-w-md mx-auto mt-2">The sales data for this past event has not been published by the admin yet. Please check back later.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
-                    <div className="p-4 border-b border-gray-100 bg-gray-50">
-                       <h4 className="font-bold text-paa-navy flex items-center gap-2"><Package className="w-4 h-4" /> Inventory & Sales Breakdown</h4>
-                    </div>
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50/50 text-gray-500 text-[10px] uppercase tracking-widest font-bold">
-                          <th className="p-4">Book Title</th>
-                          <th className="p-4 text-right">Sent / Listed</th>
-                          <th className="p-4 text-right">Sold</th>
-                          <th className="p-4 text-right">Returned</th>
-                          <th className="p-4 text-right">Revenue Generated</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {displayBooks.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-500">No books listed for this event.</td></tr>}
-                        {displayBooks.map((b: any, j: number) => (
-                          <tr key={j} className="hover:bg-blue-50/30 transition-colors">
-                            <td className="p-4 font-semibold text-gray-900">{b.title || books.find((ab: any) => ab.id === b.bookId)?.title || 'Unknown Book'}</td>
-                            <td className="p-4 text-sm font-mono text-right text-gray-600">{b.listedStock || b.sent || 0}</td>
-                            <td className="p-4 text-sm font-mono text-right text-paa-navy font-bold">{b.soldStock || b.sold || 0}</td>
-                            <td className="p-4 text-sm font-mono text-right text-gray-600">{b.returnedStock || b.returned || 0}</td>
-                            <td className="p-4 text-sm font-mono text-right text-emerald-600 font-bold bg-emerald-50/30">₹{b.revenue || 0}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
         </div>
       )}
 
+            {activeTab === 'performance' && (() => {
+                 let totalSent = 0;
+                 let totalSold = 0;
+                 let totalReturned = 0;
+                 let totalRev = 0;
+                 let bestEvent = { name: '-', rev: 0 };
+                 let eventsWithSales = 0;
+                 let eventStats: any[] = [];
+                 let bookStats: Record<string, { sold: number, rev: number, title: string, sent: number, events: any[] }> = {};
+                 
+                 validParticipations.forEach(evt => {
+                     let evtSent = 0;
+                     let evtSold = 0;
+                     let evtReturned = 0;
+                     let evtRev = 0;
+                     
+                     let evtBooks: any[] = [];
+                     if (evt.isInvite) evtBooks = getEventBooks(evt.id);
+                     else if (evt.isPast && evt.isDataUpdated) evtBooks = evt.books || [];
+                     
+                     evtBooks.forEach((b: any) => {
+                         const bId = b.bookId?.toString() || b.id?.toString();
+                         if (selectedBookIds.length === 0 || selectedBookIds.includes(bId)) {
+                             const listed = (b.listedStock || b.sent || 0);
+                             const sold = (b.soldStock || b.sold || 0);
+                             const returned = (b.returnedStock || b.returned || 0);
+                             const rev = sold * (b.mrp || b.book?.mrp || 0);
+                             
+                             evtSent += listed;
+                             evtSold += sold;
+                             evtReturned += returned;
+                             evtRev += rev;
+                             
+                             if (bId && bId !== 'undefined') {
+                                 if (!bookStats[bId]) {
+                                     const bDetails = books.find(book => book.id.toString() === bId);
+                                     bookStats[bId] = { sold: 0, rev: 0, sent: 0, title: b.title || bDetails?.title || 'Unknown', events: [] };
+                                 }
+                                 bookStats[bId].sold += sold;
+                                 bookStats[bId].sent += listed;
+                                 bookStats[bId].rev += rev;
+                                 if (listed > 0 || sold > 0) {
+                                     bookStats[bId].events.push({
+                                         name: evt.name || 'Unknown Event',
+                                         date: evt.date || evt.startDate,
+                                         sent: listed,
+                                         sold: sold,
+                                         rev: rev
+                                     });
+                                 }
+                             }
+                         }
+                     });
+                     
+                     totalSent += evtSent;
+                     totalSold += evtSold;
+                     totalReturned += evtReturned;
+                     totalRev += evtRev;
+                     
+                     if (evtRev > 0) {
+                         eventsWithSales++;
+                         eventStats.push({ name: evt.name, rev: evtRev, date: evt.date || evt.startDate, sold: evtSold });
+                     }
+                 });
+                 
+                 const sellThroughNum = totalSent > 0 ? ((totalSold / totalSent) * 100) : 0;
+                 const sellThrough = sellThroughNum.toFixed(1);
+                 const returnRate = totalSent > 0 ? Math.max(0, 100 - sellThroughNum).toFixed(1) : 0;
+                 
+                 const avgRev = validParticipations.length > 0 ? Math.round(totalRev / validParticipations.length) : 0;
+                 
+                 let fastestMover = { title: '-', rate: 0 };
+                 
+                 const sortedEvents = eventStats.sort((a, b) => b.rev - a.rev);
+                 bestEvent = sortedEvents[0] || { name: '-', rev: 0 };
+                 const secondBestEvent = sortedEvents[1];
+                 
+                 const sortedBooks = Object.values(bookStats).sort((a, b) => b.rev - a.rev);
+                 let bestBook = sortedBooks[0] || { title: '-', rev: 0, sold: 0 };
+                 const secondBestBook = sortedBooks[1];
+                 
+                 Object.values(bookStats).forEach(bs => {
+                     if (bs.sent > 0) {
+                         const rate = (bs.sold / bs.sent) * 100;
+                         if (rate >= fastestMover.rate && bs.sold > 0) {
+                             if (rate > fastestMover.rate || bs.sold > (fastestMover.rate > 0 ? 0 : -1)) {
+                                 fastestMover = { title: bs.title, rate };
+                             }
+                         }
+                     }
+                 });
 
-      {activeTab === 'performance' && (
+                return (
         <div className="space-y-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <h4 className="font-bold text-paa-navy mb-4">Book Sales Performance Over Time</h4>
-            <div className="w-full overflow-x-auto pb-4">
-              <div className="h-64" style={{ minWidth: `${Math.max(100, allEvents.length * 80)}px` }}>
-                <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={allEvents.filter((evt: any) => evt.isDataUpdated || !evt.isPast).map((evt: any) => {
-                  let sold = 0;
-                  let evtBooks: any[] = [];
-                  if (evt.isPast) evtBooks = evt.books || [];
-                  else evtBooks = getEventBooks(evt.id);
-                  evtBooks.forEach((b: any) => {
-                    if (selectedBookIds.length === 0 || selectedBookIds.includes(b.bookId.toString())) {
-                      sold += (b.soldStock || b.sold || 0);
-                    }
-                  });
-                  return { name: evt.name.length > 15 ? evt.name.substring(0, 15) + '...' : evt.name, sold };
-                })} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                  <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }} />
-                  <Bar dataKey="sold" name="Copies Sold" fill="#1e3a8a" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                </BarChart>
-              </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
           <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="mb-4">
-              <label className="text-sm font-semibold text-gray-700 block mb-2">Select Books to Analyze:</label>
+            <div className="mb-2">
+              <label className="text-sm font-semibold text-gray-700 block mb-3 flex items-center gap-2"><BookOpen className="w-4 h-4 text-indigo-500" /> Analyze Specific Books:</label>
               <div className="flex flex-wrap gap-4">
                 {books.map((b: any) => (
-                  <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm hover:border-indigo-300 transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedBookIds.includes(b.id.toString())}
@@ -3523,63 +3712,177 @@ function EventsDashboard({ registrations }: any) {
                         if (e.target.checked) setSelectedBookIds([...selectedBookIds, b.id.toString()]);
                         else setSelectedBookIds(selectedBookIds.filter(id => id !== b.id.toString()));
                       }}
-                      className="text-paa-navy focus:ring-paa-navy rounded"
+                      className="text-paa-navy focus:ring-paa-navy rounded border-gray-300"
                     />
-                    {b.title}
+                    <span className="font-medium text-gray-700">{b.title}</span>
                   </label>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto border border-gray-200 rounded-xl">
-            <table className="w-full text-left border-collapse">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
+                       <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center relative group cursor-default">
+                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1"><TrendingUp className="w-3 h-3 text-indigo-400" /> Sell-Through Rate</div>
+                          <div className="text-3xl font-serif font-bold text-indigo-700">{sellThrough}%</div>
+                          <div className="text-[10px] text-orange-500 font-bold mt-1">Returns: {returnRate}%</div>
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 p-2 bg-gray-800 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none text-center shadow-lg">Percentage of the inventory you sent that successfully sold vs returned.</div>
+                       </div>
+                       <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center relative group cursor-default">
+                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1"><BookOpen className="w-3 h-3 text-purple-400" /> Best Book</div>
+                          <div className="text-lg font-serif font-bold text-purple-700" title={bestBook.title}>{bestBook.title}</div>
+                          <div className="text-[10px] text-purple-500 font-bold mt-1">₹{bestBook.rev.toLocaleString()} • {bestBook.sold} Sold</div>
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 p-2 bg-gray-800 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none text-center shadow-lg">The specific title that generated the most gross revenue across all events.</div>
+                       </div>
+                       <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center relative group cursor-default">
+                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1"><TrendingUp className="w-3 h-3 text-blue-400" /> Fastest Mover</div>
+                          <div className="text-lg font-serif font-bold text-blue-700 truncate" title={fastestMover.title}>{fastestMover.title}</div>
+                          <div className="text-[10px] text-blue-500 font-bold mt-1">{fastestMover.rate > 0 ? fastestMover.rate.toFixed(1) : 0}% Sold</div>
+                          <div className="absolute top-full right-0 md:left-1/2 md:-translate-x-1/2 mt-2 w-48 p-2 bg-gray-800 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none text-center shadow-lg">The book with the highest sell-through rate overall.</div>
+                       </div>
+
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h4 className="font-bold text-paa-navy mb-4">Book Sales Performance Over Time</h4>
+            <div className="w-full overflow-x-auto pb-4">
+              <div className="h-64" style={{ minWidth: `${Math.max(100, validParticipations.length * 150)}px` }}>
+                <ResponsiveContainer width="100%" height="100%">
+                {(() => {
+                    const uniqueBooks = new Set<string>();
+                    const chartData = validParticipations.map((evt: any) => {
+                      let evtData: any = { name: evt.name.length > 15 ? evt.name.substring(0, 15) + '...' : evt.name };
+                      let evtBooks: any[] = [];
+                      if (evt.isInvite) evtBooks = getEventBooks(evt.id);
+                      else if (evt.isPast && evt.isDataUpdated) evtBooks = evt.books || [];
+                      evtBooks.forEach((b: any) => {
+                        if (selectedBookIds.length === 0 || selectedBookIds.includes(b.bookId?.toString() || b.id?.toString())) {
+                          const bTitle = b.title || b.book?.title || 'Unknown Book';
+                          uniqueBooks.add(bTitle);
+                          evtData[bTitle] = (evtData[bTitle] || 0) + (b.soldStock || b.sold || 0);
+                        }
+                      });
+                      return evtData;
+                    });
+                    
+                    const bookTitles = Array.from(uniqueBooks);
+                    const colors = ['#1e3a8a', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#c026d3', '#ea580c', '#65a30d', '#4f46e5'];
+                    
+                    return (
+                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                          <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }} />
+                          {bookTitles.map((title, idx) => (
+                             <Bar key={idx} dataKey={title} name={title} fill={colors[idx % colors.length]} radius={[4, 4, 0, 0]} maxBarSize={30} />
+                          ))}
+                        </BarChart>
+                    );
+                })()}
+              </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-end mb-4">
+            <h4 className="font-bold text-paa-navy text-lg flex items-center gap-2"><BarChart3 className="w-5 h-5 text-indigo-500" /> Book Performance Breakdown</h4>
+            <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Sort By:</span>
+                <select className="border border-gray-200 rounded-lg text-sm font-bold text-paa-navy p-2 outline-none cursor-pointer bg-white" value={bpSort} onChange={e => setBpSort(e.target.value)}>
+                    <option value="revenue_desc">Highest Revenue</option>
+                    <option value="revenue_asc">Lowest Revenue</option>
+                    <option value="sold_desc">Most Copies Sold</option>
+                    <option value="rate_desc">Highest Sell-Through</option>
+                </select>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-premium border border-paa-navy/5 overflow-hidden mb-8">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-                  <th className="p-4 font-semibold">Event</th>
-                  <th className="p-4 font-semibold text-right">Copies Sent</th>
-                  <th className="p-4 font-semibold text-right">Copies Sold</th>
-                  <th className="p-4 font-semibold text-right">Revenue</th>
+                <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
+                  <th className="px-6 py-4 w-1/3">Book Title</th>
+                  <th className="px-4 py-4 text-right">Copies Sent</th>
+                  <th className="px-4 py-4 text-right">Copies Sold</th>
+                  <th className="px-4 py-4 text-right">Sell-Through Rate</th>
+                  <th className="px-4 py-4 text-right">Revenue</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {allEvents.filter((evt: any) => evt.isDataUpdated || !evt.isPast).map((evt: any, i: number) => {
-                  let sent = 0;
-                  let sold = 0;
-                  let rev = 0;
-
-                  let evtBooks: any[] = [];
-                  if (evt.isPast) evtBooks = evt.books || [];
-                  else evtBooks = getEventBooks(evt.id);
-
-                  evtBooks.forEach((b: any) => {
-                    if (selectedBookIds.includes(b.bookId?.toString() || b.id?.toString())) {
-                      sent += (b.listedStock || b.sent || 0);
-                      sold += (b.soldStock || b.sold || 0);
-                      rev += (b.revenue || 0);
-                    }
-                  });
-
-                  if (sent === 0 && sold === 0 && rev === 0) return null;
-
+                {Object.keys(bookStats).length === 0 && <tr><td colSpan={5} className="p-8 text-center text-sm text-paa-gray-text italic">No books found.</td></tr>}
+                {(() => {
+                   const statsArray = Object.values(bookStats).map(bs => ({
+                       ...bs,
+                       rate: bs.sent > 0 ? (bs.sold / bs.sent) * 100 : 0
+                   }));
+                   
+                   statsArray.sort((a, b) => {
+                       if (bpSort === 'revenue_desc') return b.rev - a.rev;
+                       if (bpSort === 'revenue_asc') return a.rev - b.rev;
+                       if (bpSort === 'sold_desc') return b.sold - a.sold || b.rev - a.rev;
+                       if (bpSort === 'rate_desc') return b.rate - a.rate || b.rev - a.rev;
+                       return b.rev - a.rev;
+                   });
+                   
+                   return statsArray.map((bs: any, i: number) => {
+                  const isExpanded = expandedBookId === bs.title;
                   return (
-                    <tr key={i} className="hover:bg-gray-50/50">
-                      <td className="p-4 font-medium text-gray-900">{evt.name}</td>
-                      <td className="p-4 text-sm font-mono text-right">{sent}</td>
-                      <td className="p-4 text-sm font-mono text-right">{sold}</td>
-                      <td className="p-4 text-sm font-mono text-right text-emerald-600 font-medium">₹{rev}</td>
-                    </tr>
+                    <React.Fragment key={i}>
+                      <tr onClick={() => setExpandedBookId(isExpanded ? null : bs.title)} className="hover:bg-gray-50 transition-colors cursor-pointer group">
+                        <td className="px-6 py-4 text-sm font-semibold text-paa-navy whitespace-normal flex items-center gap-2">
+                           <div className={`transform transition-transform text-gray-400 group-hover:text-paa-navy ${isExpanded ? 'rotate-180' : ''}`}>▼</div>
+                           {bs.title}
+                        </td>
+                        <td className="px-4 py-4 text-sm font-bold text-gray-700 text-right">{bs.sent > 0 ? bs.sent : '-'}</td>
+                        <td className="px-4 py-4 text-sm font-bold text-paa-navy text-right">{bs.sold > 0 ? bs.sold : '-'}</td>
+                        <td className="px-4 py-4 text-sm font-bold text-indigo-600 text-right">{bs.rate > 0 ? `${bs.rate.toFixed(1)}%` : '-'}</td>
+                        <td className="px-4 py-4 text-sm font-black text-emerald-700 text-right">{bs.rev > 0 ? `₹${bs.rev.toLocaleString()}` : '-'}</td>
+                      </tr>
+                      {isExpanded && (
+                          <tr>
+                            <td colSpan={5} className="p-0 bg-gray-50 border-b border-gray-200">
+                                <div className="p-4 pl-12">
+                                    <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <BookOpen className="w-3 h-3" /> Event Breakdown for {bs.title}
+                                    </div>
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-200">
+                                                <th className="pb-2 font-bold w-1/2">Event Name</th>
+                                                <th className="pb-2 font-bold text-right">Date</th>
+                                                <th className="pb-2 font-bold text-right">Sent</th>
+                                                <th className="pb-2 font-bold text-right">Sold</th>
+                                                <th className="pb-2 font-bold text-right">Revenue</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {bs.events?.length > 0 ? bs.events.map((ev: any, idx: number) => (
+                                                <tr key={idx} className="hover:bg-white transition-colors">
+                                                    <td className="py-3 text-xs font-semibold text-paa-navy">{ev.name}</td>
+                                                    <td className="py-3 text-[10px] text-gray-500 text-right">{new Date(ev.date).toLocaleDateString()}</td>
+                                                    <td className="py-3 text-xs font-bold text-gray-700 text-right">{ev.sent > 0 ? ev.sent : '-'}</td>
+                                                    <td className="py-3 text-xs font-bold text-paa-navy text-right">{ev.sold > 0 ? ev.sold : '-'}</td>
+                                                    <td className="py-3 text-xs font-black text-emerald-700 text-right">{ev.rev > 0 ? `₹${ev.rev.toLocaleString()}` : '-'}</td>
+                                                </tr>
+                                            )) : <tr><td colSpan={5} className="py-4 text-center text-xs text-gray-400 italic">No events recorded.</td></tr>}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                          </tr>
+                      )}
+                    </React.Fragment>
                   );
-                })}
+                })})()}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-    </div>
-  );
 
-  <Modal isOpen={isOptInModalOpen} onClose={() => setIsOptInModalOpen(false)} title={`Review Invite: ${selectedInvite?.name}`}>
+        </div>
+        );
+      })()}
+      
+      <Modal isOpen={isOptInModalOpen} onClose={() => setIsOptInModalOpen(false)} title={`Review Invite: ${selectedInvite?.name}`}>
     {selectedInvite && (
       <div className="space-y-6">
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
@@ -3656,6 +3959,8 @@ function EventsDashboard({ registrations }: any) {
       </div>
     )}
   </Modal>
+    </div>
+  );
 }
 
 function AuthorSalesReport({ data }: { data: any }) {

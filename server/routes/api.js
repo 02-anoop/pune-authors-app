@@ -2802,7 +2802,9 @@ router.get('/api/admin/events/:id/registrations', verifyToken, isAdmin, async (r
     const registrations = await prisma.eventAuthor.findMany({
       where: { eventId, optInStatus: { not: 'Pending' } },
       include: {
-        author: true
+        author: {
+          include: { books: true }
+        }
       }
     });
     
@@ -3303,7 +3305,7 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
       
       const toCreate = [];
       for (const b of booksData) {
-         if (b.isSelected) {
+         if (b.isSelected || parseInt(b.listedStock) > 0 || parseInt(b.soldStock) > 0) {
             toCreate.push({
                eventId,
                authorId,

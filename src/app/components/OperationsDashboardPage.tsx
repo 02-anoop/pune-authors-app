@@ -4,7 +4,7 @@ import {
   RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search,
   Eye, Edit, Edit2, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle,
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
-  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, Loader2, FileText, AlertCircle,
+  ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, ChevronUp, Loader2, FileText, AlertCircle,
   LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone
 } from 'lucide-react';
 import {
@@ -123,8 +123,9 @@ export function OperationsDashboardPage() {
 
   const [showAuthorDataModal, setShowAuthorDataModal] = useState(false);
   const [showAllPlatformAuthors, setShowAllPlatformAuthors] = useState(false);
+  const [isEditingKPIs, setIsEditingKPIs] = useState(false);
   const [selectedEventForData, setSelectedEventForData] = useState<any>(null);
-  const [selectedAuthorForData, setSelectedAuthorForData] = useState('');
+  const [selectedAuthorForData, setSelectedAuthorForData] = useState<any>(null);
 
   const [reportEventId, setReportEventId] = useState<number | null>(null);
   const [eventReportData, setEventReportData] = useState<any>(null);
@@ -160,6 +161,7 @@ export function OperationsDashboardPage() {
   const [hasGranularData, setHasGranularData] = useState(false);
   const [authorSearch, setAuthorSearch] = useState('');
   const [expandedAuthorId, setExpandedAuthorId] = useState<number | null>(null);
+  const [expandedEventIndex, setExpandedEventIndex] = useState<number | null>(null);
   const [eventSearch, setEventSearch] = useState('');
   const [createEventDate, setCreateEventDate] = useState('');
   const [createEventStatus, setCreateEventStatus] = useState('Upcoming');
@@ -1068,7 +1070,7 @@ export function OperationsDashboardPage() {
 
     return (
       <div className="space-y-6">
-        {/* ── High Level KPIs ── */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ High Level KPIs ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             { label: 'Total Authors', value: stats?.totalAuthors || 0, icon: Users, colorClass: 'blue' },
@@ -1088,7 +1090,7 @@ export function OperationsDashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* ── Visual Data Insights (col-span-2) ── */}
+          {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Visual Data Insights (col-span-2) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
           <div className="lg:col-span-2 space-y-6">
             {/* Mini Insight Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -1242,7 +1244,7 @@ export function OperationsDashboardPage() {
             </div>
           </div>
 
-          {/* ── Pending Actions & Low Stock (col-span-1) ── */}
+          {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Pending Actions & Low Stock (col-span-1) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
               <h3 className="text-lg font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2">
@@ -1442,7 +1444,7 @@ export function OperationsDashboardPage() {
 
     return (
       <div className="space-y-6">
-        {/* ── Daily Sales Stats ── */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Daily Sales Stats ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         <h3 className="text-xl font-serif font-medium text-paa-navy flex items-center gap-2">
           <Activity className="w-5 h-5 text-paa-gold" /> Today's Sales Activity
         </h3>
@@ -1480,7 +1482,7 @@ export function OperationsDashboardPage() {
           </div>
         </div>
 
-        {/* ── Sales & Revenue Reports ── */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Sales & Revenue Reports ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         <div className="bg-white p-4 md:p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl mt-8">
           <div className="mb-6 border-b border-paa-navy/5 pb-4">
             <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
@@ -1558,7 +1560,7 @@ export function OperationsDashboardPage() {
                       <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{row.Author}</td>
                       <td className="px-4 py-3 text-sm text-paa-navy">{row.BookTitle}</td>
                       <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{row.QuantitySold}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">Ã¢â€šÂ¹{row.Revenue}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{row.Revenue}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1604,7 +1606,7 @@ export function OperationsDashboardPage() {
 
     return (
       <div className="space-y-6">
-        {/* ── Order Tracking KPIs ── */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Order Tracking KPIs ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
             { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'text-green-600 bg-green-100', bgClass: 'border-green-100' },
@@ -1695,7 +1697,7 @@ export function OperationsDashboardPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                <input type="text" placeholder="SEARCH ORDERS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64" />
+                <input type="text" placeholder="SEARCH ORDErs..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64" />
               </div>
               <button onClick={handleExportCSV} className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium rounded-full">
                 <ClipboardList className="w-4 h-4" /> Export CSV
@@ -1914,7 +1916,7 @@ export function OperationsDashboardPage() {
           </div>
         </div>
 
-        {/* ── Pending Fine Approvals ── */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Pending Fine Approvals ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         {activeTable === 'approvals' && (
           <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm animate-fade-in-up">
             <div className="flex justify-between items-center mb-4">
@@ -1956,7 +1958,7 @@ export function OperationsDashboardPage() {
           </div>
         )}
 
-        {/* ── Active Fines (Unpaid) ── */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Active Fines (Unpaid) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         {activeTable === 'suspended' && (
           <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm animate-fade-in-up">
             <div className="flex justify-between items-center mb-4">
@@ -1987,7 +1989,7 @@ export function OperationsDashboardPage() {
           </div>
         )}
 
-        {/* ── Late Deliveries Row (Charging) ── */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Late Deliveries Row (Charging) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         {activeTable === 'late' && (
           <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm animate-fade-in-up">
             <div className="flex justify-between items-center mb-4">
@@ -2079,7 +2081,7 @@ export function OperationsDashboardPage() {
           </div>
         )}
 
-        {/* ── Fine History ── */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Fine History ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         {activeTable === 'history' && (
           <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm animate-fade-in-up">
             <div className="flex justify-between items-center mb-4">
@@ -2119,7 +2121,7 @@ export function OperationsDashboardPage() {
             <div className="dash-modal" style={{ maxWidth: 400 }}>
               <div className="dash-modal-header">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">Charge Fine</h3>
-                <button onClick={() => setFineModalAuthor(null)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">✕</button>
+                <button onClick={() => setFineModalAuthor(null)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text transition-colors">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢</button>
               </div>
               <div className="dash-modal-body flex flex-col gap-4">
                 <div>
@@ -2229,7 +2231,7 @@ export function OperationsDashboardPage() {
                     onClick={() => setAuthorStatusFilter(status)}
                     className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
                   >
-                    {status === 'Reapplied' ? '🔄 Reapplied' : status}
+                    {status === 'Reapplied' ? 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Reapplied' : status}
                   </button>
                 ))}
               </div>
@@ -2237,7 +2239,7 @@ export function OperationsDashboardPage() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
                 <input
                   type="text"
-                  placeholder="SEARCH AUTHORS..."
+                  placeholder="SEARCH AUTHOrs..."
                   className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -2326,7 +2328,7 @@ export function OperationsDashboardPage() {
                       const ed = typeof author.extraData === 'string' ? (() => { try { return JSON.parse(author.extraData); } catch (e) { return {}; } })() : (author.extraData || {});
                       const isReapplied = ed?.isReapplied === true && author.status === 'Pending';
                       return isReapplied ? (
-                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>🔄 Reapplied</span>
+                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Reapplied</span>
                       ) : (
                         <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
                           {author.status}
@@ -2695,7 +2697,7 @@ export function OperationsDashboardPage() {
                     <input required name="date" type="date" className="dash-input" value={createEventDate} onChange={(e) => setCreateEventDate(e.target.value)} />
                     {createEventDate && (
                       <div className={`text-[10px] mt-1 font-bold ${isPastEvent ? 'text-orange-500' : 'text-emerald-500'}`}>
-                        {isPastEvent ? '✓ Past Event' : '✓ Upcoming Event'}
+                        {isPastEvent ? '— Past Event' : '— Upcoming Event'}
                       </div>
                     )}
                   </div>
@@ -2749,22 +2751,26 @@ export function OperationsDashboardPage() {
     });
 
 
-    const handleEditAuthorData = (author: any) => {
-        setSelectedAuthorForData(author);
+    const handleEditAuthorData = (m: any) => {
+        const authorProfile = m.author || m;
+        setSelectedAuthorForData(authorProfile);
         setUseGlobalOverride(false);
         setGlobalSold(0);
         setGlobalRevenue(0);
-        setManageAuthorBooks((author.books || []).map((b: any) => {
-            const isEventBook = b.bookId !== undefined;
-            const bookData = isEventBook ? b.book : b;
+        
+        const globalBooks = authorProfile.books || [];
+        const eventBooks = (m.books || []).filter((b: any) => b.bookId !== undefined);
+
+        setManageAuthorBooks(globalBooks.map((gb: any) => {
+            const evb = eventBooks.find((eb: any) => eb.bookId === gb.id);
             return {
-                bookId: isEventBook ? b.bookId : b.id,
-                title: bookData?.title || 'Unknown Book',
-                mrp: parseFloat(bookData?.mrp) || 0,
-                isSelected: isEventBook ? true : false,
-                listedStock: isEventBook ? (b.listedStock || 0) : 0,
-                soldStock: isEventBook ? (b.soldStock || 0) : 0,
-                returnedStock: isEventBook ? (b.returnedStock || 0) : 0
+                bookId: gb.id,
+                title: gb.title || 'Unknown Book',
+                mrp: parseFloat(gb.mrp) || 0,
+                isSelected: !!evb,
+                listedStock: evb ? (evb.listedStock || 0) : 0,
+                soldStock: evb ? (evb.soldStock || 0) : 0,
+                returnedStock: evb ? (evb.returnedStock || 0) : 0
             };
         }));
     };
@@ -2867,7 +2873,7 @@ export function OperationsDashboardPage() {
                                         toast.error('Failed to unpublish');
                                     }
                                 }} className="dash-btn bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-700 border border-gray-300 hover:border-red-300 transition-colors shadow-sm font-bold flex items-center gap-2">
-                                  ✓ PUBLISHED · Click to Unpublish
+                                  ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ PUBLISHED ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Click to Unpublish
                                 </button>
                               )}
                             </>
@@ -2888,30 +2894,35 @@ export function OperationsDashboardPage() {
                  </button>
                </div>
                </div>
-               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                   <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
-                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>
-                      <div className="text-xl font-serif text-paa-navy font-bold">{totalAuthors}</div>
-                   </div>
-                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm">
-                      <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Listed</div>
-                      <div className="text-xl font-serif text-blue-800 font-bold">{totalListed}</div>
-                   </div>
-                   <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 shadow-sm">
-                      <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Sold</div>
-                      <div className="text-xl font-serif text-indigo-800 font-bold">{totalSold}</div>
-                   </div>
-                   <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
-                      <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
-                      <div className="text-xl font-serif text-emerald-800 font-bold">₹{totalSale}</div>
-                   </div>
-                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 shadow-sm">
-                      <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Best Selling Book</div>
-                      <div className="text-sm font-bold text-purple-900 truncate">
-                         {bestSellingBook}
-                      </div>
-                   </div>
-               </div>
+                {/* KPI Cards */}
+                <div className="mb-2 flex justify-between items-center">
+                  <span className="text-xs text-gray-400">Event Summary</span>
+                  {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === "Past" || selectedEventBreakdown.status === "Legacy Archive") && ( isEditingKPIs ? ( <div className="flex gap-2"><button onClick={() => setIsEditingKPIs(false)} className="text-xs font-bold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-full transition-colors">Cancel</button><button onClick={async () => { await handleSaveAggregateData(); setIsEditingKPIs(false); }} className="text-xs font-bold bg-paa-navy text-paa-cream px-4 py-1.5 rounded-full hover:bg-paa-gold hover:text-paa-navy transition-colors active:scale-95">Save Stats</button></div> ) : ( <button onClick={() => setIsEditingKPIs(true)} className="text-xs font-bold text-paa-navy border border-paa-navy/20 bg-gray-50 hover:bg-paa-navy/5 px-4 py-1.5 rounded-full transition-colors">Edit Stats</button> ) )}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                    <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
+                       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>
+                       {isEditingKPIs ? (<input type="number" autoFocus className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0" value={selectedEventBreakdown.aggAuthors ?? ""} placeholder="NA" onChange={e => setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: e.target.value === "" ? null : parseInt(e.target.value) })} />) : (<div className="text-xl font-serif text-paa-navy font-bold">{selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : (totalAuthors || "-")}</div>)}
+                    </div>
+                    <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
+                       <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Listed</div>
+                       {isEditingKPIs ? (<input type="number" className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSent ?? ""} placeholder="NA" onChange={e => setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: e.target.value === "" ? null : parseInt(e.target.value) })} />) : (<div className="text-xl font-serif text-blue-800 font-bold">{selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : (totalListed || "-")}</div>)}
+                    </div>
+                    <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
+                       <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Sold</div>
+                       {isEditingKPIs ? (<input type="number" className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSold ?? ""} placeholder="NA" onChange={e => setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: e.target.value === "" ? null : parseInt(e.target.value) })} />) : (<div className="text-xl font-serif text-indigo-800 font-bold">{selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : (totalSold || "-")}</div>)}
+                    </div>
+                    <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
+                       <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
+                       {isEditingKPIs ? (<div className="flex items-center gap-0.5"><span className="text-xl font-serif text-emerald-800 font-bold">₹</span><input type="number" className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0" value={selectedEventBreakdown.aggRevenue ?? ""} placeholder="NA" onChange={e => setSelectedEventBreakdown({ ...selectedEventBreakdown, aggRevenue: e.target.value === "" ? null : parseFloat(e.target.value) })} /></div>) : (<div className="text-xl font-serif text-emerald-800 font-bold">₹{selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : (totalSale || "-")}</div>)}
+                    </div>
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 shadow-sm">
+                       <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Best Selling Book</div>
+                       <div className="text-sm font-bold text-purple-900 truncate">{bestSellingBook || "-"}</div>
+                       <div className="text-[9px] text-purple-400 mt-1">auto-calculated</div>
+                    </div>
+                </div>
+
                
                {selectedAuthorForData ? (
                   <div className="border border-gray-200 rounded-xl p-6 bg-gray-50 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
@@ -2984,6 +2995,7 @@ export function OperationsDashboardPage() {
                                    <input type="number" value={book.listedStock} onChange={(e) => {
                                       const newBooks = [...manageAuthorBooks];
                                       newBooks[idx].listedStock = parseInt(e.target.value) || 0;
+                                      if (newBooks[idx].listedStock > 0) newBooks[idx].isSelected = true;
                                       if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
                                       setManageAuthorBooks(newBooks);
                                    }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
@@ -2993,6 +3005,7 @@ export function OperationsDashboardPage() {
                                    <input type="number" value={book.soldStock} onChange={(e) => {
                                       const newBooks = [...manageAuthorBooks];
                                       newBooks[idx].soldStock = parseInt(e.target.value) || 0;
+                                      if (newBooks[idx].soldStock > 0) newBooks[idx].isSelected = true;
                                       if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
                                       setManageAuthorBooks(newBooks);
                                    }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
@@ -3029,45 +3042,11 @@ export function OperationsDashboardPage() {
                   </div>
                ) : (
                   <div>
-                     {showAllPlatformAuthors && (selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past') && (
-                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
-                            <h5 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Or Set Aggregate Data for Entire Event</h5>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div>
-                                    <label className="dash-label text-[10px] text-gray-500 block mb-1">Total Authors Participated</label>
-                                    <input type="number" className="dash-input font-mono w-full" value={selectedEventBreakdown.aggAuthors || 0} onChange={e => {
-                                         setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: parseInt(e.target.value) || 0 })
-                                    }} />
-                                </div>
-                                <div>
-                                    <label className="dash-label text-[10px] text-gray-500 block mb-1">Total Books Sent</label>
-                                    <input type="number" className="dash-input font-mono w-full" value={selectedEventBreakdown.aggSent || 0} onChange={e => {
-                                         setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: parseInt(e.target.value) || 0 })
-                                    }} />
-                                </div>
-                                <div>
-                                    <label className="dash-label text-[10px] text-gray-500 block mb-1">Total Books Sold</label>
-                                    <input type="number" className="dash-input font-mono w-full" value={selectedEventBreakdown.aggSold || 0} onChange={e => {
-                                         setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: parseInt(e.target.value) || 0 })
-                                    }} />
-                                </div>
-                                <div>
-                                    <label className="dash-label text-[10px] text-emerald-600 block mb-1">Total Revenue (₹)</label>
-                                    <input type="number" className="dash-input font-mono w-full text-emerald-600 font-bold" value={selectedEventBreakdown.aggRevenue || 0} onChange={e => {
-                                         setSelectedEventBreakdown({ ...selectedEventBreakdown, aggRevenue: parseFloat(e.target.value) || 0 })
-                                    }} />
-                                </div>
-                            </div>
-                            <div className="mt-4 flex justify-end">
-                                <button onClick={handleSaveAggregateData} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-sm active:scale-95">Save Aggregate Stats</button>
-                            </div>
-                        </div>
-                     )}
                      <div className="flex justify-between items-center mb-4">
                          <div>
                            <h4 className="font-bold text-gray-700">Authors Participated / Registered</h4>
                            {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past') && (
-                              <p className="text-xs text-gray-400 mt-0.5">Showing all platform-registered authors — fill in data for those who attended this event</p>
+                              <p className="text-xs text-gray-400 mt-0.5">Showing all platform-registered authors - fill in data for those who attended this event</p>
                            )}
                          </div>
                          <input 
@@ -3079,19 +3058,19 @@ export function OperationsDashboardPage() {
                          />
                       </div>
                      <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                         <table className="w-full text-left border-collapse bg-white">
-                             <thead className="bg-gray-50 border-b border-gray-200">
+                         <table className="dash-table w-full">
+                             <thead>
                                  <tr>
-                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Author Name</th>
-                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Listed</th>
-                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Quantities</th>
-                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Sold</th>
-                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Revenue</th>
+                                     <th>Author Name</th>
+                                     <th>Books Listed</th>
+                                     <th>Quantities</th>
+                                     <th>Books Sold</th>
+                                     <th>Revenue</th>
                                      {!selectedEventBreakdown.isLegacy && (
-                                        <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center">Payment</th>
+                                        <th style={{ textAlign: 'center' }}>Payment</th>
                                      )}
-                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase">Status</th>
-                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center">Actions</th>
+                                     <th>Status</th>
+                                     <th style={{ textAlign: 'center' }}>Actions</th>
                                  </tr>
                              </thead>
                              <tbody className="divide-y divide-gray-100">
@@ -3111,11 +3090,13 @@ export function OperationsDashboardPage() {
                                      return (
                                      <React.Fragment key={i}>
                                      <tr className="hover:bg-gray-50/50 transition-colors">
-                                         <td className="p-3 font-semibold text-paa-navy">{authorData?.name || 'Unknown'}</td>
+                                         <td>
+                                            <p className="font-bold text-paa-navy">{authorData?.name || 'Unknown'}</p>
+                                         </td>
                                          <td className="p-3 text-sm text-gray-600">{m.books?.length || 0} Books</td>
                                          <td className="p-3 font-mono text-sm text-gray-600">{listed}</td>
                                          <td className="p-3 font-mono text-sm text-gray-600">{sold}</td>
-                                         <td className="p-3 font-mono text-sm text-emerald-600 font-bold">₹{rev}</td>
+                                         <td className="p-3 font-mono text-sm text-emerald-600 font-bold">{'₹'}{rev}</td>
                                          {!selectedEventBreakdown.isLegacy && (
                                             <td className="p-3 text-center align-middle">
                                                <div className="flex flex-col items-center justify-center h-full">
@@ -3123,7 +3104,7 @@ export function OperationsDashboardPage() {
                                                      <a href={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} target="_blank" rel="noreferrer" className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80">
                                                          <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
                                                      </a>
-                                                 ) : <span className="text-[10px] text-gray-400 italic">N/A</span>}
+                                                 ) : <span className="text-sm text-gray-400 font-bold">ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“</span>}
                                                  
                                                  {status === 'Registered' && (
                                                      <div className="mt-1">
@@ -3151,11 +3132,11 @@ export function OperationsDashboardPage() {
                                          <td className="p-3 text-center">
                                              <div className="flex gap-2 justify-center items-center">
                                                  <button onClick={() => setExpandedAuthorId(isExpanded ? null : (showAllAuthors ? m.id : m.authorId))} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-bold border border-gray-200 transition-colors shadow-sm">
-                                                     {isExpanded ? '▲' : '▼'}
+                                                     {isExpanded ? 'â–²' : 'â–¼'}
                                                  </button>
                                                  {showAllAuthors || status === 'Registered' ? (
                                                      <button onClick={() => {
-                                                         handleEditAuthorData(authorData);
+                                                         handleEditAuthorData(m);
                                                          if (selectedEventBreakdown.isLegacy && m.optInStatus) {
                                                              setUseGlobalOverride(true);
                                                              setGlobalSold(m.manualTotalSold || 0);
@@ -3334,11 +3315,11 @@ export function OperationsDashboardPage() {
             <table className="dash-table w-full text-left min-w-[600px]">
               <thead className="bg-[#f0f4f8]">
                 <tr>
+                  <th className="w-12 pl-6 pr-2 py-3 border-b border-paa-navy/5"></th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Event Name</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Date</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Location</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Duration</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Charges</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Event Type</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Registration Fee</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Status</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-center">POS</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Authors</th>
@@ -3353,47 +3334,90 @@ export function OperationsDashboardPage() {
                   const books = evt.isLegacy ? (evt.aggSold || 0) : (evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0) || 0);
                   const revenue = evt.isLegacy ? (evt.aggRevenue || (books * 200)) : (evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0);
                   return (
-                      <tr key={i} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{evt.name}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{evt.date}</td>
-                        <td className="px-4 py-3 text-sm text-paa-gray-text">{evt.location || evt.address || 'TBA'}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{evt.durationDays ? `${evt.durationDays} Days` : 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">₹{evt.registrationFee || 0}</td>
-                        <td className="px-4 py-3">
-                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
-                              {evt.isLegacy ? 'Legacy Archive' : evt.status}
-                           </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-bold text-center">{evt.livePosEnabled && !evt.isPast ? <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Enabled</span> : <span className="text-gray-400">-</span>}</td>
-                                                <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
-                           <div className="flex items-center justify-end gap-2">
-                               {authors}
-                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{books}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{revenue}</td>
-                        <td className="px-4 py-3 text-right">
-                           <div className="flex gap-2 justify-center">
-                               <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
-                                  <Eye className="w-4 h-4" />
-                                  {evt.registrations?.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length > 0 && (
-                                      <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse shadow-sm">
-                                          {evt.registrations.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length}
-                                      </span>
-                                  )}
-                               </button>
-                               <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
-                                  <Edit2 className="w-4 h-4" />
-                               </button>
-                               <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors shadow-sm">
-                                  <Trash2 className="w-4 h-4" />
-                               </button>
-                           </div>
-                        </td>
-                      </tr>
-                  );
+                      <React.Fragment key={i}>
+                       <tr className={`hover:bg-gray-50 transition-colors ${expandedEventIndex === i ? 'bg-gray-50' : ''}`}>
+                         <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => setExpandedEventIndex(expandedEventIndex === i ? null : i)}>
+                            <button className="text-gray-400 hover:text-paa-navy transition-colors">
+                                {expandedEventIndex === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            </button>
+                         </td>
+                         <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{evt.name}</td>
+                         <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{evt.date}</td>
+                         <td className="px-4 py-3 text-sm text-paa-gray-text capitalize">{evt.eventType || 'N/A'}</td>
+                         <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
+                            <div>₹{evt.registrationFee || 0}</div>
+                            {evt.registrationFee > 0 && <div className="text-[10px] font-normal text-gray-500 uppercase tracking-widest mt-0.5">{evt.feeType || 'Per Author'}</div>}
+                         </td>
+                         <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
+                               {evt.isLegacy ? 'Legacy Archive' : evt.status}
+                            </span>
+                         </td>
+                         <td className="px-4 py-3 text-sm font-bold text-center">{evt.livePosEnabled && !evt.isPast ? <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Enabled</span> : <span className="text-gray-400">-</span>}</td>
+                         <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
+                            <div className="flex items-center justify-end gap-2">
+                                {authors}
+                            </div>
+                         </td>
+                         <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{books}</td>
+                         <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{revenue}</td>
+                         <td className="px-4 py-3 text-right">
+                            <div className="flex gap-2 justify-center">
+                                <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
+                                   <Eye className="w-4 h-4" />
+                                   {evt.registrations?.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length > 0 && (
+                                       <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse shadow-sm">
+                                           {evt.registrations.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length}
+                                       </span>
+                                   )}
+                                </button>
+                                <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
+                                   <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors shadow-sm">
+                                   <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                         </td>
+                       </tr>
+                       {expandedEventIndex === i && (
+                          <tr className="bg-[#f8fafc] border-b border-gray-100 shadow-inner">
+                             <td colSpan={11} className="p-0">
+                                <div className="flex flex-col md:flex-row gap-8 px-8 py-6 border-l-4 border-indigo-400 ml-6 my-4 bg-white rounded-r-xl shadow-sm mr-6">
+                                   <div className="flex-1">
+                                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><FileText className="w-3 h-3"/> Event Description</p>
+                                      <p className="text-sm text-paa-navy leading-relaxed">{evt.description || 'No description provided.'}</p>
+                                   </div>
+                                   <div className="w-px bg-gray-100 hidden md:block"></div>
+                                   <div className="flex flex-col gap-5 min-w-[150px]">
+                                      <div>
+                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3"/> Location</p>
+                                         <p className="text-sm text-paa-navy font-semibold">{evt.location || evt.address || 'TBA'}</p>
+                                      </div>
+                                      <div>
+                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><CalendarIcon className="w-3 h-3"/> Duration</p>
+                                         <p className="text-sm text-paa-navy font-semibold">{evt.durationDays ? `${evt.durationDays} Days` : 'N/A'}</p>
+                                      </div>
+                                   </div>
+                                   <div className="w-px bg-gray-100 hidden md:block"></div>
+                                   <div className="min-w-[160px]">
+                                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><ImageIcon className="w-3 h-3"/> Event Banner</p>
+                                      {evt.bannerUrl ? (
+                                         <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-video w-40 relative group">
+                                           <img src={evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`} alt="Banner" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                         </div>
+                                      ) : (
+                                         <div className="aspect-video w-40 bg-gray-50 rounded-lg border border-gray-200 border-dashed flex items-center justify-center text-[10px] text-gray-400 italic">No Banner Uploaded</div>
+                                      )}
+                                   </div>
+                                </div>
+                             </td>
+                          </tr>
+                       )}
+                      </React.Fragment>
+                   );
                })}
-               {allCombinedEvents.length === 0 && <tr><td colSpan={10} className="text-center py-6 text-sm text-paa-gray-text italic">No events found.</td></tr>}
+               {allCombinedEvents.length === 0 && <tr><td colSpan={11} className="text-center py-6 text-sm text-paa-gray-text italic">No events found.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -3655,7 +3679,7 @@ export function OperationsDashboardPage() {
               <button onClick={handleExportCSV} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-widest rounded-3xl-2xl transition-colors shadow rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                 Export CSV
               </button>
-              <button onClick={fetchAuthors} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+              <button onClick={() => fetchAuthors()} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
                 <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
               </button>
             </div>
@@ -3965,7 +3989,7 @@ export function OperationsDashboardPage() {
               <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 420, background: '#fff', borderRadius: 16, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', zIndex: 9999, overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fafafa' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>📢 Broadcast to Authors</p>
+                    <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â¢ Broadcast to Authors</p>
                     <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X className="w-4 h-4" /></button>
                   </div>
                   <p style={{ fontSize: 12, color: '#6b6b80', marginTop: 4 }}>Type <span style={{ background: '#e0e7ff', color: '#3b82f6', padding: '1px 6px', borderRadius: 4, fontWeight: 700, fontFamily: 'monospace' }}>@</span> to mention an author, or send to all.</p>
@@ -4043,7 +4067,7 @@ export function OperationsDashboardPage() {
                       <div key={n.id} style={{ padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 8, borderBottom: '1px solid rgba(0,0,0,0.03)' }}>
                         <div style={{ flex: 1 }}>
                           <p style={{ fontSize: 12, color: '#1a1a2e', lineHeight: 1.4 }}>{n.message}</p>
-                          <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{n.target === 'ALL' ? '→ All Authors' : `→ @${n.target}`} · {new Date(n.createdAt).toLocaleDateString()}</p>
+                          <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{n.target === 'ALL' ? 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ All Authors' : `ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ @${n.target}`} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {new Date(n.createdAt).toLocaleDateString()}</p>
                         </div>
                         <button onClick={() => handleDeleteNotification(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#ef4444', opacity: 0.5 }}><Trash2 className="w-3 h-3" /></button>
                       </div>
@@ -4354,7 +4378,7 @@ export function OperationsDashboardPage() {
                                 {author.name}
                                 {author.optInStatus === 'Pending Approval' && <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-[10px] rounded-full">Pending</span>}
                               </p>
-                              <p className="text-[10px] text-gray-500">{author.email} â€¢ {author.phone}</p>
+                              <p className="text-[10px] text-gray-500">{author.email} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ {author.phone}</p>
                             </div>
                             <div className="text-right flex gap-6">
                               <div>
@@ -4584,7 +4608,7 @@ export function OperationsDashboardPage() {
               <option value="Literary Events">Literary Events</option>
               <option value="Book Fairs">Book Fairs</option>
               <option value="Flybraries">Flybraries</option>
-              <option value="Book CafÃ©">Book CafÃ©</option>
+              <option value="Book CafÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©">Book CafÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©</option>
             </select>
           </div>
           <div>
@@ -5300,7 +5324,7 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
                 </button>
               ))}
             </div>
-            <button onClick={fetchQueries} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+            <button onClick={() => fetchQueries()} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
               <RefreshCw size={18} />
             </button>
           </div>

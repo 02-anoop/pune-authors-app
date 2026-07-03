@@ -381,7 +381,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
           skills: parseArray(initialData.skillsJson, initialData.skills),
           hobbies: parseArray(initialData.hobbiesJson, initialData.hobbies),
           whyJoining: initialData.whyJoining || '',
-          isTraditionallyPublished: (extra as any).isTraditionallyPublished || (initialData.whyJoining ? 'yes' : ''),
+          // isTraditionallyPublished removed (calculated dynamically)
           bio: initialData.bio || '',
           penName: initialData.penName || '',
           city: initialData.city || '',
@@ -420,7 +420,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     skills: [],
     hobbies: [],
     whyJoining: "",
-    isTraditionallyPublished: "",
+    // isTraditionallyPublished removed
     bio: "",
     penName: "",
     city: "",
@@ -679,8 +679,10 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
 
     // Questionnaire
     if (key === "conflictOfInterestSignature" && !value) error = "Signature is required.";
-    if (key === "isTraditionallyPublished" && !value) error = "This field is required.";
-    if (key === "whyJoining" && form.isTraditionallyPublished === 'yes' && !value) error = "This field is required.";
+    if (key === "whyJoining" && !value) {
+      // We only validate whyJoining if isTraditionallyPublished is true, but validateField doesn't easily have access to derived state inside the loop if it's stale. 
+      // Actually we'll just check it when validating the form.
+    }
 
     // Payment
     if (key === "transactionId" && !value) error = "Transaction ID is required.";
@@ -1571,6 +1573,16 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   </div>
                 </>
               )}
+
+              {/* Conditionally show whyJoining if traditionally published */}
+              {(books.some((b: any) => b.publisher && b.publisher.trim() !== '' && b.publisher.toLowerCase().trim() !== 'self published') || (showAddBookForm && form.publisher && form.publisher.trim() !== '' && form.publisher.toLowerCase().trim() !== 'self published')) && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300 mt-8 p-6 bg-blue-50/50 border border-blue-100 rounded-2xl">
+                  <label className="dash-label text-blue-900">Since you have a traditionally published book, why are you joining this group and what priority will you give to this group? *</label>
+                  <textarea value={form.whyJoining} onChange={(e) => update("whyJoining", e.target.value)} rows={3} className={`dash-input w-full resize-y ${errors.whyJoining ? '!border-red-500' : ''} ${getDiffClass("whyJoining")} bg-white`} placeholder="Please explain your reasons..." />
+                  {errors.whyJoining && <div className="text-red-500 text-xs mt-1 font-medium">{errors.whyJoining}</div>}
+                  {getDiffUi("whyJoining")}
+                </div>
+              )}
                 </div>
               </div>
             )}
@@ -1581,25 +1593,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                 <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Declarations & Guidelines</h2>
                 <p className="text-sm text-paa-gray-text mb-8">Please agree to the PAA guidelines and sign the conflict of interest declaration.</p>
 
-                <div className="space-y-8">
-                  <div>
-                    <label className="dash-label">Are you published by a traditional publisher? *</label>
-                    <select value={form.isTraditionallyPublished} onChange={(e) => { update("isTraditionallyPublished", e.target.value); if(e.target.value === 'no') update("whyJoining", ""); }} className={`dash-input w-full ${errors.isTraditionallyPublished ? '!border-red-500' : ''}`}>
-                      <option value="">Select...</option>
-                      <option value="yes">Yes, I am published by a publisher</option>
-                      <option value="no">No, I am self-published</option>
-                    </select>
-                    {errors.isTraditionallyPublished && <div className="text-red-500 text-xs mt-1 font-medium">{errors.isTraditionallyPublished}</div>}
-                  </div>
-
-                  {form.isTraditionallyPublished === 'yes' && (
-                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                      <label className="dash-label">If you are published by a publisher, why are you joining this group and what priority will you give to this group? *</label>
-                      <textarea value={form.whyJoining} onChange={(e) => update("whyJoining", e.target.value)} rows={3} className={`dash-input w-full resize-y ${errors.whyJoining ? '!border-red-500' : ''} ${getDiffClass("whyJoining")}`} placeholder="Please explain your reasons..." />
-                      {errors.whyJoining && <div className="text-red-500 text-xs mt-1 font-medium">{errors.whyJoining}</div>}
-                      {getDiffUi("whyJoining")}
-                    </div>
-                  )}
+                  <div className="space-y-8">
+                    {/* The whyJoining question has been moved to Step 1 (Books section) */}
 
                   <div className="p-5 bg-gray-50 border border-paa-navy/10 rounded-2xl space-y-4">
                     <h3 className="font-serif font-medium text-paa-navy">Declarations</h3>
@@ -1758,18 +1753,19 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       }
                     }
                     if (formStepIndex === 2 && !isAdminEdit) {
-                      if (!form.isTraditionallyPublished) {
-                        alert("Please indicate if you are published by a traditional publisher.");
-                        return;
-                      }
-                      if (form.isTraditionallyPublished === 'yes' && (!form.whyJoining || !form.whyJoining.trim())) {
-                        alert("Please explain why you are joining this group.");
-                        return;
-                      }
                       if (!form.conflictOfInterestSignature || !form.agreedToGuidelines || !form.agreedToInfoDoc) {
                         alert("Please agree to the declarations and sign the conflict of interest statement.");
                         return;
                       }
+                    }
+                    
+                    // Add whyJoining validation for Step 1
+                    if (formStepIndex === 1) {
+                       const hasTraditional = books.some((b: any) => b.publisher && b.publisher.trim() !== '' && b.publisher.toLowerCase().trim() !== 'self published') || (showAddBookForm && form.publisher && form.publisher.trim() !== '' && form.publisher.toLowerCase().trim() !== 'self published');
+                       if (hasTraditional && (!form.whyJoining || !form.whyJoining.trim())) {
+                          alert("Please explain why you are joining this group.");
+                          return;
+                       }
                     }
                     setStep((s) => Math.min(currentSteps.length - 1, s + 1));
                   }}
@@ -1867,15 +1863,14 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       }
                     }
 
+                    // Global validaton for whyJoining on submit
+                    const hasTraditionalGlobal = books.some((b: any) => b.publisher && b.publisher.trim() !== '' && b.publisher.toLowerCase().trim() !== 'self published');
+                    if (hasTraditionalGlobal && (!form.whyJoining || !form.whyJoining.trim())) {
+                      setStep(isOnboardingMode ? 4 : 1);
+                      alert("Please explain why you are joining this group in the Books step."); return;
+                    }
+
                     // Step 2 Validations
-                    if (!form.isTraditionallyPublished) {
-                      setStep(isOnboardingMode ? 5 : 2);
-                      alert("Please indicate if you are published by a traditional publisher."); return;
-                    }
-                    if (form.isTraditionallyPublished === 'yes' && (!form.whyJoining || !form.whyJoining.trim())) {
-                      setStep(isOnboardingMode ? 5 : 2);
-                      alert("Please explain why you are joining this group."); return;
-                    }
                     if (!form.conflictOfInterestSignature || !form.agreedToGuidelines || !form.agreedToInfoDoc) {
                       setStep(isOnboardingMode ? 5 : 2);
                       alert("Please agree to the declarations and sign the conflict of interest statement."); return;

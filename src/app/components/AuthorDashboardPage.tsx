@@ -162,6 +162,13 @@ export function AuthorDashboardPage() {
         hobbies: dashboardData.authorProfile.hobbies || '',
         instagram: dashboardData.authorProfile.instagram || '',
         facebook: dashboardData.authorProfile.facebook || '',
+        linkedin: (() => {
+          try {
+            return JSON.parse(dashboardData.authorProfile.extraData || '{}').linkedin || '';
+          } catch {
+            return '';
+          }
+        })(),
         transactionId: dashboardData.authorProfile.transactionId || ''
       }));
     }
@@ -575,7 +582,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const [editingBook, setEditingBook] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [reapplyForm, setReapplyForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', instagram: '', facebook: '', transactionId: '', extraData: {} });
-  const [editProfileForm, setEditProfileForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', instagram: '', facebook: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '' });
+  const [editProfileForm, setEditProfileForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', instagram: '', facebook: '', linkedin: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '' });
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [editCoverBookId, setEditCoverBookId] = useState<number | null>(null);
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
@@ -810,6 +817,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
     if (!editProfileForm.name?.trim()) errors.push('Name is required');
     if (!editProfileForm.phone?.trim()) errors.push('Phone is required');
     if (editProfileForm.phone && !/^\d{10}$/.test(editProfileForm.phone.replace(/\D/g, ''))) errors.push('Phone must be 10 digits');
+    if (editProfileForm.linkedin && !/^(https?:\/\/|www\.)/.test(editProfileForm.linkedin)) errors.push('Enter valid url starting with www.');
     const bioWordCount = editProfileForm.bio.split(/\s+/).filter(Boolean).length;
     if (bioWordCount < 100 || bioWordCount > 150) errors.push(`Bio must be 100-150 words (currently ${bioWordCount})`);
     // Validate qualifications
@@ -1126,6 +1134,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Facebook</label>
                     <input className="dash-input w-full" value={editProfileForm.facebook} onChange={e => setEditProfileForm({ ...editProfileForm, facebook: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">LinkedIn</label>
+                    <input className="dash-input w-full" value={editProfileForm.linkedin} onChange={e => setEditProfileForm({ ...editProfileForm, linkedin: e.target.value })} />
                   </div>
                 </div>
                 <div className="mb-3">

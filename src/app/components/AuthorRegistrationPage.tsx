@@ -652,7 +652,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     // Social Media
     if (key === "facebook" && value && !/^https?:\/\//.test(String(value))) error = "Must be a valid URL starting with http:// or https://";
     if (key === "instagram" && value && !/^https?:\/\//.test(String(value)) && !String(value).startsWith('@')) error = "Must be a valid URL or @username";
-    if (key === "linkedin" && value && !/^https?:\/\//.test(String(value))) error = "Must be a valid URL starting with http:// or https://";
+    if (key === "linkedin" && value && !/^(https?:\/\/|www\.)/.test(String(value))) error = "Enter valid url starting with www.";
     if (key === "youtube" && value && !/^https?:\/\//.test(String(value))) error = "Must be a valid URL starting with http:// or https://";
 
 
@@ -951,7 +951,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         <div className="flex items-center justify-center w-11 h-11 shrink-0 bg-[#0A66C2]">
                           <Linkedin size={18} className="text-white" />
                         </div>
-                        <input type="text" value={form.linkedin} onChange={(e) => update("linkedin", e.target.value)} className="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent" placeholder="https://linkedin.com/in/yourprofile" />
+                        <input type="text" value={form.linkedin} onChange={(e) => update("linkedin", e.target.value)} className="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent" placeholder="www.linkedin.com/in/yourprofile" />
                       </div>
                       {errors.linkedin && <div className="text-red-500 text-xs mt-1 font-medium">{errors.linkedin}</div>}
                     </div>
@@ -1848,6 +1848,23 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
 
                     // Step 1 Validations
+                    if (form.linkedin && !/^(https?:\/\/|www\.)/.test(String(form.linkedin))) {
+                      setStep(isOnboardingMode ? 3 : 0);
+                      alert("Enter valid url starting with www."); return;
+                    }
+                    if (form.facebook && !/^https?:\/\//.test(String(form.facebook))) {
+                      setStep(isOnboardingMode ? 3 : 0);
+                      alert("Facebook must be a valid URL starting with http:// or https://"); return;
+                    }
+                    if (form.youtube && !/^https?:\/\//.test(String(form.youtube))) {
+                      setStep(isOnboardingMode ? 3 : 0);
+                      alert("YouTube must be a valid URL starting with http:// or https://"); return;
+                    }
+                    if (form.instagram && !/^https?:\/\//.test(String(form.instagram)) && !String(form.instagram).startsWith('@')) {
+                      setStep(isOnboardingMode ? 3 : 0);
+                      alert("Instagram must be a valid URL or @username"); return;
+                    }
+
                     const hasFirstBook = form.title && form.genre && form.mrp && (coverBlob || coverFileUrl) && (backCoverBlob || backCoverFileUrl) && form.purposeOfWriting && form.pages && form.isbn && form.synopsis.split(/\s+/).filter(Boolean).length <= 100;
                     const hasBook = books.length > 0 || hasFirstBook;
                     if (!hasBook) {
@@ -1886,6 +1903,10 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
 
 
+                    if (Object.values(errors).some(err => typeof err === 'string' && err.trim() !== "")) {
+                      alert("Please fix all validation errors before submitting.");
+                      return;
+                    }
                     setIsSubmitting(true);
                     try {
                       const formData = new FormData();

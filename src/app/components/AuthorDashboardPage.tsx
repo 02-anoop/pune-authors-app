@@ -3035,6 +3035,17 @@ function EventsDashboard({ registrations }: any) {
       paymentStatus: '-',
       isPast: evt.status === 'Past' || (evt.date && new Date(evt.date) < new Date()),
       isInvite: true
+    })),
+    ...pastEvents.filter((pe: any) => pe.broadcastStatus === 'Published' && !invites.some((inv: any) => inv.eventId === pe.id)).map((evt: any) => ({
+      ...evt,
+      registration: 'Not Participated',
+      paymentStatus: '-',
+      manualTotalSold: evt.aggSold || 0,
+      manualTotalRevenue: evt.aggRevenue || 0,
+      aggAuthors: evt.aggAuthors || 0,
+      isPast: true,
+      isInvite: false,
+      isDataUpdated: true
     }))
   ];
 
@@ -3203,9 +3214,14 @@ function EventsDashboard({ registrations }: any) {
                       <td className="p-4 text-sm text-gray-600">{new Date(evt.startDate || evt.date).toLocaleDateString()}</td>
                       <td className="p-4 text-sm text-gray-600">{evt.location || evt.venue || 'TBA'}</td>
                       <td className="p-4 text-sm font-semibold">
-                         <span className={`px-2 py-1 rounded-full text-[10px] uppercase tracking-wider ${evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-                           {evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live')}
-                         </span>
+                         <div className="flex flex-col items-start gap-1">
+                             <span className={`px-2 py-1 rounded-full text-[10px] uppercase tracking-wider ${evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                               {evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live')}
+                             </span>
+                             {evt.registration === 'Not Participated' && evt.aggAuthors > 0 && (
+                               <span className="text-[10px] text-gray-500 font-mono">{evt.aggAuthors} Authors Participated</span>
+                             )}
+                         </div>
                       </td>
                       <td className="p-4 text-sm font-mono text-right">{sold > 0 || (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) ? sold : '-'}</td>
                       <td className="p-4 text-sm font-mono text-right">{rev > 0 || (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) ? `₹${rev}` : '-'}</td>

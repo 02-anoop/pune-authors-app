@@ -2998,7 +2998,7 @@ router.get('/api/author/events', verifyToken, async (req, res) => {
 
     // All past events (for the gallery / history section in author dashboard)
     const pastEvents = await prisma.event.findMany({ 
-      where: { status: 'Past' }, 
+      where: { status: { in: ['Past', 'Legacy Archive'] }, broadcastStatus: 'Published' }, 
       orderBy: { date: 'desc' },
       include: {
         _count: { select: { eventAuthors: { where: { optInStatus: 'Registered' } }, eventBooks: true } }
@@ -3223,7 +3223,7 @@ router.post('/api/admin/events', verifyToken, isAdmin, upload.single('banner'), 
         endTime: endTime || null,
         description: description || null,
         bannerUrl,
-        status: new Date(date) < new Date() ? 'Past' : 'Upcoming',
+        status: req.body.status || (new Date(date) < new Date() ? 'Past' : 'Upcoming'),
         broadcastStatus: 'CustomersAlso',
         eventType: eventType || 'Book Fair',
         registrationFee: registrationFee ? parseFloat(registrationFee) : 0,
@@ -3245,6 +3245,32 @@ router.post('/api/admin/events', verifyToken, isAdmin, upload.single('banner'), 
   }
 });
 
+router.post('/api/admin/events/:eventId/publish-all', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.eventId);
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { broadcastStatus: 'Published' }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/api/admin/events/:eventId/unpublish', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.eventId);
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { broadcastStatus: 'Draft' }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, res) => {
   try {
     const eventId = parseInt(req.params.eventId);
@@ -3255,7 +3281,7 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
     const tx = prisma;
       // Upsert EventAuthor to update status
       const existingAuthor = await tx.eventAuthor.findFirst({ where: { eventId, authorId } });
-      const statusValue = registrationStatus === 'Participated' ? 'Registered' : 'Pending';
+      const statusValue = (registrationStatus === 'Participated' || registrationStatus === 'Registered') ? 'Registered' : 'Declined';
       const manualSold = useGlobalOverride ? parseInt(globalSold) || 0 : null;
       const manualRevenue = useGlobalOverride ? parseFloat(globalRevenue) || 0 : null;
 
@@ -3319,7 +3345,7 @@ router.get('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
 router.put('/api/admin/events/:id', verifyToken, isAdmin, upload.single('banner'), async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
-    const { name, location, date, duration, startTime, endTime, status, eventType, registrationFee, feeType, description, livePosEnabled } = req.body;
+    const { name, location, date, duration, startTime, endTime, status, eventType, registrationFee, feeType, description, livePosEnabled, aggAuthors, aggSent, aggSold, aggRevenue } = req.body;
     
     let updateData = { name, location, date, duration, status };
     if (startTime !== undefined) updateData.startTime = startTime || null;
@@ -3329,6 +3355,10 @@ router.put('/api/admin/events/:id', verifyToken, isAdmin, upload.single('banner'
     if (registrationFee !== undefined) updateData.registrationFee = parseFloat(registrationFee);
     if (feeType !== undefined) updateData.feeType = feeType;
     if (livePosEnabled !== undefined) updateData.livePosEnabled = livePosEnabled === 'true' || livePosEnabled === true;
+    if (aggAuthors !== undefined) updateData.aggAuthors = parseInt(aggAuthors) || 0;
+    if (aggSent !== undefined) updateData.aggSent = parseInt(aggSent) || 0;
+    if (aggSold !== undefined) updateData.aggSold = parseInt(aggSold) || 0;
+    if (aggRevenue !== undefined) updateData.aggRevenue = parseFloat(aggRevenue) || 0;
     
     if (req.file) {
       updateData.bannerUrl = `/uploads/${req.file.filename}`;

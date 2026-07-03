@@ -42,11 +42,11 @@ axios.interceptors.response.use(
 import { AuthorFullProfileView } from './AuthorFullProfileView';
 import { AuthorRegistrationPage } from './AuthorRegistrationPage';
 
-const Modal = ({ isOpen, onClose, title, children }: any) => {
+const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
   if (!isOpen) return null;
   return (
     <div className="dash-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="dash-modal">
+      <div className={`dash-modal ${maxWidthClass || ''}`}>
         <div className="dash-modal-header">
           <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy">{title}</h3>
           <button type="button" onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/6 text-paa-gray-text hover:text-paa-navy transition-colors">
@@ -122,6 +122,7 @@ export function OperationsDashboardPage() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
 
   const [showAuthorDataModal, setShowAuthorDataModal] = useState(false);
+  const [showAllPlatformAuthors, setShowAllPlatformAuthors] = useState(false);
   const [selectedEventForData, setSelectedEventForData] = useState<any>(null);
   const [selectedAuthorForData, setSelectedAuthorForData] = useState('');
 
@@ -161,6 +162,7 @@ export function OperationsDashboardPage() {
   const [expandedAuthorId, setExpandedAuthorId] = useState<number | null>(null);
   const [eventSearch, setEventSearch] = useState('');
   const [createEventDate, setCreateEventDate] = useState('');
+  const [createEventStatus, setCreateEventStatus] = useState('Upcoming');
   const [manageAuthorBooks, setManageAuthorBooks] = useState<any[]>([]);
   const [manageRegStatus, setManageRegStatus] = useState('Registered');
   const [managePaymentStatus, setManagePaymentStatus] = useState('Paid');
@@ -2581,9 +2583,12 @@ export function OperationsDashboardPage() {
 
     const handleOpenBreakdown = (evt: any) => {
       setSelectedEventBreakdown(evt);
-      if (!evt.isLegacy) {
-         fetchEventRegistrations(evt.id);
-      }
+      // For Past/Legacy events, always show all platform authors so admin can fill data
+      const isPastOrLegacy = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
+      setShowAllPlatformAuthors(isPastOrLegacy);
+      fetchEventRegistrations(evt.id);
+      // Always fetch full author list so "Add Author Data Manually" works
+      fetchAuthors(true);
       const slug = evt.name.replace(/\s+/g, '-').toLowerCase();
       window.history.pushState(null, '', `/operations/events/${slug}`);
     };
@@ -2594,8 +2599,26 @@ export function OperationsDashboardPage() {
       window.history.pushState(null, '', `/operations`);
     };
 
+    const handleSaveAggregateData = async () => {
+        try {
+            const formData = new FormData();
+            formData.append('aggAuthors', selectedEventBreakdown.aggAuthors?.toString() || '0');
+            formData.append('aggSent', selectedEventBreakdown.aggSent?.toString() || '0');
+            formData.append('aggSold', selectedEventBreakdown.aggSold?.toString() || '0');
+            formData.append('aggRevenue', selectedEventBreakdown.aggRevenue?.toString() || '0');
+            
+            await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}`, formData, {
+               headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            toast.success('Aggregate stats saved!');
+            fetchEvents();
+        } catch(err) {
+            toast.error('Failed to save aggregate stats');
+        }
+    };
+
     if (isEventModalOpen) {
-        const isPastEvent = createEventDate && new Date(createEventDate) < new Date();
+        const isPastEvent = createEventStatus === 'Past' || createEventStatus === 'Legacy Archive';
         return (
           <div className="bg-white rounded-xl shadow-premium p-8 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between mb-6 border-b pb-4">
@@ -2638,8 +2661,16 @@ export function OperationsDashboardPage() {
               }
             }}>
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2"><label className="dash-label">Event Name</label><input required name="name" type="text" className="dash-input" /></div>
+                  <div>
+                     <label className="dash-label">Event Status</label>
+                     <select name="status" className="dash-input" value={createEventStatus} onChange={(e) => setCreateEventStatus(e.target.value)}>
+                        <option value="Upcoming">Upcoming</option>
+                        <option value="Past">Past (Granular Data)</option>
+                        <option value="Legacy Archive">Legacy Archive (Aggregate Data)</option>
+                     </select>
+                  </div>
                   <div><label className="dash-label">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="dash-input" /></div>
                 </div>
                 
@@ -2692,36 +2723,8 @@ export function OperationsDashboardPage() {
               </div>
               
               <div className="border-t border-gray-200 pt-6 mt-6">
-                  {isPastEvent && (
-                      <label className="flex items-center gap-3 font-semibold text-paa-navy mb-4 cursor-pointer">
-                          <input type="checkbox" className="w-5 h-5 rounded text-paa-navy" checked={hasGranularData} onChange={(e) => setHasGranularData(e.target.checked)} />
-                          I have granular author-specific data for this event (manage authors individually)
-                      </label>
-                  )}
-                  {(!hasGranularData && isPastEvent) && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
-                          <div>
-                              <label className="dash-label">Total Authors Participated</label>
-                              <input type="number" name="aggAuthors" className="dash-input font-mono" defaultValue={0} />
-                          </div>
-                          <div>
-                              <label className="dash-label">Total Books Sent</label>
-                              <input type="number" name="aggSent" className="dash-input font-mono" defaultValue={0} />
-                          </div>
-                          <div>
-                              <label className="dash-label">Total Books Sold</label>
-                              <input type="number" name="aggSold" className="dash-input font-mono" defaultValue={0} />
-                          </div>
-                          <div>
-                              <label className="dash-label">Total Revenue (₹)</label>
-                              <input type="number" name="aggRevenue" className="dash-input font-mono text-emerald-600" defaultValue={0} />
-                          </div>
-                          <div className="col-span-full mt-2 text-xs text-gray-500">
-                             * This aggregate data will be shown in the master table.
-                          </div>
-                      </div>
-                  )}
-                  {(hasGranularData || !isPastEvent) && (
+
+                  {createEventStatus !== 'Legacy Archive' && (
                       <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm text-blue-800">
                          * You can manage granular data for each author from the Event Breakdown view after creating this event.
                       </div>
@@ -2830,13 +2833,49 @@ export function OperationsDashboardPage() {
                <div className="flex items-center justify-between mb-6 border-b pb-4">
                  <div>
                     <h3 className="text-2xl font-serif text-paa-navy mb-1">{selectedEventBreakdown.name}</h3>
-                    <p className="text-sm text-gray-500 font-medium">{selectedEventBreakdown.date} &bull; {selectedEventBreakdown.location || selectedEventBreakdown.address || 'Location TBA'}</p>
+                    <p className="text-sm text-gray-500 font-medium">{selectedEventBreakdown.date} &bull; {selectedEventBreakdown.location || 'Location TBA'} &bull; {selectedEventBreakdown.duration || 'Duration N/A'}</p>
+                    {selectedEventBreakdown.description && (
+                       <p className="text-sm text-gray-600 mt-2 max-w-3xl leading-relaxed">{selectedEventBreakdown.description}</p>
+                    )}
                  </div>
                  <div className="flex gap-2">
                    {!selectedAuthorForData && (
-                     <button onClick={handleDownloadEventReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm font-bold flex items-center gap-2">
-                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download Report
-                     </button>
+                     <>
+                        {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.status === 'Legacy Archive') && (
+                            <>
+                              {selectedEventBreakdown.broadcastStatus !== 'Published' ? (
+                                <button onClick={async () => {
+                                    try {
+                                        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/publish-all`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                        toast.success('Event Published to all Authors!');
+                                        setSelectedEventBreakdown({ ...selectedEventBreakdown, broadcastStatus: 'Published' });
+                                        fetchEvents();
+                                    } catch(err) {
+                                        toast.error('Failed to publish');
+                                    }
+                                }} className="dash-btn bg-paa-gold text-paa-navy hover:brightness-110 shadow-sm font-bold flex items-center gap-2">
+                                  PUBLISH TO ALL AUTHORS
+                                </button>
+                              ) : (
+                                <button onClick={async () => {
+                                    try {
+                                        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/unpublish`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                        toast.success('Event unpublished from Author dashboards.');
+                                        setSelectedEventBreakdown({ ...selectedEventBreakdown, broadcastStatus: 'Draft' });
+                                        fetchEvents();
+                                    } catch(err) {
+                                        toast.error('Failed to unpublish');
+                                    }
+                                }} className="dash-btn bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-700 border border-gray-300 hover:border-red-300 transition-colors shadow-sm font-bold flex items-center gap-2">
+                                  ✓ PUBLISHED · Click to Unpublish
+                                </button>
+                              )}
+                            </>
+                        )}
+                       <button onClick={handleDownloadEventReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm font-bold flex items-center gap-2">
+                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download Report
+                       </button>
+                     </>
                    )}
                    <button onClick={() => {
                      if (selectedAuthorForData) {
@@ -2891,8 +2930,8 @@ export function OperationsDashboardPage() {
                         <div>
                            <label className="block text-xs font-bold text-gray-600 mb-1">Registration Status</label>
                            <select className="w-full border border-gray-300 rounded p-2 text-sm" value={manageRegStatus} onChange={(e) => setManageRegStatus(e.target.value)}>
-                         <option>Registered</option>
-                         <option>Declined</option>
+                         <option value="Registered">Registered</option>
+                         <option value="Declined">Declined</option>
                       </select>
                         </div>
                         <div>
@@ -2990,16 +3029,55 @@ export function OperationsDashboardPage() {
                   </div>
                ) : (
                   <div>
+                     {showAllPlatformAuthors && (selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past') && (
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                            <h5 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Or Set Aggregate Data for Entire Event</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label className="dash-label text-[10px] text-gray-500 block mb-1">Total Authors Participated</label>
+                                    <input type="number" className="dash-input font-mono w-full" value={selectedEventBreakdown.aggAuthors || 0} onChange={e => {
+                                         setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: parseInt(e.target.value) || 0 })
+                                    }} />
+                                </div>
+                                <div>
+                                    <label className="dash-label text-[10px] text-gray-500 block mb-1">Total Books Sent</label>
+                                    <input type="number" className="dash-input font-mono w-full" value={selectedEventBreakdown.aggSent || 0} onChange={e => {
+                                         setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: parseInt(e.target.value) || 0 })
+                                    }} />
+                                </div>
+                                <div>
+                                    <label className="dash-label text-[10px] text-gray-500 block mb-1">Total Books Sold</label>
+                                    <input type="number" className="dash-input font-mono w-full" value={selectedEventBreakdown.aggSold || 0} onChange={e => {
+                                         setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: parseInt(e.target.value) || 0 })
+                                    }} />
+                                </div>
+                                <div>
+                                    <label className="dash-label text-[10px] text-emerald-600 block mb-1">Total Revenue (₹)</label>
+                                    <input type="number" className="dash-input font-mono w-full text-emerald-600 font-bold" value={selectedEventBreakdown.aggRevenue || 0} onChange={e => {
+                                         setSelectedEventBreakdown({ ...selectedEventBreakdown, aggRevenue: parseFloat(e.target.value) || 0 })
+                                    }} />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex justify-end">
+                                <button onClick={handleSaveAggregateData} className="bg-paa-navy text-paa-cream px-6 py-2 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-sm active:scale-95">Save Aggregate Stats</button>
+                            </div>
+                        </div>
+                     )}
                      <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-bold text-gray-700">Authors Participated / Registered</h4>
-                        <input 
-                           type="text" 
-                           placeholder="Search authors..." 
-                           className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy"
-                           value={authorSearch}
-                           onChange={(e) => setAuthorSearch(e.target.value)}
-                        />
-                     </div>
+                         <div>
+                           <h4 className="font-bold text-gray-700">Authors Participated / Registered</h4>
+                           {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past') && (
+                              <p className="text-xs text-gray-400 mt-0.5">Showing all platform-registered authors — fill in data for those who attended this event</p>
+                           )}
+                         </div>
+                         <input 
+                            type="text" 
+                            placeholder="Search authors..." 
+                            className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy"
+                            value={authorSearch}
+                            onChange={(e) => setAuthorSearch(e.target.value)}
+                         />
+                      </div>
                      <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                          <table className="w-full text-left border-collapse bg-white">
                              <thead className="bg-gray-50 border-b border-gray-200">
@@ -3009,7 +3087,7 @@ export function OperationsDashboardPage() {
                                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Quantities</th>
                                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Sold</th>
                                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Revenue</th>
-                                     {!(selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.isLegacy) && (
+                                     {!selectedEventBreakdown.isLegacy && (
                                         <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center">Payment</th>
                                      )}
                                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Status</th>
@@ -3017,18 +3095,18 @@ export function OperationsDashboardPage() {
                                  </tr>
                              </thead>
                              <tbody className="divide-y divide-gray-100">
-                                 {(selectedEventBreakdown.isLegacy ? authors : eventRegistrations).filter((a: any) => (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase())).slice(0, 50).map((a: any, i: number) => {
-                                     const isLegacy = selectedEventBreakdown.isLegacy;
+                                 {(showAllPlatformAuthors ? authors : eventRegistrations).filter((a: any) => (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase())).slice(0, 50).map((a: any, i: number) => {
+                                     const showAllAuthors = showAllPlatformAuthors;
                                      let m = a;
-                                     if (isLegacy) {
+                                     if (showAllAuthors) {
                                          const reg = eventRegistrations.find(r => r.authorId === a.id);
                                          if (reg) m = { ...a, ...reg, author: a, id: a.id };
                                      }
-                                     const authorData = isLegacy ? m : m.author;
+                                     const authorData = showAllAuthors ? m : m.author;
                                      const listed = m.books?.reduce((s:number,b:any)=>s+(b.listedStock||0),0)||0;
                                      const sold = (m.manualTotalSold !== null && m.manualTotalSold !== undefined) ? m.manualTotalSold : (m.books?.reduce((s:number,b:any)=>s+(b.soldStock||0),0)||0);
                                      const rev = (m.manualTotalRevenue !== null && m.manualTotalRevenue !== undefined) ? m.manualTotalRevenue : (m.books?.reduce((s:number,b:any)=>s+((b.soldStock||0)*(b.mrp||b.book?.mrp||0)),0)||0);
-                                     const isExpanded = expandedAuthorId === (isLegacy ? m.id : m.authorId);
+                                     const isExpanded = expandedAuthorId === (showAllAuthors ? m.id : m.authorId);
                                      const status = m.optInStatus || 'Unpublished';
                                      return (
                                      <React.Fragment key={i}>
@@ -3038,7 +3116,7 @@ export function OperationsDashboardPage() {
                                          <td className="p-3 font-mono text-sm text-gray-600">{listed}</td>
                                          <td className="p-3 font-mono text-sm text-gray-600">{sold}</td>
                                          <td className="p-3 font-mono text-sm text-emerald-600 font-bold">₹{rev}</td>
-                                         {!(selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.isLegacy) && (
+                                         {!selectedEventBreakdown.isLegacy && (
                                             <td className="p-3 text-center align-middle">
                                                <div className="flex flex-col items-center justify-center h-full">
                                                  {a.paymentScreenshot ? (
@@ -3072,17 +3150,17 @@ export function OperationsDashboardPage() {
                                          </td>
                                          <td className="p-3 text-center">
                                              <div className="flex gap-2 justify-center items-center">
-                                                 <button onClick={() => setExpandedAuthorId(isExpanded ? null : (isLegacy ? m.id : m.authorId))} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-bold border border-gray-200 transition-colors shadow-sm">
+                                                 <button onClick={() => setExpandedAuthorId(isExpanded ? null : (showAllAuthors ? m.id : m.authorId))} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-bold border border-gray-200 transition-colors shadow-sm">
                                                      {isExpanded ? '▲' : '▼'}
                                                  </button>
-                                                 {isLegacy || status === 'Registered' ? (
+                                                 {showAllAuthors || status === 'Registered' ? (
                                                      <button onClick={() => {
                                                          handleEditAuthorData(authorData);
-                                                         if (isLegacy && m.optInStatus) {
+                                                         if (selectedEventBreakdown.isLegacy && m.optInStatus) {
                                                              setUseGlobalOverride(true);
                                                              setGlobalSold(m.manualTotalSold || 0);
                                                              setGlobalRevenue(m.manualTotalRevenue || 0);
-                                                             setManageRegStatus(m.optInStatus === 'Registered' ? 'Participated' : 'Pending');
+                                                             setManageRegStatus(m.optInStatus === 'Registered' ? 'Registered' : 'Declined');
                                                          }
                                                      }} className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-bold border border-indigo-200 transition-colors shadow-sm whitespace-nowrap">
                                                          Manage Data
@@ -3099,7 +3177,7 @@ export function OperationsDashboardPage() {
                                                          <div className="flex-1 w-full">
                                                              <div className="flex justify-between items-center mb-3">
                                                                 <h5 className="text-xs font-bold text-gray-500 uppercase">Individual Book Breakdown</h5>
-                                                                {!isLegacy && (status === 'Pending' || status === 'Pending Approval') && (
+                                                                {!selectedEventBreakdown.isLegacy && (status === 'Pending' || status === 'Pending Approval') && (
                                                                    <div className="flex gap-2">
                                                                        <button onClick={() => handleRejectRegistration(selectedEventBreakdown.id, m.authorId)} className="py-1 px-4 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors">Reject</button>
                                                                        <button onClick={() => handleApproveRegistration(selectedEventBreakdown.id, m.authorId)} className="py-1 px-4 text-xs font-bold text-white bg-paa-navy hover:bg-paa-gold hover:text-paa-navy rounded transition-colors shadow-sm">Approve</button>
@@ -3119,7 +3197,7 @@ export function OperationsDashboardPage() {
                                                                                     <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Listed</span>
                                                                                     <span className="font-bold text-gray-700">{b.listedStock || 0}</span>
                                                                                  </div>
-                                                                                 {!isLegacy && (
+                                                                                 {!selectedEventBreakdown.isLegacy && (
                                                                                     <div className="flex flex-col items-center md:items-end">
                                                                                         <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Fee</span>
                                                                                         <span className="font-bold text-indigo-700">₹{selectedEventBreakdown.feeType === 'Per Title' ? selectedEventBreakdown.registrationFee : (j === 0 ? selectedEventBreakdown.registrationFee : 0)}</span>
@@ -3304,16 +3382,12 @@ export function OperationsDashboardPage() {
                                       </span>
                                   )}
                                </button>
-                               {!evt.isLegacy && (
-                                 <>
-                                   <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
-                                      <Edit2 className="w-4 h-4" />
-                                   </button>
-                                   <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors shadow-sm">
-                                      <Trash2 className="w-4 h-4" />
-                                   </button>
-                                 </>
-                               )}
+                               <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
+                                  <Edit2 className="w-4 h-4" />
+                               </button>
+                               <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors shadow-sm">
+                                  <Trash2 className="w-4 h-4" />
+                               </button>
                            </div>
                         </td>
                       </tr>
@@ -4049,7 +4123,7 @@ export function OperationsDashboardPage() {
 
       
 
-      <Modal isOpen={isEditEventModalOpen} onClose={() => setIsEditEventModalOpen(false)} title="Edit Event">
+      <Modal isOpen={isEditEventModalOpen} onClose={() => setIsEditEventModalOpen(false)} title="Edit Event" maxWidthClass="!max-w-4xl w-[90vw]">
         {editingEvent && (
           <form className="space-y-4" onSubmit={handleEditEventSubmit}>
             <div><label className="dash-label">Event Name</label><input required type="text" className="dash-input" value={editingEvent.name} onChange={e => setEditingEvent({ ...editingEvent, name: e.target.value })} /></div>
@@ -4078,7 +4152,7 @@ export function OperationsDashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="dash-label">Date</label><input required type="date" className="dash-input" value={editingEvent.date} onChange={e => setEditingEvent({ ...editingEvent, date: e.target.value })} /></div>
+              <div><label className="dash-label">Date</label><input required type="date" className="dash-input" value={editingEvent.date ? (!isNaN(new Date(editingEvent.date).getTime()) ? new Date(editingEvent.date).toISOString().substring(0, 10) : editingEvent.date.toString().substring(0, 10)) : ''} onChange={e => setEditingEvent({ ...editingEvent, date: e.target.value })} /></div>
               <div><label className="dash-label">Duration</label><input required type="text" className="dash-input" value={editingEvent.duration} onChange={e => setEditingEvent({ ...editingEvent, duration: e.target.value })} /></div>
             </div>
             <div><label className="dash-label">Location</label><input required type="text" className="dash-input" value={editingEvent.location} onChange={e => setEditingEvent({ ...editingEvent, location: e.target.value })} /></div>
@@ -4104,8 +4178,11 @@ export function OperationsDashboardPage() {
                 <option value="Upcoming">Upcoming</option>
                 <option value="Ongoing">Ongoing</option>
                 <option value="Past">Past</option>
+                <option value="Legacy Archive">Legacy Archive</option>
               </select>
             </div>
+
+
 
             <div className="pt-4 mt-4 border-t border-paa-navy/5 flex justify-end gap-2">
               <button type="button" onClick={() => setIsEditEventModalOpen(false)} className="bg-gray-100 text-paa-navy px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">Cancel</button>

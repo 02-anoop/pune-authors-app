@@ -1352,11 +1352,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       {errors.language && <div className="text-red-500 text-xs mt-1 font-medium">{errors.language}</div>}
                     </div>
                     <div>
-                      <label className="dash-label flex items-center justify-between">
-                        Publisher Name *
-                        <label className="flex items-center gap-1.5 text-xs font-normal cursor-pointer lowercase text-gray-500"><input type="checkbox" checked={form.isSelfPublished === 'yes'} onChange={(e) => { update('isSelfPublished', e.target.checked ? 'yes' : 'no'); if(e.target.checked) update('publisher', 'Self Published'); else update('publisher', ''); }} className="w-3 h-3"/> I am Self Published</label>
-                      </label>
-                      <input type="text" placeholder="e.g. Penguin" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} className={`dash-input w-full ${errors.publisher ? '!border-red-500' : ''}`} disabled={form.isSelfPublished === 'yes'} />
+                      <div className="mb-1">
+                        <label className="dash-label !mb-0">Publisher *</label>
+                      </div>
+                      <div className="relative">
+                        <input type="text" placeholder="e.g. Penguin (or type Self Published)" value={form.publisher} onChange={(e) => update("publisher", e.target.value)} className={`dash-input w-full ${errors.publisher ? '!border-red-500' : ''}`} />
+                      </div>
                       {errors.publisher && <div className="text-red-500 text-xs mt-1 font-medium">{errors.publisher}</div>}
                     </div>
                     <div>

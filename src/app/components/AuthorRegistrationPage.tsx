@@ -1994,7 +1994,16 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       }
                     } catch (e: any) {
                       console.error("Submission error:", e.response?.data || e.message || e);
-                      const errorMessage = e.response?.data?.error || "Oops! We hit a small snag on our end. Please try clicking submit again, or contact support if the issue persists.";
+                      let errorMessage = e.response?.data?.error;
+                      if (!errorMessage) {
+                        if (e.response?.status === 413) {
+                          errorMessage = "Your images are too large! Please compress your photos (keep them under a few megabytes) and try again.";
+                        } else if (e.message === "Network Error") {
+                          errorMessage = "Network connection failed. This usually happens if your images are too large for the server, or your internet connection dropped. Please compress your photos and try again.";
+                        } else {
+                          errorMessage = "Oops! We hit a small snag on our end. Please try clicking submit again, or contact support if the issue persists.";
+                        }
+                      }
                       alert(errorMessage);
                     } finally {
                       setIsSubmitting(false);

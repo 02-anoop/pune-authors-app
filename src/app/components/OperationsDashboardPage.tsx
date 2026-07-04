@@ -2756,7 +2756,7 @@ export function OperationsDashboardPage() {
     const handleEditAuthorData = (m: any) => {
         const authorProfile = m.author || m;
         setSelectedAuthorForData(authorProfile);
-        setManageRegStatus(m.optInStatus === 'Registered' || m.optInStatus === 'Participated' ? 'Registered' : 'Declined');
+        setManageRegStatus(m.optInStatus === 'Declined' ? 'Declined' : 'Registered');
         setManagePaymentStatus(m.paymentStatus || 'Paid');
         setManageAmountPaid(m.amountPaid || 0);
         setUseGlobalOverride(m.manualTotalSold !== null && m.manualTotalSold !== undefined);
@@ -2967,10 +2967,10 @@ export function OperationsDashboardPage() {
                      <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Author Registration & Logistics</h4>
                      <div className="grid grid-cols-2 gap-4 mb-8">
                         <div>
-                           <label className="block text-xs font-bold text-gray-600 mb-1">Registration Status</label>
-                           <select className="w-full border border-gray-300 rounded p-2 text-sm" value={manageRegStatus} onChange={(e) => setManageRegStatus(e.target.value)}>
-                         <option value="Registered">Registered</option>
-                         <option value="Declined">Declined</option>
+                           <label className="block text-xs font-bold text-gray-600 mb-1">Publish to Author Dashboard</label>
+                           <select className="w-full border border-gray-300 rounded p-2 text-sm font-semibold text-paa-navy" value={manageRegStatus} onChange={(e) => setManageRegStatus(e.target.value)}>
+                         <option value="Registered">Yes, Publish Data</option>
+                         <option value="Declined">No, Keep Hidden</option>
                       </select>
                         </div>
                         <div>
@@ -3121,19 +3121,31 @@ export function OperationsDashboardPage() {
                                  </tr>
                              </thead>
                              <tbody className="divide-y divide-gray-100">
-                                 {(showAllPlatformAuthors ? authors : eventRegistrations).filter((a: any) => (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase())).slice(0, 50).map((a: any, i: number) => {
+                                 {(showAllPlatformAuthors ? authors : eventRegistrations).filter((a: any) => (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase()))
+                                 .map((a: any) => {
                                      const showAllAuthors = showAllPlatformAuthors;
                                      let m = a;
                                      if (showAllAuthors) {
                                          const reg = eventRegistrations.find(r => r.authorId === a.id);
                                          if (reg) m = { ...a, ...reg, author: a, id: a.id };
                                      }
+                                     return { a, m, showAllAuthors };
+                                 })
+                                 .sort((rowA: any, rowB: any) => {
+                                     const isPubA = (rowA.m.books && rowA.m.books.length > 0) || rowA.m.manualTotalSold != null;
+                                     const isPubB = (rowB.m.books && rowB.m.books.length > 0) || rowB.m.manualTotalSold != null;
+                                     if (isPubA && !isPubB) return 1;
+                                     if (!isPubA && isPubB) return -1;
+                                     return 0;
+                                 })
+                                 .slice(0, 50).map(({ a, m, showAllAuthors }, i: number) => {
                                      const authorData = showAllAuthors ? m : m.author;
                                      const listed = m.books?.reduce((s:number,b:any)=>s+(b.listedStock||0),0)||0;
                                      const sold = (m.manualTotalSold !== null && m.manualTotalSold !== undefined) ? m.manualTotalSold : (m.books?.reduce((s:number,b:any)=>s+(b.soldStock||0),0)||0);
                                      const rev = (m.manualTotalRevenue !== null && m.manualTotalRevenue !== undefined) ? m.manualTotalRevenue : (m.books?.reduce((s:number,b:any)=>s+((b.soldStock||0)*(b.mrp||b.book?.mrp||0)),0)||0);
                                      const isExpanded = expandedAuthorId === (showAllAuthors ? m.id : m.authorId);
                                      const status = m.optInStatus || 'Unpublished';
+                                     const hasData = (m.books && m.books.length > 0) || m.manualTotalSold != null;
                                      return (
                                      <React.Fragment key={i}>
                                      <tr className="hover:bg-gray-50/50 transition-colors">
@@ -3169,11 +3181,13 @@ export function OperationsDashboardPage() {
                                          )}
                                          <td className="p-3">
                                             {status === 'Registered' ? (
-                                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3"/> Registered</span>
-                                            ) : (status === 'Pending' || status === 'Pending Approval') ? (
-                                                <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase">Pending</span>
+                                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3"/> {hasData ? 'Published' : 'Registered'}</span>
+                                            ) : (status === 'Pending' || status === 'Pending Approval' || status === 'Unpublished') ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max">Pending</span>
+                                            ) : status === 'Declined' ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><XCircle className="w-3 h-3"/> Hidden</span>
                                             ) : (
-                                                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold uppercase">{status}</span>
+                                                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold uppercase flex items-center gap-1 w-max">{status}</span>
                                             )}
                                          </td>
                                          <td className="p-3 text-center">

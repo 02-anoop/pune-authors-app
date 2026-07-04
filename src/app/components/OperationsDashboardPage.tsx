@@ -174,6 +174,9 @@ export function OperationsDashboardPage() {
   const [globalSold, setGlobalSold] = useState(0);
   const [globalRevenue, setGlobalRevenue] = useState(0);
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
+  const [showBooksSold, setShowBooksSold] = useState(true);
+  const [showAuthorsParticipated, setShowAuthorsParticipated] = useState(true);
+  const [eventGraphFilter, setEventGraphFilter] = useState('All');
   const [viewingRegistrationsEventId, setViewingRegistrationsEventId] = useState<number | null>(null);
   const [eventRegistrations, setEventRegistrations] = useState<any[]>([]);
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
@@ -3426,29 +3429,49 @@ export function OperationsDashboardPage() {
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
                     <h4 className="font-bold text-paa-navy">Events Performance Overview</h4>
                     <p className="text-xs text-gray-500 font-medium mt-1">Comparing book sales and author participation across all events.</p>
                 </div>
-                <div className="flex items-center gap-4 text-xs font-bold">
-                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-paa-navy"></div> Books Sold</div>
-                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-300"></div> Authors Participated</div>
+                <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
+                    <select 
+                        className="border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-paa-navy text-gray-700 bg-gray-50"
+                        value={eventGraphFilter}
+                        onChange={(e) => setEventGraphFilter(e.target.value)}
+                    >
+                        <option value="All">All Event Types</option>
+                        <option value="Literary Event">Literary Events Only</option>
+                        <option value="Book Fair">Book Fairs Only</option>
+                        <option value="Meet the Authors / Other">Meet the Authors / Other</option>
+                    </select>
+                    <div className="w-px h-6 bg-gray-200 hidden md:block"></div>
+                    <div className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${!showBooksSold ? 'opacity-50' : ''}`} onClick={() => setShowBooksSold(!showBooksSold)}>
+                        <div className="w-3 h-3 rounded-sm bg-paa-navy"></div> Books Sold
+                    </div>
+                    <div className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${!showAuthorsParticipated ? 'opacity-50' : ''}`} onClick={() => setShowAuthorsParticipated(!showAuthorsParticipated)}>
+                        <div className="w-3 h-3 rounded-sm bg-indigo-300"></div> Authors Participated
+                    </div>
                 </div>
             </div>
             <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={allCombinedEvents.map(e => ({ name: e.name, booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0, authors: (e.isLegacy ? e.aggAuthors : e._count?.eventAuthors) || 0 }))} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
+                    <BarChart data={allCombinedEvents.filter(e => {
+                        if (eventGraphFilter === 'All') return true;
+                        if (eventGraphFilter === 'Literary Event') return e.eventType?.toLowerCase().includes('literary');
+                        if (eventGraphFilter === 'Book Fair') return e.eventType?.toLowerCase().includes('fair');
+                        if (eventGraphFilter === 'Meet the Authors / Other') return !e.eventType?.toLowerCase().includes('literary') && !e.eventType?.toLowerCase().includes('fair');
+                        return true;
+                    }).map(e => ({ name: e.name, booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0, authors: (e.isLegacy ? e.aggAuthors : e._count?.eventAuthors) || 0 }))} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280', angle: -90, textAnchor: 'end' }} dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
-                        <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                        <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                        <YAxis orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                         <RechartsTooltip 
                             cursor={{ fill: '#F3F4F6' }}
                             contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                         />
-                        <Bar yAxisId="left" dataKey="booksSold" name="Books Sold" fill="var(--color-paa-navy, #1e3a8a)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                        <Bar yAxisId="right" dataKey="authors" name="Authors" fill="#818CF8" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        {showBooksSold && <Bar dataKey="booksSold" name="Books Sold" fill="var(--color-paa-navy, #1e3a8a)" radius={[4, 4, 0, 0]} maxBarSize={40} />}
+                        {showAuthorsParticipated && <Bar dataKey="authors" name="Authors Participated" fill="#818CF8" radius={[4, 4, 0, 0]} maxBarSize={40} />}
                     </BarChart>
                 </ResponsiveContainer>
             </div>

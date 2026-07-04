@@ -168,6 +168,7 @@ export function OperationsDashboardPage() {
   const [manageAuthorBooks, setManageAuthorBooks] = useState<any[]>([]);
   const [manageRegStatus, setManageRegStatus] = useState('Registered');
   const [managePaymentStatus, setManagePaymentStatus] = useState('Paid');
+  const [manageAmountPaid, setManageAmountPaid] = useState<number>(0);
   const [isPublishingData, setIsPublishingData] = useState(false);
   const [useGlobalOverride, setUseGlobalOverride] = useState(false);
   const [globalSold, setGlobalSold] = useState(0);
@@ -2754,9 +2755,12 @@ export function OperationsDashboardPage() {
     const handleEditAuthorData = (m: any) => {
         const authorProfile = m.author || m;
         setSelectedAuthorForData(authorProfile);
-        setUseGlobalOverride(false);
-        setGlobalSold(0);
-        setGlobalRevenue(0);
+        setManageRegStatus(m.optInStatus === 'Registered' || m.optInStatus === 'Participated' ? 'Registered' : 'Declined');
+        setManagePaymentStatus(m.paymentStatus || 'Paid');
+        setManageAmountPaid(m.amountPaid || 0);
+        setUseGlobalOverride(m.manualTotalSold !== null && m.manualTotalSold !== undefined);
+        setGlobalSold(m.manualTotalSold || 0);
+        setGlobalRevenue(m.manualTotalRevenue || 0);
         
         const globalBooks = authorProfile.books || [];
         const eventBooks = (m.books || []).filter((b: any) => b.bookId !== undefined);
@@ -2781,6 +2785,7 @@ export function OperationsDashboardPage() {
             await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/author/${selectedAuthorForData.id}/publish`, {
                 registrationStatus: manageRegStatus,
                 paymentStatus: managePaymentStatus,
+                amountPaid: manageAmountPaid,
                 booksData: manageAuthorBooks,
                 useGlobalOverride,
                 globalSold,
@@ -2792,6 +2797,28 @@ export function OperationsDashboardPage() {
         } catch (err: any) {
             toast.error(err.response?.data?.error || 'Failed to publish data.');
             if (err.response?.data?.stack) console.error(err.response.data.stack);
+            setIsPublishingData(false);
+        }
+    };
+
+    const handleSaveDraft = async () => {
+        try {
+            setIsPublishingData(true);
+            await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/author/${selectedAuthorForData.id}/publish`, {
+                registrationStatus: manageRegStatus,
+                paymentStatus: managePaymentStatus,
+                amountPaid: manageAmountPaid,
+                booksData: manageAuthorBooks,
+                useGlobalOverride,
+                globalSold,
+                globalRevenue,
+                isDraft: true
+            }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+            await fetchEventRegistrations(selectedEventBreakdown.id);
+            toast.success('Draft Saved! Data instantly reflected on the table.');
+            setIsPublishingData(false);
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || 'Failed to save draft.');
             setIsPublishingData(false);
         }
     };
@@ -2947,8 +2974,18 @@ export function OperationsDashboardPage() {
                         </div>
                         <div>
                            <label className="block text-xs font-bold text-gray-600 mb-1">Payment Status</label>
-                           <select className="w-full border border-gray-300 rounded p-2 text-sm"><option>Paid</option><option>Unpaid</option><option>-</option></select>
+                           <select className="w-full border border-gray-300 rounded p-2 text-sm" value={managePaymentStatus} onChange={(e) => setManagePaymentStatus(e.target.value)}>
+                              <option value="Paid">Paid</option>
+                              <option value="Unpaid">Unpaid</option>
+                              <option value="-">-</option>
+                           </select>
                         </div>
+                        {managePaymentStatus === 'Paid' && (
+                            <div>
+                               <label className="block text-xs font-bold text-emerald-600 mb-1">Amount Paid (₹)</label>
+                               <input type="number" className="w-full border border-emerald-300 bg-emerald-50 text-emerald-800 rounded p-2 text-sm font-bold" value={manageAmountPaid} onChange={(e) => setManageAmountPaid(parseFloat(e.target.value) || 0)} />
+                            </div>
+                        )}
                      </div>
                      
                      <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Book Sales & Metrics</h4>
@@ -2976,11 +3013,20 @@ export function OperationsDashboardPage() {
                         {/* Iterating over authors books */}
 
                         {manageAuthorBooks.map((book: any, idx: number) => {
-                          const revenue = book.mrp * (book.soldStock || 0);
+                          const revenue = (book.overrideMrp || book.mrp) * (book.soldStock || 0);
                           return (
                           <div key={idx} className="border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm hover:shadow transition-shadow">
                              <div className="flex justify-between items-center p-4 bg-white border-b border-gray-100">
-                                <div className="font-medium text-sm text-gray-800">{book.title} <span className="text-xs text-gray-400 font-normal">(MRP: ₹{book.mrp})</span></div>
+                                 <div className="font-medium text-sm text-gray-800 flex items-center gap-2">
+                                     {book.title} 
+                                     <div className="flex items-center gap-1 text-xs text-gray-500 font-normal ml-2">
+                                        (MRP: ₹<input type="number" className="w-14 border border-gray-200 rounded p-0.5 text-xs text-center" value={book.overrideMrp || book.mrp} onChange={(e) => {
+                                            const newBooks = [...manageAuthorBooks];
+                                            newBooks[idx].overrideMrp = parseFloat(e.target.value) || 0;
+                                            setManageAuthorBooks(newBooks);
+                                        }} />)
+                                     </div>
+                                 </div>
                                 <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
                                    <input type="checkbox" checked={book.isSelected} onChange={(e) => {
                                       const newBooks = [...manageAuthorBooks];
@@ -3036,7 +3082,7 @@ export function OperationsDashboardPage() {
                      )}
                      <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 items-center">
                         <span className="text-xs text-gray-500 mr-auto font-medium">* Explicit publish required for authors to see past data in their dashboard.</span>
-                        <button onClick={() => toast.success('Draft Saved!')} className="px-6 py-2.5 text-sm text-paa-navy border border-paa-navy rounded-lg font-bold hover:bg-paa-navy hover:text-white transition-colors">Save Draft</button>
+                        <button onClick={handleSaveDraft} disabled={isPublishingData} className="px-6 py-2.5 text-sm text-paa-navy border border-paa-navy rounded-lg font-bold hover:bg-paa-navy hover:text-white transition-colors">{isPublishingData ? 'SAVING...' : 'Save Draft'}</button>
                         <button onClick={handlePublishData} disabled={isPublishingData} className="px-8 py-2.5 text-sm bg-paa-gold text-paa-navy rounded-lg font-black hover:brightness-110 transition-all shadow-md">{isPublishingData ? 'PUBLISHING...' : 'PUBLISH TO AUTHOR'}</button>
                      </div>
                   </div>
@@ -3101,11 +3147,11 @@ export function OperationsDashboardPage() {
                                             <td className="p-3 text-center align-middle">
                                                <div className="flex flex-col items-center justify-center h-full">
                                                  {a.paymentScreenshot ? (
-                                                     <a href={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} target="_blank" rel="noreferrer" className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80">
+                                                     <a href={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} target="_blank" rel="noreferrer" className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80 mx-auto">
                                                          <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
                                                      </a>
-                                                 ) : <span className="text-sm text-gray-400 font-bold">ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“</span>}
-                                                 
+                                                 ) : <span className="text-sm text-gray-400 font-bold">-</span>}
+                                                 {m.amountPaid ? <div className="text-[10px] text-emerald-600 font-bold mt-1">₹{m.amountPaid}</div> : null}
                                                  {status === 'Registered' && (
                                                      <div className="mt-1">
                                                          <input 

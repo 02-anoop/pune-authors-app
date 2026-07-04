@@ -3277,7 +3277,7 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
   try {
     const eventId = parseInt(req.params.eventId);
     const authorId = parseInt(req.params.authorId);
-    const { booksData, registrationStatus, paymentStatus, useGlobalOverride, globalSold, globalRevenue } = req.body;
+    const { booksData, registrationStatus, paymentStatus, amountPaid, useGlobalOverride, globalSold, globalRevenue, isDraft } = req.body;
     
     // Remove transaction wrapper to prevent timeouts
     const tx = prisma;
@@ -3290,11 +3290,11 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
       if (existingAuthor) {
           await tx.eventAuthor.update({
              where: { id: existingAuthor.id },
-             data: { optInStatus: statusValue, manualTotalSold: manualSold, manualTotalRevenue: manualRevenue }
+             data: { optInStatus: statusValue, manualTotalSold: manualSold, manualTotalRevenue: manualRevenue, paymentStatus: paymentStatus || null, amountPaid: amountPaid ? parseFloat(amountPaid) : null }
           });
       } else {
           await tx.eventAuthor.create({
-             data: { eventId, authorId, optInStatus: statusValue, manualTotalSold: manualSold, manualTotalRevenue: manualRevenue }
+             data: { eventId, authorId, optInStatus: statusValue, manualTotalSold: manualSold, manualTotalRevenue: manualRevenue, paymentStatus: paymentStatus || null, amountPaid: amountPaid ? parseFloat(amountPaid) : null }
           });
       }
 
@@ -3312,7 +3312,8 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
                bookId: parseInt(b.bookId),
                listedStock: parseInt(b.listedStock) || 0,
                soldStock: parseInt(b.soldStock) || 0,
-               returnedStock: parseInt(b.returnedStock) || 0
+               returnedStock: parseInt(b.returnedStock) || 0,
+               overrideMrp: b.overrideMrp ? parseFloat(b.overrideMrp) : null
             });
          }
       }
@@ -3332,7 +3333,9 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
         <p>Please log in to your dashboard to view the performance breakdown and settlement details.</p>`;
         
         // Use sendNotificationEmail without await so it doesn't block the response
-        sendNotificationEmail(author.email, subject, emailWrap(subject, content)).catch(e => console.error('Email failed:', e));
+        if (!isDraft) {
+           sendNotificationEmail(author.email, subject, emailWrap(subject, content)).catch(e => console.error('Email failed:', e));
+        }
         
         await tx.notification.create({
           data: {

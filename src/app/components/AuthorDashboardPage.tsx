@@ -3205,9 +3205,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                     if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
                        rev = evt.manualTotalRevenue;
                     } else if (evt.isInvite) {
-                       getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                       getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0));
                     } else if (evt.isPast && evt.isDataUpdated) {
-                       evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                       evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0));
                     }
                     return acc + rev;
                  }, 0).toLocaleString()}
@@ -3227,9 +3227,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                        if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
                           rev = evt.manualTotalRevenue;
                        } else if (evt.isInvite) {
-                          getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                          getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0));
                        } else if (evt.isPast && evt.isDataUpdated) {
-                          evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                          evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0));
                        }
                        return acc + rev;
                     }, 0);
@@ -3253,9 +3253,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                       if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
                           rev = evt.manualTotalRevenue;
                       } else if (evt.isInvite) {
-                          getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                          getEventBooks(evt.id).forEach((b: any) => rev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0));
                       } else if (evt.isPast && evt.isDataUpdated) {
-                          evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                          evt.books?.forEach((b: any) => rev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0));
                       }
                       const cost = evt.amountPaid || 0;
                       return { name: evt.name || evt.title || 'Unknown', profit: rev - cost };
@@ -3350,12 +3350,12 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                     const evtBooks = getEventBooks(evt.id);
                     evtBooks.forEach((b: any) => {
                       sold += (b.soldStock || 0);
-                      rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0);
+                      rev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0);
                     });
                   } else if (evt.isPast && evt.isDataUpdated) {
                     evt.books?.forEach((b: any) => {
                       sold += (b.soldStock || 0);
-                      rev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0);
+                      rev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0);
                     });
                   }
 
@@ -3415,7 +3415,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                      if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
                                          eventRev = evt.manualTotalRevenue;
                                      } else {
-                                         (evt.isInvite ? getEventBooks(evt.id) : (evt.books || [])).forEach((b: any) => eventRev += (b.soldStock || 0) * (b.mrp || b.book?.mrp || 0));
+                                         (evt.isInvite ? getEventBooks(evt.id) : (evt.books || [])).forEach((b: any) => eventRev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0));
                                      }
                                      gain = eventRev - (evt.amountPaid || 0);
                                      return <span className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm inline-block ${gain >= 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>{gain >= 0 ? '+' : '-'}₹{Math.abs(gain).toLocaleString()}</span>;
@@ -3575,7 +3575,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                                      <div className="flex items-center gap-3 text-[10px] font-mono shrink-0">
                                                         <div className="flex flex-col items-center"><span className="text-gray-400 font-bold">SENT</span><span className="text-gray-600">{b.listedStock || b.sent || 0}</span></div>
                                                         <div className="flex flex-col items-center"><span className="text-paa-navy font-bold">SOLD</span><span className="text-paa-navy text-xs font-black">{b.soldStock || b.sold || 0}</span></div>
-                                                        <div className="flex flex-col items-end"><span className="text-emerald-600 font-bold">REV</span><span className="text-emerald-600 font-bold bg-emerald-50 px-1 rounded">₹{(b.soldStock || b.sold || 0) * (b.mrp || b.book?.mrp || bDetails?.mrp || 0)}</span></div>
+                                                        <div className="flex flex-col items-end"><span className="text-emerald-600 font-bold">REV</span><span className="text-emerald-600 font-bold bg-emerald-50 px-1 rounded">₹{(b.soldStock || b.sold || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || bDetails?.mrp || 0)}</span></div>
                                                      </div>
                                                   ) : (
                                                      <div className="flex items-center gap-4 text-xs font-mono shrink-0">
@@ -3688,7 +3688,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                              const listed = (b.listedStock || b.sent || 0);
                              const sold = (b.soldStock || b.sold || 0);
                              const returned = (b.returnedStock || b.returned || 0);
-                             const rev = sold * (b.mrp || b.book?.mrp || 0);
+                             const rev = sold * (b.overrideMrp || b.mrp || b.book?.mrp || 0);
                              
                              evtSent += listed;
                              evtSold += sold;

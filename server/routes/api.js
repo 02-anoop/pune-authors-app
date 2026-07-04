@@ -3320,6 +3320,27 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
       if (toCreate.length > 0 && !useGlobalOverride) {
          await tx.eventBook.createMany({ data: toCreate });
       }
+
+      // Notify the author
+      const author = await tx.author.findUnique({ where: { id: authorId } });
+      const event = await tx.event.findUnique({ where: { id: eventId } });
+      
+      if (author && event) {
+        const subject = `Sales Data Published: ${event.name}`;
+        const content = `<p>Dear ${author.name},</p>
+        <p>Your sales and revenue data for the event <strong>${event.name}</strong> has been updated and published to your Author Dashboard.</p>
+        <p>Please log in to your dashboard to view the performance breakdown and settlement details.</p>`;
+        
+        // Use sendNotificationEmail without await so it doesn't block the response
+        sendNotificationEmail(author.email, subject, emailWrap(subject, content)).catch(e => console.error('Email failed:', e));
+        
+        await tx.notification.create({
+          data: {
+            message: `Your sales data for the event "${event.name}" has been published.`,
+            target: author.email
+          }
+        });
+      }
     
     res.json({ success: true });
   } catch (err) {

@@ -3075,7 +3075,10 @@ function EventsDashboard({ registrations }: any) {
         manualTotalRevenue: inv.manualTotalRevenue,
         isPast: inv.event?.status === 'Past' || inv.event?.status === 'Legacy Archive' || (inv.event?.date && new Date(inv.event.date) < new Date()),
         isInvite: true,
-        isDataUpdated: inv.manualTotalSold !== null || hasGranular || inv.event?.broadcastStatus === 'Published'
+        isDataUpdated: inv.manualTotalSold !== null || hasGranular || inv.event?.broadcastStatus === 'Published',
+        aggSold: inv.event?.aggSold || 0,
+        aggRevenue: inv.event?.aggRevenue || 0,
+        aggAuthors: inv.event?.aggAuthors || 0
       };
     }),
     ...availableEvents.map((evt: any) => ({
@@ -3116,7 +3119,6 @@ const pe = pastEvents.find(p => p.eventId === eventId);
   const filteredEvents = allEvents.filter((evt: any) => {
     const isLegacy = evt.status === 'Legacy Archive';
     
-    if (eventFilter === 'ALL' && isLegacy) return false;
     if (eventFilter === 'UPCOMING' && (evt.isPast || isLegacy)) return false;
     if (eventFilter === 'PAST' && (!evt.isPast || isLegacy)) return false;
     if (eventFilter === 'INVITES' && (evt.isPast || isLegacy || evt.registration !== 'Pending')) return false;
@@ -3269,6 +3271,14 @@ const pe = pastEvents.find(p => p.eventId === eventId);
              </div>
           </div>
           
+          <div className="mb-6 p-4 bg-indigo-50/50 rounded-xl border border-dashed border-indigo-200 flex items-start gap-3">
+             <AlertCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+             <p className="text-xs text-indigo-700 font-medium leading-relaxed">
+                <strong className="block mb-1 text-sm">Legacy Archive Data Notice</strong>
+                For events marked as <span className="bg-white px-1.5 py-0.5 rounded text-indigo-800 font-bold shadow-sm">LEGACY ARCHIVE</span>, the sales and revenue numbers shown are <b>cumulative across all participating authors</b>, not your individual sales.
+             </p>
+          </div>
+          
           <div className="flex justify-between items-end mb-4">
             <h4 className="font-bold text-paa-navy text-lg flex items-center gap-2"><BarChart3 className="w-5 h-5 text-indigo-500" /> Event Performance Breakdown</h4>
             <div className="flex items-center gap-2">
@@ -3308,7 +3318,10 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                 {filteredEvents.map((evt: any, i: number) => {
                   let sold = 0;
                   let rev = 0;
-                  if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
+                  if (evt.status === 'Legacy Archive') {
+                    sold = evt.aggSold || 0;
+                    rev = evt.aggRevenue || 0;
+                  } else if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
                     sold = evt.manualTotalSold;
                     rev = evt.manualTotalRevenue || 0;
                   } else if (evt.isInvite) {
@@ -3504,9 +3517,8 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                       {(() => {
                                          if (evt.status === 'Legacy Archive') {
                                              return (
-                                                <div className="text-center p-4 bg-indigo-50/50 rounded-lg border border-dashed border-indigo-200">
-                                                   <AlertCircle className="w-6 h-6 text-indigo-400 mx-auto mb-2" />
-                                                   <p className="text-xs text-indigo-700 font-medium">This is a legacy event archive. The sales and revenue shown above are cumulative across all participating authors, not your individual sales.</p>
+                                                <div className="p-3">
+                                                   <p className="text-xs text-gray-500 font-medium italic">Legacy aggregate data (no granular details available).</p>
                                                 </div>
                                              );
                                          }

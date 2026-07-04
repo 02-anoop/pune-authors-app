@@ -3358,8 +3358,8 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                       <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{new Date(evt.startDate || evt.date).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-sm font-semibold">
                          <div className="flex flex-col items-start gap-1">
-                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-                               {evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live')}
+                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.status === 'Legacy Archive' ? 'bg-indigo-100 text-indigo-800' : (evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800')}`}>
+                               {evt.status === 'Legacy Archive' ? 'Legacy Archive' : (evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live'))}
                              </span>
                              {evt.registration === 'Not Participated' && evt.aggAuthors > 0 && (
                                <div className="text-[10px] text-gray-500 font-mono mt-1">{evt.aggAuthors} Authors</div>
@@ -3380,6 +3380,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                           <td className="px-4 py-3 text-sm font-bold text-right">
                              {(() => {
                                  let gain = 0;
+                                 if (evt.status === 'Legacy Archive') return <span className="text-gray-400 font-bold">NA</span>;
                                  if (evt.isPast) {
                                      let eventRev = 0;
                                      if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {

@@ -2816,10 +2816,10 @@ export function OperationsDashboardPage() {
     };
 
     if (selectedEventBreakdown) {
-       const totalAuthors = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.authorsParticipated || selectedEventBreakdown.aggAuthors || 0) : eventRegistrations.length;
-       const totalListed = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSent || 0) : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
-       const totalSold = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.booksSold || selectedEventBreakdown.aggSold || 0) : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) || 0), 0);
-       const totalSale = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggRevenue || (totalSold * 200) || 0) : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.mrp || b.book?.mrp || 0)), 0) || 0), 0);
+       const totalAuthors = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : 'NA') : eventRegistrations.length;
+       const totalListed = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : 'NA') : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
+       const totalSold = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : 'NA') : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) || 0), 0);
+       const totalSale = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : 'NA') : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.mrp || b.book?.mrp || 0)), 0) || 0), 0);
        
        let maxSold = -1;
        let bestSellingBook = '-';
@@ -2902,15 +2902,15 @@ export function OperationsDashboardPage() {
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                     <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>
-                       {isEditingKPIs ? (<input type="text" autoFocus className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0" value={selectedEventBreakdown.aggAuthors == null ? "" : selectedEventBreakdown.aggAuthors} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-paa-navy font-bold">{selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : (totalAuthors || "-")}</div>)}
+                       {isEditingKPIs ? (<input type="text" autoFocus className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0" value={selectedEventBreakdown.aggAuthors == null ? "" : selectedEventBreakdown.aggAuthors} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-paa-navy font-bold">{selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : (totalAuthors === 'NA' ? 'NA' : totalAuthors)}</div>)}
                     </div>
                     <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
                        <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Listed</div>
-                       {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSent == null ? "" : selectedEventBreakdown.aggSent} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-blue-800 font-bold">{selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : (totalListed || "-")}</div>)}
+                       {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSent == null ? "" : selectedEventBreakdown.aggSent} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-blue-800 font-bold">{selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : (totalListed === 'NA' ? 'NA' : totalListed)}</div>)}
                     </div>
                     <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
                        <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Sold</div>
-                       {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSold == null ? "" : selectedEventBreakdown.aggSold} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-indigo-800 font-bold">{selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : (totalSold || "-")}</div>)}
+                       {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSold == null ? "" : selectedEventBreakdown.aggSold} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-indigo-800 font-bold">{selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : (totalSold === 'NA' ? 'NA' : totalSold)}</div>)}
                     </div>
                     <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
                        <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
@@ -3330,9 +3330,9 @@ export function OperationsDashboardPage() {
               </thead>
               <tbody className="divide-y divide-paa-navy/5 bg-white">
                {allCombinedEvents.filter(evt => evt.name.toLowerCase().includes(eventSearch.toLowerCase())).map((evt: any, i: number) => {
-                  const authors = evt.isLegacy ? (evt.aggAuthors || 0) : (evt._count?.eventAuthors || evt.aggAuthors || 0);
-                  const books = evt.isLegacy ? (evt.aggSold || 0) : (evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0) || 0);
-                  const revenue = evt.isLegacy ? (evt.aggRevenue || (books * 200)) : (evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0);
+                  const authors = evt.isLegacy ? (evt.aggAuthors != null ? evt.aggAuthors : 'NA') : (evt._count?.eventAuthors || evt.aggAuthors || 0);
+                  const books = evt.isLegacy ? (evt.aggSold != null ? evt.aggSold : 'NA') : (evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0) || 0);
+                  const revenue = evt.isLegacy ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
                   return (
                       <React.Fragment key={i}>
                        <tr className={`hover:bg-gray-50 transition-colors ${expandedEventIndex === i ? 'bg-gray-50' : ''}`}>
@@ -3360,7 +3360,7 @@ export function OperationsDashboardPage() {
                             </div>
                          </td>
                          <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{books}</td>
-                         <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{revenue}</td>
+                         <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">{revenue}</td>
                          <td className="px-4 py-3 text-right">
                             <div className="flex gap-2 justify-center">
                                 <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">

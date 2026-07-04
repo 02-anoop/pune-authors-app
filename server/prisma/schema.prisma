@@ -300,6 +300,8 @@ model EventAuthor {
   transactionId      String?
   manualTotalSold    Int?
   manualTotalRevenue Float?
+  amountPaid         Float?
+  paymentStatus      String?  @default("Unpaid")
   author             Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
@@ -312,6 +314,7 @@ model EventBook {
   listedStock   Int      @default(0)
   soldStock     Int      @default(0)
   returnedStock Int      @default(0)
+  overrideMrp   Float?
   createdAt     DateTime @default(now())
   author        Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)

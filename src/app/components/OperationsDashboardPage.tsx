@@ -364,6 +364,7 @@ export function OperationsDashboardPage() {
       fd.append('registrationFee', editingEvent.registrationFee.toString());
       fd.append('feeType', editingEvent.feeType);
       fd.append('status', editingEvent.status);
+      fd.append('livePosEnabled', editingEvent.livePosEnabled ? 'true' : 'false');
 
       const descVal = (form.elements.namedItem('description') as HTMLTextAreaElement)?.value;
       if (descVal) fd.append('description', descVal);

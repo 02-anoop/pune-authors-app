@@ -3233,7 +3233,8 @@ router.post('/api/admin/events', verifyToken, isAdmin, upload.single('banner'), 
         aggAuthors: req.body.aggAuthors ? parseInt(req.body.aggAuthors) : null,
         aggSent: req.body.aggSent ? parseInt(req.body.aggSent) : null,
         aggSold: req.body.aggSold ? parseInt(req.body.aggSold) : null,
-        aggRevenue: req.body.aggRevenue ? parseFloat(req.body.aggRevenue) : null
+        aggRevenue: req.body.aggRevenue ? parseFloat(req.body.aggRevenue) : null,
+        livePosEnabled: livePosEnabled === 'true' || livePosEnabled === true
       }
     });
 

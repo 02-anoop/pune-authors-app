@@ -2236,7 +2236,7 @@ export function OperationsDashboardPage() {
                     onClick={() => setAuthorStatusFilter(status)}
                     className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
                   >
-                    {status === 'Reapplied' ? 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Reapplied' : status}
+                    {status === 'Reapplied' ? '🔄 Reapplied' : status}
                   </button>
                 ))}
               </div>
@@ -2333,7 +2333,7 @@ export function OperationsDashboardPage() {
                       const ed = typeof author.extraData === 'string' ? (() => { try { return JSON.parse(author.extraData); } catch (e) { return {}; } })() : (author.extraData || {});
                       const isReapplied = ed?.isReapplied === true && author.status === 'Pending';
                       return isReapplied ? (
-                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Reapplied</span>
+                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>🔄 Reapplied</span>
                       ) : (
                         <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
                           {author.status}

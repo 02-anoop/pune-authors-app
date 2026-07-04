@@ -3231,6 +3231,7 @@ router.post('/api/admin/events', verifyToken, isAdmin, upload.single('banner'), 
         registrationFee: registrationFee ? parseFloat(registrationFee) : 0,
         feeType: feeType || 'Per Author',
         aggAuthors: req.body.aggAuthors ? parseInt(req.body.aggAuthors) : null,
+        aggTitles: req.body.aggTitles ? parseInt(req.body.aggTitles) : null,
         aggSent: req.body.aggSent ? parseInt(req.body.aggSent) : null,
         aggSold: req.body.aggSold ? parseInt(req.body.aggSold) : null,
         aggRevenue: req.body.aggRevenue ? parseFloat(req.body.aggRevenue) : null,
@@ -3372,7 +3373,7 @@ router.get('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
 router.put('/api/admin/events/:id', verifyToken, isAdmin, upload.single('banner'), async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
-    const { name, location, date, duration, startTime, endTime, status, eventType, registrationFee, feeType, description, livePosEnabled, aggAuthors, aggSent, aggSold, aggRevenue } = req.body;
+    const { name, location, date, duration, startTime, endTime, status, eventType, registrationFee, feeType, description, livePosEnabled, aggAuthors, aggTitles, aggSent, aggSold, aggRevenue } = req.body;
     
     let updateData = { name, location, date, duration, status };
     if (startTime !== undefined) updateData.startTime = startTime || null;
@@ -3383,6 +3384,7 @@ router.put('/api/admin/events/:id', verifyToken, isAdmin, upload.single('banner'
     if (feeType !== undefined) updateData.feeType = feeType;
     if (livePosEnabled !== undefined) updateData.livePosEnabled = livePosEnabled === 'true' || livePosEnabled === true;
     if (aggAuthors !== undefined) updateData.aggAuthors = parseInt(aggAuthors) || 0;
+    if (aggTitles !== undefined) updateData.aggTitles = parseInt(aggTitles) || 0;
     if (aggSent !== undefined) updateData.aggSent = parseInt(aggSent) || 0;
     if (aggSold !== undefined) updateData.aggSold = parseInt(aggSold) || 0;
     if (aggRevenue !== undefined) updateData.aggRevenue = parseFloat(aggRevenue) || 0;

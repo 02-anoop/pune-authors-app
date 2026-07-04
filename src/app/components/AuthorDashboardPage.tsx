@@ -3420,15 +3420,15 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                               let statusText = evt.registration;
                               let statusColors = 'bg-gray-100 text-gray-700';
                               
-                              if (evt.status === 'Legacy Archive') {
+                              if (evt.registration === 'Registered' || evt.registration === 'Approved') {
+                                  statusText = evt.isPast ? 'Participated' : 'Registered';
+                                  statusColors = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+                              } else if (evt.status === 'Legacy Archive') {
                                   statusText = 'Completed';
                                   statusColors = 'bg-gray-100 text-gray-600 border border-gray-200';
                               } else if (evt.isPast && !evt.isDataUpdated) {
                                   statusText = 'Completed';
                                   statusColors = 'bg-gray-100 text-gray-600 border border-gray-200';
-                              } else if (evt.registration === 'Registered' || evt.registration === 'Approved') {
-                                  statusText = 'Registered';
-                                  statusColors = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
                               } else if (evt.registration === 'Pending Approval') {
                                   statusText = 'Wait for Approval';
                                   statusColors = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
@@ -4113,6 +4113,7 @@ function AuthorSalesReport({ data }: { data: any }) {
   const totalPosRevenue = posOrders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
   const totalBooksSold = chartData.reduce((acc, curr) => acc + curr.totalBooks, 0);
   const totalRevenue = totalWebRevenue + totalPosRevenue;
+  const eventsParticipated = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered' || inv.optInStatus === 'Approved').length;
 
   const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered').reduce((acc: number, inv: any) => {
     const evt = inv.event;
@@ -4224,7 +4225,7 @@ function AuthorSalesReport({ data }: { data: any }) {
           </div>
         )}</div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Revenue</p>
           <div className="text-2xl font-bold text-paa-navy">₹{totalRevenue}</div>
@@ -4248,6 +4249,10 @@ function AuthorSalesReport({ data }: { data: any }) {
         <div className="bg-white p-4 rounded-xl border shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Sold</p>
           <div className="text-2xl font-bold text-paa-navy">{totalBooksSold}</div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Events Attended</p>
+          <div className="text-2xl font-bold text-emerald-600">{eventsParticipated}</div>
         </div>
       </div>
 

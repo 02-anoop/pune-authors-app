@@ -281,6 +281,7 @@ model Event {
   endTime           String?
   startTime         String?
   aggAuthors        Int?
+  aggTitles         Int?
   aggSent           Int?
   aggSold           Int?
   aggRevenue        Float?

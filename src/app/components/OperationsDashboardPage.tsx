@@ -2607,6 +2607,7 @@ export function OperationsDashboardPage() {
         try {
             const formData = new FormData();
             formData.append('aggAuthors', selectedEventBreakdown.aggAuthors?.toString() || '0');
+            formData.append('aggTitles', selectedEventBreakdown.aggTitles?.toString() || '0');
             formData.append('aggSent', selectedEventBreakdown.aggSent?.toString() || '0');
             formData.append('aggSold', selectedEventBreakdown.aggSold?.toString() || '0');
             formData.append('aggRevenue', selectedEventBreakdown.aggRevenue?.toString() || '0');
@@ -2759,7 +2760,8 @@ export function OperationsDashboardPage() {
         setManageRegStatus(m.optInStatus === 'Declined' ? 'Declined' : 'Registered');
         setManagePaymentStatus(m.paymentStatus || 'Paid');
         setManageAmountPaid(m.amountPaid || 0);
-        setUseGlobalOverride(m.manualTotalSold !== null && m.manualTotalSold !== undefined);
+        const isLegacyEvent = selectedEventBreakdown?.status === 'Legacy Archive' || selectedEventBreakdown?.isLegacy;
+        setUseGlobalOverride(isLegacyEvent || (m.manualTotalSold !== null && m.manualTotalSold !== undefined));
         setGlobalSold(m.manualTotalSold || 0);
         setGlobalRevenue(m.manualTotalRevenue || 0);
         
@@ -2823,31 +2825,84 @@ export function OperationsDashboardPage() {
             setIsPublishingData(false);
         }
     };
-        const handleDownloadEventReport = () => {
+    const handleDownloadEventReport = () => {
         if (!selectedEventBreakdown) return;
-        let csv = 'Author Name,Total Books Listed,Total Books Sold,Total Revenue (INR)\n';
-        authors.forEach((a: any) => {
-            const listed = a.books?.reduce((s:number, b:any) => s + (b.listedStock || 0), 0) || 0;
-            const sold = a.books?.reduce((s:number, b:any) => s + (b.soldStock || 0), 0) || 0;
-            const rev = a.books?.reduce((s:number, b:any) => s + ((b.soldStock || 0) * (b.book?.mrp || 0)), 0) || 0;
-            csv += `"${a.name}",${listed},${sold},${rev}\n`;
+        
+        const match = selectedEventBreakdown.duration?.match(/(\d+)/); 
+        const numDays = match ? parseInt(match[1]) : 1;
+        
+        let daysHeader = '';
+        for(let i=1; i<=numDays; i++) {
+            daysHeader += `Day-${i} sales,`;
+        }
+        
+        let csv = `S.No,Book Title,MRP,Author Name,Amount Paid,No of Copies received,${daysHeader}No of copies Sold,Balance Remaining\n`;
+        
+        let sNo = 1;
+        
+        eventRegistrations.forEach((a: any) => {
+            const amountPaid = a.amountPaid != null ? a.amountPaid : (a.paymentStatus === 'Paid' ? 'Paid' : 'NA');
+            const authorName = a.author?.name || a.name || 'Unknown';
+            
+            if (a.books && a.books.length > 0) {
+                a.books.forEach((b: any) => {
+                    const title = (b.book?.title || b.title || 'Unknown').replace(/"/g, '""');
+                    const mrp = b.overrideMrp || b.book?.mrp || b.mrp || 'NA';
+                    const listed = b.listedStock || 0;
+                    const sold = b.soldStock || 0;
+                    const balance = listed - sold;
+                    
+                    let daysSales = '';
+                    for(let i=1; i<=numDays; i++) {
+                        daysSales += `NA,`;
+                    }
+                    
+                    csv += `${sNo},"${title}",${mrp},"${authorName}",${amountPaid},${listed},${daysSales}${sold},${balance}\n`;
+                    sNo++;
+                });
+            } else if (selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Legacy Archive' || selectedEventBreakdown.status === 'Past') {
+                // For events where books might not be listed explicitly
+                let daysSales = '';
+                for(let i=1; i<=numDays; i++) {
+                    daysSales += `NA,`;
+                }
+                csv += `${sNo},NA,NA,"${authorName}",${amountPaid},NA,${daysSales}${a.manualTotalSold || 0},NA\n`;
+                sNo++;
+            }
         });
+        
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Event_Report_${selectedEventBreakdown.name.replace(/\s+/g, '_')}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const aLink = document.createElement('a');
+        aLink.href = url;
+        aLink.download = `Event_Report_${selectedEventBreakdown.name.replace(/\s+/g, '_')}.csv`;
+        document.body.appendChild(aLink);
+        aLink.click();
+        document.body.removeChild(aLink);
         window.URL.revokeObjectURL(url);
     };
 
     if (selectedEventBreakdown) {
-       const totalAuthors = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : 'NA') : eventRegistrations.length;
-       const totalListed = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : 'NA') : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
-       const totalSold = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : 'NA') : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) || 0), 0);
-       const totalSale = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : 'NA') : eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.mrp || b.book?.mrp || 0)), 0) || 0), 0);
+       const isPastOrArchive = selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.status === 'Legacy Archive';
+
+       const totalAuthorsBase = eventRegistrations.length;
+       const totalListedBase = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
+       const totalSoldBase = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
+       const totalSaleBase = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
+       const totalTitlesBase = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books ? a.books.length : 0), 0);
+
+       const pubRegs = eventRegistrations.filter((a: any) => a.optInStatus === 'Registered');
+       const pubAuthors = pubRegs.length;
+       const pubListed = pubRegs.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
+       const pubSold = pubRegs.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
+       const pubSale = pubRegs.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
+       const pubTitles = pubRegs.reduce((acc: number, a: any) => acc + (a.books ? a.books.length : 0), 0);
+
+       const totalAuthors = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : 'NA') : totalAuthorsBase;
+       const totalTitles = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggTitles != null ? selectedEventBreakdown.aggTitles : 'NA') : totalTitlesBase;
+       const totalListed = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : 'NA') : totalListedBase;
+       const totalSold = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : 'NA') : totalSoldBase;
+       const totalSale = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : 'NA') : totalSaleBase;
        
        let maxSold = -1;
        let bestSellingBook = '-';
@@ -2927,27 +2982,63 @@ export function OperationsDashboardPage() {
                   <span className="text-xs text-gray-400">Event Summary</span>
                   {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === "Past" || selectedEventBreakdown.status === "Legacy Archive") && ( isEditingKPIs ? ( <div className="flex gap-2"><button onClick={() => setIsEditingKPIs(false)} className="text-xs font-bold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-full transition-colors">Cancel</button><button onClick={async () => { await handleSaveAggregateData(); setIsEditingKPIs(false); }} className="text-xs font-bold bg-paa-navy text-paa-cream px-4 py-1.5 rounded-full hover:bg-paa-gold hover:text-paa-navy transition-colors active:scale-95">Save Stats</button></div> ) : ( <button onClick={() => setIsEditingKPIs(true)} className="text-xs font-bold text-paa-navy border border-paa-navy/20 bg-gray-50 hover:bg-paa-navy/5 px-4 py-1.5 rounded-full transition-colors">Edit Stats</button> ) )}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                    <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
-                       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>
-                       {isEditingKPIs ? (<input type="text" autoFocus className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0" value={selectedEventBreakdown.aggAuthors == null ? "" : selectedEventBreakdown.aggAuthors} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-paa-navy font-bold">{selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : (totalAuthors === 'NA' ? 'NA' : totalAuthors)}</div>)}
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+                    <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
+                       <div>
+                           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>
+                           {isEditingKPIs ? (<input type="text" autoFocus className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0" value={selectedEventBreakdown.aggAuthors == null ? "" : selectedEventBreakdown.aggAuthors} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-paa-navy font-bold">{selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : (totalAuthors === 'NA' ? 'NA' : totalAuthors)}</div>)}
+                       </div>
+                        {isPastOrArchive && !isEditingKPIs && totalAuthors !== 'NA' && (
+                           <div className="text-[10px] text-gray-500 font-bold uppercase mt-2 pt-2 border-t border-gray-200">Plat. Reg: <span className="text-paa-navy">{pubAuthors}</span></div>
+                       )}
                     </div>
-                    <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
-                       <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Listed</div>
-                       {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSent == null ? "" : selectedEventBreakdown.aggSent} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-blue-800 font-bold">{selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : (totalListed === 'NA' ? 'NA' : totalListed)}</div>)}
+                    
+                    <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between border-gray-200`}>
+                       <div>
+                           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Titles</div>
+                           {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-gray-800 font-bold bg-transparent border-0 border-b-2 border-gray-300 focus:border-gray-600 outline-none w-full p-0" value={selectedEventBreakdown.aggTitles == null ? "" : selectedEventBreakdown.aggTitles} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggTitles: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-gray-800 font-bold">{selectedEventBreakdown.aggTitles != null ? selectedEventBreakdown.aggTitles : (totalTitles === 'NA' ? 'NA' : totalTitles)}</div>)}
+                       </div>
+                        {isPastOrArchive && !isEditingKPIs && totalTitlesBase > 0 && (
+                           <div className="text-[10px] text-gray-500 font-bold uppercase mt-2 pt-2 border-t border-gray-200">Plat. Reg: <span className="text-gray-800">{pubTitles}</span></div>
+                       )}
                     </div>
-                    <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
-                       <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Sold</div>
-                       {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSold == null ? "" : selectedEventBreakdown.aggSold} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-indigo-800 font-bold">{selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : (totalSold === 'NA' ? 'NA' : totalSold)}</div>)}
+
+                    <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
+                       <div>
+                           <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Listed</div>
+                           {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSent == null ? "" : selectedEventBreakdown.aggSent} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-blue-800 font-bold">{selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : (totalListed === 'NA' ? 'NA' : totalListed)}</div>)}
+                       </div>
+                        {isPastOrArchive && !isEditingKPIs && totalListed !== 'NA' && (
+                           <div className="text-[10px] text-blue-600 font-bold uppercase mt-2 pt-2 border-t border-blue-200/50">Plat. Reg: <span className="text-blue-800">{pubListed}</span></div>
+                       )}
                     </div>
-                    <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm ${isEditingKPIs ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
-                       <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
-                       {isEditingKPIs ? (<div className="flex items-center gap-0.5"><span className="text-xl font-serif text-emerald-800 font-bold">₹</span><input type="text" className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0" value={selectedEventBreakdown.aggRevenue == null ? "" : selectedEventBreakdown.aggRevenue} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggRevenue: (val.toUpperCase() === "NA" || val === "") ? null : parseFloat(val) || 0 }) }} /></div>) : (<div className="text-xl font-serif text-emerald-800 font-bold">₹{selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : (totalSale || "-")}</div>)}
+                    
+                    <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
+                       <div>
+                           <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Sold</div>
+                           {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSold == null ? "" : selectedEventBreakdown.aggSold} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-indigo-800 font-bold">{selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : (totalSold === 'NA' ? 'NA' : totalSold)}</div>)}
+                       </div>
+                        {isPastOrArchive && !isEditingKPIs && totalSold !== 'NA' && (
+                           <div className="text-[10px] text-indigo-600 font-bold uppercase mt-2 pt-2 border-t border-indigo-200/50">Plat. Reg: <span className="text-indigo-800">{pubSold}</span></div>
+                       )}
                     </div>
-                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 shadow-sm">
-                       <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Best Selling Book</div>
-                       <div className="text-sm font-bold text-purple-900 truncate">{bestSellingBook || "-"}</div>
-                       <div className="text-[9px] text-purple-400 mt-1">auto-calculated</div>
+                    
+                    <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
+                       <div>
+                           <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
+                           {isEditingKPIs ? (<div className="flex items-center gap-0.5"><span className="text-xl font-serif text-emerald-800 font-bold">₹</span><input type="text" className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0" value={selectedEventBreakdown.aggRevenue == null ? "" : selectedEventBreakdown.aggRevenue} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggRevenue: (val.toUpperCase() === "NA" || val === "") ? null : parseFloat(val) || 0 }) }} /></div>) : (<div className="text-xl font-serif text-emerald-800 font-bold">₹{selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : (totalSale || "-")}</div>)}
+                       </div>
+                        {isPastOrArchive && !isEditingKPIs && totalSale !== 'NA' && (
+                           <div className="text-[10px] text-emerald-600 font-bold uppercase mt-2 pt-2 border-t border-emerald-200/50">Plat. Reg: <span className="text-emerald-800">₹{pubSale}</span></div>
+                       )}
+                    </div>
+                    
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+                       <div>
+                           <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Best Selling Book</div>
+                           <div className="text-sm font-bold text-purple-900 truncate" title={bestSellingBook || "-"}>{bestSellingBook || "-"}</div>
+                       </div>
+                       <div className="text-[9px] text-purple-400 font-medium mt-2 pt-2 border-t border-purple-200/50">auto-calculated</div>
                     </div>
                 </div>
 
@@ -2967,10 +3058,10 @@ export function OperationsDashboardPage() {
                      <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Author Registration & Logistics</h4>
                      <div className="grid grid-cols-2 gap-4 mb-8">
                         <div>
-                           <label className="block text-xs font-bold text-gray-600 mb-1">Publish to Author Dashboard</label>
+                           <label className="block text-xs font-bold text-gray-600 mb-1">{selectedEventBreakdown.isLegacy ? 'Mark Attendance' : 'Publish to Author Dashboard'}</label>
                            <select className="w-full border border-gray-300 rounded p-2 text-sm font-semibold text-paa-navy" value={manageRegStatus} onChange={(e) => setManageRegStatus(e.target.value)}>
-                         <option value="Registered">Yes, Publish Data</option>
-                         <option value="Declined">No, Keep Hidden</option>
+                         <option value="Registered">{selectedEventBreakdown.isLegacy ? 'Yes, Mark Participated' : 'Yes, Publish Data'}</option>
+                         <option value="Declined">{selectedEventBreakdown.isLegacy ? 'No, Did Not Participate' : 'No, Keep Hidden'}</option>
                       </select>
                         </div>
                         <div>
@@ -3182,7 +3273,7 @@ export function OperationsDashboardPage() {
                                          )}
                                          <td className="p-3">
                                             {status === 'Registered' ? (
-                                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3"/> {hasData ? 'Published' : 'Registered'}</span>
+                                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3"/> {selectedEventBreakdown.isLegacy ? 'Participated' : (hasData ? 'Published' : 'Registered')}</span>
                                             ) : (status === 'Pending' || status === 'Pending Approval' || status === 'Unpublished') ? (
                                                 <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max">Pending</span>
                                             ) : status === 'Declined' ? (
@@ -3392,9 +3483,10 @@ export function OperationsDashboardPage() {
               </thead>
               <tbody className="divide-y divide-paa-navy/5 bg-white">
                {allCombinedEvents.filter(evt => evt.name.toLowerCase().includes(eventSearch.toLowerCase())).map((evt: any, i: number) => {
-                  const authors = evt.isLegacy ? (evt.aggAuthors != null ? evt.aggAuthors : 'NA') : (evt._count?.eventAuthors || evt.aggAuthors || 0);
-                  const books = evt.isLegacy ? (evt.aggSold != null ? evt.aggSold : 'NA') : (evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0) || 0);
-                  const revenue = evt.isLegacy ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
+                  const isPastOrArchive = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
+                  const authors = isPastOrArchive ? (evt.aggAuthors != null ? evt.aggAuthors : 'NA') : (evt._count?.eventAuthors || 0);
+                  const books = isPastOrArchive ? (evt.aggSold != null ? evt.aggSold : 'NA') : (evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0) || 0);
+                  const revenue = isPastOrArchive ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
                   return (
                       <React.Fragment key={i}>
                        <tr className={`hover:bg-gray-50 transition-colors ${expandedEventIndex === i ? 'bg-gray-50' : ''}`}>

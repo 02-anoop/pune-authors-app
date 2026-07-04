@@ -3014,16 +3014,17 @@ export function OperationsDashboardPage() {
                         {/* Iterating over authors books */}
 
                         {manageAuthorBooks.map((book: any, idx: number) => {
-                          const revenue = (book.overrideMrp || book.mrp) * (book.soldStock || 0);
+                          const mrpToUse = book.overrideMrp !== undefined && book.overrideMrp !== '' ? parseFloat(book.overrideMrp) : book.mrp;
+                          const revenue = (mrpToUse || 0) * (book.soldStock || 0);
                           return (
                           <div key={idx} className="border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm hover:shadow transition-shadow">
                              <div className="flex justify-between items-center p-4 bg-white border-b border-gray-100">
                                  <div className="font-medium text-sm text-gray-800 flex items-center gap-2">
                                      {book.title} 
                                      <div className="flex items-center gap-1 text-xs text-gray-500 font-normal ml-2">
-                                        (MRP: ₹<input type="number" className="w-14 border border-gray-200 rounded p-0.5 text-xs text-center" value={book.overrideMrp || book.mrp} onChange={(e) => {
+                                        (MRP: ₹<input type="text" className="w-14 border border-gray-200 rounded p-0.5 text-xs text-center outline-none focus:border-paa-navy" value={book.overrideMrp !== undefined ? book.overrideMrp : (book.mrp || '')} onChange={(e) => {
                                             const newBooks = [...manageAuthorBooks];
-                                            newBooks[idx].overrideMrp = parseFloat(e.target.value) || 0;
+                                            newBooks[idx].overrideMrp = e.target.value;
                                             setManageAuthorBooks(newBooks);
                                         }} />)
                                      </div>
@@ -3232,7 +3233,7 @@ export function OperationsDashboardPage() {
                                                                          <div key={j} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
                                                                              <div className="font-bold text-paa-navy flex-1 w-full text-base truncate" title={b.title || b.book?.title || 'Unknown Book'}>
                                                                                  {b.title || b.book?.title || 'Unknown Book'}
-                                                                                 <span className="text-xs text-gray-400 font-medium ml-3 tracking-wider">(MRP: ₹{b.mrp || b.book?.mrp || 'N/A'})</span>
+                                                                                 <span className="text-xs text-gray-400 font-medium ml-3 tracking-wider">(MRP: ₹{b.overrideMrp || b.mrp || b.book?.mrp || 'N/A'})</span>
                                                                              </div>
                                                                              <div className="flex font-mono text-sm text-gray-600 gap-8 md:gap-12 bg-gray-50/80 px-6 py-2 rounded-lg border border-gray-100 w-full md:w-auto justify-between md:justify-end">
                                                                                  <div className="flex flex-col items-center md:items-end">
@@ -3251,7 +3252,7 @@ export function OperationsDashboardPage() {
                                                                                  </div>
                                                                                  <div className="flex flex-col items-center md:items-end">
                                                                                     <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Rev</span>
-                                                                                    <span className="font-bold text-emerald-600">{b.soldStock ? `₹${(b.soldStock) * (b.mrp || b.book?.mrp || 0)}` : '₹0'}</span>
+                                                                                    <span className="font-bold text-emerald-600">{b.soldStock ? `₹${(b.soldStock) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)}` : '₹0'}</span>
                                                                                  </div>
                                                                              </div>
                                                                          </div>

@@ -2933,8 +2933,6 @@ export function OperationsDashboardPage() {
                  <div className="flex gap-2">
                    {!selectedAuthorForData && (
                      <>
-                        {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.status === 'Legacy Archive') && (
-                            <>
                               {selectedEventBreakdown.broadcastStatus !== 'Published' ? (
                                 <button onClick={async () => {
                                     try {
@@ -2962,8 +2960,6 @@ export function OperationsDashboardPage() {
                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> PUBLISHED &bull; Click to Unpublish
                                 </button>
                               )}
-                            </>
-                        )}
                        <button onClick={handleDownloadEventReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm font-bold flex items-center gap-2">
                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download Report
                        </button>

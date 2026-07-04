@@ -3089,7 +3089,12 @@ function EventsDashboard({ registrations }: any) {
       isInvite: false,
       isDataUpdated: true
     }))
-  ];
+  ].filter((evt: any) => {
+     if (evt.status === 'Legacy Archive' && evt.broadcastStatus !== 'Published') {
+         return false;
+     }
+     return true;
+  });
 
   const getEventBooks = (eventId: number) => listedBooks.filter((lb: any) => lb.eventId === eventId);
   const getPastEventBooks = (eventId: number) => {
@@ -3113,6 +3118,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
     if (eventFilter === 'PAST' && (!evt.isPast || isLegacy)) return false;
     if (eventFilter === 'INVITES' && (evt.isPast || isLegacy || evt.registration !== 'Pending')) return false;
     if (eventFilter === 'LEGACY ARCHIVE' && !isLegacy) return false;
+    if (eventFilter === 'PARTICIPATED' && (evt.registration !== 'Registered' && evt.registration !== 'Approved')) return false;
     
     if (searchTerm) {
         return (evt.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -3273,8 +3279,8 @@ const pe = pastEvents.find(p => p.eventId === eventId);
 
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
              <div className="flex flex-wrap gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
-               {['ALL', 'UPCOMING', 'PAST', 'INVITES', 'LEGACY ARCHIVE'].map((f) => (
-                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : 'Invites')))}</button>
+               {['ALL', 'PARTICIPATED', 'UPCOMING', 'PAST', 'INVITES', 'LEGACY ARCHIVE'].map((f) => (
+                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'PARTICIPATED' ? 'Participated' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : 'Invites'))))}</button>
                ))}
              </div>
              <div className="relative w-full md:w-64">
@@ -3424,8 +3430,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                   statusText = evt.isPast ? 'Participated' : 'Registered';
                                   statusColors = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
                               } else if (evt.status === 'Legacy Archive') {
-                                  statusText = 'Completed';
-                                  statusColors = 'bg-gray-100 text-gray-600 border border-gray-200';
+                                  const isFuture = evt.startDate || evt.date ? new Date(evt.startDate || evt.date) > new Date() : false;
+                                  statusText = isFuture ? 'Upcoming' : 'Completed';
+                                  statusColors = isFuture ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-600 border border-gray-200';
                               } else if (evt.isPast && !evt.isDataUpdated) {
                                   statusText = 'Completed';
                                   statusColors = 'bg-gray-100 text-gray-600 border border-gray-200';

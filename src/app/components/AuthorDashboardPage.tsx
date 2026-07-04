@@ -392,17 +392,7 @@ export function AuthorDashboardPage() {
         </div>
       )}
 
-      {/* Mandatory Settlement Overlay Blackout */}
-      {dashboardData?.eventInvites?.some((inv: any) => inv.optInStatus === 'Registered' && inv.event.status === 'Past' && dashboardData?.listedBooks?.some((lb: any) => lb.eventId === inv.eventId && lb.listedStock !== (lb.soldStock || 0) + (lb.returnedStock || 0))) && location.pathname !== '/dashboard/events' && (
-        <div className="fixed inset-0 bg-white z-[65] flex items-center justify-center pointer-events-auto">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-paa-navy mx-auto mb-4" />
-            <h2 className="text-2xl font-serif text-paa-navy">Action Required</h2>
-            <p className="text-gray-500 mt-2 mb-6">Please settle your past event inventory to access your dashboard.</p>
-            <button onClick={() => navigate('/dashboard/events')} className="bg-paa-navy text-paa-cream px-6 py-3 font-bold uppercase tracking-widest text-xs hover:bg-paa-gold hover:text-paa-navy transition-colors">Go to Events Tab</button>
-          </div>
-        </div>
-      )}
+
 
       <div className="min-h-screen font-sans" style={{ background: '#f5f5f3' }}>
         {/* TOP NAV */}

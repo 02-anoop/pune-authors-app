@@ -3396,7 +3396,7 @@ export function OperationsDashboardPage() {
                                       </div>
                                       <div>
                                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><CalendarIcon className="w-3 h-3"/> Duration</p>
-                                         <p className="text-sm text-paa-navy font-semibold">{evt.durationDays ? `${evt.durationDays} Days` : 'N/A'}</p>
+                                         <p className="text-sm text-paa-navy font-semibold">{evt.duration || (evt.durationDays ? `${evt.durationDays} Days` : 'N/A')}</p>
                                       </div>
                                    </div>
                                    <div className="w-px bg-gray-100 hidden md:block"></div>

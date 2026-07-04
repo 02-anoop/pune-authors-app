@@ -307,8 +307,8 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
             format: b.format || "NA",
             printFormat: b.printFormat || "NA",
             purpose: b.purpose || "NA",
-            coverUrl: covers[idx] || covers[0] || "",
-            backCoverUrl: backCovers[idx] || backCovers[0] || "",
+            coverUrl: covers[idx] || "",
+            backCoverUrl: backCovers[idx] || "",
             status: 'Pending'
           }))
         }

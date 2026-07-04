@@ -251,7 +251,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   const [paymentBlob, setPaymentBlob] = useState<File | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [qrCodeBlob, setQrCodeBlob] = useState<File | null>(null);
-  const [qualifications, setQualifications] = useState<any[]>([{ id: Date.now(), qualification: "", institution: "", subject: "", certificateUrl: "", certificateBlob: null }]);
+  const [qualifications, setQualifications] = useState<any[]>([{ id: Date.now(), qualification: "", institution: "", subject: "", mode: "", certificateUrl: "", certificateBlob: null }]);
   const [dynamicFields, setDynamicFields] = useState<any[]>([]);
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [books, setBooks] = useState<any[]>([]);
@@ -1824,7 +1824,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
                     if (!qrCodeBlob && !qrCodeUrl) {
                       setStep(isOnboardingMode ? 3 : 0);
-                      alert("Please upload your Payment QR Code."); return;
+                      alert("Author Profile: Please upload your personal UPI/Bank QR Code for receiving payments."); return;
                     }
                     if (dynamicFields.length > 0) {
                       for (const f of dynamicFields) {
@@ -1924,7 +1924,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
 
                       const finalBooks = [...books];
                       if (form.title && form.genre && form.mrp) {
-                        finalBooks.push({ ...form, coverBlob });
+                        finalBooks.push({ ...form, coverBlob, backCoverBlob });
                       }
 
                       formData.append("books", JSON.stringify(finalBooks.map(b => {
@@ -1994,7 +1994,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       }
                     } catch (e: any) {
                       console.error("Submission error:", e.response?.data || e.message || e);
-                      alert("Oops! We hit a small snag on our end. Please try clicking submit again, or contact support if the issue persists.");
+                      const errorMessage = e.response?.data?.error || "Oops! We hit a small snag on our end. Please try clicking submit again, or contact support if the issue persists.";
+                      alert(errorMessage);
                     } finally {
                       setIsSubmitting(false);
                     }

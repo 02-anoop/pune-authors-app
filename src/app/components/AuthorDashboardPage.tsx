@@ -3098,8 +3098,8 @@ const pe = pastEvents.find(p => p.eventId === eventId);
   };
 
   const validParticipations = allEvents.filter((evt: any) => {
-    if (evt.status === 'Legacy Archive') return false;
     if (evt.registration === 'Registered' || evt.registration === 'Approved' || evt.registration === 'Pending Approval') return true;
+    if (evt.status === 'Legacy Archive') return false;
     if (evt.isPast) {
       if (evt.isDataUpdated && (evt.isInvite ? getEventBooks(evt.id).length > 0 : getPastEventBooks(evt.id).length > 0)) return true;
     }

@@ -3380,9 +3380,16 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                       <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{new Date(evt.startDate || evt.date).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-sm font-semibold">
                          <div className="flex flex-col items-start gap-1">
-                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.status === 'Legacy Archive' ? 'bg-indigo-100 text-indigo-800' : (evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800')}`}>
-                               {evt.status === 'Legacy Archive' ? 'Legacy Archive' : (evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live'))}
-                             </span>
+                             <div className="flex gap-1 mb-1 flex-wrap">
+                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.status === 'Legacy Archive' ? 'bg-indigo-100 text-indigo-800' : (evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800')}`}>
+                                   {evt.status === 'Legacy Archive' ? 'Legacy Archive' : (evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live'))}
+                                 </span>
+                                 {evt.eventType && (
+                                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-gray-100 text-gray-700">
+                                       {evt.eventType}
+                                     </span>
+                                 )}
+                             </div>
                              {(evt.status === 'Legacy Archive' || evt.registration === 'Not Participated') && evt.aggAuthors > 0 && (
                                <div className="text-[10px] text-gray-500 font-mono mt-1">{evt.aggAuthors} Authors</div>
                              )}

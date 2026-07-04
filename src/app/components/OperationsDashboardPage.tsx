@@ -2873,7 +2873,7 @@ export function OperationsDashboardPage() {
                                         toast.error('Failed to unpublish');
                                     }
                                 }} className="dash-btn bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-700 border border-gray-300 hover:border-red-300 transition-colors shadow-sm font-bold flex items-center gap-2">
-                                  ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ PUBLISHED ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Click to Unpublish
+                                   <CheckCircle2 className="w-4 h-4 text-emerald-600" /> PUBLISHED &bull; Click to Unpublish
                                 </button>
                               )}
                             </>
@@ -3283,11 +3283,11 @@ export function OperationsDashboardPage() {
                     <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-300"></div> Authors Participated</div>
                 </div>
             </div>
-            <div className="h-64 w-full">
+            <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={allCombinedEvents.map(e => ({ name: e.name, booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0, authors: (e.isLegacy ? e.aggAuthors : e._count?.eventAuthors) || 0 }))} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <BarChart data={allCombinedEvents.map(e => ({ name: e.name, booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0, authors: (e.isLegacy ? e.aggAuthors : e._count?.eventAuthors) || 0 }))} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280', angle: -90, textAnchor: 'end' }} dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
                         <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                         <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                         <RechartsTooltip 
@@ -3349,11 +3349,22 @@ export function OperationsDashboardPage() {
                             {evt.registrationFee > 0 && <div className="text-[10px] font-normal text-gray-500 uppercase tracking-widest mt-0.5">{evt.feeType || 'Per Author'}</div>}
                          </td>
                          <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
-                               {evt.isLegacy ? 'Legacy Archive' : evt.status}
-                            </span>
+                            <div className="flex flex-col gap-1.5 items-start">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
+                                   {evt.isLegacy ? 'Legacy Archive' : evt.status}
+                                </span>
+                                <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                    {evt.broadcastStatus === 'Published' ? (
+                                        <span className="text-emerald-600 flex items-center gap-1" title="Published to all authors"><CheckCircle2 className="w-3 h-3" /> All</span>
+                                    ) : (evt.registrations?.length > 0) ? (
+                                        <span className="text-orange-500 flex items-center gap-1" title="Published to individual authors"><CheckCircle2 className="w-3 h-3" /> Partial</span>
+                                    ) : (
+                                        <span className="text-gray-400 flex items-center gap-1" title="Not published"><XCircle className="w-3 h-3" /> Hidden</span>
+                                    )}
+                                </div>
+                            </div>
                          </td>
-                         <td className="px-4 py-3 text-sm font-bold text-center">{evt.livePosEnabled && !evt.isPast ? <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Enabled</span> : <span className="text-gray-400">-</span>}</td>
+                         <td className="px-4 py-3 text-sm font-bold text-center">{evt.livePosEnabled && !evt.isPast && !evt.isLegacy && evt.status !== 'Legacy Archive' ? <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Enabled</span> : <span className="text-gray-400">-</span>}</td>
                          <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
                             <div className="flex items-center justify-end gap-2">
                                 {authors}
@@ -4196,14 +4207,20 @@ export function OperationsDashboardPage() {
               </div>
             </div>
 
-            <div>
-              <label className="dash-label">Status</label>
-              <select className="dash-input" value={editingEvent.status} onChange={e => setEditingEvent({ ...editingEvent, status: e.target.value })}>
-                <option value="Upcoming">Upcoming</option>
-                <option value="Ongoing">Ongoing</option>
-                <option value="Past">Past</option>
-                <option value="Legacy Archive">Legacy Archive</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="dash-label">Status</label>
+                <select className="dash-input" value={editingEvent.status} onChange={e => setEditingEvent({ ...editingEvent, status: e.target.value })}>
+                  <option value="Upcoming">Upcoming</option>
+                  <option value="Ongoing">Ongoing</option>
+                  <option value="Past">Past</option>
+                  <option value="Legacy Archive">Legacy Archive</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-3 pt-6">
+                <input type="checkbox" id="editPosEnable" checked={editingEvent.livePosEnabled || false} onChange={e => setEditingEvent({ ...editingEvent, livePosEnabled: e.target.checked })} className="w-5 h-5 rounded border-gray-300 text-paa-navy focus:ring-paa-navy" />
+                <label htmlFor="editPosEnable" className="text-sm font-bold text-paa-navy cursor-pointer">Live POS Enabled</label>
+              </div>
             </div>
 
 

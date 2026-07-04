@@ -3401,7 +3401,10 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                               let statusText = evt.registration;
                               let statusColors = 'bg-gray-100 text-gray-700';
                               
-                              if (evt.isPast && !evt.isDataUpdated) {
+                              if (evt.status === 'Legacy Archive') {
+                                  statusText = 'Completed';
+                                  statusColors = 'bg-gray-100 text-gray-600 border border-gray-200';
+                              } else if (evt.isPast && !evt.isDataUpdated) {
                                   statusText = 'Completed';
                                   statusColors = 'bg-gray-100 text-gray-600 border border-gray-200';
                               } else if (evt.registration === 'Registered' || evt.registration === 'Approved') {

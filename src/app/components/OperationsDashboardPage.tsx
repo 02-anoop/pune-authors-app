@@ -3132,7 +3132,7 @@ export function OperationsDashboardPage() {
                                          <td className="p-3 text-center">
                                              <div className="flex gap-2 justify-center items-center">
                                                  <button onClick={() => setExpandedAuthorId(isExpanded ? null : (showAllAuthors ? m.id : m.authorId))} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-bold border border-gray-200 transition-colors shadow-sm">
-                                                     {isExpanded ? 'â–²' : 'â–¼'}
+                                                     {isExpanded ? <ChevronUp className="w-4 h-4 mx-auto"/> : <ChevronDown className="w-4 h-4 mx-auto"/>}
                                                  </button>
                                                  {showAllAuthors || status === 'Registered' ? (
                                                      <button onClick={() => {

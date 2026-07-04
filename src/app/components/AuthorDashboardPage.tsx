@@ -3129,6 +3129,28 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                (evt.location || '').toLowerCase().includes(searchTerm.toLowerCase());
     }
     return true;
+  }).sort((a: any, b: any) => {
+    const getRev = (evt: any) => {
+        if (evt.status === 'Legacy Archive') return evt.aggRevenue || 0;
+        if (evt.manualTotalRevenue != null) return evt.manualTotalRevenue;
+        let r = 0;
+        (evt.isInvite ? getEventBooks(evt.id) : (evt.books || [])).forEach((bk: any) => r += (bk.soldStock || 0) * (bk.mrp || bk.book?.mrp || 0));
+        return r;
+    };
+    const getSold = (evt: any) => {
+        if (evt.status === 'Legacy Archive') return evt.aggSold || 0;
+        if (evt.manualTotalSold != null) return evt.manualTotalSold;
+        let s = 0;
+        (evt.isInvite ? getEventBooks(evt.id) : (evt.books || [])).forEach((bk: any) => s += (bk.soldStock || 0));
+        return s;
+    };
+    
+    if (bpSort === 'revenue_desc') return getRev(b) - getRev(a);
+    if (bpSort === 'revenue_asc') return getRev(a) - getRev(b);
+    if (bpSort === 'sold_desc') return getSold(b) - getSold(a);
+    if (bpSort === 'date_desc') return new Date(b.date || b.startDate).getTime() - new Date(a.date || a.startDate).getTime();
+    if (bpSort === 'date_asc') return new Date(a.date || a.startDate).getTime() - new Date(b.date || b.startDate).getTime();
+    return 0;
   });
 
   if (loading) return (
@@ -3361,7 +3383,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.status === 'Legacy Archive' ? 'bg-indigo-100 text-indigo-800' : (evt.isPast ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800')}`}>
                                {evt.status === 'Legacy Archive' ? 'Legacy Archive' : (evt.type || (evt.isPast ? 'Past Event' : 'Upcoming/Live'))}
                              </span>
-                             {evt.registration === 'Not Participated' && evt.aggAuthors > 0 && (
+                             {(evt.status === 'Legacy Archive' || evt.registration === 'Not Participated') && evt.aggAuthors > 0 && (
                                <div className="text-[10px] text-gray-500 font-mono mt-1">{evt.aggAuthors} Authors</div>
                              )}
                          </div>

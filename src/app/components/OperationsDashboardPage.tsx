@@ -2812,6 +2812,7 @@ export function OperationsDashboardPage() {
                 bookId: gb.id,
                 title: gb.title || 'Unknown Book',
                 mrp: parseFloat(gb.mrp) || 0,
+                overrideMrp: evb?.overrideMrp || undefined,
                 isSelected: !!evb,
                 listedStock: evb ? (evb.listedStock || 0) : 0,
                 soldStock: evb ? (evb.soldStock || 0) : 0,
@@ -3282,9 +3283,10 @@ export function OperationsDashboardPage() {
                                  })
                                  .slice(0, 50).map(({ a, m, showAllAuthors }, i: number) => {
                                      const authorData = showAllAuthors ? m : m.author;
-                                     const listed = m.books?.reduce((s:number,b:any)=>s+(b.listedStock||0),0)||0;
-                                     const sold = (m.manualTotalSold !== null && m.manualTotalSold !== undefined) ? m.manualTotalSold : (m.books?.reduce((s:number,b:any)=>s+(b.soldStock||0),0)||0);
-                                     const rev = (m.manualTotalRevenue !== null && m.manualTotalRevenue !== undefined) ? m.manualTotalRevenue : (m.books?.reduce((s:number,b:any)=>s+((b.soldStock||0)*(b.mrp||b.book?.mrp||0)),0)||0);
+                                     const hasBooks = m.books && m.books.length > 0;
+                                     const listed = hasBooks ? m.books.reduce((s:number,b:any)=>s+(b.listedStock||0),0) : 0;
+                                     const sold = hasBooks ? m.books.reduce((s:number,b:any)=>s+(b.soldStock||0),0) : ((m.manualTotalSold !== null && m.manualTotalSold !== undefined) ? m.manualTotalSold : 0);
+                                     const rev = hasBooks ? m.books.reduce((s:number,b:any)=>s+((b.soldStock||0)*(b.overrideMrp||b.mrp||b.book?.mrp||0)),0) : ((m.manualTotalRevenue !== null && m.manualTotalRevenue !== undefined) ? m.manualTotalRevenue : 0);
                                      const isExpanded = expandedAuthorId === (showAllAuthors ? m.id : m.authorId);
                                      const status = m.optInStatus || 'Unpublished';
                                      const hasData = (m.books && m.books.length > 0) || m.manualTotalSold != null;

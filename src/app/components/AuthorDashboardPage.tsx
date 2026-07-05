@@ -12,6 +12,7 @@ import nonFictionData from './data/non_fiction_catalogue.json';
 import { AuthorRegistrationPage } from './AuthorRegistrationPage';
 import { NavBar } from './NavBar';
 import { Footer } from './Footer';
+import { AuthorDonationsTab } from './AuthorDonationsTab';
 
 export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -513,6 +514,29 @@ export function AuthorDashboardPage() {
           return null;
         })()}
 
+        {(() => {
+          const activeDonations = dashboardData?.activeDonations || [];
+          const donationRegistrations = dashboardData?.authorProfile?.donationRegistrations || [];
+          const unregisteredDonations = activeDonations.filter((ad: any) => !donationRegistrations.find((dr: any) => dr.announcementId === ad.id));
+
+          if (unregisteredDonations.length > 0) {
+            return (
+              <div className="bg-gradient-to-r from-indigo-900 to-paa-navy text-white px-6 py-3 flex flex-col md:flex-row items-center justify-between shadow-sm relative z-[99] border-b border-indigo-950 gap-4">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-indigo-300" />
+                  <span className="text-sm font-semibold tracking-wide text-indigo-50">
+                    You have been invited to participate in a new Airport Library Donation Campaign.
+                  </span>
+                </div>
+                <button onClick={() => navigate('/dashboard/donations')} className="bg-white text-paa-navy px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-indigo-50 transition-colors shrink-0 shadow-sm">
+                  Register Now
+                </button>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
         <div className="max-w-[1600px] mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-6 relative">
           <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-30 ${isMobileMenuOpen ? 'flex fixed inset-0 top-[80px] z-[500] bg-white md:static md:shadow-premium' : 'hidden md:flex'}`}>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname === '/dashboard' ? 'active' : ''}`}><BarChart3 className="w-4 h-4" /> Overview</Link>
@@ -520,6 +544,7 @@ export function AuthorDashboardPage() {
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/sales" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/sales') ? 'active' : ''}`}><TrendingUp className="w-4 h-4" /> Sales Report</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/inventory" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/inventory') ? 'active' : ''}`}><BookOpen className="w-4 h-4" /> Inventory & Distribution</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/events" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/events') ? 'active' : ''}`}><CalendarIcon className="w-4 h-4" /> Events Ecosystem</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/donations" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/donations') ? 'active' : ''}`}><MapPin className="w-4 h-4" /> Library Donations</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/reviews" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/reviews') ? 'active' : ''}`}><Star className="w-4 h-4" /> Reviews & Ratings</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/gallery" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/gallery') ? 'active' : ''}`}><ImageIcon className="w-4 h-4" /> Event Gallery</Link>
             <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/profile" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/profile') ? 'active' : ''}`}><User className="w-4 h-4" /> Profile Settings</Link>
@@ -533,6 +558,7 @@ export function AuthorDashboardPage() {
               <Route path="/forms/*" element={<FormsWrapper />} />
               <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
               <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
+              <Route path="/donations" element={<AuthorDonationsTab dashboardData={dashboardData} onRefresh={() => fetchDashboardData(true)} />} />
               <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
               <Route path="/gallery" element={<AuthorGallery />} />
               <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
@@ -645,6 +671,13 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
   const toApproveOrders = authorOrders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
   const underDeliveryOrders = authorOrders.filter((o: any) => o.status === 'Dispatched').length;
+
+  const donationRegistrations = data?.authorProfile?.donationRegistrations || [];
+  const pendingRegistrations = donationRegistrations.filter((dr: any) => dr.status === 'Registered').length;
+  const approvedDonations = donationRegistrations.filter((dr: any) => dr.status === 'Approved').length;
+  const uniqueLibraries = new Set(donationRegistrations.filter((dr: any) => dr.announcement?.libraryId).map((dr: any) => dr.announcement.libraryId)).size;
+  const totalBooksDonated = donationRegistrations.reduce((acc: number, curr: any) => 
+    acc + (curr.books || []).reduce((bAcc: number, book: any) => bAcc + book.quantityDonated, 0), 0);
 
   const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered').reduce((acc: number, inv: any) => {
     const evt = inv.event;
@@ -1013,6 +1046,29 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           </div>
         ))}
       </div>
+
+      {/* ── Library Donations KPI Cards ── */}
+      {data?.activeDonations?.length > 0 || donationRegistrations.length > 0 ? (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-paa-navy">Library Donations Overview</h3>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+            {[
+              { label: 'Active Campaigns', value: data?.activeDonations?.length || 0, colorClass: 'blue' },
+              { label: 'Pending Registrations', value: pendingRegistrations, colorClass: 'amber' },
+              { label: 'Approved Donations', value: approvedDonations, colorClass: 'green' },
+              { label: 'Libraries Reached', value: uniqueLibraries, colorClass: 'teal' },
+              { label: 'Books Donated', value: totalBooksDonated, colorClass: 'blue' },
+            ].map((kpi, i) => (
+              <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
+                <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+                <h3 className="text-2xl font-bold text-paa-navy">{kpi.value}</h3>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
 
 

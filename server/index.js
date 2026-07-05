@@ -17,11 +17,13 @@ const posRoutes = require('./routes/pos');
 const formsRoutes = require('./routes/forms');
 const queriesRoutes = require('./routes/queries');
 const apiRoutes = require('./routes/api');
+const donationsRoutes = require('./routes/donations');
 
 app.use('/api/auth', authRoutes);
 app.use('/', posRoutes);
 app.use('/', formsRoutes);
 app.use('/', queriesRoutes);
+app.use('/', donationsRoutes);
 
 // Main legacy routes aggregator mounted at root since paths inside have full prefix like /api/admin/...
 app.use('/', apiRoutes);

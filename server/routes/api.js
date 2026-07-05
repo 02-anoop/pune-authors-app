@@ -1396,6 +1396,12 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
         books: { include: { reviews: true } },
         eventRegistrations: {
           include: { activity: true }
+        },
+        donationRegistrations: {
+          include: {
+            announcement: { include: { library: true } },
+            books: { include: { book: true } }
+          }
         }
       }
     });
@@ -1456,7 +1462,11 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
       where: { OR: [{ target: 'ALL' }, { target: authorProfile.name }, { target: `@${authorProfile.name}` }] },
       orderBy: { createdAt: 'desc' }
     });
-    const result = { authorProfile, authorOrders, dynamicFields, eventInvites, listedBooks, posOrders, notifications };
+    const activeDonations = await prisma.donationAnnouncement.findMany({
+      where: { visibility: 'Published' },
+      include: { library: true }
+    });
+    const result = { authorProfile, authorOrders, dynamicFields, eventInvites, listedBooks, posOrders, notifications, activeDonations };
     setCache(cacheKey, result, 20 * 1000); // 20s cache for dashboard
     res.json(result);
   } catch (err) {

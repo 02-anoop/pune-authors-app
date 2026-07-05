@@ -85,6 +85,8 @@ model Author {
   formResponses      FormResponse[]
   posOrders          PosOrder[]
   queries            Query[]
+  donationRegistrations DonationRegistration[]
+  donationLogs          DonationLog[]
 }
 
 model Query {
@@ -133,6 +135,8 @@ model Book {
   eventBooks      EventBook[]
   orderItems      OrderItem[]
   posOrderItems   PosOrderItem[]
+  donationBooks   DonationBook[]
+  donationLogs    DonationLog[]
 }
 
 model Order {
@@ -352,4 +356,121 @@ model Notification {
   message   String
   target    String   @default("ALL")
   createdAt DateTime @default(now())
+}
+
+model Library {
+  id               Int      @id @default(autoincrement())
+  name             String
+  type             String   // Airport Library, Public Library, etc.
+  airportCode      String?
+  airportName      String?
+  city             String
+  state            String
+  country          String
+  contactPerson    String
+  contactNumber    String
+  email            String?
+  shippingAddress  String
+  status           String   @default("Active") // Active / Inactive
+  createdAt        DateTime @default(now())
+  
+  announcements    DonationAnnouncement[]
+  logs             DonationLog[]
+}
+
+model DonationAnnouncement {
+  id                     Int       @id @default(autoincrement())
+  title                  String
+  description            String
+  libraryId              Int
+  library                Library   @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  eventDate              String?
+  announcementDate       String
+  registrationStartDate  String
+  registrationEndDate    String
+  expectedCollectionDate String
+  expectedDispatchDate   String
+  collectionPoint        String
+  dispatchAddress        String
+  contactPerson          String
+  contactNumber          String
+  feeType                String    @default("Free")
+  feeAmount              Int?
+  additionalInstructions String?
+  visibility             String    @default("Draft") // Draft, Published, Closed
+  createdAt              DateTime  @default(now())
+  
+  registrations          DonationRegistration[]
+}
+
+model DonationRegistration {
+  id                 Int      @id @default(autoincrement())
+  announcementId     Int
+  authorId           Int
+  status             String   @default("Registered") // Registered, Approved, Rejected, Changes Requested
+  verificationStatus String   @default("Pending")
+  dispatchStatus     String   @default("Pending")
+  receivedStatus     String   @default("Pending")
+  
+  feePaid            Int?
+  paymentStatus      String?  @default("Pending") // Pending, Completed, Failed
+  paymentScreenshot  String?
+  transactionId      String?
+  
+  dispatchDate       String?
+  courierPartner     String?
+  trackingNumber     String?
+  collectionPoint    String?
+  packedBy           String?
+  
+  receivedDate       String?
+  receivedBy         String?
+  libraryConfirmation Boolean @default(false)
+  proofImageUrl      String?
+  remarks            String?
+  
+  useGlobalOverride  Boolean  @default(false)
+  globalBooksDonated Int?     @default(0)
+  globalDonationValue Float?  @default(0)
+  globalRemarks      String?
+  broadcastStatus    String   @default("Draft")
+  
+  createdAt          DateTime @default(now())
+  
+  announcement       DonationAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  author             Author               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  books              DonationBook[]
+}
+
+model DonationBook {
+  id               Int      @id @default(autoincrement())
+  registrationId   Int
+  bookId           Int
+  quantityDonated  Int
+  qtyCollected     Int      @default(0)
+  qtyDispatched    Int      @default(0)
+  qtyReceived      Int      @default(0)
+  libraryConfirmation String @default("Pending")
+  remarks          String?
+  createdAt        DateTime @default(now())
+  
+  registration     DonationRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  book             Book                 @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+model DonationLog {
+  id               Int      @id @default(autoincrement())
+  date             DateTime @default(now())
+  libraryId        Int
+  authorId         Int
+  bookId           Int
+  quantity         Int
+  dispatchDate     String?
+  deliveryDate     String?
+  status           String
+  remarks          String?
+  
+  library          Library @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  author           Author  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  book             Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
 }

@@ -1,0 +1,1696 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { Download, Edit, Trash2, Megaphone, MapPin, Search, Calendar, Package, Plus, X, List, CheckCircle, CheckCircle2, XCircle, FileDown, BookOpen, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from 'recharts';
+
+export function LibraryDonationsTab() {
+  const [drives, setDrives] = useState<any[]>([]);
+  const [libraries, setLibraries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // UI States
+  const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
+  const [isLibraryMasterOpen, setIsLibraryMasterOpen] = useState(false);
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [selectedDriveBreakdown, setSelectedDriveBreakdown] = useState<any>(null);
+  const [driveSearch, setDriveSearch] = useState('');
+
+  // Editing States
+  const [editingDrive, setEditingDrive] = useState<any>(null);
+  const [editingLib, setEditingLib] = useState<any>(null);
+
+  // Registry/Authors State
+  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [registrySearch, setRegistrySearch] = useState('');
+
+  // Logs State
+  const [globalLogs, setGlobalLogs] = useState<any[]>([]);
+  const [logsSearch, setLogsSearch] = useState('');
+
+  // Manual Registration State
+  const [adminAuthors, setAdminAuthors] = useState<any[]>([]);
+  const [isManualRegOpen, setIsManualRegOpen] = useState(false);
+  const [manualRegAuthorSearch, setManualRegAuthorSearch] = useState('');
+  const [manualRegAuthorId, setManualRegAuthorId] = useState<number | null>(null);
+  const [manualRegBooks, setManualRegBooks] = useState<{ bookId: number, qty: number }[]>([]);
+  const [manualRegFeePaid, setManualRegFeePaid] = useState<number>(0);
+  const [manualRegPaymentStatus, setManualRegPaymentStatus] = useState('Completed');
+  const [editingAuthorReg, setEditingAuthorReg] = useState<any>(null);
+  const [granularData, setGranularData] = useState<any[]>([]);
+
+  // Temporary State for Modal Logic
+  const [currentFeeType, setCurrentFeeType] = useState('Free');
+  const [breakdownTab, setBreakdownTab] = useState<'All' | 'Registered' | 'NotRegistered'>('All');
+  const [expandedAuthorId, setExpandedAuthorId] = useState<number | null>(null);
+
+  // Stats Overrides States
+  const [statsOverrides, setStatsOverrides] = useState<any>({ drivesOverride: null, booksOverride: null, authorsOverride: null, librariesOverride: null });
+  const [isEditingStats, setIsEditingStats] = useState(false);
+  const [overrideDrives, setOverrideDrives] = useState<any>('');
+  const [overrideBooks, setOverrideBooks] = useState<any>('');
+  const [overrideAuthors, setOverrideAuthors] = useState<any>('');
+  const [overrideLibraries, setOverrideLibraries] = useState<any>('');
+
+  const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+  const fetchStatsOverrides = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/library-stats-overrides`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setStatsOverrides(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveStatsOverrides = async () => {
+    try {
+      const res = await axios.post(`${API}/api/admin/library-stats-overrides`, {
+        drivesOverride: overrideDrives === '' ? null : overrideDrives,
+        booksOverride: overrideBooks === '' ? null : overrideBooks,
+        authorsOverride: overrideAuthors === '' ? null : overrideAuthors,
+        librariesOverride: overrideLibraries === '' ? null : overrideLibraries
+      }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setStatsOverrides(res.data);
+      setIsEditingStats(false);
+      toast.success('Library stats overrides updated');
+    } catch (err) {
+      toast.error('Failed to save stats overrides');
+    }
+  };
+
+  // Specific Drive Overrides States
+  const [isEditingDriveStats, setIsEditingDriveStats] = useState(false);
+  const [overrideDriveAuthors, setOverrideDriveAuthors] = useState<any>('');
+  const [overrideDriveBooks, setOverrideDriveBooks] = useState<any>('');
+  const [overrideDriveDispatched, setOverrideDriveDispatched] = useState<any>('');
+
+  const handleSaveDriveStatsOverrides = async () => {
+    if (!selectedDriveBreakdown) return;
+    try {
+      const res = await axios.post(`${API}/api/admin/library-stats-overrides/drive/${selectedDriveBreakdown.id}`, {
+        authorsOverride: overrideDriveAuthors === '' ? null : overrideDriveAuthors,
+        booksOverride: overrideDriveBooks === '' ? null : overrideDriveBooks,
+        dispatchedOverride: overrideDriveDispatched === '' ? null : overrideDriveDispatched
+      }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setStatsOverrides(res.data);
+      setIsEditingDriveStats(false);
+      toast.success('Campaign stats overrides updated');
+    } catch (err) {
+      toast.error('Failed to save campaign stats overrides');
+    }
+  };
+
+  const fetchLibraries = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/libraries`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setLibraries(res.data);
+    } catch (err) { toast.error('Failed to fetch libraries'); }
+  };
+
+  const fetchDrives = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API}/api/admin/donation-announcements`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setDrives(res.data);
+    } catch (err) { toast.error('Failed to fetch donation drives'); }
+    setLoading(false);
+  };
+
+  const fetchRegistrations = async (driveId: number) => {
+    try {
+      const res = await axios.get(`${API}/api/admin/donation-registrations?announcementId=${driveId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setRegistrations(res.data);
+    } catch (err) { toast.error('Failed to fetch registrations for this drive'); }
+  };
+
+  const fetchGlobalLogs = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/donation-registrations`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setGlobalLogs(res.data);
+    } catch (err) { toast.error('Failed to fetch global logs'); }
+  };
+
+  const fetchAuthors = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/authors`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setAdminAuthors(res.data);
+    } catch (err) { }
+  };
+
+  useEffect(() => {
+    fetchLibraries();
+    fetchDrives();
+    fetchGlobalLogs();
+    fetchAuthors();
+    fetchStatsOverrides();
+  }, []);
+
+
+  // --- DRIVE FORM HANDLER ---
+  const handleSaveDrive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const fd = new FormData(e.target as HTMLFormElement);
+    const data = Object.fromEntries(fd.entries());
+
+    // Formatting dates
+    ['eventDate', 'announcementDate', 'expectedDispatchDate', 'registrationStartDate', 'registrationEndDate', 'expectedCollectionDate'].forEach(f => {
+      if (data[f]) data[f] = new Date(data[f] as string).toISOString();
+      else delete data[f]; // If empty, don't send empty string
+    });
+
+    // Auto-fill removed dates so backend validation passes
+    const today = new Date().toISOString();
+    if (!data.announcementDate) data.announcementDate = today;
+    if (!data.registrationStartDate) data.registrationStartDate = today;
+    if (!data.registrationEndDate) data.registrationEndDate = data.expectedDispatchDate || today;
+    if (!data.expectedCollectionDate) data.expectedCollectionDate = data.expectedDispatchDate || today;
+
+    data.libraryId = parseInt(data.libraryId as string) as any;
+    if (data.feeAmount) data.feeAmount = parseInt(data.feeAmount as string) as any;
+
+    try {
+      if (editingDrive) {
+        await axios.put(`${API}/api/admin/donation-announcements/${editingDrive.id}`, data, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        toast.success('Donation Drive updated');
+      } else {
+        await axios.post(`${API}/api/admin/donation-announcements`, data, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        toast.success('Donation Drive created');
+      }
+      setIsDriveModalOpen(false);
+      setEditingDrive(null);
+      fetchDrives();
+    } catch (err) { toast.error('Failed to save drive'); }
+  };
+
+  // --- MANUAL REGISTRATION HANDLER ---
+  const handleManualRegistrationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualRegAuthorId || manualRegBooks.length === 0) {
+      toast.error('Please select an author and at least one book');
+      return;
+    }
+
+    try {
+      await axios.post(`${API}/api/admin/donation-registrations/manual`, {
+        announcementId: selectedDriveBreakdown.id,
+        authorId: manualRegAuthorId,
+        books: manualRegBooks.map(b => ({ bookId: b.bookId, quantityDonated: b.qty })),
+        feePaid: manualRegFeePaid,
+        paymentStatus: manualRegPaymentStatus
+      }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+
+      toast.success('Manual registration added successfully');
+      setIsManualRegOpen(false);
+      setManualRegAuthorId(null);
+      setManualRegBooks([]);
+      setManualRegFeePaid(0);
+      setManualRegPaymentStatus('Completed');
+      fetchRegistrations(selectedDriveBreakdown.id);
+      fetchGlobalLogs();
+    } catch (err) {
+      toast.error('Failed to add manual registration');
+    }
+  };
+
+  // --- LIBRARY FORM HANDLER ---
+  const handleSaveLibrary = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const fd = new FormData(e.target as HTMLFormElement);
+    const data = Object.fromEntries(fd.entries()) as any;
+    data.name = data.libName; delete data.libName; // Map form name to DB name
+    if (!data.country) data.country = 'India'; // Auto-fill required field
+
+    try {
+      if (editingLib) {
+        await axios.put(`${API}/api/admin/libraries/${editingLib.id}`, data, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        toast.success('Library updated');
+      } else {
+        await axios.post(`${API}/api/admin/libraries`, data, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        toast.success('Library added');
+      }
+      setEditingLib(null);
+      fetchLibraries();
+    } catch (err) { toast.error('Failed to save library'); }
+  };
+
+  const handleDeleteLibrary = async (id: number) => {
+    if (!window.confirm('Delete this library?')) return;
+    try {
+      await axios.delete(`${API}/api/admin/libraries/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Library deleted');
+      fetchLibraries();
+    } catch (err) { toast.error('Failed to delete library'); }
+  };
+
+  // --- REGISTRY HANDLERS ---
+  const updateRegistrationStatus = async (id: number, status: string) => {
+    try {
+      await axios.patch(`${API}/api/admin/donation-registrations/${id}/status`, { status }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Status updated');
+      fetchRegistrations(selectedDriveBreakdown.id);
+      fetchGlobalLogs();
+    } catch (err) { toast.error('Update failed'); }
+  };
+
+  const updateDispatchDetails = async (id: number, dispatchStatus: string, courierPartner: string, trackingNumber: string) => {
+    try {
+      await axios.patch(`${API}/api/admin/donation-registrations/${id}/dispatch`, { dispatchStatus, courierPartner, trackingNumber }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Dispatch details updated');
+      fetchRegistrations(selectedDriveBreakdown.id);
+      fetchGlobalLogs();
+    } catch (err) { toast.error('Update failed'); }
+  };
+
+  const updateReceivedStatus = async (id: number, receivedStatus: string) => {
+    try {
+      await axios.patch(`${API}/api/admin/donation-registrations/${id}/dispatch`, { receivedStatus }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Received status updated');
+      fetchRegistrations(selectedDriveBreakdown.id);
+      fetchGlobalLogs();
+    } catch (err) { toast.error('Update failed'); }
+  };
+
+  const handleDeleteDrive = async (id: number) => {
+    if (!window.confirm('Delete this donation drive? This will also remove all registrations for this drive.')) return;
+    try {
+      await axios.delete(`${API}/api/admin/donation-announcements/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Donation drive deleted');
+      fetchDrives();
+    } catch (err) { toast.error('Failed to delete drive'); }
+  };
+
+  const publishCampaign = async (id: number) => {
+    try {
+      await axios.post(`${API}/api/admin/donation-announcements/${id}/publish-all`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Campaign published to all authors!');
+      fetchDrives();
+    } catch (err) {
+      toast.error('Failed to publish campaign');
+    }
+  };
+
+  const unpublishCampaign = async (id: number) => {
+    try {
+      await axios.post(`${API}/api/admin/donation-announcements/${id}/unpublish`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Campaign unpublished!');
+      fetchDrives();
+    } catch (err) {
+      toast.error('Failed to unpublish campaign');
+    }
+  };
+
+  const handlePublishData = async (regId: number) => {
+    try {
+      await axios.post(`${API}/api/admin/donation-registrations/${regId}/publish`, {
+        registrationStatus: editingAuthorReg?.status,
+        paymentStatus: editingAuthorReg?.paymentStatus,
+        receivedStatus: editingAuthorReg?.receivedStatus,
+        useGlobalOverride: false, // Explicitly false as per user preference
+        booksData: granularData
+      }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Donation data saved and published to author!');
+      setEditingAuthorReg(null);
+      if (selectedDriveBreakdown) {
+        fetchRegistrations(selectedDriveBreakdown.id);
+      }
+    } catch (err) {
+      toast.error('Failed to publish author data');
+    }
+  };
+
+  const handleExportGlobalRegistry = () => {
+    // Collect all authors who participated in any drive
+    const allAuthorsMap = new Map();
+    globalLogs.forEach((log: any) => {
+      if (!allAuthorsMap.has(log.authorId)) {
+        allAuthorsMap.set(log.authorId, {
+          id: log.authorId,
+          name: log.author?.name || 'Unknown',
+          city: log.author?.city || 'Unknown',
+          regDate: log.author?.createdAt || '',
+          drives: {}
+        });
+      }
+      const authorData = allAuthorsMap.get(log.authorId);
+
+      const driveId = log.announcementId;
+      if (!authorData.drives[driveId]) {
+        authorData.drives[driveId] = { participated: 'Yes', totalBooks: 0 };
+      }
+      const driveBooks = log.books?.reduce((acc: number, b: any) => acc + (b.quantityDonated || 0), 0) || 0;
+      authorData.drives[driveId].totalBooks += driveBooks;
+    });
+
+    const authors = Array.from(allAuthorsMap.values());
+    const driveColumns = drives.map(d => d.title.replace(/,/g, ''));
+
+    let csvContent = 'Author Name,City,Registration Date,Drives Participated,Total Books Donated';
+    drives.forEach(d => {
+      csvContent += `,"${d.title.replace(/,/g, '')} (Participated)","${d.title.replace(/,/g, '')} (Books)"`;
+    });
+    csvContent += '\n';
+
+    authors.forEach((a: any) => {
+      const drivesParticipated = Object.keys(a.drives).length;
+      const totalBooks = Object.values(a.drives).reduce((sum: number, d: any) => sum + d.totalBooks, 0);
+      let row = `"${a.name}","${a.city}","${new Date(a.regDate).toLocaleDateString()}",${drivesParticipated},${totalBooks}`;
+
+      drives.forEach(d => {
+        const driveData = a.drives[d.id];
+        if (driveData) {
+          row += `,${driveData.participated},${driveData.totalBooks}`;
+        } else {
+          row += `,No,0`;
+        }
+      });
+      csvContent += row + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'airport_donation_registry_global.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportCampaignReport = () => {
+    if (!selectedDriveBreakdown) return;
+
+    let csvContent = 'Author Name,Library Name,Book Title,Genre,Qty Committed,Qty Collected,Qty Dispatched,Qty Received,Pending Qty,Library Confirmation Status,Donation Value (MRP)\n';
+
+    registrations.forEach((reg: any) => {
+      const authorName = reg.author?.name || 'Unknown';
+      const libName = selectedDriveBreakdown.library?.name || 'Unknown';
+
+      reg.books.forEach((b: any) => {
+        const title = b.book?.title?.replace(/,/g, ' ') || 'Unknown';
+        const genre = b.book?.genre || 'Unknown';
+        const committed = b.quantityDonated || 0;
+        const collected = b.qtyCollected || 0;
+        const dispatched = b.qtyDispatched || 0;
+        const received = b.qtyReceived || 0;
+        const pending = committed - received;
+        const conf = b.libraryConfirmation || 'Pending';
+        const val = (b.book?.mrp || 0) * committed;
+
+        csvContent += `"${authorName}","${libName}","${title}","${genre}",${committed},${collected},${dispatched},${received},${pending},${conf},${val}\n`;
+      });
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `campaign_report_${selectedDriveBreakdown.id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportAirportWiseReport = () => {
+    let csvContent = 'Airport/Library Name,Total Participating Authors,Total Titles Donated,Total Books Received,Donation Value (MRP)\n';
+
+    libraries.forEach(lib => {
+      const libDrives = drives.filter(d => d.libraryId === lib.id);
+      const libLogs = globalLogs.filter((log: any) => libDrives.some(d => d.id === log.announcementId));
+
+      const totalAuthors = new Set(libLogs.map((l: any) => l.authorId)).size;
+      let totalTitles = 0;
+      let totalBooksReceived = 0;
+      let totalValue = 0;
+
+      libLogs.forEach((log: any) => {
+        log.books?.forEach((b: any) => {
+          totalTitles += 1;
+          totalBooksReceived += (b.qtyReceived || 0);
+          totalValue += (b.qtyReceived || 0) * (b.book?.mrp || 0);
+        });
+      });
+
+      csvContent += `"${lib.name}",${totalAuthors},${totalTitles},${totalBooksReceived},${totalValue}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'airport_wise_donation_report.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportAuthorDonationReport = () => {
+    let csvContent = 'Author Name,Donation Campaigns Participated,Libraries Donated To,Total Books Donated,Total Donation Value (MRP)\n';
+
+    const authorLogsMap = new Map();
+    globalLogs.forEach((log: any) => {
+      if (!authorLogsMap.has(log.authorId)) {
+        authorLogsMap.set(log.authorId, {
+          name: log.author?.name || 'Unknown',
+          campaigns: new Set(),
+          libraries: new Set(),
+          totalBooks: 0,
+          totalValue: 0
+        });
+      }
+
+      const authorData = authorLogsMap.get(log.authorId);
+      authorData.campaigns.add(log.announcementId);
+
+      const drive = drives.find((d: any) => d.id === log.announcementId);
+      if (drive && drive.libraryId) {
+        authorData.libraries.add(drive.libraryId);
+      }
+
+      log.books?.forEach((b: any) => {
+        const qty = b.quantityDonated || 0;
+        authorData.totalBooks += qty;
+        authorData.totalValue += qty * (b.book?.mrp || 0);
+      });
+    });
+
+    authorLogsMap.forEach((data: any) => {
+      csvContent += `"${data.name}",${data.campaigns.size},${data.libraries.size},${data.totalBooks},${data.totalValue}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'author_donation_report.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+
+  // ==========================================
+  // RENDER: CREATE/EDIT DRIVE MODAL
+  // ==========================================
+  if (isDriveModalOpen) {
+    return (
+      <div className="bg-white rounded-xl shadow-premium p-8 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center justify-between mb-6 border-b pb-4">
+          <h3 className="text-2xl font-serif text-paa-navy">{editingDrive ? 'Edit Donation Drive' : 'Create New Donation Drive'}</h3>
+          <button onClick={() => { setIsDriveModalOpen(false); setEditingDrive(null); setCurrentFeeType('Free'); }} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">Cancel & Go Back</button>
+        </div>
+        <form onSubmit={handleSaveDrive} className="space-y-6">
+          <section>
+            <h4 className="font-semibold text-paa-navy border-b pb-2 mb-3">Basic Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <label className="dash-label">Title *</label>
+                <input name="title" defaultValue={editingDrive?.title} required className="dash-input" />
+              </div>
+              <div className="md:col-span-1">
+                <label className="dash-label">Select Library *</label>
+                <select name="libraryId" defaultValue={editingDrive?.libraryId} required className="dash-input">
+                  <option value="">-- Choose Library --</option>
+                  {libraries.map(lib => (
+                    <option key={lib.id} value={lib.id}>{lib.name} ({lib.city})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-1">
+                <label className="dash-label">Visibility</label>
+                <select name="visibility" defaultValue={editingDrive?.visibility || 'Draft'} className="dash-input">
+                  <option>Draft</option>
+                  <option>Published</option>
+                  <option>Closed</option>
+                </select>
+              </div>
+              <div className="md:col-span-4">
+                <label className="dash-label">Description *</label>
+                <textarea name="description" defaultValue={editingDrive?.description} required className="dash-input resize-y" rows={2}></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-paa-navy border-b pb-2 mb-3">Timeline & Fees</h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-1">
+                <label className="dash-label">Announcement Date</label>
+                <input type="date" name="eventDate" defaultValue={editingDrive?.eventDate ? new Date(editingDrive.eventDate).toISOString().split('T')[0] : ''} className="dash-input" />
+              </div>
+              <div className="md:col-span-1">
+                <label className="dash-label">Expected Dispatch *</label>
+                <input type="date" name="expectedDispatchDate" defaultValue={editingDrive?.expectedDispatchDate ? new Date(editingDrive.expectedDispatchDate).toISOString().split('T')[0] : ''} required className="dash-input" />
+              </div>
+              <div className="md:col-span-1">
+                <label className="dash-label">Expected Collection</label>
+                <input type="date" name="expectedCollectionDate" defaultValue={editingDrive?.expectedCollectionDate ? new Date(editingDrive.expectedCollectionDate).toISOString().split('T')[0] : ''} className="dash-input" />
+              </div>
+
+              <div className="md:col-span-2 mt-4 md:mt-0">
+                <label className="dash-label">Fee Structure</label>
+                <select name="feeType" defaultValue={editingDrive?.feeType || 'Free'} className="dash-input" onChange={(e) => setCurrentFeeType(e.target.value)}>
+                  <option>Free</option>
+                  <option>Per Author</option>
+                  <option>Per Title</option>
+                  <option>Pay As You Wish</option>
+                </select>
+              </div>
+              <div className="md:col-span-2 mt-4 md:mt-0">
+                <label className="dash-label">Fee Amount (₹)</label>
+                <input type="number" name="feeAmount" defaultValue={editingDrive?.feeAmount} min="0" className="dash-input" disabled={currentFeeType === 'Free' || currentFeeType === 'Pay As You Wish'} placeholder={currentFeeType === 'Free' ? "N/A" : currentFeeType === 'Pay As You Wish' ? "Determined by author" : "Enter fee"} />
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-paa-navy border-b pb-2 mb-3">Shipping & Contact Info</h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="dash-label">Contact Person *</label>
+                <input name="contactPerson" defaultValue={editingDrive?.contactPerson} required className="dash-input" />
+              </div>
+              <div>
+                <label className="dash-label">Contact Number *</label>
+                <input name="contactNumber" defaultValue={editingDrive?.contactNumber} required className="dash-input" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="dash-label">Collection Point</label>
+                <input name="collectionPoint" defaultValue={editingDrive?.collectionPoint} className="dash-input" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="dash-label">Dispatch Address *</label>
+                <textarea name="dispatchAddress" defaultValue={editingDrive?.dispatchAddress} required className="dash-input" rows={2}></textarea>
+              </div>
+              <div className="md:col-span-2">
+                <label className="dash-label">Additional Instructions</label>
+                <textarea name="additionalInstructions" defaultValue={editingDrive?.additionalInstructions} className="dash-input" rows={2}></textarea>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+            <button type="submit" className="dash-btn dash-btn-primary min-w-[120px]">
+              {editingDrive ? 'Update Drive Details' : 'Create Donation Drive'}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // RENDER: DRIVE BREAKDOWN (REGISTRY)
+  // ==========================================
+  if (selectedDriveBreakdown) {
+    const totalAuthors = new Set(registrations.map(r => r.authorId)).size;
+    const totalBooks = registrations.reduce((acc, r) => acc + r.books.reduce((sum: number, b: any) => sum + b.quantityDonated, 0), 0);
+    const totalDispatched = new Set(registrations.filter(r => r.dispatchStatus === 'Dispatched' || r.dispatchStatus === 'Delivered').map(r => r.authorId)).size;
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center justify-between mb-6 border-b pb-4">
+          <div>
+            <h3 className="text-2xl font-serif text-paa-navy mb-1">{selectedDriveBreakdown.title}</h3>
+            <p className="text-sm text-gray-500 font-medium">
+              {selectedDriveBreakdown.library?.name} &bull; {selectedDriveBreakdown.library?.city}, {selectedDriveBreakdown.library?.state} &bull;
+              Deadline: {new Date(selectedDriveBreakdown.registrationEndDate).toLocaleDateString()}
+            </p>
+            {selectedDriveBreakdown.description && (
+              <p className="text-sm text-gray-600 mt-2 max-w-3xl leading-relaxed">{selectedDriveBreakdown.description}</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleExportCampaignReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm flex items-center gap-2">
+              <Download className="w-4 h-4" /> Download Report
+            </button>
+            <button onClick={() => {
+              setSelectedDriveBreakdown(null);
+              fetchDrives(); // Refresh drives list when going back
+            }} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">
+              Back to Drives List
+            </button>
+          </div>
+        </div>
+
+        {/* Event Summary Heading & Edit Stats Button */}
+        <div className="mb-2 flex justify-between items-center">
+          <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Event Summary</span>
+          {isEditingDriveStats ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsEditingDriveStats(false)}
+                className="text-xs font-bold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-full transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveDriveStatsOverrides}
+                className="text-xs font-bold bg-paa-navy text-white px-4 py-1.5 rounded-full hover:bg-paa-navy/90 transition-colors active:scale-95"
+              >
+                Save Stats
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                const curOverrides = statsOverrides.driveOverrides?.[selectedDriveBreakdown.id] || {};
+                setOverrideDriveAuthors(curOverrides.authorsOverride !== undefined && curOverrides.authorsOverride !== null ? curOverrides.authorsOverride : totalAuthors);
+                setOverrideDriveBooks(curOverrides.booksOverride !== undefined && curOverrides.booksOverride !== null ? curOverrides.booksOverride : totalBooks);
+                setOverrideDriveDispatched(curOverrides.dispatchedOverride !== undefined && curOverrides.dispatchedOverride !== null ? curOverrides.dispatchedOverride : totalDispatched);
+                setIsEditingDriveStats(true);
+              }}
+              className="text-xs font-bold text-paa-navy border border-paa-navy/20 bg-gray-50 hover:bg-paa-navy/5 px-4 py-1.5 rounded-full transition-colors"
+            >
+              Edit Stats
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm ${isEditingDriveStats ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors Registered</div>
+            {isEditingDriveStats ? (
+              <input
+                type="text"
+                autoFocus
+                className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0"
+                value={overrideDriveAuthors}
+                placeholder="NA"
+                onChange={e => setOverrideDriveAuthors(e.target.value)}
+              />
+            ) : (
+              <div className="text-xl font-serif text-paa-navy font-bold">
+                {statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.authorsOverride !== undefined && statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.authorsOverride !== null
+                  ? statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.authorsOverride
+                  : totalAuthors}
+              </div>
+            )}
+          </div>
+          <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm ${isEditingDriveStats ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
+            <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Books Pledged</div>
+            {isEditingDriveStats ? (
+              <input
+                type="text"
+                className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0"
+                value={overrideDriveBooks}
+                placeholder="NA"
+                onChange={e => setOverrideDriveBooks(e.target.value)}
+              />
+            ) : (
+              <div className="text-xl font-serif text-blue-800 font-bold">
+                {statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.booksOverride !== undefined && statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.booksOverride !== null
+                  ? statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.booksOverride
+                  : totalBooks}
+              </div>
+            )}
+          </div>
+          <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm ${isEditingDriveStats ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
+            <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Dispatched Authors</div>
+            {isEditingDriveStats ? (
+              <input
+                type="text"
+                className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0"
+                value={overrideDriveDispatched}
+                placeholder="NA"
+                onChange={e => setOverrideDriveDispatched(e.target.value)}
+              />
+            ) : (
+              <div className="text-xl font-serif text-emerald-800 font-bold">
+                {statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.dispatchedOverride !== undefined && statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.dispatchedOverride !== null
+                  ? statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.dispatchedOverride
+                  : totalDispatched}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h4 className="font-bold text-gray-700">Author Registry</h4>
+            <p className="text-xs text-gray-400 mt-0.5">Manage author registrations and dispatch details for this drive</p>
+          </div>
+          <input
+            type="text"
+            placeholder="Search authors..."
+            className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy"
+            value={registrySearch}
+            onChange={(e) => setRegistrySearch(e.target.value)}
+          />
+        </div>
+
+        {/* Tab Switcher */}
+        {(() => {
+          const uniqueRegisteredCount = new Set(registrations.map(r => r.authorId)).size;
+          const uniqueNotRegisteredCount = adminAuthors.filter(a => !registrations.some(r => r.authorId === a.id)).length;
+          
+          return (
+            <div className="flex mb-6 bg-gray-100 p-1.5 rounded-2xl gap-2 w-max shadow-inner">
+              <button
+                onClick={() => setBreakdownTab('All')}
+                className={`py-2.5 px-6 text-xs font-extrabold rounded-xl transition-all duration-300 ${breakdownTab === 'All'
+                    ? 'bg-paa-navy text-white shadow-lg shadow-paa-navy/25'
+                    : 'text-gray-500 hover:text-paa-navy hover:bg-white/50'
+                  }`}
+              >
+                All Authors ({adminAuthors.length})
+              </button>
+              <button
+                onClick={() => setBreakdownTab('Registered')}
+                className={`py-2.5 px-6 text-xs font-extrabold rounded-xl transition-all duration-300 ${breakdownTab === 'Registered'
+                    ? 'bg-paa-navy text-white shadow-lg shadow-paa-navy/25'
+                    : 'text-gray-500 hover:text-paa-navy hover:bg-white/50'
+                  }`}
+              >
+                Registered ({uniqueRegisteredCount})
+              </button>
+              <button
+                onClick={() => setBreakdownTab('NotRegistered')}
+                className={`py-2.5 px-6 text-xs font-extrabold rounded-xl transition-all duration-300 ${breakdownTab === 'NotRegistered'
+                    ? 'bg-paa-navy text-white shadow-lg shadow-paa-navy/25'
+                    : 'text-gray-500 hover:text-paa-navy hover:bg-white/50'
+                  }`}
+              >
+                Not Registered ({uniqueNotRegisteredCount})
+              </button>
+            </div>
+          );
+        })()}
+
+        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+          <table className="w-full text-left bg-white whitespace-nowrap min-w-max">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Author Name</th>
+                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Donating</th>
+                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Payment</th>
+                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Status</th>
+                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Dispatch / Tracking</th>
+                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Received Status</th>
+                <th className="p-3 text-xs font-bold text-gray-500 uppercase text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {(() => {
+                // Filter authors based on search
+                const filteredAuthors = adminAuthors.filter((a: any) => 
+                  a.name.toLowerCase().includes(registrySearch.toLowerCase())
+                );
+
+                // Build list of items to render
+                const itemsToRender: { author: any, reg: any }[] = [];
+                
+                filteredAuthors.forEach((author: any) => {
+                  const authorRegs = registrations.filter((r: any) => r.authorId === author.id);
+                  
+                  if (authorRegs.length > 0) {
+                    if (breakdownTab !== 'NotRegistered') {
+                      authorRegs.forEach(reg => {
+                        itemsToRender.push({ author, reg });
+                      });
+                    }
+                  } else {
+                    if (breakdownTab !== 'Registered') {
+                      itemsToRender.push({ author, reg: null });
+                    }
+                  }
+                });
+
+                if (itemsToRender.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-gray-500">
+                        No entries found in this section.
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return itemsToRender.map(({ author, reg }) => {
+                  const isRegistered = !!reg;
+                  const totalQty = isRegistered ? reg.books.reduce((acc: any, b: any) => acc + (b.quantityDonated || 0), 0) : 0;
+                  const totalValue = isRegistered ? reg.books.reduce((acc: any, b: any) => acc + ((b.quantityDonated || 0) * (b.book?.mrp || 0)), 0) : 0;
+                  const isExpanded = isRegistered && expandedAuthorId === reg.id;
+
+                  return (
+                    <React.Fragment key={isRegistered ? reg.id : `not-reg-${author.id}`}>
+                      <tr className="hover:bg-gray-50/50 transition-colors animate-in fade-in duration-300">
+                        <td className="p-3">
+                          <div className="font-medium text-paa-navy">{author.name}</div>
+                          <div className="text-xs text-gray-500">{new Date(author.createdAt || Date.now()).toLocaleDateString()}</div>
+                        </td>
+                        <td className="p-3 text-center">
+                          {isRegistered ? (
+                            <div className="flex flex-col items-center">
+                              <span className="font-bold text-paa-navy text-sm">{reg.books.length} Titles</span>
+                              <span className="text-xs text-gray-500">{totalQty} total books</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        {/* PAYMENT COLUMN */}
+                        <td className="p-3">
+                          {isRegistered ? (
+                            <div className="flex items-center gap-3">
+                              {reg.paymentScreenshot ? (
+                                <a
+                                  href={reg.paymentScreenshot.startsWith('http') ? reg.paymentScreenshot : `${API}${reg.paymentScreenshot}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80 transition-opacity bg-gray-50 animate-in zoom-in-50 duration-300"
+                                  title="View Receipt"
+                                >
+                                  <img
+                                    src={reg.paymentScreenshot.startsWith('http') ? reg.paymentScreenshot : `${API}${reg.paymentScreenshot}`}
+                                    className="w-full h-full object-cover"
+                                    alt="Receipt"
+                                  />
+                                </a>
+                              ) : (
+                                <div className="w-10 h-10 border border-dashed border-gray-300 rounded flex items-center justify-center text-gray-300 text-[10px]" title="No Receipt Uploaded">
+                                  N/A
+                                </div>
+                              )}
+                              <div className="flex flex-col text-[10px] text-gray-600 gap-0.5">
+                                <div><span className="font-semibold text-gray-400">Amt:</span> <span className="font-bold text-paa-navy">₹{reg.feePaid || 0}</span></div>
+                                {reg.transactionId && (
+                                  <div className="truncate max-w-[100px] font-mono text-[9px]" title={reg.transactionId}>
+                                    <span className="font-semibold text-gray-400">Txn:</span> {reg.transactionId}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        <td className="p-3">
+                          {isRegistered ? (
+                            <div className="flex flex-col gap-1">
+                              <select
+                                className={`text-xs font-bold rounded-lg px-2 py-1 border-0 focus:ring-2 outline-none cursor-pointer ${reg.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                    reg.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                                  }`}
+                                value={reg.status}
+                                onChange={(e) => updateRegistrationStatus(reg.id, e.target.value)}
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Rejected">Rejected</option>
+                              </select>
+                              <div className="text-[10px] text-gray-500 font-bold mt-0.5">Val: ₹{totalValue}</div>
+                            </div>
+                          ) : (
+                            <span className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-lg">Not Registered</span>
+                          )}
+                        </td>
+
+                        <td className="p-3">
+                          {isRegistered ? (
+                            <select
+                              className={`text-xs font-bold rounded-lg px-2 py-1.5 border-0 focus:ring-2 outline-none cursor-pointer w-full max-w-[150px] ${reg.dispatchStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-700' :
+                                  reg.dispatchStatus === 'Dispatched' ? 'bg-amber-100 text-amber-700' :
+                                    reg.dispatchStatus === 'Received at Hub' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                                }`}
+                              value={reg.dispatchStatus || 'Pending'}
+                              onChange={(e) => updateDispatchDetails(reg.id, e.target.value, '', '')}
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="Received at Hub">Received at Hub</option>
+                              <option value="Dispatched">Dispatched</option>
+                              <option value="Delivered">Delivered</option>
+                            </select>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        <td className="p-3">
+                          {isRegistered ? (
+                            <select
+                              className={`text-xs font-bold rounded-lg px-2 py-1.5 border-0 focus:ring-2 outline-none cursor-pointer w-full max-w-[150px] ${reg.receivedStatus === 'Received' || reg.receivedStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-700' :
+                                  reg.receivedStatus === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'
+                                }`}
+                              value={reg.receivedStatus || 'Pending'}
+                              onChange={(e) => updateReceivedStatus(reg.id, e.target.value)}
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="Received">Received</option>
+                            </select>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        <td className="p-3 text-right align-middle">
+                          <div className="flex gap-2 justify-end items-center">
+                            {isRegistered && (
+                              <button
+                                onClick={() => setExpandedAuthorId(isExpanded ? null : reg.id)}
+                                className={`text-xs p-2 rounded-lg font-bold border transition-all cursor-pointer ${isExpanded
+                                    ? 'bg-paa-navy text-white border-paa-navy shadow-md'
+                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200 shadow-sm'
+                                  }`}
+                                title="Toggle Book Details"
+                              >
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </button>
+                            )}
+                            {isRegistered ? (
+                              <div className="flex flex-col items-end gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingAuthorReg(reg);
+                                    setGranularData(reg.books.map((b: any) => ({
+                                      id: b.id,
+                                      bookId: b.bookId,
+                                      qtyCommitted: b.quantityDonated,
+                                      qtyCollected: b.qtyCollected || 0,
+                                      qtyDispatched: b.qtyDispatched || 0,
+                                      qtyReceived: b.qtyReceived || 0,
+                                      libraryConfirmation: b.libraryConfirmation || 'Pending',
+                                      remarks: b.remarks || ''
+                                    })));
+                                  }}
+                                  className="text-[10px] font-bold bg-paa-navy text-white px-3 py-1.5 rounded hover:bg-paa-gold hover:text-paa-navy transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                                >
+                                  MANAGE DATA
+                                </button>
+                                {reg.broadcastStatus === 'Published' && (
+                                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 rounded px-2 py-0.5 border border-emerald-100 uppercase tracking-wide">
+                                    PUBLISHED
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setManualRegAuthorId(author.id);
+                                  setManualRegBooks([]);
+                                  setManualRegFeePaid(0);
+                                  setManualRegPaymentStatus('Completed');
+                                  setIsManualRegOpen(true);
+                                }}
+                                className="text-[10px] font-bold bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-paa-gold hover:text-paa-navy transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                              >
+                                REGISTER AUTHOR
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* EXPANDABLE INDIVIDUAL BOOK BREAKDOWN ROW */}
+                      {isExpanded && isRegistered && (
+                        <tr>
+                          <td colSpan={7} className="p-4 bg-gray-50/20 border-b border-gray-100">
+                            <div className="bg-gray-50/70 p-5 border-l-4 border-paa-navy rounded-r-2xl shadow-inner animate-in slide-in-from-top-2 duration-300">
+                              <div className="flex items-center justify-between mb-4 border-b border-gray-200/50 pb-2">
+                                <span className="text-xs font-bold text-paa-navy uppercase tracking-widest flex items-center gap-2">
+                                  <BookOpen className="w-4 h-4 text-paa-gold" />
+                                  Individual Book Breakdown
+                                </span>
+                              </div>
+                              {reg.books?.length > 0 ? (
+                                <div className="flex flex-col gap-3">
+                                  {reg.books.map((b: any, j: number) => (
+                                    <div key={j} className="bg-white p-4 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-serif font-bold text-paa-navy text-base truncate" title={b.book?.title || 'Unknown Book'}>
+                                          {b.book?.title || 'Unknown Book'}
+                                        </div>
+                                        <div className="text-xs text-gray-500 font-medium mt-1 flex items-center gap-1.5">
+                                          <span>{b.book?.genre}</span>
+                                          <span>&bull;</span>
+                                          <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px] font-bold">MRP: ₹{b.book?.mrp || 'N/A'}</span>
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-gray-50/70 p-3 rounded-xl border border-gray-100 w-full md:w-auto">
+                                        <div className="flex flex-col items-center px-3 py-1 bg-white rounded-lg shadow-sm border border-gray-200/40">
+                                          <span className="text-[9px] uppercase font-bold text-gray-400 mb-0.5">Pledged</span>
+                                          <span className="font-mono font-extrabold text-gray-700 text-sm">{b.quantityDonated || 0}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center px-3 py-1 bg-blue-50/40 rounded-lg shadow-sm border border-blue-100/40">
+                                          <span className="text-[9px] uppercase font-bold text-blue-500 mb-0.5">Collected</span>
+                                          <span className="font-mono font-extrabold text-blue-700 text-sm">{b.qtyCollected || 0}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center px-3 py-1 bg-amber-50/40 rounded-lg shadow-sm border border-amber-100/40">
+                                          <span className="text-[9px] uppercase font-bold text-amber-600 mb-0.5">Dispatched</span>
+                                          <span className="font-mono font-extrabold text-amber-700 text-sm">{b.qtyDispatched || 0}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center px-3 py-1 bg-emerald-50/40 rounded-lg shadow-sm border border-emerald-100/40">
+                                          <span className="text-[9px] uppercase font-bold text-emerald-600 mb-0.5">Received</span>
+                                          <span className="font-mono font-extrabold text-emerald-700 text-sm">{b.qtyReceived || 0}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center px-3 py-1 bg-white rounded-lg shadow-sm border border-gray-200/40 col-span-2 sm:col-span-1 justify-center">
+                                          <span className="text-[9px] uppercase font-bold text-gray-400 mb-1">Confirm</span>
+                                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${b.libraryConfirmation === 'Approved' || b.libraryConfirmation === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' :
+                                              b.libraryConfirmation === 'Rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                                            }`}>{b.libraryConfirmation || 'Pending'}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-400 italic">No books found in this registration.</p>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                });
+              })()}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Manual Registration Modal */}
+        {isManualRegOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-premium p-8 border border-gray-200 w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-300">
+              <div className="flex items-center justify-between mb-6 border-b pb-4">
+                <h3 className="text-2xl font-serif text-paa-navy font-bold">Add Manual Registration</h3>
+                <button onClick={() => setIsManualRegOpen(false)} className="p-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleManualRegistrationSubmit} className="space-y-6">
+                {/* Selected Author Display */}
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-col justify-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Registering Author</div>
+                  <div className="text-lg font-serif text-paa-navy font-bold">{adminAuthors.find(a => a.id === manualRegAuthorId)?.name}</div>
+                  <div className="text-sm text-gray-600">{adminAuthors.find(a => a.id === manualRegAuthorId)?.email}</div>
+                </div>
+
+                {/* Books Selection */}
+                {manualRegAuthorId && (
+                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                    <h4 className="font-semibold text-paa-navy mb-3">Select Books to Donate</h4>
+                    {(!adminAuthors.find(a => a.id === manualRegAuthorId)?.books || adminAuthors.find(a => a.id === manualRegAuthorId)?.books.length === 0) ? (
+                      <p className="text-sm text-red-500">This author has no registered books in the database.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {adminAuthors.find(a => a.id === manualRegAuthorId)?.books.map((book: any) => {
+                          const existing = manualRegBooks.find(b => b.bookId === book.id);
+                          return (
+                            <div key={book.id} className="flex items-center gap-4 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                              <div className="flex-1">
+                                <div className="font-bold text-sm text-paa-navy">{book.title}</div>
+                                <div className="text-xs text-gray-500">{book.genre} &bull; MRP: ₹{book.mrp}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs font-bold text-gray-600">Qty:</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  className="w-20 dash-input !py-1 !px-2 text-sm"
+                                  value={existing?.qty || ''}
+                                  onChange={(e) => {
+                                    const qty = parseInt(e.target.value) || 0;
+                                    if (qty <= 0) {
+                                      setManualRegBooks(prev => prev.filter(b => b.bookId !== book.id));
+                                    } else if (existing) {
+                                      setManualRegBooks(prev => prev.map(b => b.bookId === book.id ? { ...b, qty } : b));
+                                    } else {
+                                      setManualRegBooks(prev => [...prev, { bookId: book.id, qty }]);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Payment Details */}
+                {selectedDriveBreakdown.feeType !== 'Free' && (
+                  <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                    <h4 className="font-semibold text-paa-navy mb-3">3. Payment Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-3 mb-2">
+                        <p className="text-sm text-gray-600 font-medium">Drive Fee Structure: <span className="font-bold text-paa-navy">{selectedDriveBreakdown.feeType}</span> {selectedDriveBreakdown.feeAmount ? `(₹${selectedDriveBreakdown.feeAmount})` : ''}</p>
+                      </div>
+                      <div>
+                        <label className="dash-label">Amount Paid (₹)</label>
+                        <input type="number" min="0" value={manualRegFeePaid} onChange={e => setManualRegFeePaid(parseInt(e.target.value) || 0)} className="dash-input" />
+                      </div>
+                      <div>
+                        <label className="dash-label">Payment Status</label>
+                        <select value={manualRegPaymentStatus} onChange={e => setManualRegPaymentStatus(e.target.value)} className="dash-input">
+                          <option>Pending</option>
+                          <option>Completed</option>
+                          <option>Failed</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-4 border-t gap-3">
+                  <button type="button" onClick={() => setIsManualRegOpen(false)} className="dash-btn bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
+                  <button type="submit" disabled={!manualRegAuthorId || manualRegBooks.length === 0} className="dash-btn dash-btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Save Manual Registration
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ==========================================
+                   RENDER: GRANULAR TRACKING MODAL
+                   ========================================== */}
+        {editingAuthorReg && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-premium p-8 border border-gray-200 w-full max-w-6xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-300">
+              <div className="flex items-center justify-between mb-6 border-b pb-4">
+                <div>
+                  <h3 className="text-2xl font-serif text-paa-navy">Author Data: {editingAuthorReg.author?.name}</h3>
+                  <p className="text-sm text-gray-500 font-medium mt-1">Manage granular book tracking and publish updates to the author's dashboard.</p>
+                </div>
+                <button onClick={() => setEditingAuthorReg(null)} className="p-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-6 flex gap-4">
+                <div className="flex-1 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Registration Status</label>
+                  <select
+                    className="w-full text-sm border-0 rounded p-2 focus:ring-1 focus:ring-paa-navy outline-none"
+                    value={editingAuthorReg.status}
+                    onChange={(e) => setEditingAuthorReg({ ...editingAuthorReg, status: e.target.value })}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+                <div className="flex-1 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Payment Status</label>
+                  <select
+                    className="w-full text-sm border-0 rounded p-2 focus:ring-1 focus:ring-paa-navy outline-none"
+                    value={editingAuthorReg.paymentStatus || 'Pending'}
+                    onChange={(e) => setEditingAuthorReg({ ...editingAuthorReg, paymentStatus: e.target.value })}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Failed">Failed</option>
+                  </select>
+                </div>
+                <div className="flex-1 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Received Status</label>
+                  <select
+                    className="w-full text-sm border-0 rounded p-2 focus:ring-1 focus:ring-paa-navy outline-none"
+                    value={editingAuthorReg.receivedStatus || 'Pending'}
+                    onChange={(e) => setEditingAuthorReg({ ...editingAuthorReg, receivedStatus: e.target.value })}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Received">Received</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+                <table className="w-full text-left min-w-max">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Book Title</th>
+                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-blue-50/50">Committed</th>
+                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-amber-50/50">Collected</th>
+                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-indigo-50/50">Dispatched</th>
+                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-emerald-50/50">Received</th>
+                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Library Conf.</th>
+                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {granularData.map((b: any, index: number) => {
+                      const originalBook = editingAuthorReg.books.find((ob: any) => ob.id === b.id);
+                      return (
+                        <tr key={index}>
+                          <td className="p-3">
+                            <div className="font-bold text-sm text-paa-navy max-w-[200px] truncate" title={originalBook?.book?.title}>{originalBook?.book?.title}</div>
+                            <div className="text-xs text-gray-500">₹{originalBook?.book?.price}</div>
+                          </td>
+                          <td className="p-3 text-center bg-blue-50/30 font-bold text-blue-700">{b.qtyCommitted}</td>
+                          <td className="p-3 text-center bg-amber-50/30">
+                            <input type="number" min="0" className="w-16 text-center text-sm border border-gray-300 rounded p-1" value={b.qtyCollected} onChange={e => {
+                              const newData = [...granularData];
+                              newData[index].qtyCollected = parseInt(e.target.value) || 0;
+                              setGranularData(newData);
+                            }} />
+                          </td>
+                          <td className="p-3 text-center bg-indigo-50/30">
+                            <input type="number" min="0" className="w-16 text-center text-sm border border-gray-300 rounded p-1" value={b.qtyDispatched} onChange={e => {
+                              const newData = [...granularData];
+                              newData[index].qtyDispatched = parseInt(e.target.value) || 0;
+                              setGranularData(newData);
+                            }} />
+                          </td>
+                          <td className="p-3 text-center bg-emerald-50/30">
+                            <input type="number" min="0" className="w-16 text-center text-sm border border-gray-300 rounded p-1" value={b.qtyReceived} onChange={e => {
+                              const newData = [...granularData];
+                              newData[index].qtyReceived = parseInt(e.target.value) || 0;
+                              setGranularData(newData);
+                            }} />
+                          </td>
+                          <td className="p-3">
+                            <select className="text-sm border border-gray-300 rounded p-1.5 w-28" value={b.libraryConfirmation} onChange={e => {
+                              const newData = [...granularData];
+                              newData[index].libraryConfirmation = e.target.value;
+                              setGranularData(newData);
+                            }}>
+                              <option>Pending</option>
+                              <option>Confirmed</option>
+                              <option>Disputed</option>
+                            </select>
+                          </td>
+                          <td className="p-3">
+                            <input type="text" placeholder="Remarks..." className="w-32 text-sm border border-gray-300 rounded p-1.5" value={b.remarks} onChange={e => {
+                              const newData = [...granularData];
+                              newData[index].remarks = e.target.value;
+                              setGranularData(newData);
+                            }} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t gap-3">
+                <button onClick={() => setEditingAuthorReg(null)} className="dash-btn bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button onClick={() => handlePublishData(editingAuthorReg.id)} className="dash-btn dash-btn-primary px-8">Save & Publish Data</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ==========================================
+  // RENDER: MAIN LIST (DONATION DRIVES)
+  // ==========================================
+  const calculatedBooks = globalLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
+  const calculatedAuthors = new Set(globalLogs.map(l => l.authorId)).size;
+  const filteredDrives = drives.filter(d => d.title.toLowerCase().includes(driveSearch.toLowerCase()));
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+
+
+      {/* Header Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h2 className="text-2xl font-serif font-bold text-paa-navy">Library Donations Ecosystem</h2>
+          <p className="text-sm text-gray-500">Manage libraries and organize donation drives for authors</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={handleExportGlobalRegistry} className="dash-btn bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm flex items-center gap-2">
+            <Download className="w-4 h-4" /> Global Registry
+          </button>
+          <button onClick={handleExportAirportWiseReport} className="dash-btn bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm flex items-center gap-2">
+            <Download className="w-4 h-4" /> Airport Report
+          </button>
+          <button onClick={handleExportAuthorDonationReport} className="dash-btn bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm flex items-center gap-2">
+            <Download className="w-4 h-4" /> Author Report
+          </button>
+          <button onClick={() => setIsLibraryMasterOpen(true)} className="dash-btn bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm flex items-center gap-2">
+            <BookOpen className="w-4 h-4" /> Manage Libraries
+          </button>
+          <button onClick={() => { setEditingDrive(null); setIsDriveModalOpen(true); }} className="dash-btn dash-btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Create New Drive
+          </button>
+        </div>
+      </div>
+
+      {/* Ecosystem Summary Heading & Edit Stats Button */}
+      <div className="mb-3 flex justify-between items-center mt-6">
+        <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Ecosystem Summary</span>
+        {isEditingStats ? (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsEditingStats(false)}
+              className="text-xs font-bold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-full transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveStatsOverrides}
+              className="text-xs font-bold bg-paa-navy text-white px-4 py-1.5 rounded-full hover:bg-paa-navy/90 transition-colors active:scale-95"
+            >
+              Save Stats
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              setOverrideDrives(statsOverrides.drivesOverride !== null ? statsOverrides.drivesOverride : drives.length);
+              setOverrideBooks(statsOverrides.booksOverride !== null ? statsOverrides.booksOverride : calculatedBooks);
+              setOverrideAuthors(statsOverrides.authorsOverride !== null ? statsOverrides.authorsOverride : calculatedAuthors);
+              setOverrideLibraries(statsOverrides.librariesOverride !== null ? statsOverrides.librariesOverride : libraries.length);
+              setIsEditingStats(true);
+            }}
+            className="text-xs font-bold text-paa-navy border border-paa-navy/20 bg-gray-50 hover:bg-paa-navy/5 px-4 py-1.5 rounded-full transition-colors"
+          >
+            Edit Stats
+          </button>
+        )}
+      </div>
+
+      {/* Dashboard Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Drives Organized</div>
+          {isEditingStats ? (
+            <input
+              type="text"
+              autoFocus
+              className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0"
+              value={overrideDrives}
+              placeholder="NA"
+              onChange={e => setOverrideDrives(e.target.value)}
+            />
+          ) : (
+            <div className="text-xl font-serif text-paa-navy font-bold">
+              {statsOverrides.drivesOverride !== null ? statsOverrides.drivesOverride : drives.length}
+            </div>
+          )}
+        </div>
+        <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
+          <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Books Donated</div>
+          {isEditingStats ? (
+            <input
+              type="text"
+              className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0"
+              value={overrideBooks}
+              placeholder="NA"
+              onChange={e => setOverrideBooks(e.target.value)}
+            />
+          ) : (
+            <div className="text-xl font-serif text-blue-800 font-bold">
+              {statsOverrides.booksOverride !== null ? statsOverrides.booksOverride : calculatedBooks}
+            </div>
+          )}
+        </div>
+        <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
+          <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Authors Participated</div>
+          {isEditingStats ? (
+            <input
+              type="text"
+              className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0"
+              value={overrideAuthors}
+              placeholder="NA"
+              onChange={e => setOverrideAuthors(e.target.value)}
+            />
+          ) : (
+            <div className="text-xl font-serif text-indigo-800 font-bold">
+              {statsOverrides.authorsOverride !== null ? statsOverrides.authorsOverride : calculatedAuthors}
+            </div>
+          )}
+        </div>
+        <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
+          <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Active Libraries</div>
+          {isEditingStats ? (
+            <input
+              type="text"
+              className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0"
+              value={overrideLibraries}
+              placeholder="NA"
+              onChange={e => setOverrideLibraries(e.target.value)}
+            />
+          ) : (
+            <div className="text-xl font-serif text-emerald-800 font-bold">
+              {statsOverrides.librariesOverride !== null ? statsOverrides.librariesOverride : libraries.length}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Donations Performance Chart */}
+      {(() => {
+        const chartData = drives.map(drive => {
+          const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
+          const authors = new Set(driveLogs.map(l => l.authorId)).size;
+          const books = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
+          return {
+            name: drive.title,
+            booksDonated: books,
+            authorsCount: authors
+          };
+        });
+
+        return (
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h4 className="font-bold text-paa-navy font-serif">Donations Performance Overview</h4>
+                <p className="text-xs text-gray-500 font-medium mt-1">Comparing total books donated and author participation across campaigns.</p>
+              </div>
+              <div className="flex items-center gap-4 text-xs font-bold">
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-paa-navy"></div> Books Donated</div>
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-300"></div> Authors Participated</div>
+              </div>
+            </div>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                  <RechartsTooltip
+                    cursor={{ fill: '#F3F4F6' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
+                  />
+                  <Bar dataKey="booksDonated" name="Books Donated" fill="var(--color-paa-navy, #1e3a8a)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="authorsCount" name="Authors" fill="#818CF8" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Drives Grid Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 mt-8">
+        <h3 className="text-xl font-bold text-paa-navy font-serif">Donation Drives Master</h3>
+        <input
+          type="text"
+          placeholder="Search drives by title..."
+          className="w-full sm:w-80 border border-gray-300 rounded-lg p-2.5 text-sm outline-none focus:border-paa-navy focus:ring-1 focus:ring-paa-navy shadow-sm"
+          value={driveSearch}
+          onChange={(e) => setDriveSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Drive Name</th>
+              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Deadline</th>
+              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Location</th>
+              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Authors</th>
+              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Books</th>
+              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={7} className="p-12 text-center text-gray-500">Loading donation drives...</td></tr>
+            ) : filteredDrives.length === 0 ? (
+              <tr><td colSpan={7} className="p-12 text-center text-gray-500">No donation drives found. Click "Create New Drive" to start.</td></tr>
+            ) : filteredDrives.map(drive => {
+              // Calculate books for this drive from globalLogs (since fetchDrives doesn't nest books)
+              const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
+              const totalBooks = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
+
+              return (
+                <tr key={drive.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="p-4">
+                    <div className="font-bold text-sm text-paa-navy">{drive.title}</div>
+                  </td>
+                  <td className="p-4 text-sm text-gray-600">
+                    {new Date(drive.registrationEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="p-4 text-sm text-gray-600">
+                    {drive.library?.city ? `${drive.library.name}, ${drive.library.city}` : drive.library?.name}
+                  </td>
+                  <td className="p-4">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border ${drive.visibility === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                        drive.visibility === 'Closed' ? 'bg-gray-100 text-gray-600 border-gray-200' :
+                          'bg-yellow-50 text-yellow-600 border-yellow-200'
+                      }`}>
+                      {drive.visibility}
+                    </span>
+                  </td>
+                  <td className="p-4 font-bold text-sm text-paa-navy">{drive.registrations?.length || 0}</td>
+                  <td className="p-4 font-bold text-sm text-paa-navy">{totalBooks}</td>
+                  <td className="p-4 text-right space-x-2">
+                    <button onClick={() => {
+                      setSelectedDriveBreakdown(drive);
+                      fetchRegistrations(drive.id);
+                    }}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded border border-blue-200 transition-colors" title="Manage Drive"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => { setEditingDrive(drive); setIsDriveModalOpen(true); }}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded border border-blue-200 transition-colors" title="Edit Drive"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    {drive.visibility === 'Published' ? (
+                      <button onClick={() => unpublishCampaign(drive.id)} className="p-1.5 text-orange-600 hover:bg-orange-50 rounded border border-orange-200 transition-colors" title="Unpublish Campaign">
+                        <X className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button onClick={() => publishCampaign(drive.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 transition-colors" title="Publish to All Authors">
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button onClick={() => handleDeleteDrive(drive.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded border border-red-200 transition-colors" title="Delete Drive">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+
+      {/* ==========================================
+          MODAL: LIBRARY MASTER
+          ========================================== */}
+      {isLibraryMasterOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div>
+                <h3 className="text-xl font-bold text-paa-navy flex items-center gap-2"><BookOpen className="w-5 h-5 text-paa-gold" /> Library Master</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Manage target libraries and airports for donation drives</p>
+              </div>
+              <button onClick={() => setIsLibraryMasterOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+              {/* Add/Edit Library Form inline at top */}
+              <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm">
+                <h4 className="text-sm font-bold text-paa-navy uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">{editingLib ? 'Edit Library' : 'Add New Library'}</h4>
+                <form onSubmit={handleSaveLibrary} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Library Name *</label>
+                    <input name="libName" defaultValue={editingLib?.name} required className="w-full border border-gray-300 p-2 rounded text-sm focus:border-paa-navy outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Type *</label>
+                    <select name="type" defaultValue={editingLib?.type || 'Public Library'} required className="w-full border border-gray-300 p-2 rounded text-sm focus:border-paa-navy outline-none">
+                      <option>Airport Library</option>
+                      <option>Public Library</option>
+                      <option>Institutional Library</option>
+                      <option>Military Library</option>
+                      <option>CafAc Library</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Status</label>
+                    <select name="status" defaultValue={editingLib?.status || 'Active'} className="w-full border border-gray-300 p-2 rounded text-sm focus:border-paa-navy outline-none">
+                      <option>Active</option>
+                      <option>Inactive</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">City *</label>
+                    <input name="city" defaultValue={editingLib?.city} required className="w-full border border-gray-300 p-2 rounded text-sm focus:border-paa-navy outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">State *</label>
+                    <input name="state" defaultValue={editingLib?.state} required className="w-full border border-gray-300 p-2 rounded text-sm focus:border-paa-navy outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Contact Person *</label>
+                    <input name="contactPerson" defaultValue={editingLib?.contactPerson} required className="w-full border border-gray-300 p-2 rounded text-sm focus:border-paa-navy outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Contact Number *</label>
+                    <input name="contactNumber" defaultValue={editingLib?.contactNumber} required className="w-full border border-gray-300 p-2 rounded text-sm focus:border-paa-navy outline-none" />
+                  </div>
+
+                  <div className="md:col-span-4">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Shipping Address *</label>
+                    <input name="shippingAddress" defaultValue={editingLib?.shippingAddress} required className="w-full border border-gray-300 p-2 rounded text-sm focus:border-paa-navy outline-none" />
+                  </div>
+
+                  <div className="md:col-span-4 flex justify-end gap-2 mt-2">
+                    {editingLib && <button type="button" onClick={() => setEditingLib(null)} className="px-4 py-2 border border-gray-300 rounded text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel Edit</button>}
+                    <button type="submit" className="px-6 py-2 bg-paa-navy text-white rounded text-sm font-bold hover:bg-paa-gold hover:text-paa-navy transition-colors">{editingLib ? 'Update Library' : 'Add Library'}</button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Libraries Table */}
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Library</th>
+                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Location</th>
+                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Contact</th>
+                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {libraries.map(lib => (
+                      <tr key={lib.id} className="hover:bg-gray-50/50">
+                        <td className="p-3">
+                          <div className="font-semibold text-sm text-paa-navy">{lib.name}</div>
+                          <div className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded inline-block mt-1">{lib.type}</div>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-sm">{lib.city}</div>
+                          <div className="text-xs text-gray-500">{lib.state}</div>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-sm font-medium">{lib.contactPerson}</div>
+                          <div className="text-xs text-gray-500">{lib.contactNumber}</div>
+                        </td>
+                        <td className="p-3 text-right">
+                          <button onClick={() => setEditingLib(lib)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded inline-block mr-1"><Edit className="w-4 h-4" /></button>
+                          <button onClick={() => handleDeleteLibrary(lib.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded inline-block"><Trash2 className="w-4 h-4" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {libraries.length === 0 && (
+                      <tr><td colSpan={4} className="p-6 text-center text-gray-500 text-sm">No libraries found. Add one above.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logs section removed as per user request */}
+
+    </div>
+  );
+}

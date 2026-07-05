@@ -20,7 +20,6 @@ import { EventLogPage } from "./components/EventLogPage";
 import { ContactPage } from "./components/ContactPage";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { BookDetailPage } from "./components/BookDetailPage";
-import { LivePosDashboard } from "./components/LivePosDashboard";
 
 {/* MARKER-MAKE-KIT-INVOKED */}
 
@@ -45,7 +44,6 @@ function AppContent() {
           <Route path="/signup" element={<AuthPage type="signup" />} />
           <Route path="/dashboard/*" element={<AuthorDashboardPage />} />
           <Route path="/operations/*" element={<OperationsDashboardPage />} />
-          <Route path="/pos/:eventId" element={<LivePosDashboard />} />
           <Route path="/profile" element={<CustomerProfilePage />} />
           <Route path="/book-cafe" element={<GoaCafePage />} />
           <Route path="/events" element={<EventsPage />} />

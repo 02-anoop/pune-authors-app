@@ -41,6 +41,7 @@ axios.interceptors.response.use(
 
 import { AuthorFullProfileView } from './AuthorFullProfileView';
 import { AuthorRegistrationPage } from './AuthorRegistrationPage';
+import { LibraryDonationsTab } from './LibraryDonationsTab';
 
 const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
   if (!isOpen) return null;
@@ -4232,6 +4233,7 @@ export function OperationsDashboardPage() {
             { id: 'author_data', label: 'Author Extra Data', icon: ClipboardList },
             { id: 'helpdesk', label: 'Helpdesk / Queries', icon: Users, hasAlert: pendingAlerts.queries },
             { id: 'settings', label: 'System Settings', icon: Settings },
+            { id: 'library_donations', label: 'Library Donations', icon: BookOpen },
           ].map((item) => (
             <button
               key={item.id}
@@ -4404,6 +4406,7 @@ export function OperationsDashboardPage() {
           {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
           {activeTab === 'author_data' && <AuthorDataTab refreshTrigger={lastRefreshTime} />}
           {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
+          {activeTab === 'library_donations' && <LibraryDonationsTab />}
           {activeTab === 'settings' && (
             <div className="p-8 text-center text-gray-500">
               <h2 className="text-2xl font-bold mb-2">System Settings</h2>

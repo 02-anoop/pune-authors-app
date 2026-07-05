@@ -8,9 +8,9 @@ import {
   LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line
 } from 'recharts';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
 
 // Automatically attach token to all admin requests
@@ -93,6 +93,9 @@ export function OperationsDashboardPage() {
   const [authorStatusFilter, setAuthorStatusFilter] = useState('All');
   const [bookStatusFilter, setBookStatusFilter] = useState('All');
   const navigate = useNavigate();
+  const location = useLocation();
+
+
 
   // State for data
   const [stats, setStats] = useState<any>(() => {
@@ -175,8 +178,8 @@ export function OperationsDashboardPage() {
   const [globalRevenue, setGlobalRevenue] = useState(0);
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
   const [showBooksSold, setShowBooksSold] = useState(true);
-  const [showAuthorsParticipated, setShowAuthorsParticipated] = useState(true);
   const [eventGraphFilter, setEventGraphFilter] = useState('All');
+  const [eventTimeFilter, setEventTimeFilter] = useState('Last 15');
   const [viewingRegistrationsEventId, setViewingRegistrationsEventId] = useState<number | null>(null);
   const [eventRegistrations, setEventRegistrations] = useState<any[]>([]);
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
@@ -469,6 +472,35 @@ export function OperationsDashboardPage() {
       toast.error('Failed to delete image');
     }
   };
+
+  useEffect(() => {
+    if (location.pathname === '/operations' || location.pathname === '/operations/') {
+        if (selectedEventBreakdown) {
+            setSelectedEventBreakdown(null);
+            setSelectedAuthorForData(null);
+        }
+    } else if (events.length > 0 && location.pathname.startsWith('/operations/events/')) {
+        const slug = location.pathname.split('/operations/events/')[1];
+        if (slug) {
+            if (!selectedEventBreakdown || selectedEventBreakdown.name.replace(/\s+/g, '-').toLowerCase() !== slug) {
+                const evt = events.find((e: any) => e.name.replace(/\s+/g, '-').toLowerCase() === slug);
+                if (evt) {
+                    setActiveTab('events');
+                    setSelectedEventBreakdown(evt);
+                    const isPastOrLegacy = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
+                    setShowAllPlatformAuthors(isPastOrLegacy);
+                    fetchEventRegistrations(evt.id);
+                    fetchAuthors(true);
+                    setTimeout(() => {
+                        const scrollEl = document.getElementById('admin-dashboard-scroll');
+                        if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'auto' });
+                        else window.scrollTo({ top: 0, behavior: 'auto' });
+                    }, 0);
+                }
+            }
+        }
+    }
+  }, [events, location.pathname, selectedEventBreakdown]);
 
   useEffect(() => {
     const fetchCurrentTabData = async (isBackground = false) => {
@@ -2590,20 +2622,23 @@ export function OperationsDashboardPage() {
 
     const handleOpenBreakdown = (evt: any) => {
       setSelectedEventBreakdown(evt);
-      // For Past/Legacy events, always show all platform authors so admin can fill data
       const isPastOrLegacy = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
       setShowAllPlatformAuthors(isPastOrLegacy);
       fetchEventRegistrations(evt.id);
-      // Always fetch full author list so "Add Author Data Manually" works
       fetchAuthors(true);
       const slug = evt.name.replace(/\s+/g, '-').toLowerCase();
-      window.history.pushState(null, '', `/operations/events/${slug}`);
+      navigate(`/operations/events/${slug}`);
+      setTimeout(() => {
+          const scrollEl = document.getElementById('admin-dashboard-scroll');
+          if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'auto' });
+          else window.scrollTo({ top: 0, behavior: 'auto' });
+      }, 0);
     };
 
     const handleCloseBreakdown = () => {
       setSelectedEventBreakdown(null);
       setSelectedAuthorForData(null);
-      window.history.pushState(null, '', `/operations`);
+      navigate('/operations');
     };
 
     const handleSaveAggregateData = async () => {
@@ -2831,45 +2866,61 @@ export function OperationsDashboardPage() {
     const handleDownloadEventReport = () => {
         if (!selectedEventBreakdown) return;
         
-        const match = selectedEventBreakdown.duration?.match(/(\d+)/); 
-        const numDays = match ? parseInt(match[1]) : 1;
+        const totalParticipants = eventRegistrations.length;
+        const totalBooksListed = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || (a.manualTotalListed || 0)), 0);
+        const totalBooksSold = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
+        const totalSalesRevenue = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (parseFloat(b.overrideMrp || b.book?.mrp || b.mrp) || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
+        const totalFeesReceived = eventRegistrations.reduce((acc: number, a: any) => {
+            const fee = a.amountPaid != null ? parseFloat(a.amountPaid) : (a.paymentStatus === 'Paid' ? parseFloat(selectedEventBreakdown.registrationFee || 0) : 0);
+            return acc + (!isNaN(fee) ? fee : 0);
+        }, 0);
+
+        let csv = `Event Report: ${selectedEventBreakdown.name}\n`;
+        csv += `Date/Duration:,${selectedEventBreakdown.date} / ${selectedEventBreakdown.duration}\n\n`;
         
-        let daysHeader = '';
-        for(let i=1; i<=numDays; i++) {
-            daysHeader += `Day-${i} sales,`;
-        }
+        csv += `--- EVENT SUMMARY ---\n`;
+        csv += `Total Participants:,${totalParticipants}\n`;
+        csv += `Total Books Listed:,${totalBooksListed}\n`;
+        csv += `Total Books Sold:,${totalBooksSold}\n`;
+        csv += `Total Sales Revenue (MRP):,${totalSalesRevenue}\n`;
+        csv += `Total Fees Received:,${totalFeesReceived}\n\n`;
         
-        let csv = `S.No,Book Title,MRP,Author Name,Amount Paid,No of Copies received,${daysHeader}No of copies Sold,Balance Remaining\n`;
+        csv += `--- INDIVIDUAL AUTHOR BREAKDOWN ---\n`;
+        csv += `S.No,Author Name,Phone,Email,Participated,Payment Status,Fees Paid,Book Title,MRP,Copies Received,Copies Sold,Revenue,Balance Remaining\n`;
         
         let sNo = 1;
         
-        eventRegistrations.forEach((a: any) => {
-            const amountPaid = a.amountPaid != null ? a.amountPaid : (a.paymentStatus === 'Paid' ? 'Paid' : 'NA');
-            const authorName = a.author?.name || a.name || 'Unknown';
-            
-            if (a.books && a.books.length > 0) {
-                a.books.forEach((b: any) => {
+        authors.forEach((author: any) => {
+            const reg = eventRegistrations.find((r: any) => r.author?.id === author.id || r.authorId === author.id || r.id === author.id);
+            const isParticipating = reg ? 'Yes' : 'No';
+            const amountPaid = reg?.amountPaid != null ? reg.amountPaid : (reg?.paymentStatus === 'Paid' ? (selectedEventBreakdown.registrationFee || 0) : '0');
+            const paymentStatus = reg?.paymentStatus || 'NA';
+            const authorName = (author.name || '').replace(/"/g, '""');
+            const phone = author.phone || 'NA';
+            const email = author.email || 'NA';
+
+            if (reg && reg.books && reg.books.length > 0) {
+                reg.books.forEach((b: any) => {
                     const title = (b.book?.title || b.title || 'Unknown').replace(/"/g, '""');
-                    const mrp = b.overrideMrp || b.book?.mrp || b.mrp || 'NA';
+                    const mrp = b.overrideMrp || b.book?.mrp || b.mrp || 0;
                     const listed = b.listedStock || 0;
                     const sold = b.soldStock || 0;
                     const balance = listed - sold;
+                    const revenue = sold * (parseFloat(mrp) || 0);
                     
-                    let daysSales = '';
-                    for(let i=1; i<=numDays; i++) {
-                        daysSales += `NA,`;
-                    }
-                    
-                    csv += `${sNo},"${title}",${mrp},"${authorName}",${amountPaid},${listed},${daysSales}${sold},${balance}\n`;
+                    csv += `${sNo},"${authorName}","${phone}","${email}","Yes","${paymentStatus}","${amountPaid}","${title}","${mrp}","${listed}","${sold}","${revenue}","${balance}"\n`;
                     sNo++;
                 });
-            } else if (selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Legacy Archive' || selectedEventBreakdown.status === 'Past') {
-                // For events where books might not be listed explicitly
-                let daysSales = '';
-                for(let i=1; i<=numDays; i++) {
-                    daysSales += `NA,`;
-                }
-                csv += `${sNo},NA,NA,"${authorName}",${amountPaid},NA,${daysSales}${a.manualTotalSold || 0},NA\n`;
+            } else if (reg) {
+                // Participated but no books array or legacy
+                const listed = reg.manualTotalListed || 'NA';
+                const sold = reg.manualTotalSold || 0;
+                const revenue = reg.manualTotalRevenue || 0;
+                csv += `${sNo},"${authorName}","${phone}","${email}","Yes","${paymentStatus}","${amountPaid}","NA","NA","${listed}","${sold}","${revenue}","NA"\n`;
+                sNo++;
+            } else {
+                // Did not participate
+                csv += `${sNo},"${authorName}","${phone}","${email}","No","NA","0","NA","NA","0","0","0","0"\n`;
                 sNo++;
             }
         });
@@ -2878,7 +2929,7 @@ export function OperationsDashboardPage() {
         const url = window.URL.createObjectURL(blob);
         const aLink = document.createElement('a');
         aLink.href = url;
-        aLink.download = `Event_Report_${selectedEventBreakdown.name.replace(/\s+/g, '_')}.csv`;
+        aLink.download = `${selectedEventBreakdown.name}.csv`;
         document.body.appendChild(aLink);
         aLink.click();
         document.body.removeChild(aLink);
@@ -3237,6 +3288,7 @@ export function OperationsDashboardPage() {
                                      const isExpanded = expandedAuthorId === (showAllAuthors ? m.id : m.authorId);
                                      const status = m.optInStatus || 'Unpublished';
                                      const hasData = (m.books && m.books.length > 0) || m.manualTotalSold != null;
+                                     const validScreenshot = a.paymentScreenshot && typeof a.paymentScreenshot === 'string' && a.paymentScreenshot !== 'null' && a.paymentScreenshot !== 'undefined' && a.paymentScreenshot.trim() !== '';
                                      return (
                                      <React.Fragment key={i}>
                                      <tr className="hover:bg-gray-50/50 transition-colors">
@@ -3250,22 +3302,34 @@ export function OperationsDashboardPage() {
                                          {!selectedEventBreakdown.isLegacy && (
                                             <td className="p-3 text-center align-middle">
                                                <div className="flex flex-col items-center justify-center h-full">
-                                                 {a.paymentScreenshot ? (
-                                                     <a href={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} target="_blank" rel="noreferrer" className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80 mx-auto">
-                                                         <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
-                                                     </a>
-                                                 ) : <span className="text-sm text-gray-400 font-bold">-</span>}
-                                                 {m.amountPaid ? <div className="text-[10px] text-emerald-600 font-bold mt-1">₹{m.amountPaid}</div> : null}
-                                                 {status === 'Registered' && (
-                                                     <div className="mt-1">
-                                                         <input 
-                                                            type="text" 
-                                                            placeholder="Txn ID" 
-                                                            defaultValue={m.transactionId || ''} 
-                                                            onBlur={(e) => updateTransactionId(m.eventId, m.authorId, e.target.value)}
-                                                            className="w-20 text-[9px] text-center p-0.5 border border-gray-200 bg-gray-50 rounded outline-none focus:border-paa-navy font-mono"
-                                                         />
-                                                     </div>
+                                                 {selectedEventBreakdown.status === 'Past' ? (
+                                                    <div className="text-sm text-emerald-600 font-bold">
+                                                        {m.amountPaid ? `₹${m.amountPaid}` : <span className="text-gray-400 font-normal">-</span>}
+                                                    </div>
+                                                 ) : (
+                                                    <>
+                                                        {validScreenshot && (
+                                                            <a href={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} target="_blank" rel="noreferrer" className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80 mx-auto">
+                                                                <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
+                                                            </a>
+                                                        )}
+                                                        {m.amountPaid ? (
+                                                            <div className="text-[10px] text-emerald-600 font-bold mt-1">₹{m.amountPaid}</div>
+                                                        ) : (
+                                                            !validScreenshot && <span className="text-sm text-gray-400 font-bold">-</span>
+                                                        )}
+                                                        {validScreenshot && status === 'Registered' && (
+                                                            <div className="mt-1">
+                                                                <input 
+                                                                    type="text" 
+                                                                    placeholder="Txn ID" 
+                                                                    defaultValue={m.transactionId || ''} 
+                                                                    onBlur={(e) => updateTransactionId(m.eventId, m.authorId, e.target.value)}
+                                                                    className="w-20 text-[9px] text-center p-0.5 border border-gray-200 bg-gray-50 rounded outline-none focus:border-paa-navy font-mono"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </>
                                                  )}
                                                </div>
                                             </td>
@@ -3389,6 +3453,62 @@ export function OperationsDashboardPage() {
           </div>
        </div>
     );
+    const now = new Date();
+    let chartEvents = allCombinedEvents.filter((e: any) => {
+        const eventDate = new Date(e.date || e.startDate || 0);
+        if (eventDate >= now) return false;
+
+        if (eventGraphFilter === 'All') return true;
+        if (eventGraphFilter === 'Literary Event') return e.eventType?.toLowerCase().includes('literary');
+        if (eventGraphFilter === 'Book Fair') return e.eventType?.toLowerCase().includes('fair');
+        if (eventGraphFilter === 'Meet the Authors / Other') return !e.eventType?.toLowerCase().includes('literary') && !e.eventType?.toLowerCase().includes('fair');
+        return true;
+    });
+    
+    chartEvents.sort((a: any, b: any) => {
+        const dateA = new Date(a.date || a.startDate || 0);
+        const dateB = new Date(b.date || b.startDate || 0);
+        return dateA.getTime() - dateB.getTime();
+    });
+
+    if (eventTimeFilter === 'Last 15') {
+        chartEvents = chartEvents.slice(-15);
+    } else if (eventTimeFilter === 'Last Quarter') {
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(now.getMonth() - 3);
+        chartEvents = chartEvents.filter((e: any) => new Date(e.date || e.startDate) >= threeMonthsAgo);
+    } else if (!isNaN(parseInt(eventTimeFilter))) {
+        const targetYear = parseInt(eventTimeFilter);
+        const startOfYear = new Date(targetYear, 0, 1);
+        const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59);
+        chartEvents = chartEvents.filter((e: any) => {
+            const d = new Date(e.date || e.startDate);
+            return d >= startOfYear && d <= endOfYear;
+        });
+    }
+
+    const currentYear = new Date().getFullYear();
+    const availableYears = [];
+    for (let y = currentYear; y >= 2025; y--) {
+        availableYears.push(y);
+    }
+
+    const chartData = chartEvents.map((e: any) => ({ 
+        name: e.name, 
+        booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0 
+    }));
+
+    let dateRangeString = 'All Time';
+    if (chartEvents.length > 0) {
+        const firstDate = new Date(chartEvents[0].date || chartEvents[0].startDate);
+        const lastDate = new Date(chartEvents[chartEvents.length - 1].date || chartEvents[chartEvents.length - 1].startDate);
+        const formatOpts: Intl.DateTimeFormatOptions = { month: 'short', year: 'numeric' };
+        if (firstDate.getTime() === lastDate.getTime()) {
+            dateRangeString = firstDate.toLocaleDateString(undefined, formatOpts);
+        } else {
+            dateRangeString = `${firstDate.toLocaleDateString(undefined, formatOpts)} - ${lastDate.toLocaleDateString(undefined, formatOpts)}`;
+        }
+    }
 
     return (
       <div className="space-y-6">
@@ -3427,10 +3547,22 @@ export function OperationsDashboardPage() {
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
-                    <h4 className="font-bold text-paa-navy">Events Performance Overview</h4>
+                    <h4 className="font-bold text-paa-navy">Events Performance Overview <span className="text-gray-500 font-normal ml-2 text-sm tracking-wide">({dateRangeString})</span></h4>
                     <p className="text-xs text-gray-500 font-medium mt-1">Comparing book sales and author participation across all events.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
+                    <select 
+                        className="border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-paa-navy text-gray-700 bg-gray-50"
+                        value={eventTimeFilter}
+                        onChange={(e) => setEventTimeFilter(e.target.value)}
+                    >
+                        <option value="Last 15">Last 15 Events</option>
+                        <option value="All">All Time</option>
+                        <option value="Last Quarter">Last Quarter</option>
+                        {availableYears.map(y => (
+                            <option key={y} value={y.toString()}>{y}</option>
+                        ))}
+                    </select>
                     <select 
                         className="border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-paa-navy text-gray-700 bg-gray-50"
                         value={eventGraphFilter}
@@ -3445,30 +3577,20 @@ export function OperationsDashboardPage() {
                     <div className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${!showBooksSold ? 'opacity-50' : ''}`} onClick={() => setShowBooksSold(!showBooksSold)}>
                         <div className="w-3 h-3 rounded-sm bg-paa-navy"></div> Books Sold
                     </div>
-                    <div className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${!showAuthorsParticipated ? 'opacity-50' : ''}`} onClick={() => setShowAuthorsParticipated(!showAuthorsParticipated)}>
-                        <div className="w-3 h-3 rounded-sm bg-indigo-300"></div> Authors Participated
-                    </div>
                 </div>
             </div>
             <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={allCombinedEvents.filter(e => {
-                        if (eventGraphFilter === 'All') return true;
-                        if (eventGraphFilter === 'Literary Event') return e.eventType?.toLowerCase().includes('literary');
-                        if (eventGraphFilter === 'Book Fair') return e.eventType?.toLowerCase().includes('fair');
-                        if (eventGraphFilter === 'Meet the Authors / Other') return !e.eventType?.toLowerCase().includes('literary') && !e.eventType?.toLowerCase().includes('fair');
-                        return true;
-                    }).map(e => ({ name: e.name, booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0, authors: (e.isLegacy ? e.aggAuthors : e._count?.eventAuthors) || 0 }))} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
+                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280', angle: -90, textAnchor: 'end' }} dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
                         <YAxis orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                         <RechartsTooltip 
-                            cursor={{ fill: '#F3F4F6' }}
+                            cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '3 3' }}
                             contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                         />
-                        {showBooksSold && <Bar dataKey="booksSold" name="Books Sold" fill="var(--color-paa-navy, #1e3a8a)" radius={[4, 4, 0, 0]} maxBarSize={40} />}
-                        {showAuthorsParticipated && <Bar dataKey="authors" name="Authors Participated" fill="#818CF8" radius={[4, 4, 0, 0]} maxBarSize={40} />}
-                    </BarChart>
+                        {showBooksSold && <Line type="monotone" dataKey="booksSold" name="Books Sold" stroke="var(--color-paa-navy, #1e3a8a)" strokeWidth={3} dot={{ r: 4, fill: '#1e3a8a', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />}
+                    </LineChart>
                 </ResponsiveContainer>
             </div>
         </div>
@@ -4268,7 +4390,7 @@ export function OperationsDashboardPage() {
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-auto p-4 sm:p-7">
+        <div id="admin-dashboard-scroll" className="flex-1 overflow-auto p-4 sm:p-7">
           {activeTab === 'overview' && <OverviewTab refreshTrigger={lastRefreshTime} />}
           {activeTab === 'web_orders' && <WebOrdersTab refreshTrigger={lastRefreshTime} />}
           {activeTab === 'sales_report' && <SalesReportTab refreshTrigger={lastRefreshTime} />}

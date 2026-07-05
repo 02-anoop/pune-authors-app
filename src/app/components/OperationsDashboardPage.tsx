@@ -2159,7 +2159,7 @@ export function OperationsDashboardPage() {
           return acc;
         }, [])
       ));
-      const baseFields = ['Status', 'Name', 'Pen Name', 'Email', 'Phone', 'WhatsApp', 'Address', 'City', 'State', 'Aadhar Number', 'Qualification', 'DOB', 'Experience', 'Skills', 'Hobbies', 'Why Joining', 'Transaction ID', 'Joined Date'];
+      const baseFields = ['Status', 'Name', 'Pen Name', 'Email', 'Phone', 'WhatsApp', 'Address', 'City', 'State', 'Aadhar/Voter ID/DL', 'Qualification', 'DOB', 'Experience', 'Skills', 'Hobbies', 'Why Joining', 'Transaction ID', 'Joined Date'];
       let csv = baseFields.join(',');
       dynamicKeys.forEach(col => csv += `,${col}`);
       csv += '\n';
@@ -3713,7 +3713,7 @@ export function OperationsDashboardPage() {
       const baseFields = [
         'Status', 'Name', 'Pen Name', 'Email', 'Phone', 'WhatsApp',
         'Address', 'District', 'City', 'State', 'Pincode',
-        'Aadhar Number', 'DOB', 'Bio', 'Experience', 'Qualification', 'Skills', 'Hobbies', 'Why Joining',
+        'Aadhar/Voter ID/DL', 'DOB', 'Bio', 'Experience', 'Qualification', 'Skills', 'Hobbies', 'Why Joining',
         'Instagram', 'Facebook', 'LinkedIn', 'YouTube',
         'Conflict of Interest Signature', 'Agreed To Guidelines', 'Agreed To Info Doc',
         'Transaction ID', 'Payment Screenshot', 'Joined Date', 'Books Data'
@@ -3785,7 +3785,7 @@ export function OperationsDashboardPage() {
           <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-4 rounded-3xl-2xl mb-6 flex flex-col md:flex-row gap-4 items-center">
             <input
               type="text"
-              placeholder="New Field Name (e.g. Aadhar Number)"
+              placeholder="New Field Name (e.g. Aadhar/Voter ID/DL)"
               className="border border-paa-navy/20 p-2 text-sm flex-1 outline-none focus:border-paa-navy bg-white rounded-3xl-2xl w-full md:w-auto"
               value={newField.name}
               onChange={e => setNewField({ ...newField, name: e.target.value })}
@@ -5212,7 +5212,7 @@ export function OperationsDashboardPage() {
                         <input type="text" value={editingAuthor.penName} onChange={(e) => setEditingAuthor({ ...editingAuthor, penName: e.target.value })} className={getFieldClass('penName')} /> {renderOriginalValue('penName')}
                       </div>
                       <div>
-                        <label className="dash-label">Aadhar Number</label>
+                        <label className="dash-label">Aadhar/Voter ID/DL</label>
                         <input type="text" value={editingAuthor.aadharNumber} onChange={(e) => setEditingAuthor({ ...editingAuthor, aadharNumber: e.target.value })} className={getFieldClass('aadharNumber')} /> {renderOriginalValue('aadharNumber')}
                       </div>
                       <div>

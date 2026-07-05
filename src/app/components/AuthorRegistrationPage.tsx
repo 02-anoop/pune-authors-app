@@ -607,8 +607,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     if (key === "phone" && !/^\d{10}$/.test((value as string).replace(/\D/g, ''))) error = "Must be a 10-digit number.";
     if (key === "address" && !value) error = "Full Address is required.";
     if (key === "aadharNumber") {
-      if (!value) error = "Aadhar Number is required.";
-      else if (!/^\d{12}$/.test(value as string)) error = "Aadhar Number must be exactly 12 digits.";
+      if (!value) error = "Aadhar/Voter ID/DL is required.";
     }
     if (key === "dob") {
       if (!value) error = "Date of Birth is required.";
@@ -872,8 +871,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       </div>
                     ) : (
                       <div>
-                        <label className="dash-label">Aadhar Number *</label>
-                        <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''} ${getDiffClass("aadharNumber")}`} placeholder="12-digit Aadhar number" />
+                        <label className="dash-label">Aadhar/Voter ID/DL *</label>
+                        <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value)} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''} ${getDiffClass("aadharNumber")}`} placeholder="Aadhar / Voter ID / DL" />
                         {errors.aadharNumber && <div className="text-red-500 text-xs mt-1 font-medium">{errors.aadharNumber}</div>}
                       {getDiffUi("aadharNumber")}
                       </div>
@@ -890,8 +889,8 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     </div>
                     {!isReapply && !isAdminEdit && !localStorage.getItem('token') && (
                       <div>
-                        <label className="dash-label">Aadhar Number *</label>
-                        <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value.replace(/\D/g, ''))} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="12-digit Aadhar number" />
+                        <label className="dash-label">Aadhar/Voter ID/DL *</label>
+                        <input type="text" value={form.aadharNumber} onChange={(e) => update("aadharNumber", e.target.value)} className={`dash-input w-full ${errors.aadharNumber ? '!border-red-500' : ''}`} placeholder="Aadhar / Voter ID / DL" />
                         {errors.aadharNumber && <div className="text-red-500 text-xs mt-1 font-medium">{errors.aadharNumber}</div>}
                       </div>
                     )}
@@ -1802,7 +1801,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     if (!form.pincode) missingProfileFields.push('Pincode');
                     if (!form.city) missingProfileFields.push('City');
                     if (!form.state) missingProfileFields.push('State');
-                    if (!form.aadharNumber) missingProfileFields.push('Aadhar Number');
+                    if (!form.aadharNumber) missingProfileFields.push('Aadhar/Voter ID/DL');
                     if (!form.dob) missingProfileFields.push('Date of Birth');
                     if (!form.experience) missingProfileFields.push('Years of Experience');
                     if (!form.skills || form.skills.length === 0) missingProfileFields.push('Skills');
@@ -1842,11 +1841,6 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       setStep(isOnboardingMode ? 3 : 0);
                       alert("Please enter a valid 10-digit phone number."); return;
                     }
-                    if (!/^\d{12}$/.test(form.aadharNumber)) {
-                      setStep(isOnboardingMode ? 3 : 0);
-                      alert("Please enter a valid 12-digit Aadhar number."); return;
-                    }
-
                     // Step 1 Validations
                     if (form.linkedin && !/^(https?:\/\/|www\.)/.test(String(form.linkedin))) {
                       setStep(isOnboardingMode ? 3 : 0);
@@ -1994,17 +1988,17 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       }
                     } catch (e: any) {
                       console.error("Submission error:", e.response?.data || e.message || e);
-                      let errorMessage = e.response?.data?.error;
+                      let errorMessage = e.response?.data?.error || e.response?.data?.details;
                       if (!errorMessage) {
                         if (e.response?.status === 413) {
                           errorMessage = "Your images are too large! Please compress your photos (keep them under a few megabytes) and try again.";
                         } else if (e.message === "Network Error") {
-                          errorMessage = "Network connection failed. This usually happens if your images are too large for the server, or your internet connection dropped. Please compress your photos and try again.";
+                          errorMessage = "Network connection failed. This usually happens if your images are too large for the server, or your internet connection dropped. Ensure your internet is stable and try again.";
                         } else {
-                          errorMessage = "Oops! We hit a small snag on our end. Please try clicking submit again, or contact support if the issue persists.";
+                          errorMessage = e.message || "Oops! We hit a small snag on our end. Please try clicking submit again, or contact support if the issue persists.";
                         }
                       }
-                      alert(errorMessage);
+                      alert(`Error: ${errorMessage}`);
                     } finally {
                       setIsSubmitting(false);
                     }

@@ -1112,8 +1112,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     <input className="dash-input w-full" value={editProfileForm.state} onChange={e => setEditProfileForm({ ...editProfileForm, state: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar Number</label>
-                    <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({ ...editProfileForm, aadharNumber: e.target.value.replace(/\D/g, '') })} />
+                    <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Aadhar/Voter ID/DL</label>
+                    <input className="dash-input w-full" value={editProfileForm.aadharNumber} onChange={e => setEditProfileForm({ ...editProfileForm, aadharNumber: e.target.value })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

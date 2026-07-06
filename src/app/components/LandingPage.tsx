@@ -114,12 +114,7 @@ export function LandingPage() {
       {/* ── HERO SECTION ── */}
       <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem 6rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }} className="hero-grid">
         <FadeIn>
-          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "1rem" }}>
-             <img src="/logo.png" alt="PAA Logo" style={{ height: "1.75rem", width: "auto" }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            <div style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 400, color: "#111", letterSpacing: "-0.01em" }}>
-              Pune Authors' Association
-             </div>
-          </div>
+
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.5rem, 4vw, 3.2rem)", fontWeight: 400, color: "#111", lineHeight: 1.15, marginBottom: "1.5rem", letterSpacing: "-0.01em" }}>
             Helping indie <br/><span style={{ fontStyle: "italic", color: "#b44d28" }}>authors</span> publish, promote and sell.
           </h1>

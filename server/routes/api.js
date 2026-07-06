@@ -1448,7 +1448,6 @@ router.post('/api/author/reapply', verifyToken, async (req, res) => {
 // Get Author Dashboard Data
 router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
   const cacheKey = `author:dashboard:${req.user.email}`;
-  // Skip cache if client requests a forced refresh (t= param present)
   if (!req.query.t) {
     const cached = getCache(cacheKey);
     if (cached) return res.json(cached);
@@ -1460,17 +1459,23 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
         books: { include: { reviews: true } },
         eventRegistrations: {
           include: { activity: true }
-        },
-        donationRegistrations: {
-          include: {
-            announcement: { include: { library: true } },
-            books: { include: { book: true } }
-          }
         }
       }
     });
 
     if (!authorProfile) return res.status(404).json({ error: 'Author profile not found' });
+
+    try {
+      authorProfile.donationRegistrations = await prisma.donationRegistration.findMany({
+        where: { authorId: authorProfile.id },
+        include: {
+          announcement: { include: { library: true } },
+          books: { include: { book: true } }
+        }
+      });
+    } catch (e) {
+      authorProfile.donationRegistrations = [];
+    }
 
     let authorOrders = [];
     if (authorProfile.books.length > 0) {
@@ -1526,10 +1531,14 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
       where: { OR: [{ target: 'ALL' }, { target: authorProfile.name }, { target: `@${authorProfile.name}` }] },
       orderBy: { createdAt: 'desc' }
     });
-    const activeDonations = await prisma.donationAnnouncement.findMany({
-      where: { visibility: 'Published' },
-      include: { library: true }
-    });
+    let activeDonations = [];
+    try {
+      activeDonations = await prisma.donationAnnouncement.findMany({
+        where: { visibility: 'Published' },
+        include: { library: true }
+      });
+    } catch (e) {}
+
     const result = { authorProfile, authorOrders, dynamicFields, eventInvites, listedBooks, posOrders, notifications, activeDonations };
     setCache(cacheKey, result, 20 * 1000); // 20s cache for dashboard
     res.json(result);

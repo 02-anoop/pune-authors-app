@@ -3789,7 +3789,8 @@ export function OperationsDashboardPage() {
     const dynamicKeys = Array.from(new Set<string>(
       authors.reduce((acc: string[], author: any) => {
         if (author.extraData) {
-          acc = acc.concat(Object.keys(author.extraData));
+          const parsed = typeof author.extraData === 'string' ? (() => { try { return JSON.parse(author.extraData); } catch (e) { return {}; } })() : author.extraData;
+          acc = acc.concat(Object.keys(parsed));
         }
         return acc;
       }, [])

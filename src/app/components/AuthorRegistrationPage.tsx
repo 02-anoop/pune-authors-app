@@ -1923,8 +1923,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
 
 
-                    if (Object.values(errors).some(err => typeof err === 'string' && err.trim() !== "")) {
-                      alert("Please fix all validation errors before submitting.");
+                    const activeErrors = Object.entries(errors)
+                      .filter(([_, err]) => typeof err === 'string' && err.trim() !== "")
+                      .map(([key, err]) => err);
+
+                    if (activeErrors.length > 0) {
+                      alert(`Please fix the following validation errors before submitting:\n\n- ${activeErrors.join('\\n- ')}`);
                       return;
                     }
                     setIsSubmitting(true);

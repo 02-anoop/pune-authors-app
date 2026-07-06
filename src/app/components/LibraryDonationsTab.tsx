@@ -1667,8 +1667,8 @@ export function LibraryDonationsTab() {
         />
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-left">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+        <table className="w-full text-left min-w-max">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Drive Name</th>

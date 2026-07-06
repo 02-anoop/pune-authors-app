@@ -1450,8 +1450,26 @@ export function LibraryDonationsTab() {
   // ==========================================
   // RENDER: MAIN LIST (DONATION DRIVES)
   // ==========================================
-  const calculatedBooks = globalLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
-  const calculatedAuthors = new Set(globalLogs.map(l => l.authorId)).size;
+  const calculatedBooks = drives.reduce((sum, drive) => {
+    const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
+    const totalBooks = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
+    const driveOverride = statsOverrides?.driveOverrides?.[drive.id] || statsOverrides?.driveOverrides?.[drive.id.toString()];
+    const books = (driveOverride && driveOverride.booksOverride !== null && driveOverride.booksOverride !== undefined)
+      ? Number(driveOverride.booksOverride)
+      : totalBooks;
+    return sum + books;
+  }, 0);
+
+  const calculatedAuthors = drives.reduce((sum, drive) => {
+    const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
+    const totalAuthors = new Set(driveLogs.map(l => l.authorId)).size;
+    const driveOverride = statsOverrides?.driveOverrides?.[drive.id] || statsOverrides?.driveOverrides?.[drive.id.toString()];
+    const authors = (driveOverride && driveOverride.authorsOverride !== null && driveOverride.authorsOverride !== undefined)
+      ? Number(driveOverride.authorsOverride)
+      : totalAuthors;
+    return sum + authors;
+  }, 0);
+
   const filteredDrives = drives.filter(d => d.title.toLowerCase().includes(driveSearch.toLowerCase()));
 
   return (
@@ -1591,8 +1609,17 @@ export function LibraryDonationsTab() {
       {(() => {
         const chartData = drives.map(drive => {
           const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
-          const authors = new Set(driveLogs.map(l => l.authorId)).size;
-          const books = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
+          const totalBooks = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
+          const totalAuthors = new Set(driveLogs.map(l => l.authorId)).size;
+
+          const driveOverride = statsOverrides?.driveOverrides?.[drive.id] || statsOverrides?.driveOverrides?.[drive.id.toString()];
+          const books = (driveOverride && driveOverride.booksOverride !== null && driveOverride.booksOverride !== undefined)
+            ? Number(driveOverride.booksOverride)
+            : totalBooks;
+          const authors = (driveOverride && driveOverride.authorsOverride !== null && driveOverride.authorsOverride !== undefined)
+            ? Number(driveOverride.authorsOverride)
+            : totalAuthors;
+
           return {
             name: drive.title,
             booksDonated: books,

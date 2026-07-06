@@ -306,6 +306,23 @@ export function LibraryDonationsTab() {
     } catch (err) { toast.error('Failed to delete library'); }
   };
 
+  const handleDeleteRegistration = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this registration? This will restore the author's book inventory stock.")) return;
+    try {
+      await axios.delete(`${API}/api/author/donation-registrations/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Registration deleted successfully');
+      if (selectedDriveBreakdown) {
+        fetchRegistrations(selectedDriveBreakdown.id);
+      }
+      fetchGlobalLogs();
+      fetchAuthors();
+    } catch (err) {
+      toast.error('Failed to delete registration');
+    }
+  };
+
   // --- REGISTRY HANDLERS ---
   const updateRegistrationStatus = async (id: number, status: string) => {
     try {
@@ -1067,25 +1084,47 @@ export function LibraryDonationsTab() {
                               </button>
                             )}
                             {isRegistered ? (
-                              <div className="flex flex-col items-end gap-1">
-                                <button
-                                  onClick={() => {
-                                    setEditingAuthorReg(reg);
-                                    setGranularData(reg.books.map((b: any) => ({
-                                      id: b.id,
-                                      bookId: b.bookId,
-                                      qtyCommitted: b.quantityDonated,
-                                      qtyCollected: b.qtyCollected || 0,
-                                      qtyDispatched: b.qtyDispatched || 0,
-                                      qtyReceived: b.qtyReceived || 0,
-                                      libraryConfirmation: b.libraryConfirmation || 'Pending',
-                                      remarks: b.remarks || ''
-                                    })));
-                                  }}
-                                  className="text-[10px] font-bold bg-paa-navy text-white px-3 py-1.5 rounded hover:bg-paa-gold hover:text-paa-navy transition-all cursor-pointer active:scale-95 whitespace-nowrap"
-                                >
-                                  MANAGE DATA
-                                </button>
+                              <div className="flex flex-col items-end gap-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                  <button
+                                    onClick={() => {
+                                      setEditingAuthorReg(reg);
+                                      setGranularData(reg.books.map((b: any) => ({
+                                        id: b.id,
+                                        bookId: b.bookId,
+                                        qtyCommitted: b.quantityDonated,
+                                        qtyCollected: b.qtyCollected || 0,
+                                        qtyDispatched: b.qtyDispatched || 0,
+                                        qtyReceived: b.qtyReceived || 0,
+                                        libraryConfirmation: b.libraryConfirmation || 'Pending',
+                                        remarks: b.remarks || ''
+                                      })));
+                                    }}
+                                    className="text-[10px] font-bold bg-paa-navy text-white px-2.5 py-1.5 rounded hover:bg-paa-gold hover:text-paa-navy transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                                  >
+                                    MANAGE DATA
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setManualRegAuthorId(author.id);
+                                      setManualRegBooks([]);
+                                      setManualRegFeePaid(0);
+                                      setManualRegPaymentStatus('Completed');
+                                      setIsManualRegOpen(true);
+                                    }}
+                                    className="text-[10px] font-bold bg-emerald-600 text-white px-2.5 py-1.5 rounded hover:bg-emerald-700 transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                                    title="Add another registration for this author"
+                                  >
+                                    REGISTER MORE
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteRegistration(reg.id)}
+                                    className="p-1.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded transition-all cursor-pointer active:scale-95"
+                                    title="Delete Registration"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                                 {reg.broadcastStatus === 'Published' && (
                                   <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 rounded px-2 py-0.5 border border-emerald-100 uppercase tracking-wide">
                                     PUBLISHED

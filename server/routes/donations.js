@@ -232,12 +232,9 @@ router.get('/api/author/donation-registrations', verifyToken, async (req, res) =
   }
 });
 
-// Delete author's own registration before it is approved
+// Delete author's own registration before it is approved (Admins can delete any registration)
 router.delete('/api/author/donation-registrations/:id', verifyToken, async (req, res) => {
   try {
-    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
-    if (!author) return res.status(404).json({ error: 'Author not found' });
-
     const registration = await prisma.donationRegistration.findUnique({
       where: { id: parseInt(req.params.id) },
       include: { books: true }
@@ -245,14 +242,21 @@ router.delete('/api/author/donation-registrations/:id', verifyToken, async (req,
 
     if (!registration) return res.status(404).json({ error: 'Registration not found' });
     
-    // Check ownership
-    if (registration.authorId !== author.id) {
-      return res.status(403).json({ error: 'Unauthorized to delete this registration' });
-    }
+    const isAdmin = req.user.role === 'ADMIN';
 
-    // Check status
-    if (registration.status === 'Approved') {
-      return res.status(400).json({ error: 'Cannot delete registration after it has been approved' });
+    if (!isAdmin) {
+      const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+      if (!author) return res.status(404).json({ error: 'Author not found' });
+
+      // Check ownership
+      if (registration.authorId !== author.id) {
+        return res.status(403).json({ error: 'Unauthorized to delete this registration' });
+      }
+
+      // Check status
+      if (registration.status === 'Approved') {
+        return res.status(400).json({ error: 'Cannot delete registration after it has been approved' });
+      }
     }
 
     // Replenish the author's book inventory/stock by the donated quantity

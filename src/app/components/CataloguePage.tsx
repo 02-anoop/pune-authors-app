@@ -94,170 +94,210 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
       byAuthor[b.authorName].books.push(b);
     });
     
-    const contentHtml = Object.values(byAuthor).map((author, index) => {
-      // Calculate age if it's a DOB
-      let ageStr = author.age && author.age !== 'NA' ? String(author.age) : '—';
-      if (ageStr.includes('-')) {
-         const birthDate = new Date(ageStr);
-         if (!isNaN(birthDate.getTime())) {
-             const ageNum = new Date().getFullYear() - birthDate.getFullYear();
-             ageStr = ageNum.toString();
-         }
-      }
-
-      // Parse JSON for qualifications
-      let qualStr = '—';
-      if (author.qualification && author.qualification !== 'NA') {
-         try {
-            const parsed = JSON.parse(author.qualification);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-               qualStr = parsed.map((q: any) => q.qualification).filter(Boolean).join(', ');
-            } else {
-               qualStr = author.qualification;
-            }
-         } catch(e) { qualStr = author.qualification; }
-      }
-
-      // Parse JSON for skills
-      let skillsStr = '—';
-      if (author.skills && author.skills !== 'NA') {
-         try {
-            const parsed = JSON.parse(author.skills);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-               skillsStr = parsed.filter(Boolean).join(', ');
-            } else {
-               skillsStr = author.skills;
-            }
-         } catch(e) { skillsStr = author.skills; }
-      }
-
-      // Parse JSON for hobbies
-      let hobbiesStr = '—';
-      if (author.hobbies && author.hobbies !== 'NA') {
-         try {
-            const parsed = JSON.parse(author.hobbies);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-               hobbiesStr = parsed.filter(Boolean).join(', ');
-            } else {
-               hobbiesStr = author.hobbies;
-            }
-         } catch(e) { hobbiesStr = author.hobbies; }
-      }
+      let currentPage = 2; // Cover is page 1
       
-      const expStr = author.experience && author.experience !== 'NA' && author.experience !== '0' ? author.experience + ' Years' : '—';
-
-      // Social links block
-      const socials = [];
-      if (author.whatsapp && author.whatsapp !== 'NA') socials.push(`<a href="https://wa.me/${author.whatsapp.replace(/\D/g,'')}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
-        &#128222; ${author.whatsapp}
-      </a>`);
-      if (author.instagram && author.instagram !== 'NA') socials.push(`<a href="${author.instagram.startsWith('http') ? author.instagram : 'https://instagram.com/'+author.instagram}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
-        &#128247; ${author.instagram.replace('https://instagram.com/', '@').replace('https://www.instagram.com/', '@')}
-      </a>`);
-      if (author.facebook && author.facebook !== 'NA') socials.push(`<a href="${author.facebook.startsWith('http') ? author.facebook : 'https://facebook.com/'+author.facebook}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
-        &#128101; Facebook
-      </a>`);
-      
-      const socialHtml = socials.length > 0 ? `<div style="margin-top: 25px; font-size: 11px; display: flex; gap: 10px; flex-wrap: wrap;">${socials.join('')}</div>` : '';
-
-      const authorBooksHtml = author.books.map((b, bIdx) => `
-        <div style="display: flex; gap: 30px; margin-bottom: 40px; padding-bottom: 40px; border-bottom: ${bIdx === author.books.length - 1 ? 'none' : '1px solid #e2e8f0'}; break-inside: avoid;">
-          <div style="flex-shrink: 0; width: 180px;">
-            ${b.coverUrl ? `<img src="${(import.meta.env.VITE_API_URL || 'http://localhost:3001').trim()}${b.coverUrl.startsWith('/') ? b.coverUrl : '/' + b.coverUrl}" crossorigin="anonymous" style="width: 100%; height: 270px; object-fit: cover; border-radius: 4px; box-shadow: 15px 15px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;" />` : `<div style="width: 100%; height: 270px; background: #f8fafc; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px dashed #cbd5e1;"><span style="color:#94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">No Cover</span></div>`}
-          </div>
-          <div style="flex: 1; display: flex; flex-direction: column;">
-            <div style="margin-bottom: 15px;">
-              <h3 style="margin: 0 0 5px; color: #0f172a; font-size: 26px; font-family: 'Playfair Display', Georgia, serif; line-height: 1.2;">${b.title}</h3>
-              <p style="margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #b44d28; font-weight: 800; font-family: system-ui, sans-serif;">
-                ${b.genre} ${b.subGenre ? `<span style="color: #cbd5e1; margin: 0 5px;">/</span> ${b.subGenre}` : ''}
+      const contentHtml = Object.values(byAuthor).map((author, index) => {
+        // Calculate age if it's a DOB
+        let ageStr = author.age && author.age !== 'NA' ? String(author.age) : '—';
+        if (ageStr.includes('-')) {
+           const birthDate = new Date(ageStr);
+           if (!isNaN(birthDate.getTime())) {
+               const ageNum = new Date().getFullYear() - birthDate.getFullYear();
+               ageStr = ageNum.toString();
+           }
+        }
+  
+        // Parse JSON for qualifications
+        let qualStr = '—';
+        if (author.qualification && author.qualification !== 'NA') {
+           try {
+              const parsed = JSON.parse(author.qualification);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                 qualStr = parsed.map((q: any) => q.qualification).filter(Boolean).join(', ');
+              } else {
+                 qualStr = author.qualification;
+              }
+           } catch(e) { qualStr = author.qualification; }
+        }
+  
+        // Parse JSON for skills
+        let skillsStr = '—';
+        if (author.skills && author.skills !== 'NA') {
+           try {
+              const parsed = JSON.parse(author.skills);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                 skillsStr = parsed.filter(Boolean).join(', ');
+              } else {
+                 skillsStr = author.skills;
+              }
+           } catch(e) { skillsStr = author.skills; }
+        }
+  
+        // Parse JSON for hobbies
+        let hobbiesStr = '—';
+        if (author.hobbies && author.hobbies !== 'NA') {
+           try {
+              const parsed = JSON.parse(author.hobbies);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                 hobbiesStr = parsed.filter(Boolean).join(', ');
+              } else {
+                 hobbiesStr = author.hobbies;
+              }
+           } catch(e) { hobbiesStr = author.hobbies; }
+        }
+        
+        const expStr = author.experience && author.experience !== 'NA' && author.experience !== '0' ? author.experience + ' Years' : '—';
+  
+        // Social links block
+        const socials = [];
+        if (author.whatsapp && author.whatsapp !== 'NA') socials.push(`<a href="https://wa.me/${author.whatsapp.replace(/\\D/g,'')}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+          &#128222; ${author.whatsapp}
+        </a>`);
+        if (author.instagram && author.instagram !== 'NA') socials.push(`<a href="${author.instagram.startsWith('http') ? author.instagram : 'https://instagram.com/'+author.instagram}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+          &#128247; ${author.instagram.replace('https://instagram.com/', '@').replace('https://www.instagram.com/', '@')}
+        </a>`);
+        if (author.facebook && author.facebook !== 'NA') socials.push(`<a href="${author.facebook.startsWith('http') ? author.facebook : 'https://facebook.com/'+author.facebook}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+          &#128101; Facebook
+        </a>`);
+        
+        const socialHtml = socials.length > 0 ? `<div style="margin-top: 25px; font-size: 11px; display: flex; gap: 10px; flex-wrap: wrap;">${socials.join('')}</div>` : '';
+  
+        const authorPageHtml = `
+           <div style="width: 800px; height: 1131px; position: relative; background: #0f172a; color: #fff; page-break-after: always; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 80px 60px;">
+             <div style="position: absolute; top: 40px; right: 40px;">
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 40px; filter: brightness(0) invert(1);" />
+             </div>
+             
+             <div style="position: absolute; right: -50px; top: -50px; font-size: 400px; color: rgba(255,255,255,0.03); font-family: 'Playfair Display', serif; font-weight: 900; line-height: 1; pointer-events: none;">${author.name.charAt(0)}</div>
+             
+             <div style="display: flex; gap: 50px; align-items: center; position: relative; z-index: 2;">
+                 <div style="flex-shrink: 0; width: 220px; height: 220px; border-radius: 50%; border: 6px solid #b44d28; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); background: #1e293b;">
+                   ${author.photoUrl ? `<img src="${(import.meta.env.VITE_API_URL || 'http://localhost:3001').trim()}${author.photoUrl.startsWith('/') ? author.photoUrl : '/' + author.photoUrl}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.opacity='0';" />` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 80px; color: #94a3b8; font-family: serif;">${author.name.charAt(0)}</div>`}
+                 </div>
+                 
+                 <div style="flex: 1;">
+                   <div style="display: inline-block; background: #b44d28; color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 3px; padding: 6px 14px; margin-bottom: 20px; font-weight: 800; font-family: system-ui, sans-serif;">Featured Author</div>
+                   <h2 style="margin: 0 0 20px; font-size: 48px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">${author.name}</h2>
+                   
+                   <div style="margin: 0 0 20px; font-size: 13px; line-height: 1.8; color: #94a3b8; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 1px;">
+                     ${qualStr !== '—' ? `<div style="margin-bottom: 6px;"><strong>Qual:</strong> <span style="color: #cbd5e1">${qualStr}</span></div>` : ''}
+                     <div style="display: flex; gap: 20px; margin-bottom: 6px;">
+                       ${ageStr !== '—' ? `<div><strong>Age:</strong> <span style="color: #cbd5e1">${ageStr}</span></div>` : ''}
+                       ${expStr !== '—' ? `<div><strong>Exp:</strong> <span style="color: #cbd5e1">${expStr}</span></div>` : ''}
+                     </div>
+                     ${skillsStr !== '—' ? `<div style="margin-bottom: 6px;"><strong>Skills:</strong> <span style="color: #cbd5e1">${skillsStr}</span></div>` : ''}
+                     ${hobbiesStr !== '—' ? `<div style="margin-bottom: 6px;"><strong>Hobbies:</strong> <span style="color: #cbd5e1">${hobbiesStr}</span></div>` : ''}
+                   </div>
+                 </div>
+             </div>
+             
+             <div style="position: relative; z-index: 2; margin-top: 40px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <p style="margin: 0; font-size: 16px; line-height: 1.9; color: #e2e8f0; text-align: justify; font-style: italic;">${author.bio}</p>
+                ${socialHtml}
+             </div>
+  
+             <div style="position: absolute; bottom: 40px; right: 40px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: system-ui, sans-serif;">Page ${currentPage++}</div>
+           </div>
+         `;
+  
+        const bookChunks = [];
+        for (let i = 0; i < author.books.length; i += 2) {
+           bookChunks.push(author.books.slice(i, i + 2));
+        }
+  
+        const bookPagesHtml = bookChunks.map((chunk) => {
+           const booksHtml = chunk.map((b, bIdx) => `
+           <div style="display: flex; gap: 30px; padding-bottom: ${chunk.length > 1 && bIdx === 0 ? '30px' : '0'}; border-bottom: ${chunk.length > 1 && bIdx === 0 ? '1px solid #cbd5e1' : 'none'}; break-inside: avoid;">
+             <div style="flex-shrink: 0; width: 180px;">
+               ${b.coverUrl ? `<img src="${(import.meta.env.VITE_API_URL || 'http://localhost:3001').trim()}${b.coverUrl.startsWith('/') ? b.coverUrl : '/' + b.coverUrl}" crossorigin="anonymous" style="width: 100%; height: 270px; object-fit: cover; border-radius: 4px; box-shadow: 10px 10px 20px rgba(0,0,0,0.1); border: 1px solid #94a3b8;" onerror="this.style.opacity='0';" />` : `<div style="width: 100%; height: 270px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px dashed #94a3b8;"><span style="color:#64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">No Cover</span></div>`}
+             </div>
+             <div style="flex: 1; display: flex; flex-direction: column;">
+               <div style="margin-bottom: 12px;">
+                 <h3 style="margin: 0 0 5px; color: #0f172a; font-size: 24px; font-family: 'Playfair Display', Georgia, serif; line-height: 1.2;">${b.title}</h3>
+                 <p style="margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #0ea5e9; font-weight: 800; font-family: system-ui, sans-serif;">
+                   ${b.genre} ${b.subGenre ? `<span style="color: #94a3b8; margin: 0 5px;">/</span> ${b.subGenre}` : ''}
+                 </p>
+               </div>
+               <div style="flex: 1;">
+                 <p style="margin: 0 0 15px; font-size: 13px; line-height: 1.6; color: #334155; text-align: justify; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;">${b.synopsis}</p>
+               </div>
+               <div style="background: #fff; padding: 15px; border-top: 3px solid #0ea5e9; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                 <table style="width: 100%; font-size: 11px; color: #0f172a; border-collapse: collapse; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
+                   <tr>
+                     <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Price:</strong> <span style="color:#0ea5e9; font-weight: 800; font-size: 14px;">${b.mrp != null ? "₹" + b.mrp : b.mrpRaw || "—"}</span></td>
+                     <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Pages:</strong> ${b.pages || "—"}</td>
+                   </tr>
+                   <tr>
+                     <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0;"><strong>Language:</strong> ${b.language || "—"}</td>
+                     <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0;"><strong>Format:</strong> ${b.format || "—"}</td>
+                   </tr>
+                   <tr>
+                     <td style="padding: 6px 0;"><strong>Publisher:</strong> ${b.publisher || "—"}</td>
+                     <td style="padding: 6px 0;"><strong>ISBN:</strong> <span style="font-family: monospace;">${b.isbn || "—"}</span></td>
+                   </tr>
+                 </table>
+               </div>
+             </div>
+           </div>
+           `).join("");
+  
+           return `
+           <div style="width: 800px; height: 1131px; position: relative; background: #f0f9ff; color: #0f172a; page-break-after: always; box-sizing: border-box; padding: 60px 50px; overflow: hidden; display: flex; flex-direction: column; justify-content: center;">
+              <!-- Branding Header -->
+              <div style="position: absolute; top: 40px; right: 40px;">
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 30px;" />
+              </div>
+              
+              <div style="margin-bottom: 40px; border-bottom: 2px solid #0f172a; padding-bottom: 10px; width: calc(100% - 140px);">
+                <h4 style="margin: 0; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 3px; font-size: 14px; font-weight: 800; color: #0f172a;">${author.name} &middot; Literary Portfolio</h4>
+              </div>
+              
+              <div style="display: flex; flex-direction: column; gap: 40px;">
+                 ${booksHtml}
+              </div>
+  
+              <!-- Page Number -->
+              <div style="position: absolute; bottom: 40px; right: 40px; font-size: 12px; color: #64748b; font-family: system-ui, sans-serif;">Page ${currentPage++}</div>
+           </div>
+           `;
+        }).join('');
+  
+        return authorPageHtml + bookPagesHtml;
+      }).join("");
+  
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      document.body.appendChild(container);
+  
+      container.innerHTML = `
+        <div id="pdf-content-wrapper" style="width: 800px; background: #fff;">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&display=swap');
+          </style>
+          <!-- Magazine Cover Page -->
+          <div style="position: relative; width: 800px; height: 1131px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a; page-break-after: always; box-sizing: border-box;">
+            <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop" crossorigin="anonymous" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: grayscale(100%);" />
+            <div style="position: relative; z-index: 10; padding: 80px; width: 80%; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box;">
+              <div style="margin-bottom: 40px;">
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
+              </div>
+              <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 6px; color: #b44d28; margin-bottom: 30px; font-weight: 800; font-family: system-ui, sans-serif;">Exclusive Collection</div>
+              <h1 style="color: #fff; font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 900; line-height: 1.1; margin: 0 0 20px; letter-spacing: -1px;">Pune Authors' Association</h1>
+              <div style="width: 80px; height: 3px; background: #b44d28; margin: 30px auto;"></div>
+              <h2 style="color: #e2e8f0; margin: 0 0 40px; font-size: 32px; font-weight: 400; font-style: italic; font-family: 'Playfair Display', serif;">The ${label} Portfolio</h2>
+              <p style="color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 4px; font-family: system-ui, sans-serif;">
+                Volume &middot; ${new Date().toLocaleDateString("en-US", { month: 'long', year: 'numeric' })} &nbsp;|&nbsp; ${books.length} Curated Title(s)
               </p>
             </div>
-            <div style="flex: 1;">
-              <p style="margin: 0 0 20px; font-size: 13px; line-height: 1.8; color: #475569; text-align: justify;">${b.synopsis}</p>
-            </div>
-            <div style="background: #f8fafc; padding: 20px; border-top: 3px solid #1e293b;">
-              <table style="width: 100%; font-size: 11px; color: #334155; border-collapse: collapse; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
-                <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Price:</strong> <span style="color:#b44d28; font-weight: 800; font-size: 14px;">${b.mrp != null ? "₹" + b.mrp : b.mrpRaw || "—"}</span></td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Pages:</strong> ${b.pages || "—"}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Language:</strong> ${b.language || "—"}</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Format:</strong> ${b.format || "—"}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0;"><strong>Publisher:</strong> ${b.publisher || "—"}</td>
-                  <td style="padding: 8px 0;"><strong>ISBN:</strong> <span style="font-family: monospace;">${b.isbn || "—"}</span></td>
-                </tr>
-              </table>
-            </div>
+            <!-- Page Number -->
+            <div style="position: absolute; bottom: 40px; right: 40px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: system-ui, sans-serif; z-index: 10;">Page 1</div>
           </div>
-        </div>
-      `).join("");
-
-      return `
-        <div style="page-break-before: ${index === 0 ? 'auto' : 'always'}; font-family: 'Georgia', serif;">
-          <!-- Magazine Author Header -->
-          <div style="position: relative; background: #0f172a; color: #fff; padding: 60px 50px; display: flex; gap: 40px; align-items: center; overflow: hidden;">
-            <div style="position: absolute; right: -50px; top: -50px; font-size: 300px; color: rgba(255,255,255,0.02); font-family: 'Playfair Display', serif; font-weight: 900; line-height: 1; pointer-events: none;">${author.name.charAt(0)}</div>
-            <div style="flex-shrink: 0; width: 180px; height: 180px; border-radius: 50%; border: 4px solid #b44d28; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); background: #1e293b; position: relative; z-index: 2;">
-              ${author.photoUrl ? `<img src="${(import.meta.env.VITE_API_URL || 'http://localhost:3001').trim()}${author.photoUrl.startsWith('/') ? author.photoUrl : '/' + author.photoUrl}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover;" />` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 60px; color: #94a3b8; font-family: serif;">${author.name.charAt(0)}</div>`}
-            </div>
-            <div style="flex: 1; position: relative; z-index: 2;">
-              <div style="display: inline-block; background: #b44d28; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 4px 10px; margin-bottom: 15px; font-weight: 800; font-family: system-ui, sans-serif;">Featured Author</div>
-              <h2 style="margin: 0 0 15px; font-size: 42px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">${author.name}</h2>
-              <div style="margin: 0 0 15px; font-size: 11px; line-height: 1.6; color: #94a3b8; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 1px;">
-                ${qualStr !== '—' ? `<div style="margin-bottom: 4px;"><strong>Qual:</strong> <span style="color: #cbd5e1">${qualStr}</span></div>` : ''}
-                <div style="display: flex; gap: 15px; margin-bottom: 4px;">
-                  ${ageStr !== '—' ? `<div><strong>Age:</strong> <span style="color: #cbd5e1">${ageStr}</span></div>` : ''}
-                  ${expStr !== '—' ? `<div><strong>Exp:</strong> <span style="color: #cbd5e1">${expStr}</span></div>` : ''}
-                </div>
-                ${skillsStr !== '—' ? `<div style="margin-bottom: 4px;"><strong>Skills:</strong> <span style="color: #cbd5e1">${skillsStr}</span></div>` : ''}
-                ${hobbiesStr !== '—' ? `<div style="margin-bottom: 4px;"><strong>Hobbies:</strong> <span style="color: #cbd5e1">${hobbiesStr}</span></div>` : ''}
-              </div>
-              <p style="margin: 0; font-size: 14px; line-height: 1.8; color: #e2e8f0; text-align: justify; font-style: italic; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">${author.bio}</p>
-              ${socialHtml}
-            </div>
-          </div>
-
-          <!-- Magazine Content Body -->
-          <div style="padding: 50px;">
-            <div style="margin-bottom: 40px; border-bottom: 2px solid #0f172a; padding-bottom: 15px;">
-              <h4 style="margin: 0; color: #0f172a; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 3px; font-size: 14px; font-weight: 800;">Literary Portfolio</h4>
-            </div>
-            ${authorBooksHtml}
-          </div>
+          ${contentHtml}
         </div>
       `;
-    }).join("");
 
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '0';
-    document.body.appendChild(container);
-
-    container.innerHTML = `
-      <div id="pdf-content-wrapper" style="width: 800px; background: #fff;">
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&display=swap');
-        </style>
-        <!-- Magazine Cover Page -->
-        <div style="position: relative; width: 800px; height: 1131px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a;">
-          <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop" crossorigin="anonymous" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: grayscale(100%);" />
-          <div style="position: relative; z-index: 10; padding: 80px; width: 80%; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5);">
-            <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 6px; color: #b44d28; margin-bottom: 30px; font-weight: 800; font-family: system-ui, sans-serif;">Exclusive Collection</div>
-            <h1 style="color: #fff; font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 900; line-height: 1.1; margin: 0 0 20px; letter-spacing: -1px;">Pune Authors' Association</h1>
-            <div style="width: 80px; height: 3px; background: #b44d28; margin: 30px auto;"></div>
-            <h2 style="color: #e2e8f0; margin: 0 0 40px; font-size: 32px; font-weight: 400; font-style: italic; font-family: 'Playfair Display', serif;">The ${label} Portfolio</h2>
-            <p style="color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 4px; font-family: system-ui, sans-serif;">
-              Volume &middot; ${new Date().toLocaleDateString("en-US", { month: 'long', year: 'numeric' })} &nbsp;|&nbsp; ${books.length} Curated Title(s)
-            </p>
-          </div>
-        </div>
-        ${contentHtml}
-      </div>
-    `;
 
     const opt = {
       margin:       0,

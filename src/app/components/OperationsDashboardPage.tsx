@@ -66,7 +66,9 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'reviews' | 'late_authors' | 'author_data' | 'helpdesk' | 'settings'>((localStorage.getItem('adminActiveTab') as any) || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'reviews' | 'late_authors' | 'helpdesk' | 'settings' | 'library_donations'>(
+    (() => { const t = localStorage.getItem('adminActiveTab'); return t === 'author_data' ? 'overview' : ((t as any) || 'overview'); })()
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
@@ -514,7 +516,7 @@ export function OperationsDashboardPage() {
           promises.push(fetchOrders(true));
           promises.push(fetchAuthors(isBackground));
           promises.push(fetchBooks(isBackground));
-        } else if (activeTab === 'authors' || activeTab === 'author_data') {
+        } else if (activeTab === 'authors') {
           promises.push(fetchAuthors(isBackground));
         } else if (activeTab === 'books') {
           promises.push(fetchBooks(isBackground));
@@ -4231,7 +4233,6 @@ export function OperationsDashboardPage() {
             { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
             { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
             { id: 'late_authors', label: 'Late Authors System', icon: AlertCircle },
-            { id: 'author_data', label: 'Author Extra Data', icon: ClipboardList },
             { id: 'helpdesk', label: 'Helpdesk / Queries', icon: Users, hasAlert: pendingAlerts.queries },
             { id: 'settings', label: 'System Settings', icon: Settings },
             { id: 'library_donations', label: 'Library Donations', icon: BookOpen },
@@ -4405,7 +4406,6 @@ export function OperationsDashboardPage() {
           {activeTab === 'forms' && <FormsTab />}
           {activeTab === 'gallery' && <GalleryTab />}
           {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
-          {activeTab === 'author_data' && <AuthorDataTab refreshTrigger={lastRefreshTime} />}
           {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
           {activeTab === 'library_donations' && <LibraryDonationsTab />}
           {activeTab === 'settings' && (

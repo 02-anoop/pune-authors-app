@@ -411,7 +411,6 @@ model DonationRegistration {
   verificationStatus String   @default("Pending")
   dispatchStatus     String   @default("Pending")
   receivedStatus     String   @default("Pending")
-  isManual           Boolean  @default(false)
   
   feePaid            Int?
   paymentStatus      String?  @default("Pending") // Pending, Completed, Failed

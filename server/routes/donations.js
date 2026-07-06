@@ -100,6 +100,7 @@ router.get('/api/admin/donation-announcements', verifyToken, isAdmin, async (req
     });
     res.json(announcements);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch announcements' });
   }
 });
@@ -208,6 +209,7 @@ router.get('/api/author/donation-announcements', verifyToken, async (req, res) =
     });
     res.json(announcements);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch announcements' });
   }
 });
@@ -228,6 +230,7 @@ router.get('/api/author/donation-registrations', verifyToken, async (req, res) =
     });
     res.json(registrations);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch registrations' });
   }
 });
@@ -260,7 +263,7 @@ router.delete('/api/author/donation-registrations/:id', verifyToken, async (req,
     }
 
     // Replenish the author's book inventory/stock by the donated quantity (only if NOT manual)
-    if (!registration.isManual && registration.books && registration.books.length > 0) {
+    if (registration.transactionId !== 'MANUAL_ENTRY' && registration.books && registration.books.length > 0) {
       for (const b of registration.books) {
         await prisma.book.update({
           where: { id: b.bookId },
@@ -356,7 +359,7 @@ router.post('/api/admin/donation-registrations/manual', verifyToken, isAdmin, as
         authorId: parseInt(authorId),
         feePaid: feePaid ? parseInt(feePaid) : 0,
         paymentStatus: paymentStatus || 'Completed',
-        isManual: true,
+        transactionId: 'MANUAL_ENTRY',
         books: {
           create: books.map(b => ({
             bookId: parseInt(b.bookId),
@@ -388,6 +391,7 @@ router.get('/api/admin/donation-registrations', verifyToken, isAdmin, async (req
     });
     res.json(registrations);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch registrations' });
   }
 });

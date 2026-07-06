@@ -69,6 +69,9 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode, delay?: nu
 export function LandingPage() {
   const [activeGenre, setActiveGenre] = useState<string>("All Books");
   const [galleryItems, setGalleryItems] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    events: 12, fairs: 3, airportLibraries: 6, authors: 100, books: 350, categories: 50
+  });
 
   // Contact State
   const [contactName, setContactName] = useState("");
@@ -86,6 +89,12 @@ export function LandingPage() {
           description: b.synopsis
         }));
         setGalleryItems(mapped);
+      })
+      .catch((err) => console.error(err));
+
+    axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/public-stats`)
+      .then((res) => {
+        setStats(res.data);
       })
       .catch((err) => console.error(err));
   }, []);
@@ -134,12 +143,12 @@ export function LandingPage() {
       <section style={{ borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea", background: "#fff" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "1.5rem" }} className="stats-grid">
           {[
-            { num: 12, suffix: "+", label: "Events" },
-            { num: 3, suffix: "+", label: "Fairs" },
-            { num: 6, suffix: "", label: "Airport Libraries" },
-            { num: 100, suffix: "+", label: "Authors" },
-            { num: 350, suffix: "+", label: "Books" },
-            { num: 50, suffix: "+", label: "Categories" }
+            { num: stats.events, suffix: "+", label: "Events" },
+            { num: stats.fairs, suffix: "+", label: "Fairs" },
+            { num: stats.airportLibraries, suffix: "", label: "Airport Libraries" },
+            { num: stats.authors, suffix: "+", label: "Authors" },
+            { num: stats.books, suffix: "+", label: "Books" },
+            { num: stats.categories, suffix: "+", label: "Categories" }
           ].map((stat, i) => (
             <FadeIn key={i} delay={i * 50}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>

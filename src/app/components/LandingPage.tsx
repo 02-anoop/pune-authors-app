@@ -139,12 +139,14 @@ export function LandingPage() {
 
       {/* ── IMPACT STATS (MINIMALIST) ── */}
       <section style={{ borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea", background: "#fff" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "2rem" }} className="stats-grid">
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "2rem" }} className="stats-grid">
           {[
             { num: 12, suffix: "+", label: "Events" },
             { num: 3, suffix: "+", label: "Fairs" },
             { num: 6, suffix: "", label: "Airport Libraries" },
-            { num: 100, suffix: "+", label: "Authors" }
+            { num: 100, suffix: "+", label: "Authors" },
+            { num: 350, suffix: "+", label: "Books" },
+            { num: 50, suffix: "+", label: "Categories" }
           ].map((stat, i) => (
             <FadeIn key={i} delay={i * 50}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -158,40 +160,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── SERVICES (REFINED GRID) ── */}
-      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem" }}>
-        <FadeIn>
-          <div style={{ marginBottom: "4rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "2rem" }}>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", margin: 0, letterSpacing: "-0.01em" }}>End-to-End Capabilities</h2>
-            <div style={{ fontSize: 13, color: "#333", maxWidth: 400, lineHeight: 1.6, fontWeight: 400 }}>
-              Our bespoke services are designed to nurture manuscripts into globally distributed, beautifully crafted literary works.
-            </div>
-          </div>
-        </FadeIn>
-        
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "3rem" }}>
-          {[
-            { icon: <Book size={18} strokeWidth={1.5} />, title: "Publishing Services", desc: "Comprehensive support including professional formatting, structural editing, cover design, and printing." },
-            { icon: <Megaphone size={18} strokeWidth={1.5} />, title: "Promotional Services", desc: "Strategically sending and placing books in Airport Libraries and select premium institutional libraries." },
-            { icon: <Store size={18} strokeWidth={1.5} />, title: "Reaching Out to Readers", desc: "Organising dynamic literary events in large housing societies and leading educational institutions." },
-            { icon: <GraduationCap size={18} strokeWidth={1.5} />, title: "Reviving Book Reading", desc: "Curating highly engaging literary activities tailored specifically for school children." },
-            { icon: <Building2 size={18} strokeWidth={1.5} />, title: "Participating in Book Fairs", desc: "Establishing a strong presence through dedicated pavilions at prominent regional and national book fairs." },
-            { icon: <Mic size={18} strokeWidth={1.5} />, title: "The Book Shop, Café & Library", desc: "Creating a vibrant, tangible community space for literary enthusiasts to connect and explore." },
-          ].map((card, i) => (
-            <FadeIn key={i} delay={i * 50}>
-              <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
-                <div style={{ color: "#b44d28", marginTop: "0.2rem" }}>
-                  {card.icon}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 14, fontWeight: 500, color: "#111", marginBottom: "0.5rem" }}>{card.title}</h3>
-                  <p style={{ fontSize: 13, color: "#333", lineHeight: 1.6, fontWeight: 400 }}>{card.desc}</p>
-                </div>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </section>
+
 
       {/* ── ABOUT SECTION (ELEGANT SPLIT) ── */}
       <section style={{ background: "#fff", borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea" }}>

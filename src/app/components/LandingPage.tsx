@@ -117,14 +117,7 @@ export function LandingPage() {
           <p style={{ fontSize: 15, color: "#333", lineHeight: 1.8, marginBottom: "3rem", maxWidth: 420, fontWeight: 400 }}>
             We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels.
           </p>
-          <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
-            <Link to="/signup?role=AUTHOR" className="link-underline" style={{ color: "#111", fontSize: 13, fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
-              New Authors — Click here to JOIN <ArrowRight size={14} />
-            </Link>
-            <Link to="/catalogue" className="link-underline-subtle" style={{ color: "#333", fontSize: 13, fontWeight: 400, textDecoration: "none" }}>
-              Explore Gallery
-            </Link>
-          </div>
+          
         </FadeIn>
         <FadeIn delay={150}>
           <div style={{ padding: "1rem", background: "#fff", border: "1px solid #eaeaea" }}>
@@ -157,86 +150,6 @@ export function LandingPage() {
               </div>
             </FadeIn>
           ))}
-        </div>
-        
-        <FadeIn delay={300}>
-          <div style={{ display: "flex", justifyContent: "center", paddingBottom: "4rem" }}>
-            <Link to="/catalogue" style={{ 
-              display: "inline-flex", 
-              alignItems: "center", 
-              gap: "0.5rem",
-              padding: "0.8rem 2rem", 
-              background: "#b44d28", 
-              color: "#fff", 
-              textDecoration: "none", 
-              fontSize: 13, 
-              fontWeight: 500,
-              textTransform: "uppercase", 
-              letterSpacing: "0.05em",
-              border: "none",
-              cursor: "pointer"
-            }}>
-              Browse All Books <ArrowRight size={14} />
-            </Link>
-          </div>
-        </FadeIn>
-      </section>
-
-
-      {/* ── ABOUT SECTION (ELEGANT SPLIT) ── */}
-      <section style={{ background: "#fff", borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6rem", alignItems: "center" }} className="hero-grid">
-          <FadeIn>
-            <div>
-              <img 
-                src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&h=1000&fit=crop" 
-                alt="Library glowing" 
-                style={{ width: "100%", height: 500, objectFit: "cover", filter: "grayscale(20%) contrast(0.9)" }}
-              />
-            </div>
-          </FadeIn>
-          
-          <FadeIn delay={150}>
-            <div>
-              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", marginBottom: "2rem", lineHeight: 1.2 }}>Reviving the <br/><span style={{ fontStyle: "italic", color: "#b44d28" }}>culture of reading.</span></h2>
-              <div style={{ width: 40, height: 1, background: "#eaeaea", marginBottom: "2rem" }}></div>
-              <p style={{ fontSize: 14, color: "#333", lineHeight: 1.8, marginBottom: "1.5rem", fontWeight: 400 }}>
-                Founded in 2024, our association operates as a highly refined collaborative ecosystem. We grant independent authors access to premium production and strategic promotion traditionally reserved for corporate publishing.
-              </p>
-              <p style={{ fontSize: 14, color: "#333", lineHeight: 1.8, marginBottom: "3rem", fontWeight: 400 }}>
-                Through tailored physical touchpoints—from curated airport library shelves to intimate community spaces—we bridge the gap between discerning readers and exceptional independent literature.
-              </p>
-              <Link to="/about" className="link-underline" style={{ fontSize: 13, fontWeight: 500, color: "#111", textDecoration: "none" }}>
-                Read Our Charter
-              </Link>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* ── PILLARS SECTION (MINIMAL TEXT BLOCKS) ── */}
-      <section style={{ background: "#fafafa", padding: "8rem 1.5rem" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <FadeIn>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", marginBottom: "4rem", textAlign: "center" }}>Our Methodology</h2>
-          </FadeIn>
-          
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "4rem" }}>
-            {[
-              { num: "I.", title: "Publish", desc: "Providing formatting, editing, cover design, and high-quality printing services." },
-              { num: "II.", title: "Promote", desc: "Placing literature in airport libraries, educational institutions, and exclusive venues." },
-              { num: "III.", title: "Sell", desc: "Connecting authors directly with readers through strategic book fairs and exhibitions." },
-              { num: "IV.", title: "Revive", desc: "Reviving book reading by organising engaging literary activities for children and communities." },
-            ].map((p, i) => (
-              <FadeIn key={i} delay={i * 50}>
-                <div style={{ borderTop: "1px solid #111", paddingTop: "1.5rem" }}>
-                  <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#b44d28", marginBottom: "1rem", fontStyle: "italic" }}>{p.num}</div>
-                  <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginBottom: "0.8rem" }}>{p.title}</h3>
-                  <p style={{ fontSize: 13, color: "#333", lineHeight: 1.7, fontWeight: 400 }}>{p.desc}</p>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -341,6 +254,64 @@ export function LandingPage() {
             ))}
           </div>
         </FadeIn>
+      </section>
+
+
+      {/* ── ABOUT SECTION (ELEGANT SPLIT) ── */}
+      <section style={{ background: "#fff", borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8rem 1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6rem", alignItems: "center" }} className="hero-grid">
+          <FadeIn>
+            <div>
+              <img 
+                src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&h=1000&fit=crop" 
+                alt="Library glowing" 
+                style={{ width: "100%", height: 500, objectFit: "cover", filter: "grayscale(20%) contrast(0.9)" }}
+              />
+            </div>
+          </FadeIn>
+          
+          <FadeIn delay={150}>
+            <div>
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", marginBottom: "2rem", lineHeight: 1.2 }}>Reviving the <br/><span style={{ fontStyle: "italic", color: "#b44d28" }}>culture of reading.</span></h2>
+              <div style={{ width: 40, height: 1, background: "#eaeaea", marginBottom: "2rem" }}></div>
+              <p style={{ fontSize: 14, color: "#333", lineHeight: 1.8, marginBottom: "1.5rem", fontWeight: 400 }}>
+                Founded in 2024, our association operates as a highly refined collaborative ecosystem. We grant independent authors access to premium production and strategic promotion traditionally reserved for corporate publishing.
+              </p>
+              <p style={{ fontSize: 14, color: "#333", lineHeight: 1.8, marginBottom: "3rem", fontWeight: 400 }}>
+                Through tailored physical touchpoints—from curated airport library shelves to intimate community spaces—we bridge the gap between discerning readers and exceptional independent literature.
+              </p>
+              <Link to="/about" className="link-underline" style={{ fontSize: 13, fontWeight: 500, color: "#111", textDecoration: "none" }}>
+                Read Our Charter
+              </Link>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ── PILLARS SECTION (MINIMAL TEXT BLOCKS) ── */}
+      <section style={{ background: "#fafafa", padding: "8rem 1.5rem" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <FadeIn>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", marginBottom: "4rem", textAlign: "center" }}>Our Methodology</h2>
+          </FadeIn>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "4rem" }}>
+            {[
+              { num: "I.", title: "Publish", desc: "Providing formatting, editing, cover design, and high-quality printing services." },
+              { num: "II.", title: "Promote", desc: "Placing literature in airport libraries, educational institutions, and exclusive venues." },
+              { num: "III.", title: "Sell", desc: "Connecting authors directly with readers through strategic book fairs and exhibitions." },
+              { num: "IV.", title: "Revive", desc: "Reviving book reading by organising engaging literary activities for children and communities." },
+            ].map((p, i) => (
+              <FadeIn key={i} delay={i * 50}>
+                <div style={{ borderTop: "1px solid #111", paddingTop: "1.5rem" }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#b44d28", marginBottom: "1rem", fontStyle: "italic" }}>{p.num}</div>
+                  <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginBottom: "0.8rem" }}>{p.title}</h3>
+                  <p style={{ fontSize: 13, color: "#333", lineHeight: 1.7, fontWeight: 400 }}>{p.desc}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* ── CONTACT & CONNECT (MINIMALIST) ── */}

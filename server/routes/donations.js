@@ -259,8 +259,8 @@ router.delete('/api/author/donation-registrations/:id', verifyToken, async (req,
       }
     }
 
-    // Replenish the author's book inventory/stock by the donated quantity
-    if (registration.books && registration.books.length > 0) {
+    // Replenish the author's book inventory/stock by the donated quantity (only if NOT manual)
+    if (!registration.isManual && registration.books && registration.books.length > 0) {
       for (const b of registration.books) {
         await prisma.book.update({
           where: { id: b.bookId },
@@ -350,21 +350,13 @@ router.post('/api/admin/donation-registrations/manual', verifyToken, isAdmin, as
   try {
     const { announcementId, authorId, books, feePaid, paymentStatus } = req.body;
 
-    // Verify stock availability
-    for (const b of books) {
-      const bookItem = await prisma.book.findUnique({ where: { id: parseInt(b.bookId) } });
-      if (!bookItem) return res.status(404).json({ error: 'Book not found' });
-      if (parseInt(b.quantityDonated) > bookItem.stock) {
-        return res.status(400).json({ error: `Cannot donate more than available stock (${bookItem.stock}) for "${bookItem.title}"` });
-      }
-    }
-    
     const registration = await prisma.donationRegistration.create({
       data: {
         announcementId: parseInt(announcementId),
         authorId: parseInt(authorId),
         feePaid: feePaid ? parseInt(feePaid) : 0,
         paymentStatus: paymentStatus || 'Completed',
+        isManual: true,
         books: {
           create: books.map(b => ({
             bookId: parseInt(b.bookId),
@@ -373,18 +365,6 @@ router.post('/api/admin/donation-registrations/manual', verifyToken, isAdmin, as
         }
       }
     });
-
-    // Decrease the author's book inventory/stock by the donated quantity
-    for (const b of books) {
-      await prisma.book.update({
-        where: { id: parseInt(b.bookId) },
-        data: {
-          stock: {
-            decrement: parseInt(b.quantityDonated)
-          }
-        }
-      });
-    }
     
     res.json(registration);
   } catch (err) {

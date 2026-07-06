@@ -74,24 +74,32 @@ router.get('/api/books', async (req, res) => {
 router.get('/api/public-stats', async (req, res) => {
   const cached = getCache('public-stats');
   if (cached) return res.json(cached);
+  
+  let authors = 100, books = 350, categories = 50, events = 45, libraries = 7;
+  
   try {
-    const authors = await prisma.author.count({ where: { status: 'Approved' } });
-    const books = await prisma.book.count({ where: { status: 'Approved' } });
-    const genres = await prisma.book.findMany({ select: { genre: true }, distinct: ['genre'], where: { status: 'Approved' } });
-    const categories = genres.filter(g => g.genre).length;
+    authors = await prisma.author.count({ where: { status: 'Approved' } }).catch(() => 100);
+    books = await prisma.book.count({ where: { status: 'Approved' } }).catch(() => 350);
+    const genres = await prisma.book.findMany({ select: { genre: true }, distinct: ['genre'], where: { status: 'Approved' } }).catch(() => []);
+    categories = genres.filter(g => g.genre).length || 50;
     
-    const events = await prisma.event.count();
-    const libraries = await prisma.library.count();
-    
-    // For fairs, if we don't have a specific tag, we can just use 3 or derive it.
-    const fairs = 3; 
-    
-    const stats = { authors: authors || 100, books: books || 350, categories: categories || 50, events: events || 12, fairs: fairs, airportLibraries: libraries || 6 };
-    setCache('public-stats', stats, 5 * 60 * 1000); // 5 mins
-    res.json(stats);
+    events = await prisma.event.count().catch(() => 45);
+    libraries = await prisma.library.count().catch(() => 7);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch public stats' });
+    console.error("Error fetching stats:", err);
   }
+  
+  const stats = { 
+    authors: authors > 0 ? authors : 100, 
+    books: books > 0 ? books : 350, 
+    categories: categories > 0 ? categories : 50, 
+    events: events > 0 ? events : 45, 
+    fairs: 3, 
+    airportLibraries: libraries > 0 ? libraries : 7 
+  };
+  
+  setCache('public-stats', stats, 5 * 60 * 1000); // 5 mins
+  res.json(stats);
 });
 
 

@@ -264,6 +264,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
   const [showInfoDoc, setShowInfoDoc] = useState(false);
   const hasInitialized = useRef(false);
   const hasLoadedDraft = useRef(false);
+  const editingBookIndexRef = useRef<number | null>(null);
 
   const isOnboardingMode = !isReapply && !isAdminEdit && !isAuthorEdit;
   const currentSteps = isOnboardingMode ? [...onboardingInfoSteps, ...formSteps] : formSteps;
@@ -694,6 +695,11 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     validateField(key, val);
   };
   const handleEditAddedBook = (idx: number) => {
+    if (showAddBookForm && (form.title || form.synopsis)) {
+      alert("You are currently editing a book. Please save or cancel the current book before editing another one.");
+      return;
+    }
+    editingBookIndexRef.current = idx;
     const bookToEdit = books[idx];
     setForm({
       ...form,
@@ -719,7 +725,6 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
     setBackCoverBlob(bookToEdit.backCoverBlob || null);
     setCoverFileUrl(bookToEdit.coverFileUrl || (bookToEdit.coverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${bookToEdit.coverUrl}` : null));
     setBackCoverFileUrl(bookToEdit.backCoverFileUrl || (bookToEdit.backCoverUrl ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${bookToEdit.backCoverUrl}` : null));
-    setBooks(books.filter((_, i) => i !== idx));
     setShowAddBookForm(true);
   };
 
@@ -1269,7 +1274,10 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                   {books.length > 0 && !showAddBookForm ? (
                     <button
                       type="button"
-                      onClick={() => setShowAddBookForm(true)}
+                      onClick={() => {
+                        editingBookIndexRef.current = null;
+                        setShowAddBookForm(true);
+                      }}
                       className="px-6 py-2.5 bg-paa-navy text-white hover:bg-paa-navy/90 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 mb-2"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add Another Book
@@ -1508,6 +1516,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           setBackCoverBlob(null);
                           setCoverFileUrl(null);
                           setBackCoverFileUrl(null);
+                          editingBookIndexRef.current = null;
                           setStep(2);
                         }}
                         className="px-4 py-2 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
@@ -1524,6 +1533,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           setBackCoverBlob(null);
                           setCoverFileUrl(null);
                           setBackCoverFileUrl(null);
+                          editingBookIndexRef.current = null;
                           setShowAddBookForm(false);
                         }}
                         className="px-4 py-2 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
@@ -1557,7 +1567,16 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           alert("Synopsis cannot exceed 100 words.");
                           return;
                         }
-                        setBooks([...books, { ...form, coverBlob, backCoverBlob, coverFileUrl, backCoverFileUrl }]);
+                        const newBookData = { ...form, coverBlob, backCoverBlob, coverFileUrl, backCoverFileUrl };
+                        if (editingBookIndexRef.current !== null) {
+                          const updatedBooks = [...books];
+                          updatedBooks[editingBookIndexRef.current] = { ...updatedBooks[editingBookIndexRef.current], ...newBookData };
+                          setBooks(updatedBooks);
+                          editingBookIndexRef.current = null;
+                        } else {
+                          setBooks([...books, newBookData]);
+                        }
+                        
                         setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
                         setCoverBlob(null);
                         setBackCoverBlob(null);
@@ -1846,17 +1865,24 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       setStep(isOnboardingMode ? 3 : 0);
                       alert("Enter valid url starting with www."); return;
                     }
-                    if (form.facebook && !/^https?:\/\//.test(String(form.facebook))) {
+                    if (form.facebook && !/^(https?:\/\/|www\.)/.test(String(form.facebook))) {
                       setStep(isOnboardingMode ? 3 : 0);
-                      alert("Facebook must be a valid URL starting with http:// or https://"); return;
+                      alert("Facebook must be a valid URL starting with http://, https://, or www."); return;
                     }
-                    if (form.youtube && !/^https?:\/\//.test(String(form.youtube))) {
+                    if (form.youtube && !/^(https?:\/\/|www\.)/.test(String(form.youtube))) {
                       setStep(isOnboardingMode ? 3 : 0);
-                      alert("YouTube must be a valid URL starting with http:// or https://"); return;
+                      alert("YouTube must be a valid URL starting with http://, https://, or www."); return;
                     }
-                    if (form.instagram && !/^https?:\/\//.test(String(form.instagram)) && !String(form.instagram).startsWith('@')) {
+                    if (form.instagram && !/^(https?:\/\/|www\.)/.test(String(form.instagram)) && !String(form.instagram).startsWith('@')) {
                       setStep(isOnboardingMode ? 3 : 0);
                       alert("Instagram must be a valid URL or @username"); return;
+                    }
+
+                    const hasDraftBook = form.title || form.synopsis || form.isbn;
+                    if (hasDraftBook && showAddBookForm) {
+                      setStep(isOnboardingMode ? 4 : 1);
+                      alert("You have unsaved book details in the form. Please click 'Save & Add Another Book' to include it, or clear the form before submitting.");
+                      return;
                     }
 
                     const hasFirstBook = form.title && form.genre && form.mrp && (coverBlob || coverFileUrl) && (backCoverBlob || backCoverFileUrl) && form.purposeOfWriting && form.pages && form.isbn && form.synopsis.split(/\s+/).filter(Boolean).length <= 100;
@@ -1925,6 +1951,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         let subGenre = b.subcategory;
                         if (b.subSubcategory) subGenre += ' > ' + b.subSubcategory;
                         return {
+                          id: b.id,
                           title: b.title,
                           subtitle: b.subtitle,
                           genre: b.genre,

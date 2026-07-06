@@ -57,6 +57,7 @@ router.get('/api/books', async (req, res) => {
   });
 
   const filteredBooks = books.filter(b => {
+    if (!b.author || b.author.status === 'Rejected') return false;
     const extraData = b.author?.extraData;
     if (extraData && extraData.lateFines > 0 && extraData.fineDate) {
       const diffDays = (new Date().getTime() - new Date(extraData.fineDate).getTime()) / (1000 * 3600 * 24);
@@ -445,15 +446,22 @@ router.put('/api/author/edit-profile-full', verifyToken, upload.any(), async (re
       }
     });
 
+    const incomingBookIds = booksArray.map(b => parseInt(b.id)).filter(id => !isNaN(id));
+    await prisma.book.deleteMany({
+       where: { authorId: author.id, id: { notIn: incomingBookIds } }
+    });
+
     for (let i = 0; i < booksArray.length; i++) {
        const b = booksArray[i];
-       const existingBook = author.books[i];
+       const bId = parseInt(b.id);
+       const existingBook = !isNaN(bId) ? author.books.find(eb => eb.id === bId) : null;
        const bookData = {
          title: b.title, subtitle: b.subtitle, genre: b.genre, subGenre: b.subGenre,
          synopsis: b.synopsis,
          purpose: b.purpose, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
          stock: parseInt(b.stock) || 0, language: b.language, isbn: b.isbn,
-         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat
+         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat,
+         status: 'Pending'
        };
        if (covers[i] || (i === 0 && covers[0])) {
           bookData.coverUrl = covers[i] || covers[0];
@@ -561,16 +569,22 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
       }
     });
 
-    // Update existing books instead of deleting
+    const incomingBookIds = booksArray.map(b => parseInt(b.id)).filter(id => !isNaN(id));
+    await prisma.book.deleteMany({
+       where: { authorId: author.id, id: { notIn: incomingBookIds } }
+    });
+
     for (let i = 0; i < booksArray.length; i++) {
        const b = booksArray[i];
-       const existingBook = author.books[i];
+       const bId = parseInt(b.id);
+       const existingBook = !isNaN(bId) ? author.books.find(eb => eb.id === bId) : null;
        const bookData = {
          title: b.title, subtitle: b.subtitle, genre: b.genre, subGenre: b.subGenre,
          synopsis: b.synopsis,
-              purpose: b.purpose, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
+         purpose: b.purpose, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
          stock: parseInt(b.stock) || 0, language: b.language, isbn: b.isbn,
-         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat, purpose: b.purpose
+         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat,
+         status: 'Pending'
        };
        if (covers[i] || (i === 0 && covers[0])) {
           bookData.coverUrl = covers[i] || covers[0];
@@ -581,7 +595,7 @@ router.put('/api/author/reapply-full', verifyToken, upload.any(), async (req, re
        if (existingBook) {
           await prisma.book.update({ where: { id: existingBook.id }, data: bookData });
        } else {
-          await prisma.book.create({ data: { ...bookData, authorId: author.id, status: 'Pending' } });
+          await prisma.book.create({ data: { ...bookData, authorId: author.id } });
        }
     }
 
@@ -747,16 +761,21 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
       }
     });
 
-    // Update existing books instead of deleting
+    const incomingBookIds = booksArray.map(b => parseInt(b.id)).filter(id => !isNaN(id));
+    await prisma.book.deleteMany({
+       where: { authorId: author.id, id: { notIn: incomingBookIds } }
+    });
+
     for (let i = 0; i < booksArray.length; i++) {
        const b = booksArray[i];
-       const existingBook = author.books[i];
+       const bId = parseInt(b.id);
+       const existingBook = !isNaN(bId) ? author.books.find(eb => eb.id === bId) : null;
        const bookData = {
          title: b.title, subtitle: b.subtitle, genre: b.genre, subGenre: b.subGenre,
          synopsis: b.synopsis,
          purpose: b.purpose, pages: parseInt(b.pages) || null, mrp: parseFloat(b.mrp) || 0,
          stock: parseInt(b.stock) || 0, language: b.language, isbn: b.isbn,
-         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat, purpose: b.purpose
+         publisher: b.publisher, publicationDate: b.publicationDate, edition: b.edition, format: b.format, printFormat: b.printFormat
        };
        if (covers[i] || (i === 0 && covers[0])) {
           bookData.coverUrl = covers[i] || covers[0];
@@ -813,9 +832,9 @@ router.post('/api/admin/authors/:id/approve', verifyToken, isAdmin, async (req, 
     where: { id },
     data: { status: 'Active', rejectionReason: null, extraData: JSON.stringify(extraData) }
   });
-  // Approve their books too
+  // Approve their pending books too
   await prisma.book.updateMany({
-    where: { authorId: id },
+    where: { authorId: id, status: 'Pending' },
     data: { status: 'Approved' }
   });
   
@@ -895,6 +914,26 @@ router.post('/api/admin/authors/:id/reject-edits', verifyToken, isAdmin, async (
        for (const f of fieldsToRestore) {
            if (currentExtraData.originalProfileData[f] !== undefined) {
                updateData[f] = currentExtraData.originalProfileData[f];
+           }
+       }
+
+       if (currentExtraData.originalProfileData.books) {
+           const originalBooks = currentExtraData.originalProfileData.books;
+           const currentBooks = await prisma.book.findMany({ where: { authorId: id } });
+           const originalBookIds = originalBooks.map(b => b.id);
+           
+           await prisma.book.deleteMany({ 
+               where: { authorId: id, id: { notIn: originalBookIds } } 
+           });
+           
+           for (const ob of originalBooks) {
+               const { id: bookId, authorId, createdAt, updatedAt, ...bookDataToRestore } = ob;
+               const exists = currentBooks.find(b => b.id === bookId);
+               if (exists) {
+                   await prisma.book.update({ where: { id: bookId }, data: bookDataToRestore });
+               } else {
+                   await prisma.book.create({ data: { ...bookDataToRestore, authorId: id } });
+               }
            }
        }
     }

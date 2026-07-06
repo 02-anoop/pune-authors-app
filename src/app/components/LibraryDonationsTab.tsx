@@ -1729,16 +1729,29 @@ export function LibraryDonationsTab() {
               const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
               const totalBooks = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
 
+              // Check if we have overrides for this specific drive
+              const driveOverride = statsOverrides?.driveOverrides?.[drive.id] || statsOverrides?.driveOverrides?.[drive.id.toString()];
+              
+              const displayAuthors = (driveOverride && driveOverride.authorsOverride !== null && driveOverride.authorsOverride !== undefined)
+                ? driveOverride.authorsOverride
+                : (drive.registrations?.length || 0);
+
+              const displayBooks = (driveOverride && driveOverride.booksOverride !== null && driveOverride.booksOverride !== undefined)
+                ? driveOverride.booksOverride
+                : totalBooks;
+
               return (
                 <tr key={drive.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="p-4">
-                    <div className="font-bold text-sm text-paa-navy">{drive.title}</div>
+                  <td className="p-4 max-w-[200px]">
+                    <div className="font-bold text-sm text-paa-navy leading-snug line-clamp-2" title={drive.title}>{drive.title}</div>
                   </td>
                   <td className="p-4 text-sm text-gray-600">
                     {new Date(drive.registrationEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
-                  <td className="p-4 text-sm text-gray-600">
-                    {drive.library?.city ? `${drive.library.name}, ${drive.library.city}` : drive.library?.name}
+                  <td className="p-4 text-sm text-gray-600 max-w-[200px]">
+                    <div className="line-clamp-2 leading-snug" title={drive.library?.city ? `${drive.library.name}, ${drive.library.city}` : drive.library?.name}>
+                      {drive.library?.city ? `${drive.library.name}, ${drive.library.city}` : drive.library?.name}
+                    </div>
                   </td>
                   <td className="p-4">
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border ${drive.visibility === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
@@ -1748,8 +1761,8 @@ export function LibraryDonationsTab() {
                       {drive.visibility}
                     </span>
                   </td>
-                  <td className="p-4 font-bold text-sm text-paa-navy">{drive.registrations?.length || 0}</td>
-                  <td className="p-4 font-bold text-sm text-paa-navy">{totalBooks}</td>
+                  <td className="p-4 font-bold text-sm text-paa-navy">{displayAuthors}</td>
+                  <td className="p-4 font-bold text-sm text-paa-navy">{displayBooks}</td>
                   <td className="p-4 text-right space-x-2">
                     <button onClick={() => {
                       setSelectedDriveBreakdown(drive);

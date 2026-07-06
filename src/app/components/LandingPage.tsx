@@ -158,8 +158,29 @@ export function LandingPage() {
             </FadeIn>
           ))}
         </div>
+        
+        <FadeIn delay={300}>
+          <div style={{ display: "flex", justifyContent: "center", paddingBottom: "4rem" }}>
+            <Link to="/catalogue" style={{ 
+              display: "inline-flex", 
+              alignItems: "center", 
+              gap: "0.5rem",
+              padding: "0.8rem 2rem", 
+              background: "#b44d28", 
+              color: "#fff", 
+              textDecoration: "none", 
+              fontSize: 13, 
+              fontWeight: 500,
+              textTransform: "uppercase", 
+              letterSpacing: "0.05em",
+              border: "none",
+              cursor: "pointer"
+            }}>
+              Browse All Books <ArrowRight size={14} />
+            </Link>
+          </div>
+        </FadeIn>
       </section>
-
 
 
       {/* ── ABOUT SECTION (ELEGANT SPLIT) ── */}

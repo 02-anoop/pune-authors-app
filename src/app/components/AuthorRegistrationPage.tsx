@@ -1923,8 +1923,18 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
 
 
+                    const bookKeys = ['subcategory', 'subSubcategory', 'title', 'genre', 'synopsis', 'pages', 'mrp', 'stock', 'subtitle', 'language', 'isbn', 'publisher', 'publicationDate', 'edition', 'format'];
+                    
                     const activeErrors = Object.entries(errors)
-                      .filter(([_, err]) => typeof err === 'string' && err.trim() !== "")
+                      .filter(([key, err]) => {
+                        if (typeof err !== 'string' || err.trim() === "") return false;
+                        // Ignore stale book errors if the user already has at least one book 
+                        // and they aren't actively filling out a new one (i.e. title is empty)
+                        if (books.length > 0 && (!form.title || form.title.trim() === "") && bookKeys.includes(key)) {
+                          return false;
+                        }
+                        return true;
+                      })
                       .map(([key, err]) => err);
 
                     if (activeErrors.length > 0) {

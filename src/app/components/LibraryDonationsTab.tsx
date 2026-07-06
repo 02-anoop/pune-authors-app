@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Download, Edit, Trash2, Megaphone, MapPin, Search, Calendar, Package, Plus, X, List, CheckCircle, CheckCircle2, XCircle, FileDown, BookOpen, Eye, ChevronDown, ChevronUp } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from 'recharts';
 
 export function LibraryDonationsTab() {
   const [drives, setDrives] = useState<any[]>([]);
@@ -15,6 +15,7 @@ export function LibraryDonationsTab() {
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [selectedDriveBreakdown, setSelectedDriveBreakdown] = useState<any>(null);
   const [driveSearch, setDriveSearch] = useState('');
+  const [graphFilter, setGraphFilter] = useState<'both' | 'books' | 'authors'>('both');
 
   // Editing States
   const [editingDrive, setEditingDrive] = useState<any>(null);
@@ -53,6 +54,68 @@ export function LibraryDonationsTab() {
   const [overrideLibraries, setOverrideLibraries] = useState<any>('');
 
   const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+  const getPipelineStatus = (reg: any) => {
+    if (reg.status === 'Rejected') {
+      return {
+        step: 0,
+        label: 'Rejected',
+        color: 'bg-rose-50 text-rose-700 border-rose-200',
+        description: 'Registration declined'
+      };
+    }
+    
+    // Step 4: Received at Library
+    if (
+      reg.status === 'Approved' && 
+      (reg.receivedStatus === 'Received' || reg.receivedStatus === 'Delivered' || reg.dispatchStatus === 'Delivered')
+    ) {
+      return {
+        step: 4,
+        label: 'Received at Library',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        description: 'Books confirmed and received at library'
+      };
+    }
+
+    // Step 3: Dispatched
+    if (reg.status === 'Approved' && reg.dispatchStatus === 'Dispatched') {
+      return {
+        step: 3,
+        label: 'Dispatched',
+        color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        description: 'Books in transit to library'
+      };
+    }
+
+    // Step 2: Collected (Received to the person who is collecting / hub)
+    if (reg.status === 'Approved' && reg.dispatchStatus === 'Received at Hub') {
+      return {
+        step: 2,
+        label: 'Collected / Received at Hub',
+        color: 'bg-sky-50 text-sky-700 border-sky-200',
+        description: 'Books collected and received at hub'
+      };
+    }
+
+    // Between Step 1 and Step 2 (Approved but dispatchStatus is Pending)
+    if (reg.status === 'Approved' && reg.dispatchStatus === 'Pending') {
+      return {
+        step: 1.5,
+        label: 'Awaiting Collection',
+        color: 'bg-blue-50 text-blue-700 border-blue-200',
+        description: 'Approved! Awaiting collection by hub'
+      };
+    }
+
+    // Step 1: Verification
+    return {
+      step: 1,
+      label: 'Awaiting Verification',
+      color: 'bg-amber-50 text-amber-700 border-amber-200',
+      description: 'Awaiting admin verification'
+    };
+  };
 
   const fetchStatsOverrides = async () => {
     try {
@@ -784,9 +847,7 @@ export function LibraryDonationsTab() {
                 <th className="p-3 text-xs font-bold text-gray-500 uppercase">Author Name</th>
                 <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Donating</th>
                 <th className="p-3 text-xs font-bold text-gray-500 uppercase">Payment</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Status</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Dispatch / Tracking</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Received Status</th>
+                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Donation Pipeline & Status</th>
                 <th className="p-3 text-xs font-bold text-gray-500 uppercase text-right">Actions</th>
               </tr>
             </thead>
@@ -819,7 +880,7 @@ export function LibraryDonationsTab() {
                 if (itemsToRender.length === 0) {
                   return (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-gray-500">
+                      <td colSpan={5} className="p-8 text-center text-gray-500">
                         No entries found in this section.
                       </td>
                     </tr>
@@ -888,60 +949,106 @@ export function LibraryDonationsTab() {
                         </td>
 
                         <td className="p-3">
-                          {isRegistered ? (
-                            <div className="flex flex-col gap-1">
-                              <select
-                                className={`text-xs font-bold rounded-lg px-2 py-1 border-0 focus:ring-2 outline-none cursor-pointer ${reg.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                                    reg.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                                  }`}
-                                value={reg.status}
-                                onChange={(e) => updateRegistrationStatus(reg.id, e.target.value)}
-                              >
-                                <option value="Pending">Pending</option>
-                                <option value="Approved">Approved</option>
-                                <option value="Rejected">Rejected</option>
-                              </select>
-                              <div className="text-[10px] text-gray-500 font-bold mt-0.5">Val: ₹{totalValue}</div>
-                            </div>
-                          ) : (
-                            <span className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-lg">Not Registered</span>
-                          )}
-                        </td>
+                          {isRegistered ? (() => {
+                            const pipeline = getPipelineStatus(reg);
+                            return (
+                              <div className="flex flex-col gap-2 min-w-[240px]">
+                                {/* Horizontal Progress Stepper */}
+                                <div className="flex items-center gap-1.5 select-none">
+                                  {/* Step 1: Verification */}
+                                  <div 
+                                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                      pipeline.step >= 1 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                                    }`} 
+                                    title="1. Verification"
+                                  ></div>
+                                  <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 2 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
 
-                        <td className="p-3">
-                          {isRegistered ? (
-                            <select
-                              className={`text-xs font-bold rounded-lg px-2 py-1.5 border-0 focus:ring-2 outline-none cursor-pointer w-full max-w-[150px] ${reg.dispatchStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-700' :
-                                  reg.dispatchStatus === 'Dispatched' ? 'bg-amber-100 text-amber-700' :
-                                    reg.dispatchStatus === 'Received at Hub' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
-                                }`}
-                              value={reg.dispatchStatus || 'Pending'}
-                              onChange={(e) => updateDispatchDetails(reg.id, e.target.value, '', '')}
-                            >
-                              <option value="Pending">Pending</option>
-                              <option value="Received at Hub">Received at Hub</option>
-                              <option value="Dispatched">Dispatched</option>
-                              <option value="Delivered">Delivered</option>
-                            </select>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
-                          )}
-                        </td>
+                                  {/* Step 2: Awaiting Dispatch */}
+                                  <div 
+                                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                      pipeline.step >= 2 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                                    }`} 
+                                    title="2. Awaiting Dispatch"
+                                  ></div>
+                                  <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 3 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
 
-                        <td className="p-3">
-                          {isRegistered ? (
-                            <select
-                              className={`text-xs font-bold rounded-lg px-2 py-1.5 border-0 focus:ring-2 outline-none cursor-pointer w-full max-w-[150px] ${reg.receivedStatus === 'Received' || reg.receivedStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-700' :
-                                  reg.receivedStatus === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'
-                                }`}
-                              value={reg.receivedStatus || 'Pending'}
-                              onChange={(e) => updateReceivedStatus(reg.id, e.target.value)}
-                            >
-                              <option value="Pending">Pending</option>
-                              <option value="Received">Received</option>
-                            </select>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
+                                  {/* Step 3: Dispatched */}
+                                  <div 
+                                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                      pipeline.step >= 3 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                                    }`} 
+                                    title="3. Dispatched"
+                                  ></div>
+                                  <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 4 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
+
+                                  {/* Step 4: Library Reached */}
+                                  <div 
+                                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                      pipeline.step >= 4 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                                    }`} 
+                                    title="4. Library Reached"
+                                  ></div>
+                                </div>
+
+                                {/* Active Controls based on Pipeline Step */}
+                                <div className="flex flex-col gap-1.5 mt-1 bg-gray-50 border border-gray-150 rounded-xl p-2.5">
+                                  {/* Verification Control */}
+                                  <div className="flex items-center justify-between gap-2 text-[10px]">
+                                    <span className="font-semibold text-gray-400">Verification:</span>
+                                    <select
+                                      className={`text-[10px] font-bold rounded-md px-1.5 py-0.5 border-0 focus:ring-1 outline-none cursor-pointer ${
+                                        reg.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                        reg.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                                      }`}
+                                      value={reg.status}
+                                      onChange={(e) => updateRegistrationStatus(reg.id, e.target.value)}
+                                    >
+                                      <option value="Pending">Pending</option>
+                                      <option value="Approved">Approved</option>
+                                      <option value="Rejected">Rejected</option>
+                                    </select>
+                                  </div>
+
+                                  {/* Dispatch Info/Status (Show only if Approved) */}
+                                  {reg.status === 'Approved' && (
+                                    <div className="flex items-center justify-between gap-2 text-[10px] border-t border-gray-200/60 pt-1.5">
+                                      <span className="font-semibold text-gray-400">Dispatch Status:</span>
+                                      <select
+                                        className={`text-[10px] font-bold rounded-md px-1.5 py-0.5 border-0 focus:ring-1 outline-none cursor-pointer ${
+                                          reg.dispatchStatus === 'Dispatched' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'
+                                        }`}
+                                        value={reg.dispatchStatus || 'Pending'}
+                                        onChange={(e) => updateDispatchDetails(reg.id, e.target.value, reg.courierPartner || '', reg.trackingNumber || '')}
+                                      >
+                                        <option value="Pending">Pending</option>
+                                        <option value="Dispatched">Dispatched</option>
+                                      </select>
+                                    </div>
+                                  )}
+
+                                  {/* Library Reached Control (Show only if Approved) */}
+                                  {reg.status === 'Approved' && (
+                                    <div className="flex items-center justify-between gap-2 text-[10px] border-t border-gray-200/60 pt-1.5">
+                                      <span className="font-semibold text-gray-400">Library Reached:</span>
+                                      <select
+                                        className={`text-[10px] font-bold rounded-md px-1.5 py-0.5 border-0 focus:ring-1 outline-none cursor-pointer ${
+                                          reg.receivedStatus === 'Received' || reg.receivedStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'
+                                        }`}
+                                        value={reg.receivedStatus || 'Pending'}
+                                        onChange={(e) => updateReceivedStatus(reg.id, e.target.value)}
+                                      >
+                                        <option value="Pending">Pending</option>
+                                        <option value="Received">Received</option>
+                                      </select>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-gray-500 font-semibold">Val: ₹{totalValue}</div>
+                              </div>
+                            );
+                          })() : (
+                            <span className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-lg select-none">Not Registered</span>
                           )}
                         </td>
 
@@ -1006,7 +1113,7 @@ export function LibraryDonationsTab() {
                       {/* EXPANDABLE INDIVIDUAL BOOK BREAKDOWN ROW */}
                       {isExpanded && isRegistered && (
                         <tr>
-                          <td colSpan={7} className="p-4 bg-gray-50/20 border-b border-gray-100">
+                          <td colSpan={5} className="p-4 bg-gray-50/20 border-b border-gray-100">
                             <div className="bg-gray-50/70 p-5 border-l-4 border-paa-navy rounded-r-2xl shadow-inner animate-in slide-in-from-top-2 duration-300">
                               <div className="flex items-center justify-between mb-4 border-b border-gray-200/50 pb-2">
                                 <span className="text-xs font-bold text-paa-navy uppercase tracking-widest flex items-center gap-2">
@@ -1456,29 +1563,92 @@ export function LibraryDonationsTab() {
 
         return (
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <div>
                 <h4 className="font-bold text-paa-navy font-serif">Donations Performance Overview</h4>
                 <p className="text-xs text-gray-500 font-medium mt-1">Comparing total books donated and author participation across campaigns.</p>
               </div>
-              <div className="flex items-center gap-4 text-xs font-bold">
-                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-paa-navy"></div> Books Donated</div>
-                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-300"></div> Authors Participated</div>
+              
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Switcher Buttons */}
+                <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 shadow-sm text-xs font-bold">
+                  <button 
+                    onClick={() => setGraphFilter('both')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      graphFilter === 'both' 
+                        ? 'bg-white text-paa-navy shadow-sm' 
+                        : 'text-gray-500 hover:text-paa-navy'
+                    }`}
+                  >
+                    Both
+                  </button>
+                  <button 
+                    onClick={() => setGraphFilter('books')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      graphFilter === 'books' 
+                        ? 'bg-white text-paa-navy shadow-sm' 
+                        : 'text-gray-500 hover:text-paa-navy'
+                    }`}
+                  >
+                    Books Only
+                  </button>
+                  <button 
+                    onClick={() => setGraphFilter('authors')}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      graphFilter === 'authors' 
+                        ? 'bg-white text-paa-navy shadow-sm' 
+                        : 'text-gray-500 hover:text-paa-navy'
+                    }`}
+                  >
+                    Authors Only
+                  </button>
+                </div>
+
+                {/* Legends */}
+                <div className="flex items-center gap-4 text-xs font-bold">
+                  {(graphFilter === 'both' || graphFilter === 'books') && (
+                    <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-paa-navy"></div> Books Donated</div>
+                  )}
+                  {(graphFilter === 'both' || graphFilter === 'authors') && (
+                    <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-indigo-400"></div> Authors Participated</div>
+                  )}
+                </div>
               </div>
             </div>
+            
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                   <RechartsTooltip
-                    cursor={{ fill: '#F3F4F6' }}
+                    cursor={{ stroke: '#E5E7EB', strokeWidth: 1 }}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                   />
-                  <Bar dataKey="booksDonated" name="Books Donated" fill="var(--color-paa-navy, #1e3a8a)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="authorsCount" name="Authors" fill="#818CF8" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
+                  {(graphFilter === 'both' || graphFilter === 'books') && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="booksDonated" 
+                      name="Books Donated" 
+                      stroke="var(--color-paa-navy, #1e3a8a)" 
+                      strokeWidth={3} 
+                      activeDot={{ r: 6 }} 
+                      dot={{ r: 3 }}
+                    />
+                  )}
+                  {(graphFilter === 'both' || graphFilter === 'authors') && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="authorsCount" 
+                      name="Authors" 
+                      stroke="#818CF8" 
+                      strokeWidth={3} 
+                      activeDot={{ r: 6 }} 
+                      dot={{ r: 3 }}
+                    />
+                  )}
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>

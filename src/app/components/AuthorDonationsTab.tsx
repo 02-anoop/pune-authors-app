@@ -91,6 +91,15 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
       return;
     }
 
+    // Validation: check stock availability for all selected books
+    for (const item of selectedBooks) {
+      const book = authorBooks.find(b => b.id === item.bookId);
+      if (book && item.qty > book.stock) {
+        toast.error(`Cannot donate ${item.qty} copies of "${book.title}". Available stock: ${book.stock}`);
+        return;
+      }
+    }
+
     const feeToPay = calculateFee(announcement);
     if (announcement.feeType === 'Pay As You Wish' && feeToPay <= 0) {
       toast.error('Please enter a valid donation amount');
@@ -187,7 +196,7 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
   };
 
   // Stats Calculations
-  const statsCampaigns = myRegistrations.length;
+  const statsCampaigns = new Set(myRegistrations.map((reg: any) => reg.announcementId)).size;
   const statsBooksPledged = myRegistrations.reduce(
     (sum: number, reg: any) => sum + reg.books.reduce((acc: number, b: any) => acc + (b.quantityDonated || 0), 0), 0
   ) || 0;
@@ -196,21 +205,88 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
   ) || 0;
   const statsPending = myRegistrations.filter((r: any) => r.status === 'Pending' || r.status === 'Registered').length || 0;
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading active donation drives...</div>;
+  const getPipelineStatus = (reg: any) => {
+    if (reg.status === 'Rejected') {
+      return {
+        step: 0,
+        label: 'Rejected',
+        color: 'bg-rose-50 text-rose-700 border-rose-200',
+        description: 'Registration declined by admin'
+      };
+    }
+    
+    // Step 4: Library Reached (Received at Library)
+    if (
+      reg.status === 'Approved' && 
+      (reg.receivedStatus === 'Received' || reg.receivedStatus === 'Delivered' || reg.dispatchStatus === 'Delivered')
+    ) {
+      return {
+        step: 4,
+        label: 'Library Reached',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        description: 'Books confirmed and received at library'
+      };
+    }
+
+    // Step 3: Dispatched
+    if (reg.status === 'Approved' && (reg.dispatchStatus === 'Dispatched' || reg.dispatchStatus === 'Received')) {
+      return {
+        step: 3,
+        label: 'Dispatched',
+        color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        description: 'Books are in transit to library'
+      };
+    }
+
+    // Step 2: Awaiting Dispatch (Approved but dispatchStatus is Pending)
+    if (reg.status === 'Approved') {
+      return {
+        step: 2,
+        label: 'Awaiting Dispatch',
+        color: 'bg-sky-50 text-sky-700 border-sky-200',
+        description: 'Approved! Ready to be dispatched'
+      };
+    }
+
+    // Step 1: Verification
+    return {
+      step: 1,
+      label: 'Awaiting Verification',
+      color: 'bg-amber-50 text-amber-700 border-amber-200',
+      description: 'Awaiting admin verification'
+    };
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-2xl border border-gray-200 shadow-sm p-8 animate-in fade-in duration-300">
+        <div className="relative flex items-center justify-center mb-6">
+          {/* Animated Outer Ring */}
+          <div className="w-16 h-16 rounded-full border-4 border-gray-100 border-t-paa-navy animate-spin"></div>
+          {/* Animated Inner Ring (reverse spin) */}
+          <div className="absolute w-10 h-10 rounded-full border-4 border-transparent border-t-paa-gold animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+          {/* Center Point */}
+          <div className="absolute w-4 h-4 rounded-full bg-paa-navy"></div>
+        </div>
+        <h3 className="text-lg font-serif font-bold text-paa-navy mb-1 animate-pulse">Loading active donation drives...</h3>
+        <p className="text-xs text-gray-400">Fetching campaigns and verification details from library ecosystem</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       {/* Header and Report Button */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-paa-navy to-indigo-950 p-6 rounded-2xl text-white shadow-md border border-white/10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-3xl font-serif font-bold text-white flex items-center gap-2">
+          <h2 className="text-3xl font-serif font-bold text-paa-navy flex items-center gap-2">
             Library Donations Ecosystem <Sparkles className="w-5 h-5 text-paa-gold animate-pulse" />
           </h2>
-          <p className="text-gray-300 text-sm mt-1">Donate your books to Airport Libraries, Public Libraries, and Cafes</p>
+          <p className="text-gray-500 text-sm mt-1">Donate your books to Airport Libraries, Public Libraries, and Cafes</p>
         </div>
         <button
           onClick={handleExportMyDonationReport}
-          className="dash-btn bg-white/10 border border-white/20 hover:bg-white/20 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm flex items-center gap-2 active:scale-95 transition-all"
+          className="dash-btn bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold px-5 py-2.5 rounded-xl shadow-sm flex items-center gap-2 active:scale-95 transition-all"
         >
           <Download className="w-4 h-4 text-paa-gold" /> Export Donation Report
         </button>
@@ -363,16 +439,29 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
                             <div key={book.id} className={`flex justify-between items-center bg-white p-3 rounded-lg border transition-colors ${isSelected ? 'border-paa-navy shadow-sm' : 'border-gray-200'}`}>
                               <div className="flex items-center gap-3 min-w-0">
                                 <BookOpen className={`w-4 h-4 ${isSelected ? 'text-paa-navy' : 'text-gray-400'} shrink-0`} />
-                                <span className="text-xs font-semibold text-paa-navy truncate" title={book.title}>{book.title}</span>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-xs font-semibold text-paa-navy truncate" title={book.title}>{book.title}</span>
+                                  <span className="text-[10px] text-gray-400 font-bold">Stock: {book.stock}</span>
+                                </div>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] text-gray-400 font-bold uppercase">Qty:</span>
                                 <input 
                                   type="number" 
                                   min="0" 
+                                  max={book.stock}
                                   placeholder="0"
                                   className="w-16 p-1 text-xs border rounded-lg text-center font-bold focus:border-paa-navy focus:ring-1 focus:ring-paa-navy outline-none"
-                                  onChange={(e) => handleBookSelect(book.id, e.target.value)}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value) || 0;
+                                    if (val > book.stock) {
+                                      toast.error(`Cannot donate more than available stock (${book.stock}) for "${book.title}"`);
+                                      e.target.value = book.stock.toString();
+                                      handleBookSelect(book.id, book.stock.toString());
+                                    } else {
+                                      handleBookSelect(book.id, e.target.value);
+                                    }
+                                  }}
                                 />
                               </div>
                             </div>
@@ -504,9 +593,7 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Campaign / Library</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Book Details</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Qty</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Dispatch Details</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Received Status</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Donation Status & Tracking</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
@@ -525,27 +612,68 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
                     </td>
                     <td className="p-4 text-sm font-bold text-center text-gray-600">{b.quantityDonated}</td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${
-                        reg.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                        reg.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                      }`}>
-                        {reg.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-sm text-gray-600">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-xs flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-gray-400" /> {reg.dispatchStatus}</span>
-                        {reg.courierPartner && <span className="text-[10px] text-gray-400 mt-0.5">{reg.courierPartner} {reg.trackingNumber ? `(${reg.trackingNumber})` : ''}</span>}
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-gray-600">
-                      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${
-                        reg.receivedStatus === 'Received' || reg.receivedStatus === 'Delivered' 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
-                      }`}>
-                        {reg.receivedStatus}
-                      </span>
+                      {(() => {
+                        const pipeline = getPipelineStatus(reg);
+                        return (
+                          <div className="flex flex-col gap-2 min-w-[220px]">
+                            {/* Status Badge */}
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-full border ${pipeline.color}`}>
+                                {pipeline.label}
+                              </span>
+                            </div>
+                            
+                            {/* Courier/Tracking Details if In Transit or Completed */}
+                            {reg.courierPartner && (
+                              <div className="text-[10px] text-gray-500 font-semibold bg-gray-50 border border-gray-100 rounded-lg p-1.5 w-max max-w-[200px] truncate">
+                                <span className="text-gray-400">Courier:</span> {reg.courierPartner} 
+                                {reg.trackingNumber && <span className="block font-mono text-[9px] text-gray-400 mt-0.5">ID: {reg.trackingNumber}</span>}
+                              </div>
+                            )}
+                            
+                            {/* Visual Progress Steps */}
+                            {pipeline.step > 0 && (
+                              <div className="flex items-center gap-1.5 mt-1 select-none">
+                                {/* Step 1: Verification */}
+                                <div 
+                                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                    pipeline.step >= 1 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                                  }`} 
+                                  title="1. Verification"
+                                ></div>
+                                <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 2 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
+
+                                {/* Step 2: Awaiting Dispatch */}
+                                <div 
+                                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                    pipeline.step >= 2 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                                  }`} 
+                                  title="2. Awaiting Dispatch"
+                                ></div>
+                                <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 3 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
+
+                                {/* Step 3: Dispatched */}
+                                <div 
+                                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                    pipeline.step >= 3 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                                  }`} 
+                                  title="3. Dispatched"
+                                ></div>
+                                <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 4 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
+
+                                {/* Step 4: Library Reached */}
+                                <div 
+                                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                    pipeline.step >= 4 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                                  }`} 
+                                  title="4. Library Reached"
+                                ></div>
+                              </div>
+                            )}
+                            <div className="text-[10px] text-gray-400 font-medium">{pipeline.description}</div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-4 text-sm text-right">
                       {reg.status !== 'Approved' ? (
@@ -566,7 +694,7 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
               )}
               {myRegistrations.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-400 text-sm">You haven't made any library donations yet. Active campaigns will appear above.</td>
+                  <td colSpan={6} className="p-8 text-center text-gray-400 text-sm">You haven't made any library donations yet. Active campaigns will appear above.</td>
                 </tr>
               )}
             </tbody>

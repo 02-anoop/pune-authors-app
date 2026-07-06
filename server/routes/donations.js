@@ -239,7 +239,8 @@ router.delete('/api/author/donation-registrations/:id', verifyToken, async (req,
     if (!author) return res.status(404).json({ error: 'Author not found' });
 
     const registration = await prisma.donationRegistration.findUnique({
-      where: { id: parseInt(req.params.id) }
+      where: { id: parseInt(req.params.id) },
+      include: { books: true }
     });
 
     if (!registration) return res.status(404).json({ error: 'Registration not found' });
@@ -252,6 +253,20 @@ router.delete('/api/author/donation-registrations/:id', verifyToken, async (req,
     // Check status
     if (registration.status === 'Approved') {
       return res.status(400).json({ error: 'Cannot delete registration after it has been approved' });
+    }
+
+    // Replenish the author's book inventory/stock by the donated quantity
+    if (registration.books && registration.books.length > 0) {
+      for (const b of registration.books) {
+        await prisma.book.update({
+          where: { id: b.bookId },
+          data: {
+            stock: {
+              increment: b.quantityDonated
+            }
+          }
+        });
+      }
     }
 
     // Delete the registration
@@ -277,6 +292,15 @@ router.post('/api/author/donations', verifyToken, upload.single('paymentScreensh
     if (typeof books === 'string') {
       try { books = JSON.parse(books); } catch (e) { books = []; }
     }
+
+    // Verify stock availability
+    for (const b of books) {
+      const bookItem = await prisma.book.findUnique({ where: { id: parseInt(b.bookId) } });
+      if (!bookItem) return res.status(404).json({ error: 'Book not found' });
+      if (parseInt(b.quantityDonated) > bookItem.stock) {
+        return res.status(400).json({ error: `Cannot donate more than available stock (${bookItem.stock}) for "${bookItem.title}"` });
+      }
+    }
     
     const registration = await prisma.donationRegistration.create({
       data: {
@@ -294,6 +318,18 @@ router.post('/api/author/donations', verifyToken, upload.single('paymentScreensh
         }
       }
     });
+
+    // Decrease the author's book inventory/stock by the donated quantity
+    for (const b of books) {
+      await prisma.book.update({
+        where: { id: parseInt(b.bookId) },
+        data: {
+          stock: {
+            decrement: parseInt(b.quantityDonated)
+          }
+        }
+      });
+    }
     
     res.json(registration);
   } catch (err) {
@@ -309,6 +345,15 @@ router.post('/api/author/donations', verifyToken, upload.single('paymentScreensh
 router.post('/api/admin/donation-registrations/manual', verifyToken, isAdmin, async (req, res) => {
   try {
     const { announcementId, authorId, books, feePaid, paymentStatus } = req.body;
+
+    // Verify stock availability
+    for (const b of books) {
+      const bookItem = await prisma.book.findUnique({ where: { id: parseInt(b.bookId) } });
+      if (!bookItem) return res.status(404).json({ error: 'Book not found' });
+      if (parseInt(b.quantityDonated) > bookItem.stock) {
+        return res.status(400).json({ error: `Cannot donate more than available stock (${bookItem.stock}) for "${bookItem.title}"` });
+      }
+    }
     
     const registration = await prisma.donationRegistration.create({
       data: {
@@ -324,6 +369,18 @@ router.post('/api/admin/donation-registrations/manual', verifyToken, isAdmin, as
         }
       }
     });
+
+    // Decrease the author's book inventory/stock by the donated quantity
+    for (const b of books) {
+      await prisma.book.update({
+        where: { id: parseInt(b.bookId) },
+        data: {
+          stock: {
+            decrement: parseInt(b.quantityDonated)
+          }
+        }
+      });
+    }
     
     res.json(registration);
   } catch (err) {

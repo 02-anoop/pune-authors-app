@@ -70,7 +70,7 @@ export function LandingPage() {
   const [activeGenre, setActiveGenre] = useState<string>("All Books");
   const [galleryItems, setGalleryItems] = useState<any[]>([]);
   const [stats, setStats] = useState({
-    events: 45, fairs: 3, airportLibraries: 7, authors: 100, books: 38, categories: 50
+    events: 12, fairs: 3, airportLibraries: 6, authors: 100, books: 350, categories: 50
   });
 
   // Contact State

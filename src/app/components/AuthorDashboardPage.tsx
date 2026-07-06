@@ -12,6 +12,83 @@ import nonFictionData from './data/non_fiction_catalogue.json';
 import { AuthorRegistrationPage } from './AuthorRegistrationPage';
 import { NavBar } from './NavBar';
 import { Footer } from './Footer';
+import { CustomerGallery } from './CustomerGallery';
+
+const EventGalleryCard = ({ ge, onAddClick, onViewClick, addText, viewText, addIcon, viewIcon }: { ge: any, onAddClick: (ge: any) => void, onViewClick: (ge: any) => void, addText: string, viewText: string, addIcon?: React.ReactNode, viewIcon?: React.ReactNode }) => {
+  const images = (ge.images || []).filter((img: any) => img.status === 'Approved');
+  const fallback = ge.photoUrl || ge.bannerUrl || 'https://images.unsplash.com/photo-1544636331-e26879cd3d92?auto=format&fit=crop&q=80&w=800';
+  const displayImages = images.length > 0 ? images.map((i: any) => i.url) : [fallback];
+  const [index, setIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    if (displayImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % displayImages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [displayImages.length]);
+
+  const authorsCount = ge.authors ?? ge.aggAuthors ?? 0;
+  const soldCount = ge.booksSold ?? ge.aggSold ?? 0;
+
+  return (
+    <div 
+      className="border border-paa-navy/10 rounded-xl overflow-hidden bg-white flex flex-col hover:shadow-premium transition-all duration-300 ease-out cursor-pointer group"
+      onClick={() => onViewClick(ge)}
+    >
+      <div className="w-full h-48 relative overflow-hidden bg-gray-100">
+        {displayImages.map((src: string, i: number) => {
+          const imgUrl = src.startsWith('http') ? src : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${src}`;
+          return (
+            <img
+              key={i}
+              src={imgUrl}
+              className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${i === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'} group-hover:scale-110`}
+              alt="Event Banner"
+            />
+          );
+        })}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <div className="absolute bottom-4 left-4 right-4 text-white">
+            <p className="text-[10px] font-bold tracking-widest uppercase opacity-80 mb-1">{ge.type || ge.eventType || 'Event'}</p>
+            <h3 className="font-serif font-bold text-lg leading-tight">{ge.location || 'Unknown Location'}</h3>
+        </div>
+      </div>
+      <div className="p-5 flex flex-col justify-between flex-1">
+        <div>
+            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-3">{ge.date ? new Date(ge.date).toLocaleDateString() : ''} &bull; {ge.city || 'Unknown'}</p>
+            <div className="flex gap-4 mb-4">
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Authors</span>
+                    <span className="text-sm font-bold text-paa-navy">{authorsCount}</span>
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Books Sold</span>
+                    <span className="text-sm font-bold text-paa-navy">{soldCount}</span>
+                </div>
+            </div>
+        </div>
+        <div className="flex gap-2 mt-2">
+          <button
+            className="dash-btn bg-gray-100 text-paa-navy hover:bg-gray-200 flex-1 justify-center transition-colors"
+            onClick={(e) => { e.stopPropagation(); onViewClick(ge); }}
+          >
+            {viewIcon}
+            {viewText}
+          </button>
+          <button
+            className="dash-btn dash-btn-primary flex-1 justify-center"
+            onClick={(e) => { e.stopPropagation(); onAddClick(ge); }}
+          >
+            {addIcon}
+            {addText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -572,7 +649,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const [editingBook, setEditingBook] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [reapplyForm, setReapplyForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', instagram: '', facebook: '', transactionId: '', extraData: {} });
-  const [editProfileForm, setEditProfileForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', instagram: '', facebook: '', linkedin: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '' });
+  const [editProfileForm, setEditProfileForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', instagram: '', facebook: '', linkedin: '', address: '', pincode: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '' });
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [editCoverBookId, setEditCoverBookId] = useState<number | null>(null);
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
@@ -753,7 +830,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
       if (addAnother) {
         setNewBook({
-          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: '', printFormat: ''
+          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: '', printFormat: '', purpose: ''
         });
         setCover(null);
       } else {
@@ -1003,7 +1080,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           { label: 'Web Sales', value: '\u20b9' + webSalesAmount.toFixed(0), colorClass: 'blue' },
           { label: 'POS/Event Sales', value: '\u20b9' + posSalesAmount.toFixed(0), colorClass: 'amber' },
           { label: 'Avg Order Value', value: '\u20b9' + avgOrderValue, colorClass: 'blue' },
-          { label: 'Avg Delivery', value: avgDeliveryDays > 0 ? `${avgDeliveryDays} Days` : 'N/A', colorClass: 'teal' },
+          { label: 'Avg Delivery', value: Number(avgDeliveryDays) > 0 ? `${avgDeliveryDays} Days` : 'N/A', colorClass: 'teal' },
           { label: 'Pending Web Orders', value: toApproveOrders, colorClass: 'amber' },
           { label: 'Low Stock Titles', value: lowStockCount, colorClass: 'red' },
         ].map((kpi, i) => (
@@ -4372,6 +4449,7 @@ export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }
     instagram: authorProfile.instagram || '',
     facebook: authorProfile.facebook || '',
     address: authorProfile.address || '',
+    pincode: authorProfile.pincode || '',
     aadharNumber: authorProfile.aadharNumber || '',
     qualification: authorProfile.qualification || '',
     age: authorProfile.age || '',
@@ -4610,7 +4688,8 @@ function AuthorGallery() {
   const [galleries, setGalleries] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedGalleryEvent, setSelectedGalleryEvent] = React.useState<any>(null);
-  const [galleryUploadFiles, setGalleryUploadFiles] = React.useState<File[]>([]);
+  const [viewGalleryEvent, setViewGalleryEvent] = React.useState<any>(null);
+  const [galleryUploadFile, setGalleryUploadFile] = React.useState<File | null>(null);
   const [galleryUploadCaption, setGalleryUploadCaption] = React.useState('');
   const [isUploadingGallery, setIsUploadingGallery] = React.useState(false);
 
@@ -4631,29 +4710,29 @@ function AuthorGallery() {
 
   const handleUploadGalleryImage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedGalleryEvent || galleryUploadFiles.length === 0) return;
+    if (!selectedGalleryEvent || !galleryUploadFile) return;
     try {
       setIsUploadingGallery(true);
       const token = localStorage.getItem('token');
 
-      const promises = galleryUploadFiles.map(file => {
-        const formData = new FormData();
-        formData.append('photo', file);
-        formData.append('caption', galleryUploadCaption);
-        return fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/${selectedGalleryEvent.id}/images`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData
-        });
+      const formData = new FormData();
+      formData.append('photo', galleryUploadFile);
+      formData.append('caption', galleryUploadCaption);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/${selectedGalleryEvent.id}/images`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
       });
 
-      await Promise.all(promises);
-
-      toast.success('Images uploaded successfully!');
-      setGalleryUploadFiles([]);
-      setGalleryUploadCaption('');
-      setSelectedGalleryEvent(null);
-      fetchGalleries();
+      if (res.ok) {
+        toast.success('Image uploaded successfully!');
+        setGalleryUploadFile(null);
+        setGalleryUploadCaption('');
+        setSelectedGalleryEvent(null);
+        fetchGalleries();
+      } else {
+        toast.error('Failed to upload image.');
+      }
     } catch (err) {
       console.error(err);
       toast.error('Failed to upload image.');
@@ -4672,29 +4751,18 @@ function AuthorGallery() {
         </div>
         <div className="p-6">
           <p className="text-sm text-gray-500 mb-6">Select an event below to upload your photos. They will be shared in the public gallery instantly!</p>
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {galleries.map(ge => (
-              <div key={ge.id} className="border border-paa-navy/10 rounded-xl overflow-hidden bg-gray-50 flex flex-col hover:shadow-premium-hover transition-all duration-300 ease-out">
-                <div className="p-5 flex justify-between items-start border-b border-paa-navy/5 bg-white">
-                  <div>
-                    <h3 className="font-serif font-bold text-paa-navy text-xl">{ge.type} @ {ge.location}</h3>
-                    <p className="text-[11px] font-bold tracking-widest text-paa-gray-text uppercase mt-1">{new Date(ge.date).toLocaleDateString()} &bull; {ge.city}</p>
-                    <p className="text-sm text-gray-600 mt-3 max-w-2xl">{ge.description}</p>
-                  </div>
-                  <button onClick={() => setSelectedGalleryEvent(ge)} className="dash-btn dash-btn-primary shrink-0"><Upload className="w-4 h-4 inline-block mr-2" />Upload Photos</button>
-                </div>
-                {ge.images && ge.images.length > 0 ? (
-                  <div className="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                    {ge.images.filter((img: any) => img.status === 'Approved').map((img: any) => (
-                      <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-paa-navy/10 shadow-sm bg-white">
-                        <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={img.caption || 'Event image'} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-xs text-gray-400 font-medium italic text-center">No images uploaded for this event yet. Be the first!</div>
-                )}
-              </div>
+              <EventGalleryCard 
+                key={ge.id} 
+                ge={ge} 
+                onAddClick={setSelectedGalleryEvent}
+                onViewClick={setViewGalleryEvent}
+                addText="Add Images"
+                viewText="View Images"
+                addIcon={<Upload className="w-4 h-4 inline-block mr-1" />}
+                viewIcon={<Eye className="w-4 h-4 inline-block mr-1" />}
+              />
             ))}
           </div>
           {galleries.length === 0 && <p className="text-gray-500 text-sm">No active galleries found.</p>}
@@ -4715,18 +4783,33 @@ function AuthorGallery() {
                   <input disabled className="dash-input bg-gray-100 w-full" value={selectedGalleryEvent.type + ' @ ' + selectedGalleryEvent.location} />
                 </div>
                 <div>
-                  <label className="dash-label">Photos (Select Multiple) *</label>
-                  <input type="file" multiple required accept="image/*" className="dash-input text-xs w-full" onChange={e => setGalleryUploadFiles(Array.from(e.target.files || []))} />
+                  <label className="dash-label">Photo *</label>
+                  <input type="file" required accept="image/*" className="dash-input text-xs w-full" onChange={e => setGalleryUploadFile(e.target.files?.[0] || null)} />
                 </div>
                 <div>
                   <label className="dash-label">Caption (Optional)</label>
                   <input className="dash-input w-full" placeholder="e.g., Book signing moment..." value={galleryUploadCaption} onChange={e => setGalleryUploadCaption(e.target.value)} />
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
-                  <button type="button" onClick={() => { setSelectedGalleryEvent(null); setGalleryUploadFiles([]); }} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button>
+                  <button type="button" onClick={() => { setSelectedGalleryEvent(null); setGalleryUploadFile(null); }} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button>
                   <button type="submit" disabled={isUploadingGallery} className="dash-btn dash-btn-primary disabled:opacity-50">{isUploadingGallery ? 'Uploading...' : 'Upload Image'}</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewGalleryEvent && (
+        <div className="fixed inset-0 bg-black/90 z-[9999] overflow-y-auto">
+          <div className="min-h-screen py-10 px-4 md:px-10">
+            <div className="max-w-6xl mx-auto relative">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-serif text-white">{viewGalleryEvent.type} @ {viewGalleryEvent.location}</h2>
+                <button onClick={() => setViewGalleryEvent(null)} className="text-white/60 hover:text-white p-2 bg-white/5 rounded-full backdrop-blur"><X size={24} /></button>
+              </div>
+              {/* @ts-ignore */}
+              <CustomerGallery eventId={viewGalleryEvent.id.toString()} hideUpload />
             </div>
           </div>
         </div>

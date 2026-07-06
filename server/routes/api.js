@@ -2669,7 +2669,7 @@ router.get('/api/gallery', async (req, res) => {
   try {
     const events = await prisma.galleryEvent.findMany({
       orderBy: { date: 'desc' },
-      include: { images: true }
+      include: { images: { where: { status: 'Approved' } } }
     });
     res.json(events);
   } catch (err) {
@@ -2773,7 +2773,10 @@ router.post('/api/admin/gallery/:id/images', verifyToken, isAdmin, upload.single
         galleryEventId: galleryEvent.id,
         url: `/uploads/${req.file.filename}`,
         caption: caption || null,
-        dateTaken: dateTaken ? new Date(dateTaken) : null
+        dateTaken: dateTaken ? new Date(dateTaken) : null,
+        status: 'Approved',
+        uploadedBy: 'Admin',
+        uploaderRole: 'Admin'
       }
     });
     res.status(201).json(image);
@@ -3239,6 +3242,23 @@ router.post('/api/admin/events', verifyToken, isAdmin, upload.single('banner'), 
       }
     });
 
+    // Auto-create GalleryEvent for the new Event
+    await prisma.galleryEvent.create({
+      data: {
+        eventId: event.id,
+        location: event.location,
+        place: 'Unknown',
+        city: 'Unknown',
+        date: new Date(event.date),
+        duration: event.duration,
+        authors: event.aggAuthors || 0,
+        booksSold: event.aggSold || 0,
+        type: event.eventType || 'Unknown',
+        description: event.description || '',
+        photoUrl: bannerUrl || ''
+      }
+    });
+
     const activeAuthors = await prisma.author.findMany({ where: { status: 'Active' } });
     const eventAuthorsData = activeAuthors.map(a => ({ eventId: event.id, authorId: a.id, optInStatus: 'Pending' }));
     await prisma.eventAuthor.createMany({ data: eventAuthorsData, skipDuplicates: true });
@@ -3397,6 +3417,33 @@ router.put('/api/admin/events/:id', verifyToken, isAdmin, upload.single('banner'
       where: { id: eventId },
       data: updateData
     });
+    
+    // Sync GalleryEvent on update
+    await prisma.galleryEvent.upsert({
+      where: { eventId },
+      update: {
+        location: event.location,
+        date: new Date(event.date),
+        duration: event.duration,
+        type: event.eventType || 'Unknown',
+        description: event.description || '',
+        photoUrl: event.bannerUrl || ''
+      },
+      create: {
+        eventId: event.id,
+        location: event.location,
+        place: 'Unknown',
+        city: 'Unknown',
+        date: new Date(event.date),
+        duration: event.duration,
+        authors: event.aggAuthors || 0,
+        booksSold: event.aggSold || 0,
+        type: event.eventType || 'Unknown',
+        description: event.description || '',
+        photoUrl: event.bannerUrl || ''
+      }
+    });
+
     res.json(event);
   } catch (error) {
     console.error(error);
@@ -3646,16 +3693,15 @@ router.post('/api/author/gallery/:id/images', verifyToken, upload.single('photo'
     const event = await prisma.galleryEvent.findUnique({ where: { id: eventId } });
     if (!event) return res.status(404).json({ error: 'Gallery event not found' });
 
-    // Append author name to caption automatically so Admin knows who uploaded it
-    const finalCaption = caption ? `${caption} (Uploaded by ${author.name})` : `Uploaded by ${author.name}`;
-
     const newImage = await prisma.galleryImage.create({
       data: {
         galleryEventId: eventId,
         url: `/uploads/${req.file.filename}`,
-        caption: finalCaption,
+        caption: caption || null,
         dateTaken: new Date(),
-        status: 'Approved'
+        status: 'Pending',
+        uploadedBy: author.name,
+        uploaderRole: 'Author'
       }
     });
 
@@ -3673,7 +3719,7 @@ router.get('/api/gallery/events', async (req, res) => {
   try {
     const events = await prisma.galleryEvent.findMany({
       orderBy: { date: 'desc' },
-      include: { images: true }
+      include: { images: { where: { status: 'Approved' } } }
     });
     res.json(events);
   } catch (err) {
@@ -3684,7 +3730,7 @@ router.get('/api/gallery/events', async (req, res) => {
 router.get('/api/gallery/images', async (req, res) => {
   try {
     const { eventId } = req.query;
-    const where = {};
+    const where = { status: 'Approved' };
     if (eventId) {
       where.galleryEventId = parseInt(eventId);
     }
@@ -3695,6 +3741,31 @@ router.get('/api/gallery/images', async (req, res) => {
     res.json(images);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch gallery images' });
+  }
+});
+
+router.post('/api/gallery/:id/images', upload.single('photo'), async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const { caption, uploaderName } = req.body;
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+    
+    const event = await prisma.galleryEvent.findUnique({ where: { id: eventId } });
+    if (!event) return res.status(404).json({ error: 'Gallery event not found' });
+
+    const newImage = await prisma.galleryImage.create({
+      data: {
+        galleryEventId: eventId,
+        url: `/uploads/${req.file.filename}`,
+        caption: caption || null,
+        uploadedBy: uploaderName || 'Anonymous',
+        uploaderRole: 'Customer',
+        status: 'Pending'
+      }
+    });
+    res.status(201).json(newImage);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to upload image' });
   }
 });
 

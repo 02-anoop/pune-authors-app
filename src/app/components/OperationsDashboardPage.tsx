@@ -12,6 +12,83 @@ import {
 } from 'recharts';
 import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
+import { CustomerGallery } from './CustomerGallery';
+
+const AdminEventGalleryCard = ({ event, onAddClick, onViewClick, addText, viewText, addIcon, viewIcon }: { event: any, onAddClick: (e: any) => void, onViewClick: (e: any) => void, addText: string, viewText: string, addIcon?: React.ReactNode, viewIcon?: React.ReactNode }) => {
+  const images = (event.galleryEvent?.images || []);
+  const fallback = event.bannerUrl || event.galleryEvent?.photoUrl || 'https://images.unsplash.com/photo-1544636331-e26879cd3d92?auto=format&fit=crop&q=80&w=800';
+  const displayImages = images.length > 0 ? images.map((i: any) => i.url) : [fallback];
+  const [index, setIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    if (displayImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % displayImages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [displayImages.length]);
+
+  const authorsCount = event.aggAuthors ?? 0;
+  const soldCount = event.aggSold ?? 0;
+  const imageCount = images.length;
+
+  return (
+    <div 
+      className="border border-paa-navy/10 rounded-xl overflow-hidden bg-white flex flex-col hover:shadow-premium transition-all duration-300 ease-out cursor-pointer group"
+      onClick={() => onViewClick(event)}
+    >
+      <div className="w-full h-48 relative overflow-hidden bg-gray-100">
+        {displayImages.map((src: string, i: number) => {
+          const imgUrl = src.startsWith('http') ? src : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${src}`;
+          return (
+            <img
+              key={i}
+              src={imgUrl}
+              className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${i === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'} group-hover:scale-110`}
+              alt="Event Banner"
+            />
+          );
+        })}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <div className="absolute bottom-4 left-4 right-4 text-white">
+            <p className="text-[10px] font-bold tracking-widest uppercase opacity-80 mb-1">{event.eventType || 'Event'}</p>
+            <h3 className="font-serif font-bold text-lg leading-tight">{event.location || 'Unknown Location'}</h3>
+        </div>
+      </div>
+      <div className="p-5 flex flex-col justify-between flex-1">
+        <div>
+            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-3">{event.date ? new Date(event.date).toLocaleDateString() : ''}</p>
+            <div className="flex gap-4 mb-4">
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Authors</span>
+                    <span className="text-sm font-bold text-paa-navy">{authorsCount}</span>
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Books Sold</span>
+                    <span className="text-sm font-bold text-paa-navy">{soldCount}</span>
+                </div>
+            </div>
+        </div>
+        <div className="flex gap-2 mt-2">
+          <button
+            className="dash-btn bg-gray-100 text-paa-navy hover:bg-gray-200 flex-1 justify-center transition-colors"
+            onClick={(e) => { e.stopPropagation(); onViewClick(event); }}
+          >
+            {viewIcon}
+            {viewText}
+          </button>
+          <button
+            className="dash-btn dash-btn-primary flex-1 justify-center"
+            onClick={(e) => { e.stopPropagation(); onAddClick(event); }}
+          >
+            {addIcon}
+            {addText} ({imageCount})
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Automatically attach token to all admin requests
 axios.interceptors.request.use((config) => {
@@ -147,6 +224,7 @@ export function OperationsDashboardPage() {
 
   const [forms, setForms] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
+  const [pendingGalleryImages, setPendingGalleryImages] = useState<any[]>([]);
   const [selectedFormResponses, setSelectedFormResponses] = useState<any>(null);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -156,6 +234,7 @@ export function OperationsDashboardPage() {
   const [editingEvent, setEditingEvent] = useState<any>(null);
 
   const [selectedGalleryEvent, setSelectedGalleryEvent] = useState<any>(null);
+  const [viewGalleryEvent, setViewGalleryEvent] = useState<any>(null);
   const [isEditGalleryModalOpen, setIsEditGalleryModalOpen] = useState(false);
   const [editingGalleryEvent, setEditingGalleryEvent] = useState<any>(null);
 
@@ -441,22 +520,25 @@ export function OperationsDashboardPage() {
   const handleUploadGalleryImage = async (e: React.FormEvent) => {
     e.preventDefault();
     const target = e.target as any;
-    if (!selectedGalleryEvent) return;
-
-    const formData = new FormData();
-    formData.append('photo', target.photo.files[0]);
-    formData.append('caption', target.caption.value);
-    formData.append('dateTaken', target.dateTaken.value);
+    if (!selectedGalleryEvent || !target.photo.files.length) return;
 
     try {
+      const file = target.photo.files[0];
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('caption', target.caption.value);
+      formData.append('dateTaken', target.dateTaken.value);
+      
       await axios.post(`${API}/api/admin/gallery/${selectedGalleryEvent.id}/images`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+
       toast.success('Image added to gallery');
       const updatedRes = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       setEvents(updatedRes.data);
       setSelectedGalleryEvent(updatedRes.data.find((e: any) => e.id === selectedGalleryEvent.id));
       target.reset();
     } catch (err) {
-      toast.error('Failed to upload image');
+      console.error(err);
+      toast.error('Failed to add image');
     }
   };
 
@@ -470,6 +552,34 @@ export function OperationsDashboardPage() {
       setSelectedGalleryEvent(updatedRes.data.find((e: any) => e.id === selectedGalleryEvent.id));
     } catch (err) {
       toast.error('Failed to delete image');
+    }
+  };
+
+  const fetchPendingGalleryImages = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/gallery/pending`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setPendingGalleryImages(res.data);
+    } catch (err) { }
+  };
+
+  const handleApproveGalleryImage = async (imageId: number) => {
+    try {
+      await axios.put(`${API}/api/admin/gallery/images/${imageId}/approve`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Image approved');
+      fetchPendingGalleryImages();
+    } catch (err) {
+      toast.error('Failed to approve image');
+    }
+  };
+
+  const handleRejectGalleryImage = async (imageId: number) => {
+    if (!window.confirm("Reject and delete this image?")) return;
+    try {
+      await axios.delete(`${API}/api/admin/gallery/images/${imageId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      toast.success('Image rejected');
+      fetchPendingGalleryImages();
+    } catch (err) {
+      toast.error('Failed to reject image');
     }
   };
 
@@ -525,6 +635,7 @@ export function OperationsDashboardPage() {
           promises.push(fetchForms(isBackground));
         } else if (activeTab === 'gallery') {
           promises.push(fetchGallery(isBackground));
+          promises.push(fetchPendingGalleryImages());
         } else if (activeTab === 'helpdesk') {
           promises.push(fetchQueriesAlert(true));
         }
@@ -3585,7 +3696,7 @@ export function OperationsDashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280', angle: -90, textAnchor: 'end' }} dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} angle={-90} textAnchor="end" dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
                         <YAxis orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                         <RechartsTooltip 
                             cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '3 3' }}
@@ -4124,58 +4235,59 @@ export function OperationsDashboardPage() {
 
   const GalleryTab = () => (
     <div className="space-y-6">
+      {pendingGalleryImages.length > 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-3xl-2xl p-6 mb-8">
+          <h3 className="text-xl font-serif font-bold text-orange-900 mb-4 flex items-center gap-2">
+            Pending Approvals ({pendingGalleryImages.length})
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {pendingGalleryImages.map((img: any) => (
+              <div key={img.id} className="relative group rounded-xl overflow-hidden shadow-sm border border-orange-200 bg-white">
+                <img src={img.url.startsWith('http') ? img.url : `${API}${img.url}`} alt="pending" className="w-full h-32 object-cover" />
+                {(img.uploadedBy || img.uploaderRole) && (
+                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded shadow-sm text-[10px] font-bold text-paa-navy border border-paa-navy/10 z-10">
+                    {img.uploadedBy ? `By: ${img.uploadedBy}` : 'Uploaded'} {img.uploaderRole ? `(${img.uploaderRole})` : ''}
+                  </div>
+                )}
+                {img.caption && <div className="p-2 text-xs text-gray-700 bg-white/90 backdrop-blur-sm absolute bottom-0 left-0 right-0">{img.caption}</div>}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 flex-col">
+                  <button onClick={() => handleApproveGalleryImage(img.id)} className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-lg hover:bg-green-600">
+                    Approve
+                  </button>
+                  <button onClick={() => handleRejectGalleryImage(img.id)} className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600">
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight border-l-4 border-paa-navy pl-2">Gallery Management</h3>
         <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
-          Auto-synced with Past Events
+          {events.length} Events
         </span>
       </div>
 
-      <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-        <table className="dash-table">
-          <thead>
-            <tr>
-              <th>Event Info</th>
-              <th>Location</th>
-              <th>Date</th>
-              <th>Type</th>
-              <th style={{ textAlign: 'right' }}>Gallery Images</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.filter(e => e.status === 'Past').map((evt: any) => (
-              <tr key={evt.id}>
-                <td>
-                  <div className="flex items-center gap-3">
-                    <img src={evt.bannerUrl ? (evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded-xl" />
-                    <div>
-                      <p className="font-bold text-paa-navy">{evt.name}</p>
-                      <p className="text-xs text-paa-gray-text">{evt.duration}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="font-semibold text-paa-navy">{evt.location}</td>
-                <td>{evt.date ? new Date(evt.date).toLocaleDateString() : 'N/A'}</td>
-                <td><span className="px-2 py-1 bg-gray-100 text-[10px] font-bold uppercase tracking-widest rounded text-paa-navy">{evt.eventType || 'Literary Event'}</span></td>
-                <td style={{ textAlign: 'right' }}>
-                  <button
-                    onClick={() => setSelectedGalleryEvent(evt)}
-                    className="dash-btn dash-btn-primary flex items-center gap-2 ml-auto"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                    Manage Images ({evt.galleryEvent?.images?.length || 0})
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {events.filter(e => e.status === 'Past').length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-center py-8 text-paa-gray-text">No past events available for gallery management.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {events.map((evt: any) => (
+          <AdminEventGalleryCard
+            key={evt.id}
+            event={evt}
+            onAddClick={setSelectedGalleryEvent}
+            onViewClick={setViewGalleryEvent}
+            addText="Manage Images"
+            viewText="View Images"
+            addIcon={<ImageIcon className="w-4 h-4 inline-block mr-1" />}
+            viewIcon={<Eye className="w-4 h-4 inline-block mr-1" />}
+          />
+        ))}
       </div>
+      {events.length === 0 && (
+        <p className="text-gray-500 text-sm mt-4">No events available for gallery management.</p>
+      )}
     </div>
   );
 
@@ -4564,10 +4676,15 @@ export function OperationsDashboardPage() {
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
-                      {(img.caption || img.dateTaken) && (
+                      {(img.caption || img.dateTaken || img.uploadedBy || img.uploaderRole) && (
                         <div className="p-2 text-xs">
                           {img.caption && <p className="font-medium text-paa-navy truncate" title={img.caption}>{img.caption}</p>}
                           {img.dateTaken && <p className="text-[10px] text-paa-gray-text mt-0.5">{new Date(img.dateTaken).toLocaleDateString()}</p>}
+                          {(img.uploadedBy || img.uploaderRole) && (
+                            <p className="text-[10px] font-bold text-paa-gold mt-1 bg-paa-navy/5 inline-block px-1.5 py-0.5 rounded">
+                              {img.uploadedBy ? `By: ${img.uploadedBy}` : 'Uploaded'} {img.uploaderRole ? `(${img.uploaderRole})` : ''}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -4578,6 +4695,21 @@ export function OperationsDashboardPage() {
           </div>
         )}
       </Modal>
+
+      {viewGalleryEvent && (
+        <div className="fixed inset-0 bg-black/90 z-[9999] overflow-y-auto">
+          <div className="min-h-screen py-10 px-4 md:px-10">
+            <div className="max-w-6xl mx-auto relative">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-serif text-white">{viewGalleryEvent.eventType} @ {viewGalleryEvent.location}</h2>
+                <button onClick={() => setViewGalleryEvent(null)} className="text-white/60 hover:text-white p-2 bg-white/5 rounded-full backdrop-blur"><X size={24} /></button>
+              </div>
+              {/* @ts-ignore */}
+              <CustomerGallery eventId={viewGalleryEvent.galleryEvent?.id?.toString()} hideUpload />
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {/* Event Report Modal */}

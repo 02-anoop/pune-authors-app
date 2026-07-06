@@ -139,7 +139,7 @@ export function LandingPage() {
 
       {/* ── IMPACT STATS (MINIMALIST) ── */}
       <section style={{ borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea", background: "#fff" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "2rem" }} className="stats-grid">
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "1.5rem" }} className="stats-grid">
           {[
             { num: 12, suffix: "+", label: "Events" },
             { num: 3, suffix: "+", label: "Fairs" },

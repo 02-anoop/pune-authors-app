@@ -5159,6 +5159,8 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
     return 0;
   });
 
+  const authorNameString = `(Uploaded by ${dashboardData?.authorProfile?.name || ''})`;
+
   if (selectedGalleryEvent) {
     return (
         <div className="dash-panel animate-fade-in-up">
@@ -5212,11 +5214,11 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
              {/* Existing Images Section */}
             <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
               <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">
-                Your Uploaded Photos ({(selectedGalleryEvent.images?.filter((img: any) => String(img.caption || '').includes(`(Uploaded by ${dashboardData?.authorProfile?.name || ''})`)) || []).length})
+                Your Uploaded Photos ({(selectedGalleryEvent.images?.filter((img: any) => String(img.caption || '').includes(authorNameString)) || []).length})
               </h4>
               
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                 {(selectedGalleryEvent.images?.filter((img: any) => String(img.caption || '').includes(`(Uploaded by ${dashboardData?.authorProfile?.name || ''})`)) || []).map((img: any) => (
+                 {(selectedGalleryEvent.images?.filter((img: any) => String(img.caption || '').includes(authorNameString)) || []).map((img: any) => (
                     <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
                        <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url || ''}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                        

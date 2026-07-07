@@ -1,13 +1,11 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
-async function check() {
-  const books = await prisma.book.findMany({
-    select: { id: true, title: true, genre: true, subGenre: true, mrp: true, status: true },
-    orderBy: { id: 'asc' }
-  });
-  console.log(`Total: ${books.length} books`);
-  books.forEach(b => console.log(`  [${b.id}] "${b.title}" | ${b.genre} | subGenre: ${b.subGenre} | ₹${b.mrp} | ${b.status}`));
+async function main() {
+  const authors = await prisma.author.findMany();
+  for (const a of authors) {
+    if (a.extraData && JSON.stringify(a.extraData).includes('lateNotificationDate')) {
+      console.log(`Author ID: ${a.id}, Name: ${a.name}, extraData:`, a.extraData);
+    }
+  }
 }
-
-check().catch(console.error).finally(() => prisma.$disconnect());
+main().finally(() => prisma.$disconnect());

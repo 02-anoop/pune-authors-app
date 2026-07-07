@@ -1501,9 +1501,24 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
         paymentVerified: item.order.status === 'Completed',
         paymentFailed: item.order.status === 'Payment Not Received',
         createdAt: item.createdAt,
+        acceptedAt: item.acceptedAt,
         dispatchedAt: item.dispatchedAt,
         deliveredAt: item.deliveredAt,
-        date: item.createdAt.toISOString().split('T')[0]
+        expectedDeliveryDate: item.expectedDeliveryDate,
+        lateDeliveryReportedAt: item.lateDeliveryReportedAt,
+        isLateDeliveryReported: item.isLateDeliveryReported,
+        autoDelivered: item.autoDelivered,
+        date: item.createdAt.toISOString().split('T')[0],
+        feedbackRating: item.feedbackRating,
+        feedbackCondition: item.feedbackCondition,
+        feedbackPackaging: item.feedbackPackaging,
+        feedbackAsExpected: item.feedbackAsExpected,
+        feedbackBuyAgain: item.feedbackBuyAgain,
+        feedbackComments: item.feedbackComments,
+        subtotal: item.order.subtotal,
+        bundleDiscount: item.order.bundleDiscount,
+        deliveryCharges: item.order.deliveryCharges,
+        orderAmount: item.order.amount
       }));
     }
 
@@ -1841,10 +1856,13 @@ router.post('/api/author/fine/pay', verifyToken, upload.single('paymentScreensho
     const author = await prisma.author.findUnique({ where: { email: req.user.email } });
     if (!author) return res.status(403).json({ error: 'Not an author' });
 
-    let extraData = author.extraData || {};
-    extraData.fineStatus = 'Pending Verification';
-    extraData.finePaymentScreenshot = req.file ? `/uploads/${req.file.filename}` : null;
-    extraData.finePaymentDate = new Date().toISOString();
+    let extraData = typeof author.extraData === 'string' ? JSON.parse(author.extraData || '{}') : (author.extraData || {});
+    extraData = {
+      ...extraData,
+      fineStatus: 'Pending Verification',
+      finePaymentScreenshot: req.file ? `/uploads/${req.file.filename}` : null,
+      finePaymentDate: new Date().toISOString()
+    };
 
     const updatedAuthor = await prisma.author.update({
       where: { id: author.id },
@@ -1873,7 +1891,7 @@ router.post('/api/admin/authors/:id/approve-fine', verifyToken, isAdmin, async (
     const author = await prisma.author.findUnique({ where: { id: parseInt(req.params.id) } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
     
-    let extraData = author.extraData || {};
+    let extraData = typeof author.extraData === 'string' ? JSON.parse(author.extraData || '{}') : (author.extraData || {});
     
     // Add to history
     if (!extraData.fineHistory) extraData.fineHistory = [];
@@ -1918,7 +1936,7 @@ router.post('/api/admin/authors/:id/reject-fine', verifyToken, isAdmin, async (r
     const author = await prisma.author.findUnique({ where: { id: parseInt(req.params.id) } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
     
-    let extraData = author.extraData || {};
+    let extraData = typeof author.extraData === 'string' ? JSON.parse(author.extraData || '{}') : (author.extraData || {});
     extraData.fineStatus = null;
     extraData.finePaymentScreenshot = null;
     
@@ -2021,6 +2039,9 @@ router.post('/api/orders', optionalVerifyToken, upload.single('paymentScreenshot
         customerPhone,
         address,
         amount: parseFloat(amount),
+        subtotal: parseFloat(req.body.subtotal || 0),
+        bundleDiscount: parseFloat(req.body.bundleDiscount || 0),
+        deliveryCharges: parseFloat(req.body.deliveryCharges || 0),
         paymentScreenshot,
         transactionId: transactionId || null,
         items: {
@@ -2053,7 +2074,12 @@ router.post('/api/orders', optionalVerifyToken, upload.single('paymentScreenshot
         <table>
           <thead><tr><th>Book</th><th>Author</th><th>Qty</th><th>Amount</th></tr></thead>
           <tbody>${itemRowsCustomer}</tbody>
-          <tfoot><tr><td colspan="3" style="font-weight:700;text-align:right">Total</td><td style="font-weight:700;text-align:right">${inr(order.amount)}</td></tr></tfoot>
+          <tfoot>
+            ${order.bundleDiscount > 0 ? `<tr><td colspan="3" style="font-weight:600;text-align:right">Subtotal</td><td style="font-weight:600;text-align:right">${inr(order.subtotal)}</td></tr>
+            <tr><td colspan="3" style="font-weight:600;text-align:right;color:green">Bundle Discount</td><td style="font-weight:600;text-align:right;color:green">-${inr(order.bundleDiscount)}</td></tr>` : ''}
+            ${order.deliveryCharges > 0 ? `<tr><td colspan="3" style="font-weight:600;text-align:right">Delivery Charges</td><td style="font-weight:600;text-align:right">+${inr(order.deliveryCharges)}</td></tr>` : ''}
+            <tr><td colspan="3" style="font-weight:700;text-align:right">Grand Total</td><td style="font-weight:700;text-align:right">${inr(order.amount)}</td></tr>
+          </tfoot>
         </table>
         <table>
           <tr><td><strong>Order ID</strong></td><td>${orderId}</td></tr>
@@ -2089,7 +2115,12 @@ router.post('/api/orders', optionalVerifyToken, upload.single('paymentScreenshot
           <table>
             <thead><tr><th>Book</th><th>Qty</th><th>Amount</th></tr></thead>
             <tbody>${itemRowsAuthor}</tbody>
-            <tfoot><tr><td colspan="2" style="font-weight:700;text-align:right">Your Total</td><td style="font-weight:700;text-align:right">${inr(authorTotal)}</td></tr></tfoot>
+            <tfoot>
+              ${order.bundleDiscount > 0 ? `<tr><td colspan="2" style="font-weight:600;text-align:right">Subtotal</td><td style="font-weight:600;text-align:right">${inr(order.subtotal)}</td></tr>
+              <tr><td colspan="2" style="font-weight:600;text-align:right;color:green">Bundle Discount</td><td style="font-weight:600;text-align:right;color:green">-${inr(order.bundleDiscount)}</td></tr>` : ''}
+              ${order.deliveryCharges > 0 ? `<tr><td colspan="2" style="font-weight:600;text-align:right">Delivery Charges</td><td style="font-weight:600;text-align:right">+${inr(order.deliveryCharges)}</td></tr>` : ''}
+              <tr><td colspan="2" style="font-weight:700;text-align:right">Grand Total</td><td style="font-weight:700;text-align:right">${inr(order.amount)}</td></tr>
+            </tfoot>
           </table>
           <table>
             <tr><td><strong>Order ID</strong></td><td>${orderId}</td></tr>
@@ -2513,7 +2544,8 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
         trackingNumber: i.trackingNumber,
         feedbackCondition: i.feedbackCondition,
         feedbackRating: i.feedbackRating,
-        feedbackComments: i.feedbackComments
+        feedbackComments: i.feedbackComments,
+        isLateDeliveryReported: i.isLateDeliveryReported
       })),
       total: ord.amount,
       status: ord.status === 'Pending Verification' ? 'Pending' : ord.status,
@@ -2541,7 +2573,14 @@ router.put('/api/admin/orders/:id/status', verifyToken, isAdmin, async (req, res
 
 router.put('/api/order-items/:id/status', verifyToken, async (req, res) => {
   try {
-    const { status } = req.body;
+    let { status } = req.body;
+    
+    // Check if buyer has already submitted feedback
+    const existing = await prisma.orderItem.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (status === 'Delivered' && existing.feedbackRating != null) {
+      status = 'Completed';
+    }
+
     let updateData = { status };
     if (status === 'Delivered' || status === 'Completed') {
        updateData.deliveredAt = new Date();
@@ -2630,9 +2669,21 @@ router.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
 router.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
   try {
     const { trackingNumber } = req.body;
+    if (!trackingNumber || trackingNumber.trim() === '') {
+      return res.status(400).json({ error: 'Tracking Number is mandatory for dispatch.' });
+    }
+
+    const now = new Date();
+    const expectedDeliveryDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'Dispatched', trackingNumber, dispatchedAt: new Date() },
+      data: { 
+        status: 'Dispatched', 
+        trackingNumber, 
+        dispatchedAt: now,
+        expectedDeliveryDate
+      },
       include: { order: true, book: true }
     });
     
@@ -2650,22 +2701,81 @@ router.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
 
 router.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => {
   try {
-    const { condition, rating, comments } = req.body || {};
+    const { condition, rating, comments, packaging, asExpected, buyAgain } = req.body || {};
+    const existing = await prisma.orderItem.findUnique({ 
+      where: { id: parseInt(req.params.id) },
+      include: { book: { include: { author: true } }, order: true }
+    });
+
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
       data: { 
-        status: 'Completed', 
-        deliveredAt: new Date(),
+        status: 'Delivered', 
+        deliveredAt: existing.deliveredAt || new Date(),
         feedbackCondition: condition || null,
         feedbackRating: rating ? parseInt(rating) : null,
-        feedbackComments: comments || null
+        feedbackComments: comments || null,
+        feedbackPackaging: packaging || null,
+        feedbackAsExpected: asExpected || null,
+        feedbackBuyAgain: buyAgain || null
       }
     });
+
     res.json(orderItem);
 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to acknowledge order' });
+  }
+});
+
+router.post('/api/order-items/:id/report-late', verifyToken, async (req, res) => {
+  try {
+    const orderItemId = parseInt(req.params.id);
+    const existing = await prisma.orderItem.findUnique({
+      where: { id: orderItemId },
+      include: { order: true, book: { include: { author: true } } }
+    });
+    
+    if (!existing) return res.status(404).json({ error: 'Order item not found' });
+    
+    const updated = await prisma.orderItem.update({
+      where: { id: orderItemId },
+      data: {
+        isLateDeliveryReported: true,
+        lateDeliveryReportedAt: new Date()
+      }
+    });
+    
+    // Notify author via email
+    if (existing.book?.author?.email) {
+      await sendNotificationEmail(
+        existing.book.author.email,
+        'Late Delivery Reported',
+        emailWrap('Late Delivery Reported', `The buyer has reported a late delivery for order ${existing.order.id} (Book: ${existing.book.title}). Please contact the buyer or investigate the tracking status.`)
+      ).catch(e => console.error(e));
+
+      // Add in-app notification for Author
+      await prisma.notification.create({
+        data: {
+          message: `Order ORD-${existing.order.id} from ${existing.order.customerName} has been marked as Late Delivery.`,
+          target: existing.book.author.email
+        }
+      });
+
+      // Add in-app notification for Admin
+      await prisma.notification.create({
+        data: {
+          message: `Order ORD-${existing.order.id} from ${existing.order.customerName} (Author: ${existing.book.author.name}) has been marked as Late Delivery.`,
+          target: 'ADMIN'
+        }
+      });
+    }
+    
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to report late delivery' });
   }
 });
 
@@ -3848,8 +3958,8 @@ router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (r
     const author = await prisma.author.findUnique({ where: { id: authorId } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
     
-    let extraData = author.extraData || {};
-    extraData.lateNotificationDate = new Date().toISOString();
+    let extraData = typeof author.extraData === 'string' ? JSON.parse(author.extraData || '{}') : (author.extraData || {});
+    extraData = { ...extraData, lateNotificationDate: new Date().toISOString() };
     
     const updatedAuthor = await prisma.author.update({
       where: { id: authorId },
@@ -3874,7 +3984,7 @@ router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res
     const author = await prisma.author.findUnique({ where: { id: authorId } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
     
-    let extraData = author.extraData || {};
+    let extraData = typeof author.extraData === 'string' ? JSON.parse(author.extraData || '{}') : (author.extraData || {});
     extraData.lateFines = (extraData.lateFines || 0) + Number(amount);
     if (!extraData.fineDate) {
       extraData.fineDate = new Date().toISOString();

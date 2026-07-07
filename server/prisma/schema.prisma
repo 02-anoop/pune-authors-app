@@ -146,6 +146,9 @@ model Order {
   customerPhone     String?
   address           String?
   amount            Float
+  subtotal          Float       @default(0)
+  bundleDiscount    Float       @default(0)
+  deliveryCharges   Float       @default(0)
   paymentScreenshot String?
   createdAt         DateTime    @default(now())
   status            String      @default("Pending Verification")
@@ -165,9 +168,16 @@ model OrderItem {
   deliveredAt       DateTime?
   dispatchedAt      DateTime?
   acceptedAt        DateTime?
+  expectedDeliveryDate DateTime?
+  lateDeliveryReportedAt DateTime?
+  isLateDeliveryReported Boolean @default(false)
+  autoDelivered     Boolean   @default(false)
   feedbackComments  String?
   feedbackCondition String?
   feedbackRating    Int?
+  feedbackPackaging String?
+  feedbackAsExpected String?
+  feedbackBuyAgain  String?
   book              Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
   order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }

@@ -172,8 +172,6 @@ export function OperationsDashboardPage() {
   const [galleryUploadFiles, setGalleryUploadFiles] = useState<File[]>([]);
   const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-  const [lightboxImages, setLightboxImages] = useState<any[]>([]);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // Events tab lifted state
   const [selectedEventBreakdown, setSelectedEventBreakdown] = useState<any>(null);
@@ -4141,30 +4139,6 @@ export function OperationsDashboardPage() {
 
   const renderGalleryTab = () => {
 
-    const openLightbox = (images: any[], index: number) => {
-      setLightboxImages(images);
-      setLightboxIndex(index);
-      document.body.style.overflow = 'hidden';
-    };
-
-    const closeLightbox = () => {
-      setLightboxIndex(null);
-      document.body.style.overflow = 'auto';
-    };
-
-    const showNext = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (lightboxIndex !== null && lightboxImages.length > 0) {
-        setLightboxIndex((lightboxIndex + 1) % lightboxImages.length);
-      }
-    };
-
-    const showPrev = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (lightboxIndex !== null && lightboxImages.length > 0) {
-        setLightboxIndex((lightboxIndex - 1 + lightboxImages.length) % lightboxImages.length);
-      }
-    };
     const handleUploadGalleryImage = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedGalleryEvent || galleryUploadFiles.length === 0) return;
@@ -4375,15 +4349,7 @@ export function OperationsDashboardPage() {
                     if (b.status === 'Pending' && a.status !== 'Pending') return 1;
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                  }).map((img: any) => (
-                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm cursor-pointer" onClick={() => openLightbox([...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
-                       if (a.status === 'Pending' && b.status !== 'Pending') return -1;
-                       if (b.status === 'Pending' && a.status !== 'Pending') return 1;
-                       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                    }), [...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
-                       if (a.status === 'Pending' && b.status !== 'Pending') return -1;
-                       if (b.status === 'Pending' && a.status !== 'Pending') return 1;
-                       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                    }).findIndex((i: any) => i.id === img.id))}>
+                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
                        <img src={`${API}${img.url}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                        
                        {/* Always visible status badge */}
@@ -4402,7 +4368,7 @@ export function OperationsDashboardPage() {
                                        toast.success('Photo approved.');
                                        setSelectedGalleryEvent({...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.map((i: any) => i.id === img.id ? {...i, status: 'Approved'} : i) }});
                                        fetchEvents(true);
-                                     } catch (err) { toast.error('Failed to approve photo.'); }
+                                     } catch (err: any) { toast.error(err.response?.data?.error || err.message || 'Failed to approve photo.'); }
                                   }} className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 shadow-sm" title="Approve Photo">
                                      <CheckCircle2 size={12} />
                                   </button>
@@ -4414,7 +4380,8 @@ export function OperationsDashboardPage() {
                                        await axios.delete(`${API}/api/admin/gallery/images/${img.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                        toast.success('Photo deleted.');
                                        setSelectedGalleryEvent({...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.filter((i: any) => i.id !== img.id) }});
-                                     } catch (err) { toast.error('Failed to delete photo.'); }
+                                       fetchEvents(true);
+                                     } catch (err: any) { toast.error(err.response?.data?.error || err.message || 'Failed to delete photo.'); }
                                   }
                                }} className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-sm" title="Delete Photo"><Trash2 size={12} /></button>
                             </div>
@@ -4436,60 +4403,6 @@ export function OperationsDashboardPage() {
             </div>
           </div>
           
-          {lightboxIndex !== null && (
-            <div 
-              className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm"
-              onClick={closeLightbox}
-            >
-              <button 
-                className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors p-2"
-                onClick={closeLightbox}
-              >
-                <X size={32} />
-              </button>
-              
-              <div className="relative max-w-5xl w-full h-full max-h-[85vh] flex items-center justify-center flex-col gap-4">
-                <button 
-                  className="absolute left-0 md:-left-12 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-4 transition-colors hover:scale-110 active:scale-95 z-50"
-                  onClick={showPrev}
-                >
-                  <ChevronLeft size={48} />
-                </button>
-                
-                <img 
-                  src={`${API}${lightboxImages[lightboxIndex].url}`}
-                  alt={lightboxImages[lightboxIndex].caption || 'Event photo'}
-                  className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                
-                {lightboxImages[lightboxIndex].caption && (
-                   <div className="flex flex-col items-center mt-4">
-                     {String(lightboxImages[lightboxIndex].caption || '').replace(/\(Uploaded by .*?\)/, '').trim() && (
-                       <p className="text-white/90 text-sm md:text-base font-medium bg-black/60 px-6 py-2.5 rounded-full max-w-2xl text-center" onClick={(e) => e.stopPropagation()}>
-                         {String(lightboxImages[lightboxIndex].caption || '').replace(/\(Uploaded by .*?\)/, '').trim()}
-                       </p>
-                     )}
-                     {String(lightboxImages[lightboxIndex].caption || '').match(/\(Uploaded by (.*?)\)/) && (
-                       <div className="flex items-center gap-2 mt-3 bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/5" onClick={(e) => e.stopPropagation()}>
-                         <div className="w-5 h-5 rounded-full bg-paa-gold/20 flex items-center justify-center">
-                           <UserCircle size={12} className="text-paa-gold" />
-                         </div>
-                         <span className="text-white/80 text-xs font-bold tracking-wider uppercase">{String(lightboxImages[lightboxIndex].caption || '').match(/\(Uploaded by (.*?)\)/)?.[1]}</span>
-                       </div>
-                     )}
-                   </div>
-                )}
-
-                <button 
-                  className="absolute right-0 md:-right-12 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-4 transition-colors hover:scale-110 active:scale-95 z-50"
-                  onClick={showNext}
-                >
-                  <ChevronRight size={48} />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

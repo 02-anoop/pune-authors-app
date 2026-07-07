@@ -3960,6 +3960,7 @@ router.delete('/api/admin/gallery/images/:id', verifyToken, isAdmin, async (req,
     });
     res.json({ success: true });
   } catch (err) {
+    console.error('DELETE IMAGE ERROR:', err);
     res.status(500).json({ error: 'Failed to reject image' });
   }
 });

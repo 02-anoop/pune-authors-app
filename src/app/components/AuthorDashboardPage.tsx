@@ -577,7 +577,7 @@ export function AuthorDashboardPage() {
             <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/sales" element={<AuthorSalesReport data={dashboardData} />} />
             <Route path="/forms/*" element={<FormsWrapper />} />
-            <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
+            <Route path="/inventory" element={<InventoryPage onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
             <Route path="/donations" element={<AuthorDonationsTab dashboardData={dashboardData} onRefresh={() => fetchDashboardData(true)} />} />
             <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
@@ -1734,204 +1734,434 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   );
 }
 
-function InventoryPage({ books, onRefresh, dashboardData }: { books: any[], onRefresh: () => void, dashboardData: any }) {
+function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, dashboardData: any }) {
+  const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const token = () => localStorage.getItem('token');
+
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedBook, setSelectedBook] = useState<any>(null);
   const [newStocks, setNewStocks] = useState<{ [key: number]: string }>({});
-  const orders = dashboardData?.authorOrders || [];
-  const listedBooks = dashboardData?.listedBooks || [];
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
-  const handleUpdateStock = async (id: number) => {
+  const fetchInventory = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const book = books.find(b => b.id === id);
-      const updatedStock = book.stock + parseInt(newStocks[id] || '0');
-
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/inventory/${id}`,
-        { stock: updatedStock },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Stock updated');
-      setNewStocks(prev => ({ ...prev, [id]: '' }));
-      onRefresh();
+      setLoading(true);
+      const res = await axios.get(`${API}/api/author/inventory`, {
+        headers: { Authorization: `Bearer ${token()}` }
+      });
+      setInventory(res.data);
+      // Keep selected book in sync after refresh
+      if (selectedBook) {
+        const updated = res.data.find((b: any) => b.id === selectedBook.id);
+        if (updated) setSelectedBook(updated);
+      }
     } catch (err) {
-      toast.error('Failed to update stock');
+      toast.error('Failed to load inventory data');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const exportCsv = () => {
+    let csv = 'S.No,Title,Author,MRP,QTY Sold (Web),QTY to Airport,QTY for Book Fair,Current Stock\n';
+    inventory.forEach((b, i) => {
+      const title = b.title ? b.title.replace(/"/g, '""') : '';
+      const author = b.authorName ? b.authorName.replace(/"/g, '""') : '';
+      csv += `${i + 1},"${title}","${author}",${b.mrp || 0},${b.webSold || 0},${b.airportQty || 0},${b.eventQty || 0},${b.currentStock || 0}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Author_Inventory.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  useEffect(() => { fetchInventory(); }, []);
+
+  const handleUpdateStock = async (bookId: number) => {
+    const addQty = parseInt(newStocks[bookId] || '0');
+    if (!addQty || isNaN(addQty)) return toast.error('Please enter a non-zero value (+/- quantity)');
+    setUpdatingId(bookId);
+    try {
+      await axios.put(`${API}/api/author/books/${bookId}/stock`,
+        { addQty },
+        { headers: { Authorization: `Bearer ${token()}` } }
+      );
+      toast.success(addQty > 0 ? `Added ${addQty} copies to inventory` : `Removed ${Math.abs(addQty)} copies from inventory`);
+      setNewStocks(prev => ({ ...prev, [bookId]: '' }));
+      await fetchInventory();
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to update stock');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleRowClick = (book: any) => {
+    setSelectedBook(book);
+    setSidebarVisible(true);
+  };
+
+  // Stat card totals
+  const totalWebSold = inventory.reduce((s, b) => s + (b.webSold || 0), 0);
+  const totalAirport = inventory.reduce((s, b) => s + (b.airportQty || 0), 0);
+  const totalEvent = inventory.reduce((s, b) => s + (b.eventQty || 0), 0);
+  const lowStockCount = inventory.filter(b => b.isLowStock).length;
+
+  if (loading) {
+    return (
+      <div style={{ padding: '32px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, borderBottom: '1px solid rgba(26,26,46,0.05)', paddingBottom: 16 }}>
+          <div>
+            <div style={{ height: 28, width: 260, background: '#e5e7eb', borderRadius: 6, marginBottom: 8 }} className="dash-skeleton" />
+            <div style={{ height: 14, width: 340, background: '#e5e7eb', borderRadius: 4 }} className="dash-skeleton" />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+          {[...Array(4)].map((_, i) => <div key={i} style={{ height: 88, borderRadius: 12, background: '#e5e7eb' }} className="dash-skeleton" />)}
+        </div>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <div style={{ flex: '0 0 65%', height: 360, borderRadius: 12, background: '#e5e7eb' }} className="dash-skeleton" />
+          <div style={{ flex: '0 0 35%', height: 360, borderRadius: 12, background: '#e5e7eb' }} className="dash-skeleton" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: '100%', boxSizing: 'border-box' }}>
+
+      {/* Page Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(26,26,46,0.06)', paddingBottom: 16 }}>
         <div>
-          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Inventory & Distribution</h2>
-          <p className="text-sm text-paa-gray-text mt-1">Track your web orders, event distributions, and available stock levels.</p>
+          <h2 style={{ fontSize: 22, fontFamily: 'var(--font-serif, Georgia)', fontWeight: 700, color: '#1a1a2e', margin: 0, letterSpacing: '-0.3px' }}>
+            Inventory &amp; Distribution
+          </h2>
+          <p style={{ fontSize: 13, color: '#6b6b80', marginTop: 4 }}>
+            Track web orders, airport library donations, and book fair allocations. Click any row to view the granular distribution breakdown.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={exportCsv}
+            disabled={inventory.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#fff', color: '#1a1a2e', border: '1px solid rgba(26,26,46,0.15)', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: inventory.length === 0 ? 'not-allowed' : 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={fetchInventory}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#1a1a2e', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+          >
+            <Loader2 size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
+          </button>
         </div>
       </div>
 
-      {(() => {
-        const totalWebSold = orders.filter((o: any) => o.status === 'Completed' || o.status === 'Dispatched' || o.status === 'Accepted').reduce((acc: number, curr: any) => acc + curr.quantity, 0);
-        const totalEventSold = listedBooks.reduce((acc: number, curr: any) => acc + curr.soldStock, 0);
-        const lowStockCount = books.filter(b => b.stock < 10).length;
+      {/* Global Summary: Stat Cards + Inventory Pie Chart side by side */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
 
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><TrendingUp size={24} /></div>
+        {/* Stat Cards (2x2 grid) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          {[
+            { label: 'Total Titles', value: inventory.length, icon: <BookOpen size={18} />, color: '#6366f1', bg: '#eef2ff' },
+            { label: 'QTY Sold (Web)', value: totalWebSold, icon: <ShoppingCart size={18} />, color: '#16a34a', bg: '#f0fdf4' },
+            { label: 'QTY to Airport', value: totalAirport, icon: <MapPin size={18} />, color: '#0284c7', bg: '#f0f9ff' },
+            { label: 'QTY to Book Fairs', value: totalEvent, icon: <CalendarIcon size={18} />, color: '#9333ea', bg: '#fdf4ff' },
+          ].map(({ label, value, icon, color, bg }) => (
+            <div key={label} style={{ background: '#fff', border: '1px solid rgba(26,26,46,0.07)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: bg, color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {icon}
+              </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Total Copies Sold</p>
-                <p className="text-2xl font-black text-paa-navy leading-none">{totalWebSold + totalEventSold}</p>
+                <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', margin: '0 0 2px' }}>{label}</p>
+                <p style={{ fontSize: 22, fontWeight: 900, color: '#1a1a2e', lineHeight: 1, margin: 0 }}>{value}</p>
               </div>
             </div>
-            <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600"><ShoppingCart size={24} /></div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Web Channel Sales</p>
-                <p className="text-2xl font-black text-paa-navy leading-none">{totalWebSold}</p>
-              </div>
+          ))}
+        </div>
+
+        {/* Inventory Pie Chart — current stock per book */}
+        {inventory.length > 0 && (
+          <div style={{ background: '#fff', border: '1px solid rgba(26,26,46,0.07)', borderRadius: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', padding: '14px 18px', width: 280, flexShrink: 0 }}>
+            <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', margin: '0 0 8px' }}>Current Stock Split</p>
+            <div style={{ height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={inventory.map(b => ({ name: b.title.length > 14 ? b.title.substring(0, 14) + '…' : b.title, value: b.currentStock, fullTitle: b.title }))}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={48}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {inventory.map((_: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][index % 8]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any, _: any, props: any) => [`${value} copies`, props.payload?.fullTitle || props.name]}
+                    contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid rgba(26,26,46,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600"><CalendarIcon size={24} /></div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Event Channel Sales</p>
-                <p className="text-2xl font-black text-paa-navy leading-none">{totalEventSold}</p>
-              </div>
-            </div>
-            <div className="bg-white border border-paa-navy/5 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-600"><AlertCircle size={24} /></div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Low Stock Alerts</p>
-                <p className="text-2xl font-black text-paa-navy leading-none">{lowStockCount}</p>
-              </div>
+            {/* Legend */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+              {inventory.map((b: any, i: number) => (
+                <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: ['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][i % 8], flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }} title={b.title}>{b.title}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#1a1a2e', marginLeft: 'auto', flexShrink: 0 }}>{b.currentStock}</span>
+                </div>
+              ))}
             </div>
           </div>
-        );
-      })()}
+        )}
+      </div>
 
-      <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
-              <tr>
-                <th className="px-4 py-3 font-bold">Title</th>
-                <th className="px-4 py-3 font-bold text-center">Web Sold</th>
-                <th className="px-4 py-3 font-bold text-center">Events Listed</th>
-                <th className="px-4 py-3 font-bold text-center">Events Sold</th>
-                <th className="px-4 py-3 font-bold text-center">Current Stock</th>
-                <th className="px-4 py-3 font-bold">Manage Stock</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {books.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500 italic">No books listed in your inventory yet.</td></tr> : books.map((item, index) => {
-                const webSold = orders.filter((o: any) => o.bookTitle === item.title && (o.status === 'Completed' || o.status === 'Dispatched' || o.status === 'Accepted')).reduce((acc: number, curr: any) => acc + curr.quantity, 0);
-                const bookEvents = listedBooks.filter((lb: any) => lb.bookId === item.id);
-                const eventListed = bookEvents.reduce((acc: number, curr: any) => acc + curr.listedStock, 0);
-                const eventSold = bookEvents.reduce((acc: number, curr: any) => acc + curr.soldStock, 0);
-                const eventInvites = dashboardData?.eventInvites || [];
-                const resolveEventName = (eventId: number) => {
-                  const inv = eventInvites.find((i: any) => i.eventId === eventId);
-                  return inv?.event?.name || `Event #${eventId}`;
-                };
+      {/* Low Stock Warning Banner */}
+      {lowStockCount > 0 && (
+        <div style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', border: '1px solid #f59e0b', borderRadius: 10, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AlertCircle size={16} style={{ color: '#b45309', flexShrink: 0 }} />
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#78350f', margin: 0 }}>
+            <strong>{lowStockCount} title{lowStockCount > 1 ? 's' : ''}</strong> {lowStockCount > 1 ? 'are' : 'is'} running low (below 10 copies). Update stock immediately to avoid order disruptions.
+          </p>
+        </div>
+      )}
 
-                return (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="font-bold text-paa-navy">{item.title}</p>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-widest">MRP: ₹{item.mrp}</p>
-                    </td>
-                    <td className="px-4 py-3 text-center font-bold text-green-700">{webSold}</td>
-                    <td className="px-4 py-3 text-center text-gray-600 font-medium">{eventListed}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="font-bold text-blue-700 block">{eventSold}</span>
-                      {bookEvents.length > 0 && (
-                        <div className="text-[10px] text-left mt-2 border-t border-gray-100 pt-1 space-y-1">
-                          {bookEvents.map((be: any) => (
-                            <div key={be.id} className="flex justify-between text-gray-500 gap-4">
-                              <span className="truncate w-24 font-medium" title={resolveEventName(be.eventId)}>{resolveEventName(be.eventId)}</span>
-                              <span title="Sold / Listed">{be.soldStock}/{be.listedStock}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className="font-bold text-lg text-paa-navy">{item.stock}</span>
-                        {item.stock < 10 && (
-                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 mt-1 border border-red-200">LOW STOCK</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          className="dash-input w-20 text-center"
-                          placeholder="Qty"
-                          value={newStocks[item.id] || ''}
-                          onChange={(e) => setNewStocks({ ...newStocks, [item.id]: e.target.value })}
-                        />
-                        <button
-                          onClick={() => handleUpdateStock(item.id)}
-                          disabled={!newStocks[item.id]}
-                          className="dash-btn-primary px-4 py-2 disabled:opacity-50"
-                        >
-                          Add
-                        </button>
-                      </div>
+      {/* Flex Layout for Table and Sidebar */}
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', minWidth: 0 }}>
+
+        {/* LEFT — Main Table */}
+        <div style={{ flex: 1, minWidth: 0, background: '#fff', border: '1px solid rgba(26,26,46,0.07)', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#f0f4f8', borderBottom: '1px solid rgba(26,26,46,0.07)' }}>
+                  {['S.No', 'Title', 'Author', 'MRP', 'QTY Sold (Web)', 'QTY to Airport', 'QTY for Book Fair', 'Current Stock', 'Last Updated', 'Update Stock'].map(h => (
+                    <th key={h} style={{ padding: '11px 14px', fontWeight: 800, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#1a1a2e', whiteSpace: 'nowrap', textAlign: h === 'Title' || h === 'Author' ? 'left' : 'center' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {inventory.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} style={{ padding: '48px 20px', textAlign: 'center', color: '#9ca3af', fontSize: 13, fontStyle: 'italic' }}>
+                      No books in your inventory yet. Add books from your Overview tab.
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6 mt-6">
-        <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Stock Distribution</h3>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={books}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="stock"
-                  nameKey="title"
-                  label={({ name, percent }) => `${name.substring(0, 10)}... (${(percent * 100).toFixed(0)}%)`}
-                >
-                  {books.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={['#C0A062', '#1a1a2e', '#e2e8f0', '#94a3b8'][index % 4]} />
-                  ))}
-                </Pie>
-                <Tooltip wrapperClassName="shadow-premium border-none rounded-lg" />
-              </PieChart>
-            </ResponsiveContainer>
+                ) : inventory.map((book, idx) => {
+                  const isSelected = selectedBook?.id === book.id;
+                  return (
+                    <tr
+                      key={book.id}
+                      onClick={() => handleRowClick(book)}
+                      style={{
+                        borderBottom: '1px solid rgba(0,0,0,0.04)',
+                        background: isSelected ? 'rgba(99,102,241,0.06)' : (idx % 2 === 0 ? '#fff' : '#fafafa'),
+                        cursor: 'pointer',
+                        transition: 'background 0.15s',
+                        outline: isSelected ? '2px solid rgba(99,102,241,0.3)' : 'none',
+                        outlineOffset: -2
+                      }}
+                      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f8f9ff'; }}
+                      onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = idx % 2 === 0 ? '#fff' : '#fafafa'; }}
+                    >
+                      {/* S.No */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#9ca3af', fontWeight: 700, fontSize: 12 }}>{idx + 1}</td>
+                      {/* Title */}
+                      <td style={{ padding: '12px 14px', maxWidth: 160 }}>
+                        <p style={{ fontWeight: 700, color: '#1a1a2e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }} title={book.title}>{book.title}</p>
+                        <p style={{ fontSize: 10, color: '#9ca3af', margin: '2px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{book.genre}</p>
+                      </td>
+                      {/* Author */}
+                      <td style={{ padding: '12px 14px', color: '#374151', fontWeight: 500, whiteSpace: 'nowrap' }}>{book.authorName}</td>
+                      {/* MRP */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#1a1a2e' }}>₹{book.mrp}</td>
+                      {/* QTY Web */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 15 }}>{book.webSold}</span>
+                      </td>
+                      {/* QTY Airport */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        <span style={{ fontWeight: 800, color: '#0284c7', fontSize: 15 }}>{book.airportQty}</span>
+                      </td>
+                      {/* QTY Book Fair */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        <span style={{ fontWeight: 800, color: '#9333ea', fontSize: 15 }}>{book.eventQty}</span>
+                      </td>
+                      {/* Current Stock */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontWeight: 900, fontSize: 17, color: book.isLowStock ? '#dc2626' : '#1a1a2e', lineHeight: 1 }}>
+                            {book.currentStock}
+                          </span>
+                          {book.isLowStock && (
+                            <span style={{
+                              fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
+                              color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca',
+                              borderRadius: 4, padding: '2px 6px', animation: 'pulse 2s infinite'
+                            }}>⚠ LOW STOCK</span>
+                          )}
+                        </div>
+                      </td>
+                      {/* Last Updated */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#6b7280', fontSize: 12 }}>
+                        {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                      </td>
+                      {/* Update Stock */}
+                      <td style={{ padding: '12px 14px' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input
+                            id={`stock-input-${book.id}`}
+                            type="number"
+                            placeholder="+/- Qty"
+                            title="Enter a positive number to add stock, or a negative number to remove stock"
+                            value={newStocks[book.id] || ''}
+                            onChange={e => setNewStocks(prev => ({ ...prev, [book.id]: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter') handleUpdateStock(book.id); }}
+                            style={{ width: 68, padding: '6px 8px', border: '1px solid rgba(26,26,46,0.15)', borderRadius: 6, fontSize: 12, textAlign: 'center', outline: 'none', background: '#fff', color: '#1a1a2e' }}
+                          />
+                          <button
+                            id={`stock-update-btn-${book.id}`}
+                            onClick={() => handleUpdateStock(book.id)}
+                            disabled={!newStocks[book.id] || updatingId === book.id}
+                            style={{
+                              padding: '6px 10px', background: newStocks[book.id] ? (parseInt(newStocks[book.id] || '0') < 0 ? '#dc2626' : '#1a1a2e') : '#e5e7eb',
+                              color: newStocks[book.id] ? '#fff' : '#9ca3af', border: 'none',
+                              borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: newStocks[book.id] ? 'pointer' : 'not-allowed',
+                              textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {updatingId === book.id ? '...' : (parseInt(newStocks[book.id] || '0') < 0 ? 'Remove' : 'Add')}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm flex items-center gap-5">
-            <div className="w-14 h-14 bg-red-50 text-red-600 border border-red-100 flex items-center justify-center font-bold text-2xl">
-              {books.filter(i => i.stock < 10).length}
-            </div>
+        {/* RIGHT — Distribution Breakdown Sidebar */}
+        <div style={{
+          flex: '0 0 320px', minWidth: 0, background: '#fff', border: '1px solid rgba(26,26,46,0.07)',
+          borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden',
+          transition: 'opacity 0.2s', opacity: selectedBook ? 1 : 0.5
+        }}>
+          {/* Sidebar Header */}
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(26,26,46,0.06)', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div className="font-bold text-paa-navy text-sm uppercase tracking-widest">Needs Restocking</div>
-              <div className="text-xs text-gray-500 mt-1">Titles with less than 10 copies available</div>
+              <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6366f1', margin: '0 0 2px' }}>Distribution Breakdown</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
+                {selectedBook ? selectedBook.title : 'Select a book row'}
+              </p>
             </div>
+            {selectedBook && (
+              <button onClick={() => { setSelectedBook(null); setSidebarVisible(false); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
+                <X size={16} />
+              </button>
+            )}
           </div>
 
-          <div className="bg-white p-6 border border-paa-navy/5 rounded-xl shadow-sm flex items-center gap-5">
-            <div className="w-14 h-14 bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold text-2xl">
-              {books.reduce((acc, curr) => acc + curr.stock, 0)}
-            </div>
-            <div>
-              <div className="font-bold text-paa-navy text-sm uppercase tracking-widest">Total Copies</div>
-              <div className="text-xs text-gray-500 mt-1">Available across all titles in inventory</div>
-            </div>
+          {/* Sidebar Body */}
+          <div style={{ padding: '16px 20px' }}>
+            {!selectedBook ? (
+              <div style={{ textAlign: 'center', padding: '48px 20px', color: '#d1d5db' }}>
+                <Package size={40} style={{ margin: '0 auto 12px', display: 'block' }} />
+                <p style={{ fontSize: 13, margin: 0 }}>Click any book row to see where copies are distributed.</p>
+              </div>
+            ) : (
+              <>
+                {/* Book meta */}
+                <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '12px 14px', marginBottom: 16, border: '1px solid rgba(99,102,241,0.1)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {[
+                      { label: 'Current Stock', value: selectedBook.currentStock, color: selectedBook.isLowStock ? '#dc2626' : '#16a34a' },
+                      { label: 'Web Sold', value: selectedBook.webSold, color: '#16a34a' },
+                      { label: 'Airport Donated', value: selectedBook.airportQty, color: '#0284c7' },
+                      { label: 'Book Fairs', value: selectedBook.eventQty, color: '#9333ea' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} style={{ textAlign: 'center' }}>
+                        <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9ca3af', margin: '0 0 2px' }}>{label}</p>
+                        <p style={{ fontSize: 20, fontWeight: 900, color, margin: 0, lineHeight: 1 }}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedBook.isLowStock && (
+                    <div style={{ marginTop: 10, borderTop: '1px solid rgba(220,38,38,0.15)', paddingTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <AlertCircle size={13} style={{ color: '#dc2626', flexShrink: 0 }} />
+                      <p style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, margin: 0 }}>Low stock — replenish immediately</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Distribution items */}
+                <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', margin: '0 0 10px' }}>Location Detail</p>
+                {selectedBook.distributionBreakdown.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>No active distribution records for this title.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {selectedBook.distributionBreakdown.map((item: any, i: number) => (
+                      <div key={i} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '10px 14px', borderRadius: 8,
+                        background: item.type === 'airport' ? '#f0f9ff' : '#fdf4ff',
+                        border: `1px solid ${item.type === 'airport' ? 'rgba(2,132,199,0.12)' : 'rgba(147,51,234,0.12)'}`
+                      }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            <span style={{
+                              fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+                              color: item.type === 'airport' ? '#0284c7' : '#9333ea',
+                              background: item.type === 'airport' ? '#e0f2fe' : '#f3e8ff',
+                              borderRadius: 4, padding: '1px 5px'
+                            }}>
+                              {item.type === 'airport' ? '✈ Airport' : '📚 Book Fair'}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.label}>
+                            {item.label}
+                          </p>
+                          {item.location && (
+                            <p style={{ fontSize: 10, color: '#9ca3af', margin: '1px 0 0' }}>{item.location}</p>
+                          )}
+                          {item.type === 'event' && item.sold !== undefined && (
+                            <p style={{ fontSize: 10, color: '#6b7280', margin: '2px 0 0' }}>Sold: {item.sold} / Listed: {item.quantity}</p>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                          <span style={{ fontSize: 18, fontWeight: 900, color: item.type === 'airport' ? '#0284c7' : '#9333ea', lineHeight: 1 }}>
+                            {item.quantity}
+                          </span>
+                          <p style={{ fontSize: 9, color: '#9ca3af', margin: '2px 0 0', textTransform: 'uppercase' }}>copies</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Cumulative Total */}
+                    <div style={{ borderTop: '2px solid rgba(26,26,46,0.08)', paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>Total Distributed</span>
+                      <span style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e' }}>
+                        {selectedBook.distributionBreakdown.reduce((s: number, i: any) => s + i.quantity, 0)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

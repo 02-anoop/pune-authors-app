@@ -43,6 +43,7 @@ axios.interceptors.response.use(
 import { AuthorFullProfileView } from './AuthorFullProfileView';
 import { AuthorRegistrationPage } from './AuthorRegistrationPage';
 import { LibraryDonationsTab } from './LibraryDonationsTab';
+import { AdminInventoryTab } from './AdminInventoryTab';
 
 const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
   if (!isOpen) return null;
@@ -67,7 +68,7 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'events' | 'forms' | 'gallery' | 'reviews' | 'late_authors' | 'helpdesk' | 'settings' | 'library_donations'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'inventory' | 'events' | 'forms' | 'gallery' | 'reviews' | 'late_authors' | 'helpdesk' | 'settings' | 'library_donations'>(
     (() => { const t = localStorage.getItem('adminActiveTab'); return t === 'author_data' ? 'overview' : ((t as any) || 'overview'); })()
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -4457,7 +4458,8 @@ export function OperationsDashboardPage() {
             { id: 'web_orders', label: 'Web Orders', icon: ShoppingCart, hasAlert: pendingAlerts.orders },
             { id: 'sales_report', label: 'Sales Reports', icon: FileText },
             { id: 'authors', label: 'Authors Menu', icon: Users, hasAlert: pendingAlerts.authors },
-            { id: 'books', label: 'Inventory / Books', icon: BookOpen, hasAlert: pendingAlerts.books },
+            { id: 'books', label: 'Books Catalog', icon: BookOpen, hasAlert: pendingAlerts.books },
+            { id: 'inventory', label: 'Inventory / Distribution', icon: BookOpen },
             { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
             { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
             { id: 'late_authors', label: 'Late Authors System', icon: AlertCircle },
@@ -4630,6 +4632,7 @@ export function OperationsDashboardPage() {
           {activeTab === 'sales_report' && <SalesReportTab refreshTrigger={lastRefreshTime} />}
           {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
           {activeTab === 'books' && <BooksTab />}
+          {activeTab === 'inventory' && <AdminInventoryTab />}
           {activeTab === 'events' && renderEventsTab()}
           {activeTab === 'forms' && <FormsTab />}
           {activeTab === 'gallery' && <GalleryTab />}

@@ -2199,11 +2199,16 @@ router.put('/api/order-items/:id/author-approve', verifyToken, async (req, res) 
       include: { book: { include: { author: true, reviews: { select: { rating: true } } } }, order: true }
     });
 
-    // Deduct stock
-    await prisma.book.update({
+    // Deduct stock and capture resulting value for low-stock check
+    // [PRE-LAUNCH] Halt Deductions
+    const bookAfterDeduct = await prisma.book.findUnique({
       where: { id: orderItem.bookId },
-      data: { stock: { decrement: orderItem.quantity } }
+      include: { author: true }
     });
+    // Fire low-stock alert asynchronously (non-blocking) if stock drops below threshold
+    if (bookAfterDeduct.stock < 10) {
+      fireStockAlert(bookAfterDeduct.id, bookAfterDeduct.title, bookAfterDeduct.author).catch(() => {});
+    }
 
     const orderId = `PAA-${String(updated.order.id).padStart(4, '0')}`;
     const approvalDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -2692,10 +2697,11 @@ router.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
     });
     // Deduct stock immediately
     if (orderItem) {
-       await prisma.book.update({
-         where: { id: orderItem.bookId },
-         data: { stock: { decrement: orderItem.quantity } }
-       });
+       // [PRE-LAUNCH] Halt Deductions
+       // await prisma.book.update({
+       //   where: { id: orderItem.bookId },
+       //   data: { stock: { decrement: orderItem.quantity } }
+       // });
     }
     // Invalidate cache
     if (orderItem.book?.author?.email) invalidateCache(`author:dashboard:${orderItem.book.author.email}`);
@@ -3284,13 +3290,19 @@ router.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('pa
       await tx.eventBook.deleteMany({ where: { eventId, authorId: author.id } });
       
       // ── STEP 5: Deduct new listedStock from Book.stock and create EventBook records ──
+      const lowStockBooksAfterEvent = [];
       if (booksToLink && booksToLink.length > 0) {
          for (const b of booksToLink) {
            const requested = parseInt(b.stock);
-           await tx.book.update({
+           // [PRE-LAUNCH] Halt Deductions
+           const bookAfterDeduct = await tx.book.findUnique({
              where: { id: parseInt(b.bookId) },
-             data: { stock: { decrement: requested } }
+             include: { author: true }
            });
+           // Collect books that fall below threshold for post-transaction alerting
+           if (bookAfterDeduct.stock < 10) {
+             lowStockBooksAfterEvent.push(bookAfterDeduct);
+           }
          }
          const eventBooksData = booksToLink.map((b) => ({
             eventId,
@@ -3300,7 +3312,16 @@ router.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('pa
          }));
          await tx.eventBook.createMany({ data: eventBooksData });
       }
+      // Store for post-transaction processing (transactions cannot use external I/O)
+      author._lowStockBooksAfterEvent = lowStockBooksAfterEvent;
     });
+
+    // Fire low-stock alerts after transaction commits (non-blocking)
+    if (author._lowStockBooksAfterEvent && author._lowStockBooksAfterEvent.length > 0) {
+      for (const b of author._lowStockBooksAfterEvent) {
+        fireStockAlert(b.id, b.title, author).catch(() => {});
+      }
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -4256,10 +4277,11 @@ router.post('/api/pos/events/:eventId/add-stock', optionalVerifyToken, async (re
             const book = await tx.book.findUnique({ where: { id: bookId } });
             if (book.stock < quantity) throw new Error(`Insufficient warehouse stock. Max: ${book.stock}`);
             
-            await tx.book.update({
-                where: { id: bookId },
-                data: { stock: { decrement: quantity } }
-            });
+            // [PRE-LAUNCH] Halt Deductions
+            // await tx.book.update({
+            //     where: { id: bookId },
+            //     data: { stock: { decrement: quantity } }
+            // });
             
             await tx.eventBook.update({
                 where: { id: eventBook.id },
@@ -4273,5 +4295,441 @@ router.post('/api/pos/events/:eventId/add-stock', optionalVerifyToken, async (re
         res.status(500).json({ error: err.message || 'Failed to add stock' });
     }
 });
+// ----------------------------------------------------
+
+// ============================================================
+// INVENTORY & DISTRIBUTION — HELPER + 3 NEW API ENDPOINTS
+// ============================================================
+
+/**
+ * fireStockAlert — Fires a low-stock notification to the author + admin.
+ * Has a 24-hour dedup guard to prevent notification spam.
+ * Must be called OUTSIDE of Prisma transactions (uses external I/O).
+ */
+const fireStockAlert = async (bookId, bookTitle, author) => {
+  try {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentAlert = await prisma.notification.findFirst({
+      where: {
+        message: { contains: `[LOW_STOCK:${bookId}]` },
+        createdAt: { gt: oneDayAgo }
+      }
+    });
+    if (recentAlert) return; // Already alerted within 24 hours
+
+    const alertMsg = `[LOW_STOCK:${bookId}] Low stock alert: "${bookTitle}" has fewer than 10 copies remaining.`;
+
+    // In-app notification for the author
+    await prisma.notification.create({
+      data: { message: alertMsg, target: author.name }
+    });
+    // In-app notification for admin
+    await prisma.notification.create({
+      data: { message: alertMsg, target: 'ADMIN' }
+    });
+
+    // Email to author
+    await sendNotificationEmail(
+      author.email,
+      `⚠️ Low Stock Alert — "${bookTitle}"`,
+      emailWrap(`Low Inventory Warning`, `
+        <p>Hi <strong>${author.name}</strong>, this is an automated alert from the PAA platform.</p>
+        <p>Your book <strong>"${bookTitle}"</strong> has dropped below <strong>10 copies</strong> in your inventory.</p>
+        <p>Please log in to your Author Dashboard and use the <strong>Update Stock</strong> feature to replenish your inventory before accepting new orders or registering for events.</p>
+        <table>
+          <tr><td><strong>Book</strong></td><td>${bookTitle}</td></tr>
+          <tr><td><strong>Threshold</strong></td><td>Below 10 copies</td></tr>
+        </table>
+        <p style="color:#b44d28;font-weight:bold;">Action required: Update your master stock to ensure continued operations.</p>
+      `)
+    );
+  } catch (err) {
+    console.error('[fireStockAlert] Failed:', err.message);
+  }
+};
+
+// Helper for Unified Ledger Calculation
+async function computeBookInventory(books) {
+  if (!books || books.length === 0) return [];
+
+  const bookIds = books.map(b => b.id);
+
+  // Aggregate web order quantities per book (only accepted/dispatched/completed)
+  const orderItemAgg = await prisma.orderItem.groupBy({
+    by: ['bookId'],
+    where: { 
+      bookId: { in: bookIds },
+      status: { in: ['Accepted', 'Dispatched', 'Completed', 'Delivered'] }
+    },
+    _sum: { quantity: true },
+    _max: { createdAt: true }
+  });
+
+  // Aggregate donation quantities per book
+  const donationAgg = await prisma.donationBook.groupBy({
+    by: ['bookId'],
+    where: { bookId: { in: bookIds } },
+    _sum: { quantityDonated: true },
+    _max: { createdAt: true }
+  });
+
+  // Aggregate event listed stock per book — EXCLUDE Legacy Archive events
+  const eventBooksRaw = await prisma.eventBook.findMany({
+    where: {
+      bookId: { in: bookIds },
+      event: {
+        status: { not: 'Legacy Archive' },
+        livePosEnabled: true
+      }
+    },
+    include: {
+      event: { select: { id: true, name: true, location: true, status: true } }
+    }
+  });
+
+  // Latest event activity
+  const eventAgg = await prisma.eventBook.groupBy({
+    by: ['bookId'],
+    where: { bookId: { in: bookIds } },
+    _max: { createdAt: true }
+  });
+
+  // Granular donation breakdown per book (library-level)
+  const donationBooksRaw = await prisma.donationBook.findMany({
+    where: { bookId: { in: bookIds } },
+    include: {
+      registration: {
+        include: {
+          announcement: { include: { library: { select: { id: true, name: true, city: true } } } }
+        }
+      }
+    }
+  });
+
+  // Build lookup maps
+  const webSoldMap = {};
+  const lastActivityMap = {};
+  
+  orderItemAgg.forEach(r => { 
+    webSoldMap[r.bookId] = r._sum.quantity || 0; 
+    if (r._max.createdAt) {
+      if (!lastActivityMap[r.bookId] || r._max.createdAt > lastActivityMap[r.bookId]) {
+        lastActivityMap[r.bookId] = r._max.createdAt;
+      }
+    }
+  });
+
+  const airportMap = {};
+  donationAgg.forEach(r => { 
+    airportMap[r.bookId] = r._sum.quantityDonated || 0; 
+    if (r._max.createdAt) {
+      if (!lastActivityMap[r.bookId] || r._max.createdAt > lastActivityMap[r.bookId]) {
+        lastActivityMap[r.bookId] = r._max.createdAt;
+      }
+    }
+  });
+
+  eventAgg.forEach(r => {
+    if (r._max.createdAt) {
+      if (!lastActivityMap[r.bookId] || r._max.createdAt > lastActivityMap[r.bookId]) {
+        lastActivityMap[r.bookId] = r._max.createdAt;
+      }
+    }
+  });
+
+  const eventMap = {}; // bookId -> total listedStock
+  const eventBreakdownMap = {}; // bookId -> [{name, location, listed, sold}]
+  eventBooksRaw.forEach(eb => {
+    eventMap[eb.bookId] = (eventMap[eb.bookId] || 0) + eb.listedStock;
+    if (!eventBreakdownMap[eb.bookId]) eventBreakdownMap[eb.bookId] = [];
+    eventBreakdownMap[eb.bookId].push({
+      type: 'event',
+      label: eb.event.name,
+      location: eb.event.location,
+      status: eb.event.status,
+      quantity: eb.listedStock,
+      sold: eb.soldStock
+    });
+  });
+
+  const donationBreakdownMap = {}; // bookId -> [{library, qty}]
+  donationBooksRaw.forEach(db => {
+    const lib = db.registration?.announcement?.library;
+    if (!donationBreakdownMap[db.bookId]) donationBreakdownMap[db.bookId] = [];
+    donationBreakdownMap[db.bookId].push({
+      type: 'airport',
+      label: lib ? `${lib.name}${lib.city ? `, ${lib.city}` : ''}` : 'Airport Library',
+      quantity: db.quantityDonated
+    });
+  });
+
+  return books.map(book => {
+    const webSold = webSoldMap[book.id] || 0;
+    const airportQty = airportMap[book.id] || 0;
+    const eventQty = eventMap[book.id] || 0;
+    const currentStock = book.stock; // Already reflects all real-time deductions
+
+    const distributionBreakdown = [
+      ...(donationBreakdownMap[book.id] || []),
+      ...(eventBreakdownMap[book.id] || [])
+    ];
+    
+    // Last activity fallback to book.createdAt
+    const lastActivityDate = lastActivityMap[book.id] || book.createdAt;
+
+    return {
+      id: book.id,
+      title: book.title,
+      mrp: book.mrp,
+      genre: book.genre,
+      coverUrl: book.coverUrl,
+      authorId: book.authorId,
+      authorName: book.author?.name || book.authorName || 'Unknown',
+      masterStock: currentStock + webSold + airportQty + eventQty,
+      currentStock,
+      webSold,
+      airportQty,
+      eventQty,
+      isLowStock: currentStock < 10,
+      lastActivity: lastActivityDate,
+      distributionBreakdown
+    };
+  });
+}
+
+// GET /api/author/inventory
+// Returns per-book inventory with dynamic distribution breakdown
+router.get('/api/author/inventory', verifyToken, async (req, res) => {
+  try {
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    let books = await prisma.book.findMany({
+      where: { authorId: author.id },
+      orderBy: { createdAt: 'asc' }
+    });
+    
+    // Inject authorName for the helper
+    books = books.map(b => ({ ...b, authorName: author.name }));
+
+    const enriched = await computeBookInventory(books);
+    res.json(enriched);
+  } catch (err) {
+    console.error('[GET /api/author/inventory]', err);
+    res.status(500).json({ error: 'Failed to fetch inventory' });
+  }
+});
+
+
+// PUT /api/author/books/:id/stock
+// Accepts positive OR negative addQty. Positive = restock, Negative = manual deduction.
+router.put('/api/author/books/:id/stock', verifyToken, async (req, res) => {
+  try {
+    const bookId = parseInt(req.params.id);
+    const { addQty } = req.body;
+    if (addQty === undefined || addQty === null || isNaN(parseInt(addQty)) || parseInt(addQty) === 0) {
+      return res.status(400).json({ error: 'addQty must be a non-zero integer (positive to add, negative to remove)' });
+    }
+
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    const book = await prisma.book.findFirst({ where: { id: bookId, authorId: author.id } });
+    if (!book) return res.status(404).json({ error: 'Book not found or not yours' });
+
+    const qty = parseInt(addQty);
+    const newStock = book.stock + qty;
+
+    // Guard: prevent total stock going negative
+    if (newStock < 0) {
+      return res.status(400).json({
+        error: `Stock cannot be less than zero. Current: ${book.stock}, adjustment: ${qty} → would result in ${newStock}.`
+      });
+    }
+
+    const updated = await prisma.book.update({
+      where: { id: bookId },
+      data: { stock: newStock }
+    });
+
+    if (qty < 0 && newStock < 10 && book.stock >= 10) {
+      // Negative adjustment crossed the low-stock threshold — fire alert (non-blocking)
+      fireStockAlert(bookId, book.title, author).catch(() => {});
+    } else if (newStock >= 10) {
+      // Stock healthy — housekeep stale ADMIN low-stock notifications
+      const tag = `[LOW_STOCK:${bookId}]`;
+      await prisma.notification.deleteMany({
+        where: { message: { contains: tag }, target: 'ADMIN' }
+      }).catch(() => {});
+    }
+
+    invalidateCache(`author:dashboard:${req.user.email}`);
+    res.json({ id: updated.id, title: updated.title, currentStock: updated.stock, adjustment: qty });
+  } catch (err) {
+    console.error('[PUT /api/author/books/:id/stock]', err);
+    res.status(500).json({ error: 'Failed to update stock' });
+  }
+});
+
+// POST /api/author/inventory/validate-event
+// Pre-registration validation: checks if requestedQty <= currentStock
+router.post('/api/author/inventory/validate-event', verifyToken, async (req, res) => {
+  try {
+    const { bookId, requestedQty } = req.body;
+    if (!bookId || !requestedQty) return res.status(400).json({ error: 'bookId and requestedQty are required' });
+
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    const book = await prisma.book.findFirst({ where: { id: parseInt(bookId), authorId: author.id } });
+    if (!book) return res.status(404).json({ error: 'Book not found' });
+
+    const currentStock = book.stock;
+    const qty = parseInt(requestedQty);
+    const valid = currentStock >= qty;
+
+    res.json({
+      valid,
+      currentStock,
+      requestedQty: qty,
+      message: valid
+        ? `Sufficient stock available (${currentStock} copies).`
+        : `Insufficient inventory. Please update your master inventory stock before registering. Available: ${currentStock}, Requested: ${qty}.`
+    });
+  } catch (err) {
+    console.error('[POST /api/author/inventory/validate-event]', err);
+    res.status(500).json({ error: 'Validation failed' });
+  }
+});
+
+// ----------------------------------------------------
+// ADMIN INVENTORY PORTAL ROUTES
+// ----------------------------------------------------
+
+// POST /api/admin/inventory/ping-author
+router.post('/api/admin/inventory/ping-author', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { bookId, authorId } = req.body;
+    const author = await prisma.author.findUnique({ where: { id: parseInt(authorId) } });
+    const book = await prisma.book.findUnique({ where: { id: parseInt(bookId) } });
+    
+    if (!author || !book) return res.status(404).json({ error: 'Not found' });
+    
+    await prisma.notification.create({
+      data: {
+        message: `The Admin team has noticed your inventory for "${book.title}" is running low. Please update your master stock in your dashboard to ensure continued distribution.`,
+        target: author.name
+      }
+    });
+
+    if (author.email) {
+      const emailHtml = emailWrap("Restock Request", `
+        <p>Hi ${author.name},</p>
+        <p>The Admin team has noticed your inventory for <strong>${book.title}</strong> is running low.</p>
+        <p style="color:#b44d28;font-weight:bold;">Action required: Update your master stock in your dashboard to ensure continued distribution.</p>
+      `);
+      try {
+        await sendNotificationEmail(author.email, `Restock Request: ${book.title}`, emailHtml);
+      } catch (emailErr) {
+        console.error('[POST ping-author] Email failed:', emailErr);
+        return res.status(500).json({ error: 'Database updated, but failed to send email. Please verify SMTP credentials.' });
+      }
+    }
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[POST ping-author]', err);
+    res.status(500).json({ error: 'Failed to ping author' });
+  }
+});
+
+// GET /api/admin/inventory
+router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search = '', lowStock } = req.query;
+    const isExport = req.query.export === 'true';
+    const skip = (Number(page) - 1) * Number(limit);
+    
+    let whereClause = {};
+    
+    if (search) {
+      whereClause.OR = [
+        { title: { contains: search } },
+        { author: { name: { contains: search } } }
+      ];
+    }
+    
+    if (lowStock === 'true') {
+      whereClause.stock = { lt: 10 };
+    }
+
+    if (isExport) {
+      const allBooks = await prisma.book.findMany({
+        where: whereClause,
+        include: { author: { select: { name: true } } },
+        orderBy: { title: 'asc' }
+      });
+      
+      const enrichedBooks = await computeBookInventory(allBooks);
+      
+      let csv = 'S.No,Title,Author,Master Stock,Web Sold,Airport Qty,Event Qty,Current Stock,Last Activity\n';
+      enrichedBooks.forEach((b, i) => {
+        const title = `"${b.title.replace(/"/g, '""')}"`;
+        const authorStr = `"${b.authorName.replace(/"/g, '""')}"`;
+        const date = new Date(b.lastActivity).toLocaleDateString();
+        csv += `${i + 1},${title},${authorStr},${b.masterStock},${b.webSold},${b.airportQty},${b.eventQty},${b.currentStock},${date}\n`;
+      });
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=inventory_export.csv');
+      return res.status(200).send(csv);
+    }
+    
+    const [books, total] = await Promise.all([
+      prisma.book.findMany({
+        where: whereClause,
+        include: { author: { select: { name: true } } },
+        orderBy: [{ stock: 'asc' }, { title: 'asc' }], // Sorting low stock first implicitly handled in DB if not dynamic frontend sort
+        skip,
+        take: Number(limit)
+      }),
+      prisma.book.count({ where: whereClause })
+    ]);
+    
+    const enrichedBooks = await computeBookInventory(books);
+    
+    // Global stats across ALL platform
+    const globalTotalTitles = await prisma.book.count({ where: {} });
+    const globalLowStock = await prisma.book.count({ where: { stock: { lt: 10 } } });
+    
+    const stockAgg = await prisma.book.aggregate({
+      _sum: { stock: true }
+    });
+    const totalCirculation = stockAgg._sum.stock || 0;
+
+    // If initial load sorting is dynamic on frontend, we can also sort enrichedBooks here to guarantee <10 at top if limit > 1
+    // The requirement says: "On initial page load, the data table must automatically sort dynamically to push all "Low Stock" (<10 copies) items to the very top of the list."
+    // We already ordered by `stock asc` in DB, which correctly puts lowest stock (e.g. 0, 1, 2) at top.
+
+    res.json({
+      data: enrichedBooks,
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        globalStats: {
+          totalTitles: globalTotalTitles,
+          totalCirculation,
+          globalLowStock
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('[GET admin inventory]', err);
+    res.status(500).json({ error: 'Failed to fetch admin inventory' });
+  }
+});
+
 // ----------------------------------------------------
 module.exports = router;

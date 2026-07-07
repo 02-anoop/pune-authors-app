@@ -2752,7 +2752,7 @@ router.get('/api/gallery', async (req, res) => {
   try {
     const events = await prisma.galleryEvent.findMany({
       orderBy: { date: 'desc' },
-      include: { images: true }
+      include: { images: { where: { status: 'Approved' } } }
     });
     res.json(events);
   } catch (err) {
@@ -2856,7 +2856,8 @@ router.post('/api/admin/gallery/:id/images', verifyToken, isAdmin, upload.single
         galleryEventId: galleryEvent.id,
         url: `/uploads/${req.file.filename}`,
         caption: caption || null,
-        dateTaken: dateTaken ? new Date(dateTaken) : null
+        dateTaken: dateTaken ? new Date(dateTaken) : null,
+        status: 'Approved'
       }
     });
     res.status(201).json(image);
@@ -3738,7 +3739,7 @@ router.post('/api/author/gallery/:id/images', verifyToken, upload.single('photo'
         url: `/uploads/${req.file.filename}`,
         caption: finalCaption,
         dateTaken: new Date(),
-        status: 'Approved'
+        status: 'Pending'
       }
     });
 
@@ -3749,6 +3750,29 @@ router.post('/api/author/gallery/:id/images', verifyToken, upload.single('photo'
   }
 });
 
+router.delete('/api/author/gallery/images/:id', verifyToken, async (req, res) => {
+  try {
+    const imageId = parseInt(req.params.id);
+    const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+    if (!author) return res.status(403).json({ error: 'Not an author' });
+
+    // Ensure the image exists and belongs to the author
+    const image = await prisma.galleryImage.findUnique({ where: { id: imageId } });
+    if (!image) return res.status(404).json({ error: 'Image not found' });
+    
+    if (!image.caption || !image.caption.includes(`(Uploaded by ${author.name})`)) {
+       return res.status(403).json({ error: 'You can only delete your own images' });
+    }
+
+    // Actually delete the image
+    await prisma.galleryImage.delete({ where: { id: imageId } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete image' });
+  }
+});
+
 
 // --- GALLERY ENDPOINTS ---
 
@@ -3756,7 +3780,7 @@ router.get('/api/gallery/events', async (req, res) => {
   try {
     const events = await prisma.galleryEvent.findMany({
       orderBy: { date: 'desc' },
-      include: { images: true }
+      include: { images: true, event: true }
     });
     res.json(events);
   } catch (err) {

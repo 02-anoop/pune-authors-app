@@ -278,7 +278,7 @@ export function OperationsDashboardPage() {
   const fetchEvents = async (isBackground = false) => {
     if (!isBackground) setIsRefreshing(true);
     try {
-      const res = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      const res = await axios.get(`${API}/api/admin/events?_t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       setEvents(res.data); sessionStorage.setItem('adminEvents', JSON.stringify(res.data));
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
@@ -4126,62 +4126,289 @@ export function OperationsDashboardPage() {
     </div>
   );
 
-  const GalleryTab = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight border-l-4 border-paa-navy pl-2">Gallery Management</h3>
-        <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
-          Auto-synced with Past Events
-        </span>
-      </div>
+  const GalleryTab = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState('');
+    const [filterDate, setFilterDate] = useState('');
+    const [sortBy, setSortBy] = useState('date_desc');
+    const [selectedGalleryEvent, setSelectedGalleryEvent] = useState<any>(null);
+    const [galleryUploadFiles, setGalleryUploadFiles] = useState<File[]>([]);
+    const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
+    const [isUploadingGallery, setIsUploadingGallery] = useState(false);
 
-      <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-        <table className="dash-table">
-          <thead>
-            <tr>
-              <th>Event Info</th>
-              <th>Location</th>
-              <th>Date</th>
-              <th>Type</th>
-              <th style={{ textAlign: 'right' }}>Gallery Images</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.filter(e => e.status === 'Past').map((evt: any) => (
-              <tr key={evt.id}>
-                <td>
-                  <div className="flex items-center gap-3">
-                    <img src={evt.bannerUrl ? (evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`) : ''} alt="img" className="w-10 h-10 object-cover rounded-xl" />
-                    <div>
-                      <p className="font-bold text-paa-navy">{evt.name}</p>
-                      <p className="text-xs text-paa-gray-text">{evt.duration}</p>
+    const handleUploadGalleryImage = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedGalleryEvent || galleryUploadFiles.length === 0) return;
+      setIsUploadingGallery(true);
+      try {
+        const token = localStorage.getItem('token');
+        const promises = galleryUploadFiles.map(file => {
+          const formData = new FormData();
+          formData.append('photo', file);
+          if (galleryUploadCaption) formData.append('caption', galleryUploadCaption);
+          // Pass the raw event.id, the backend automatically resolves/creates the galleryEvent
+          return axios.post(`${API}/api/admin/gallery/${selectedGalleryEvent.id}/images`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+          });
+        });
+        
+        const results = await Promise.all(promises);
+        const newImages = results.map(r => r.data);
+        
+        toast.success('Images uploaded successfully. They are now live on the Customer Site!');
+        setGalleryUploadFiles([]);
+        setGalleryUploadCaption('');
+        
+        // Update the current view without closing it
+        setSelectedGalleryEvent((prev: any) => ({
+           ...prev,
+           galleryEvent: {
+              ...prev.galleryEvent,
+              images: [...(prev.galleryEvent?.images || []), ...newImages]
+           }
+        }));
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to upload image.');
+      } finally {
+        setIsUploadingGallery(false);
+      }
+    };
+
+    const filteredEvents = events.filter((e: any) => {
+       const matchSearch = (e.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || (e.location?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+       const matchType = filterType ? e.eventType === filterType : true;
+       const matchDate = filterDate ? new Date(e.date).toISOString().startsWith(filterDate) : true;
+       return matchSearch && matchType && matchDate;
+    }).sort((a: any, b: any) => {
+       const aPending = a.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
+       const bPending = b.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
+       
+       if (aPending !== bPending) return bPending - aPending; // Always prioritize events with pending approvals
+
+       if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
+       if (sortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
+       if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+       if (sortBy === 'name_desc') return (b.name || '').localeCompare(a.name || '');
+       return 0;
+    });
+
+    return (
+    <div className="space-y-6">
+      {!selectedGalleryEvent ? (
+        <div className="dash-panel animate-fade-in-up">
+          <div className="dash-panel-header flex justify-between items-center">
+            <h2 className="dash-panel-title">Gallery Management</h2>
+            <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
+              Auto-synced with All Events
+            </span>
+          </div>
+
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm">
+              <div className="flex-[3] min-w-[300px] relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input type="text" placeholder="Search by name or location..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="dash-input w-full h-full min-w-[280px]" style={{ paddingLeft: '2.5rem' }} />
+              </div>
+              <select value={filterType} onChange={e => setFilterType(e.target.value)} className="dash-input md:w-48">
+                <option value="">All Event Types</option>
+                <option value="Book Fair">Book Fair</option>
+                <option value="Literary Event">Literary Event</option>
+              </select>
+              <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="dash-input md:w-40" />
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="dash-input md:w-48">
+                <option value="date_desc">Latest First</option>
+                <option value="date_asc">Oldest First</option>
+                <option value="name_asc">Name (A-Z)</option>
+                <option value="name_desc">Name (Z-A)</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredEvents.map((evt: any) => {
+                const firstImage = evt.galleryEvent?.images?.[0]?.url;
+                const bannerUrl = firstImage ? (firstImage.startsWith('http') ? firstImage : `${API}${firstImage}`) : (evt.bannerUrl ? (evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`) : null);
+                const imageCount = evt.galleryEvent?.images?.length || 0;
+                const pendingCount = evt.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
+                return (
+                  <div key={evt.id} className="group flex flex-col bg-white border border-paa-navy/10 rounded-xl overflow-hidden hover:shadow-premium transition-all duration-300">
+                    <div className="relative h-48 w-full overflow-hidden bg-paa-navy/5 shrink-0">
+                      {bannerUrl ? (
+                         <img src={bannerUrl} alt={evt.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out" />
+                      ) : (
+                         <div className="w-full h-full flex flex-col items-center justify-center text-paa-navy/40 group-hover:scale-105 transition-transform duration-700 ease-in-out bg-gradient-to-br from-paa-cream to-gray-200">
+                            <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-paa-navy/60">No Photos Yet</span>
+                         </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-paa-navy/90 via-paa-navy/40 to-transparent"></div>
+                      <div className="absolute top-3 right-3">
+                        <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-[10px] font-extrabold uppercase tracking-widest rounded-full text-paa-navy shadow-sm">
+                          {evt.eventType || 'Event'}
+                        </span>
+                      </div>
+                      {pendingCount > 0 && (
+                        <div className="absolute top-3 left-3">
+                          <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-md">
+                            {pendingCount} Pending
+                          </span>
+                        </div>
+                      )}
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <h4 className="text-white font-serif font-bold text-xl leading-tight line-clamp-2 drop-shadow-md">{evt.name}</h4>
+                        <p className="text-white/80 text-xs font-semibold uppercase tracking-widest mt-1 flex items-center gap-1 drop-shadow-sm">
+                          <CalendarIcon size={12} /> {evt.date ? new Date(evt.date).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-5 flex flex-col flex-1 justify-between gap-4">
+                      <div className="flex items-start justify-between text-sm">
+                         <div>
+                           <p className="font-bold text-paa-navy">{evt.location}</p>
+                           <p className="text-xs text-gray-500 mt-0.5">{evt.duration}</p>
+                         </div>
+                         <div className="flex flex-col items-end">
+                            <span className="text-2xl font-black text-paa-navy leading-none">{imageCount}</span>
+                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Photos</span>
+                         </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => setSelectedGalleryEvent(evt)}
+                        className="w-full dash-btn dash-btn-primary flex justify-center items-center gap-2 group-hover:bg-paa-gold group-hover:text-paa-navy group-hover:border-paa-gold transition-colors"
+                      >
+                        <ImageIcon size={16} /> Manage Gallery
+                      </button>
                     </div>
                   </div>
-                </td>
-                <td className="font-semibold text-paa-navy">{evt.location}</td>
-                <td>{evt.date ? new Date(evt.date).toLocaleDateString() : 'N/A'}</td>
-                <td><span className="px-2 py-1 bg-gray-100 text-[10px] font-bold uppercase tracking-widest rounded text-paa-navy">{evt.eventType || 'Literary Event'}</span></td>
-                <td style={{ textAlign: 'right' }}>
-                  <button
-                    onClick={() => setSelectedGalleryEvent(evt)}
-                    className="dash-btn dash-btn-primary flex items-center gap-2 ml-auto"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                    Manage Images ({evt.galleryEvent?.images?.length || 0})
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {events.filter(e => e.status === 'Past').length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-center py-8 text-paa-gray-text">No past events available for gallery management.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="dash-panel animate-fade-in-up">
+          <div className="dash-panel-header flex justify-between items-center">
+            <div>
+              <h3 className="dash-panel-title">{selectedGalleryEvent.name}</h3>
+              <p className="text-sm text-gray-500 mt-1 uppercase tracking-widest font-bold text-[10px]">Gallery Management</p>
+            </div>
+            <button onClick={() => { fetchEvents(true); setSelectedGalleryEvent(null); setGalleryUploadFiles([]); }} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors">
+              &larr; Back to Events
+            </button>
+          </div>
+
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 bg-gray-50/30">
+            {/* Upload Section */}
+            <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm h-fit">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Upload New Photos</h4>
+              <form onSubmit={handleUploadGalleryImage} className="flex flex-col gap-4">
+                <div>
+                  <label className="dash-label">Photos (Select Multiple) *</label>
+                  <input type="file" multiple accept="image/*" className="dash-input text-xs w-full" onChange={e => {
+                      if (e.target.files && e.target.files.length > 0) {
+                          const selected = Array.from(e.target.files);
+                          setGalleryUploadFiles(prev => [...prev, ...selected]);
+                      }
+                  }} />
+                </div>
+                {galleryUploadFiles.length > 0 && (
+                   <div className="flex gap-2 overflow-x-auto py-2 px-1">
+                      {galleryUploadFiles.map((file, i) => (
+                         <div key={i} className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-gray-200 group shadow-sm">
+                            <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="Preview" />
+                            <button type="button" onClick={() => setGalleryUploadFiles(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 w-5 h-5 bg-black/50 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all">
+                               <X size={12} />
+                            </button>
+                         </div>
+                      ))}
+                   </div>
+                )}
+                <div>
+                  <label className="dash-label">Caption (Optional)</label>
+                  <input className="dash-input w-full" placeholder="e.g., Book signing moment..." value={galleryUploadCaption} onChange={e => setGalleryUploadCaption(e.target.value)} />
+                </div>
+                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <button type="button" onClick={() => setGalleryUploadFiles([])} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Clear</button>
+                  <button type="submit" disabled={isUploadingGallery} className="dash-btn dash-btn-primary disabled:opacity-50">{isUploadingGallery ? 'Uploading...' : 'Upload Image'}</button>
+                </div>
+              </form>
+            </div>
+
+            {/* Existing Images Section */}
+            <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Existing Photos ({selectedGalleryEvent.galleryEvent?.images?.length || 0})</h4>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                 {(() => {
+                    const sortedImages = [...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
+                       if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+                       if (b.status === 'Pending' && a.status !== 'Pending') return 1;
+                       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    });
+                    return sortedImages.map((img: any) => {
+                    const uploaderMatch = img.caption?.match(/\(Uploaded by (.*?)\)/);
+                    const uploaderName = uploaderMatch ? uploaderMatch[1] : '';
+                    const cleanCaption = img.caption ? img.caption.replace(/\(Uploaded by .*?\)/, '').trim() : '';
+
+                    return (
+                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
+                       <img src={`${API}${img.url}`} className="w-full h-full object-cover" alt="Gallery photo" />
+                       
+                       {/* Always visible status badge */}
+                       <div className="absolute top-2 left-2 z-10">
+                         <span className={`px-2 py-0.5 text-[9px] uppercase font-bold rounded-sm shadow-md ${img.status === 'Approved' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{img.status}</span>
+                       </div>
+
+                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 z-20">
+                          <div className="flex justify-end items-start">
+                             <div className="flex gap-1">
+                               {img.status !== 'Approved' && (
+                                  <button onClick={async () => {
+                                     try {
+                                       await axios.put(`${API}/api/admin/gallery/images/${img.id}/approve`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                       toast.success('Photo approved.');
+                                       setSelectedGalleryEvent({...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.map((i: any) => i.id === img.id ? {...i, status: 'Approved'} : i) }});
+                                     } catch (err) { toast.error('Failed to approve photo.'); }
+                                  }} className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 shadow-sm" title="Approve Photo">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                  </button>
+                               )}
+                               <button onClick={async () => {
+                                  if(window.confirm('Delete this photo completely?')) {
+                                     try {
+                                       await axios.delete(`${API}/api/admin/gallery/images/${img.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                       toast.success('Photo deleted.');
+                                       setSelectedGalleryEvent({...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.filter((i: any) => i.id !== img.id) }});
+                                     } catch (err) { toast.error('Failed to delete photo.'); }
+                                  }
+                               }} className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-sm" title="Delete Photo"><Trash2 size={12} /></button>
+                            </div>
+                          </div>
+                          <div className="mt-auto pb-1 px-1">
+                             {cleanCaption && <p className="text-white text-xs line-clamp-2 font-medium leading-tight drop-shadow-md mb-1">{cleanCaption}</p>}
+                             {uploaderName && <p className="text-paa-gold text-[9px] uppercase tracking-widest font-bold">By: {uploaderName}</p>}
+                          </div>
+                       </div>
+                    </div>
+                 );
+                 });
+                 })()}
+                 {(!selectedGalleryEvent.galleryEvent?.images || selectedGalleryEvent.galleryEvent.images.length === 0) && (
+                    <div className="col-span-full py-16 text-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                       <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                       No photos uploaded for this event yet.
+                    </div>
+                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+    );
+  };
 
   if (loading) {
     return (

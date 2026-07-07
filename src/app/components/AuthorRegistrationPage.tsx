@@ -1512,6 +1512,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         type="button"
                         onClick={() => {
                           setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
+                          setErrors(prev => { const n = {...prev}; ['title','genre','synopsis','pages','mrp','language','isbn','publisher','publicationDate','format','printFormat','purposeOfWriting'].forEach(k => delete n[k]); return n; });
                           setCoverBlob(null);
                           setBackCoverBlob(null);
                           setCoverFileUrl(null);
@@ -1529,6 +1530,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         type="button"
                         onClick={() => {
                           setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
+                          setErrors(prev => { const n = {...prev}; ['title','genre','synopsis','pages','mrp','language','isbn','publisher','publicationDate','format','printFormat','purposeOfWriting'].forEach(k => delete n[k]); return n; });
                           setCoverBlob(null);
                           setBackCoverBlob(null);
                           setCoverFileUrl(null);
@@ -1578,6 +1580,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         }
                         
                         setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
+                        setErrors(prev => { const n = {...prev}; ['title','genre','synopsis','pages','mrp','language','isbn','publisher','publicationDate','format','printFormat','purposeOfWriting'].forEach(k => delete n[k]); return n; });
                         setCoverBlob(null);
                         setBackCoverBlob(null);
                         setCoverFileUrl(null);
@@ -1753,12 +1756,22 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           alert("Synopsis cannot exceed 100 words.");
                           return;
                         }
-                        setBooks([...books, { ...form, coverBlob, backCoverBlob, coverFileUrl, backCoverFileUrl }]);
-                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", purposeOfWriting: "" });
+                        const newBookData = { ...form, coverBlob, backCoverBlob, coverFileUrl, backCoverFileUrl };
+                        if (editingBookIndexRef.current !== null) {
+                          const updatedBooks = [...books];
+                          updatedBooks[editingBookIndexRef.current] = { ...updatedBooks[editingBookIndexRef.current], ...newBookData };
+                          setBooks(updatedBooks);
+                          editingBookIndexRef.current = null;
+                        } else {
+                          setBooks([...books, newBookData]);
+                        }
+                        setForm({ ...form, title: "", subtitle: "", genre: "", subcategory: "", subSubcategory: "", synopsis: "", pages: "", mrp: "", stock: "0", language: "", isbn: "", publisher: "", publicationDate: "", edition: "", format: "", printFormat: "", purposeOfWriting: "" });
+                        setErrors(prev => { const n = {...prev}; ['title','genre','synopsis','pages','mrp','language','isbn','publisher','publicationDate','format','printFormat','purposeOfWriting'].forEach(k => delete n[k]); return n; });
                         setCoverBlob(null);
                         setBackCoverBlob(null);
                         setCoverFileUrl(null);
                         setBackCoverFileUrl(null);
+                        setShowAddBookForm(false);
                       } else if (books.length === 0) {
                         alert("Please fill all compulsory fields for at least one book.");
                         return;
@@ -1923,7 +1936,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     }
 
 
-                    if (Object.values(errors).some(err => typeof err === 'string' && err.trim() !== "")) {
+                    const activeErrors = { ...errors };
+                    if (books.length > 0 && !showAddBookForm) {
+                      ['title','genre','synopsis','pages','mrp','language','isbn','publisher','publicationDate','format','printFormat','purposeOfWriting'].forEach(k => delete activeErrors[k]);
+                    }
+                    if (Object.values(activeErrors).some(err => typeof err === 'string' && err.trim() !== "")) {
+                      console.log("Validation errors blocking submit:", activeErrors);
                       alert("Please fix all validation errors before submitting.");
                       return;
                     }

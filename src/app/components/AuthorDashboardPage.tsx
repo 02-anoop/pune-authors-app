@@ -581,7 +581,7 @@ export function AuthorDashboardPage() {
             <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
             <Route path="/donations" element={<AuthorDonationsTab dashboardData={dashboardData} onRefresh={() => fetchDashboardData(true)} />} />
             <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
-            <Route path="/gallery" element={<AuthorGallery />} />
+            <Route path="/gallery" element={<AuthorGallery dashboardData={dashboardData} />} />
             <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
             <Route path="/pos/:eventId" element={<LivePosDashboard />} />
             <Route path="/bundle-offers" element={<BundleOffersTab data={dashboardData} />} />
@@ -620,7 +620,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
   const [editingBook, setEditingBook] = useState<any>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [reapplyForm, setReapplyForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', instagram: '', facebook: '', transactionId: '', extraData: {} });
-  const [editProfileForm, setEditProfileForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', instagram: '', facebook: '', linkedin: '', address: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '' });
+  const [editProfileForm, setEditProfileForm] = useState({ name: '', phone: '', whatsapp: '', bio: '', penName: '', city: '', state: '', instagram: '', facebook: '', linkedin: '', address: '', pincode: '', aadharNumber: '', qualification: '', institution: '', subject: '', age: '', experience: '', skills: '', hobbies: '', whyJoining: '' });
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [editCoverBookId, setEditCoverBookId] = useState<number | null>(null);
   const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
@@ -808,7 +808,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
       if (addAnother) {
         setNewBook({
-          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: '', printFormat: ''
+          title: '', subtitle: '', genre: '', subcategory: '', subSubcategory: '', synopsis: '', pages: '', mrp: '', stock: '', language: '', isbn: '', publisher: '', publicationDate: '', edition: '', format: '', printFormat: '', purpose: ''
         });
         setCover(null);
       } else {
@@ -1058,7 +1058,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           { label: 'Web Sales', value: '\u20b9' + webSalesAmount.toFixed(0), colorClass: 'blue' },
           { label: 'POS/Event Sales', value: '\u20b9' + posSalesAmount.toFixed(0), colorClass: 'amber' },
           { label: 'Avg Order Value', value: '\u20b9' + avgOrderValue, colorClass: 'blue' },
-          { label: 'Avg Delivery', value: avgDeliveryDays > 0 ? `${avgDeliveryDays} Days` : 'N/A', colorClass: 'teal' },
+          { label: 'Avg Delivery', value: Number(avgDeliveryDays) > 0 ? `${avgDeliveryDays} Days` : 'N/A', colorClass: 'teal' },
           { label: 'Pending Web Orders', value: toApproveOrders, colorClass: 'amber' },
           { label: 'Low Stock Titles', value: lowStockCount, colorClass: 'red' },
         ].map((kpi, i) => (
@@ -5027,7 +5027,7 @@ function BundleOffersTab({ data }: { data: any }) {
 
 
 
-function AuthorGallery() {
+function AuthorGallery({ dashboardData }: { dashboardData: any }) {
   const [galleries, setGalleries] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedGalleryEvent, setSelectedGalleryEvent] = React.useState<any>(null);

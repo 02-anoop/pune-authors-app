@@ -5027,7 +5027,40 @@ function BundleOffersTab({ data }: { data: any }) {
 
 
 
+class GalleryErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Gallery Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 m-4 bg-red-50 border border-red-200 rounded-xl">
+          <h2 className="text-xl font-bold text-red-700 mb-2">Gallery Component Crashed</h2>
+          <p className="text-red-600 font-mono text-sm whitespace-pre-wrap">{this.state.error?.toString()}</p>
+          <button onClick={() => this.setState({ hasError: false, error: null })} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg">Try Again</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function AuthorGallery({ dashboardData }: { dashboardData: any }) {
+  return (
+    <GalleryErrorBoundary>
+      <AuthorGalleryInner dashboardData={dashboardData} />
+    </GalleryErrorBoundary>
+  );
+}
+
+function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
   const [galleries, setGalleries] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedGalleryEvent, setSelectedGalleryEvent] = React.useState<any>(null);

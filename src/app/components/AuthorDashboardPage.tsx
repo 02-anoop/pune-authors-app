@@ -5075,19 +5075,32 @@ function AuthorGallery({ dashboardData }: { dashboardData: any }) {
       });
 
       const responses = await Promise.all(promises);
-      const newImages = await Promise.all(responses.map(r => r.json()));
+      const newImages: any[] = [];
+      for (const r of responses) {
+        if (r.ok) {
+          try { newImages.push(await r.json()); } catch (_) {}
+        }
+      }
 
-      toast.success('Images uploaded successfully!');
+      if (newImages.length > 0) {
+        toast.success(`${newImages.length} image(s) uploaded successfully!`);
+      } else {
+        toast.error('Failed to upload images.');
+      }
       setGalleryUploadFiles([]);
       setGalleryUploadCaption('');
       
-      // Update the current view without closing it
-      setSelectedGalleryEvent((prev: any) => ({
-         ...prev,
-         images: [...(prev.images || []), ...newImages]
-      }));
-      
-      fetchGalleries();
+      // Re-fetch galleries and update selectedGalleryEvent from fresh data
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/gallery/events`);
+        setGalleries(res.data);
+        const updatedEvent = res.data.find((ge: any) => ge.id === selectedGalleryEvent.id);
+        if (updatedEvent) {
+          setSelectedGalleryEvent(updatedEvent);
+        }
+      } catch (_) {
+        fetchGalleries();
+      }
     } catch (err) {
       console.error(err);
       toast.error('Failed to upload image.');

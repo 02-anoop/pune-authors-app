@@ -5,7 +5,7 @@ import {
   Eye, Edit, Edit2, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle,
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
   ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, ChevronUp, Loader2, FileText, AlertCircle,
-  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send
+  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, ChevronLeft, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line
@@ -4138,6 +4138,34 @@ export function OperationsDashboardPage() {
     const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
     const [isUploadingGallery, setIsUploadingGallery] = useState(false);
 
+    // Lightbox
+    const [lightboxImages, setLightboxImages] = useState<any[]>([]);
+    const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+    const openLightbox = (images: any[], index: number) => {
+      setLightboxImages(images);
+      setLightboxIndex(index);
+      document.body.style.overflow = 'hidden';
+    };
+
+    const closeLightbox = () => {
+      setLightboxIndex(null);
+      document.body.style.overflow = 'auto';
+    };
+
+    const showNext = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (lightboxIndex !== null && lightboxImages.length > 0) {
+        setLightboxIndex((lightboxIndex + 1) % lightboxImages.length);
+      }
+    };
+
+    const showPrev = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (lightboxIndex !== null && lightboxImages.length > 0) {
+        setLightboxIndex((lightboxIndex - 1 + lightboxImages.length) % lightboxImages.length);
+      }
+    };
     const handleUploadGalleryImage = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedGalleryEvent || galleryUploadFiles.length === 0) return;
@@ -4343,20 +4371,21 @@ export function OperationsDashboardPage() {
               <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Existing Photos ({selectedGalleryEvent.galleryEvent?.images?.length || 0})</h4>
               
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                 {(() => {
-                    const sortedImages = [...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
+                 {[...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
+                    if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+                    if (b.status === 'Pending' && a.status !== 'Pending') return 1;
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                 }).map((img: any) => (
+                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm cursor-pointer" onClick={() => openLightbox([...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
                        if (a.status === 'Pending' && b.status !== 'Pending') return -1;
                        if (b.status === 'Pending' && a.status !== 'Pending') return 1;
                        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                    });
-                    return sortedImages.map((img: any) => {
-                    const uploaderMatch = img.caption?.match(/\(Uploaded by (.*?)\)/);
-                    const uploaderName = uploaderMatch ? uploaderMatch[1] : '';
-                    const cleanCaption = img.caption ? img.caption.replace(/\(Uploaded by .*?\)/, '').trim() : '';
-
-                    return (
-                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
-                       <img src={`${API}${img.url}`} className="w-full h-full object-cover" alt="Gallery photo" />
+                    }), [...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
+                       if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+                       if (b.status === 'Pending' && a.status !== 'Pending') return 1;
+                       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    }).findIndex((i: any) => i.id === img.id))}>
+                       <img src={`${API}${img.url}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                        
                        {/* Always visible status badge */}
                        <div className="absolute top-2 left-2 z-10">
@@ -4367,17 +4396,19 @@ export function OperationsDashboardPage() {
                           <div className="flex justify-end items-start">
                              <div className="flex gap-1">
                                {img.status !== 'Approved' && (
-                                  <button onClick={async () => {
+                                  <button onClick={async (e) => {
+                                     e.stopPropagation();
                                      try {
                                        await axios.put(`${API}/api/admin/gallery/images/${img.id}/approve`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                        toast.success('Photo approved.');
                                        setSelectedGalleryEvent({...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.map((i: any) => i.id === img.id ? {...i, status: 'Approved'} : i) }});
                                      } catch (err) { toast.error('Failed to approve photo.'); }
                                   }} className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 shadow-sm" title="Approve Photo">
-                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                     <CheckCircle2 size={12} />
                                   </button>
                                )}
-                               <button onClick={async () => {
+                               <button onClick={async (e) => {
+                                  e.stopPropagation();
                                   if(window.confirm('Delete this photo completely?')) {
                                      try {
                                        await axios.delete(`${API}/api/admin/gallery/images/${img.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
@@ -4389,14 +4420,12 @@ export function OperationsDashboardPage() {
                             </div>
                           </div>
                           <div className="mt-auto pb-1 px-1">
-                             {cleanCaption && <p className="text-white text-xs line-clamp-2 font-medium leading-tight drop-shadow-md mb-1">{cleanCaption}</p>}
-                             {uploaderName && <p className="text-paa-gold text-[9px] uppercase tracking-widest font-bold">By: {uploaderName}</p>}
+                             {String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim() && <p className="text-white text-xs line-clamp-2 font-medium leading-tight drop-shadow-md mb-1">{String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim()}</p>}
+                             {String(img.caption || '').match(/\(Uploaded by (.*?)\)/) && <p className="text-paa-gold text-[9px] uppercase tracking-widest font-bold">By: {String(img.caption || '').match(/\(Uploaded by (.*?)\)/)?.[1]}</p>}
                           </div>
                        </div>
                     </div>
-                 );
-                 });
-                 })()}
+                 ))}
                  {(!selectedGalleryEvent.galleryEvent?.images || selectedGalleryEvent.galleryEvent.images.length === 0) && (
                     <div className="col-span-full py-16 text-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed border-gray-200">
                        <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -4406,6 +4435,61 @@ export function OperationsDashboardPage() {
               </div>
             </div>
           </div>
+          
+          {lightboxIndex !== null && (
+            <div 
+              className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm"
+              onClick={closeLightbox}
+            >
+              <button 
+                className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors p-2"
+                onClick={closeLightbox}
+              >
+                <X size={32} />
+              </button>
+              
+              <div className="relative max-w-5xl w-full h-full max-h-[85vh] flex items-center justify-center flex-col gap-4">
+                <button 
+                  className="absolute left-0 md:-left-12 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-4 transition-colors hover:scale-110 active:scale-95 z-50"
+                  onClick={showPrev}
+                >
+                  <ChevronLeft size={48} />
+                </button>
+                
+                <img 
+                  src={`${API}${lightboxImages[lightboxIndex].url}`}
+                  alt={lightboxImages[lightboxIndex].caption || 'Event photo'}
+                  className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                
+                {lightboxImages[lightboxIndex].caption && (
+                   <div className="flex flex-col items-center mt-4">
+                     {String(lightboxImages[lightboxIndex].caption || '').replace(/\(Uploaded by .*?\)/, '').trim() && (
+                       <p className="text-white/90 text-sm md:text-base font-medium bg-black/60 px-6 py-2.5 rounded-full max-w-2xl text-center" onClick={(e) => e.stopPropagation()}>
+                         {String(lightboxImages[lightboxIndex].caption || '').replace(/\(Uploaded by .*?\)/, '').trim()}
+                       </p>
+                     )}
+                     {String(lightboxImages[lightboxIndex].caption || '').match(/\(Uploaded by (.*?)\)/) && (
+                       <div className="flex items-center gap-2 mt-3 bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/5" onClick={(e) => e.stopPropagation()}>
+                         <div className="w-5 h-5 rounded-full bg-paa-gold/20 flex items-center justify-center">
+                           <UserCircle size={12} className="text-paa-gold" />
+                         </div>
+                         <span className="text-white/80 text-xs font-bold tracking-wider uppercase">{String(lightboxImages[lightboxIndex].caption || '').match(/\(Uploaded by (.*?)\)/)?.[1]}</span>
+                       </div>
+                     )}
+                   </div>
+                )}
+
+                <button 
+                  className="absolute right-0 md:-right-12 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-4 transition-colors hover:scale-110 active:scale-95 z-50"
+                  onClick={showNext}
+                >
+                  <ChevronRight size={48} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

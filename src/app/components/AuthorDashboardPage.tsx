@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -5068,6 +5068,34 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
   const [galleryUploadCaption, setGalleryUploadCaption] = React.useState('');
   const [isUploadingGallery, setIsUploadingGallery] = React.useState(false);
 
+  // Lightbox
+  const [lightboxImages, setLightboxImages] = React.useState<any[]>([]);
+  const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null);
+
+  const openLightbox = (images: any[], index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeLightbox = () => {
+    setLightboxIndex(null);
+    document.body.style.overflow = 'auto';
+  };
+
+  const showNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lightboxIndex !== null && lightboxImages.length > 0) {
+      setLightboxIndex((lightboxIndex + 1) % lightboxImages.length);
+    }
+  };
+
+  const showPrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lightboxIndex !== null && lightboxImages.length > 0) {
+      setLightboxIndex((lightboxIndex - 1 + lightboxImages.length) % lightboxImages.length);
+    }
+  };
   // Filters
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterType, setFilterType] = React.useState('');
@@ -5219,7 +5247,7 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
               
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                  {(selectedGalleryEvent.images?.filter((img: any) => String(img.caption || '').includes(authorNameString)) || []).map((img: any) => (
-                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
+                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm cursor-pointer" onClick={() => openLightbox(selectedGalleryEvent.images?.filter((i: any) => String(i.caption || '').includes(authorNameString)) || [], selectedGalleryEvent.images?.filter((i: any) => String(i.caption || '').includes(authorNameString)).findIndex((i: any) => i.id === img.id))}>
                        <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url || ''}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                        
                        <div className="absolute top-2 left-2 z-10">

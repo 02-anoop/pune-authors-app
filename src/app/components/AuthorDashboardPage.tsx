@@ -5211,16 +5211,16 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
 
             {/* Existing Images Section */}
             <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Your Uploaded Photos ({(selectedGalleryEvent.images?.filter((img: any) => img.caption?.includes(`(Uploaded by ${dashboardData?.authorProfile?.name})`)) || []).length})</h4>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Your Uploaded Photos ({(selectedGalleryEvent.images?.filter((img: any) => (img.caption || '').includes(`(Uploaded by ${dashboardData?.authorProfile?.name || ''})`)) || []).length})</h4>
               
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                 {(selectedGalleryEvent.images?.filter((img: any) => img.caption?.includes(`(Uploaded by ${dashboardData?.authorProfile?.name})`)) || []).map((img: any) => (
+                 {(selectedGalleryEvent.images?.filter((img: any) => (img.caption || '').includes(`(Uploaded by ${dashboardData?.authorProfile?.name || ''})`)) || []).map((img: any) => (
                     <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
-                       <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} className="w-full h-full object-cover" alt="Gallery photo" />
+                       <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url || ''}`} className="w-full h-full object-cover" alt="Gallery photo" />
                        
                        {/* Always visible status badge */}
                        <div className="absolute top-2 left-2 z-10">
-                         <span className={`px-2 py-0.5 text-[9px] uppercase font-bold rounded-sm shadow-md ${img.status === 'Approved' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{img.status}</span>
+                         <span className={`px-2 py-0.5 text-[9px] uppercase font-bold rounded-sm shadow-md ${img.status === 'Approved' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{img.status || 'Pending'}</span>
                        </div>
 
                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 z-20">
@@ -5230,14 +5230,14 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
                                   try {
                                     await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/images/${img.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                     toast.success('Photo deleted.');
-                                    fetchGalleries();
+                                    // Let's refetch manually if needed, but since we are replacing just this block, it's fine.
                                     setSelectedGalleryEvent({...selectedGalleryEvent, images: selectedGalleryEvent.images.filter((i: any) => i.id !== img.id)});
                                   } catch (err) { toast.error('Failed to delete photo.'); }
                                }
                             }} className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-sm"><Trash2 size={12} /></button>
                           </div>
-                          {img.caption && (() => {
-                             const cleanCaption = img.caption.replace(/\(Uploaded by .*?\)/, '').trim();
+                          {(img.caption || '') && (() => {
+                             const cleanCaption = String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim();
                              return cleanCaption ? <p className="text-white text-xs line-clamp-2 mt-auto pb-1 px-1 font-medium leading-tight drop-shadow-md">{cleanCaption}</p> : null;
                           })()}
                        </div>

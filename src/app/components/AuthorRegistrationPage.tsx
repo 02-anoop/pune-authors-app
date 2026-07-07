@@ -1111,7 +1111,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                             {s} <button type="button" onClick={() => update("skills", form.skills.filter((_: any, idx: number) => idx !== i))} className="hover:text-emerald-900"><X size={12}/></button>
                           </div>
                         ))}
-                        <input type="text" value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const val = skillInput.trim().toLowerCase(); if (val && !(form.skills || []).map((s: string) => s.toLowerCase()).includes(val)) { update("skills", [...(form.skills || []), val]); } setSkillInput(""); } }} className="flex-1 min-w-[120px] outline-none text-sm bg-transparent" placeholder="Type and press Enter" />
+                        <input type="text" enterKeyHint="enter" value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const val = skillInput.trim().toLowerCase(); if (val && !(form.skills || []).map((s: string) => s.toLowerCase()).includes(val)) { update("skills", [...(form.skills || []), val]); } setSkillInput(""); } }} className="flex-1 min-w-[120px] outline-none text-sm bg-transparent" placeholder="Type and press Enter" />
                       </div>
                       {errors.skills && <div className="text-red-500 text-xs mt-1 font-medium">{errors.skills}</div>}
                     </div>
@@ -1123,7 +1123,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                             {h} <button type="button" onClick={() => update("hobbies", form.hobbies.filter((_: any, idx: number) => idx !== i))} className="hover:text-paa-navy/70"><X size={12}/></button>
                           </div>
                         ))}
-                        <input type="text" value={hobbyInput} onChange={(e) => setHobbyInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const val = hobbyInput.trim().toLowerCase(); if (val && !(form.hobbies || []).map((h: string) => h.toLowerCase()).includes(val)) { update("hobbies", [...(form.hobbies || []), val]); } setHobbyInput(""); } }} className="flex-1 min-w-[120px] outline-none text-sm bg-transparent" placeholder="Type and press Enter" />
+                        <input type="text" enterKeyHint="enter" value={hobbyInput} onChange={(e) => setHobbyInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const val = hobbyInput.trim().toLowerCase(); if (val && !(form.hobbies || []).map((h: string) => h.toLowerCase()).includes(val)) { update("hobbies", [...(form.hobbies || []), val]); } setHobbyInput(""); } }} className="flex-1 min-w-[120px] outline-none text-sm bg-transparent" placeholder="Type and press Enter" />
                       </div>
                       {errors.hobbies && <div className="text-red-500 text-xs mt-1 font-medium">{errors.hobbies}</div>}
                     </div>

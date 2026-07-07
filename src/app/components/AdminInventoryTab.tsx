@@ -109,109 +109,127 @@ export function AdminInventoryTab() {
   const totalPages = Math.ceil(totalRecords / limit);
 
   return (
-    <div className="flex flex-col h-full bg-[#FAFAFA] min-h-[85vh] p-4 lg:p-8 space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       
       {/* GLOBAL SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-premium flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold tracking-widest text-paa-gray-text uppercase">Total Titles Active</p>
-            <p className="text-3xl font-bold text-paa-navy mt-1">{globalStats.totalTitles}</p>
+            <p className="text-[10px] font-bold tracking-widest text-paa-gray-text uppercase">Total Titles Active</p>
+            <p className="text-2xl font-bold text-paa-navy mt-1">{globalStats.totalTitles}</p>
           </div>
-          <div className="w-12 h-12 bg-paa-navy/5 text-paa-navy rounded-xl flex items-center justify-center">
-            <BookOpen className="w-6 h-6" />
+          <div className="w-10 h-10 bg-paa-navy/5 text-paa-navy rounded-lg flex items-center justify-center">
+            <BookOpen className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-premium flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold tracking-widest text-paa-gray-text uppercase">Total in Circulation</p>
-            <p className="text-3xl font-bold text-paa-navy mt-1">{globalStats.totalCirculation}</p>
+            <p className="text-[10px] font-bold tracking-widest text-paa-gray-text uppercase">Total in Circulation</p>
+            <p className="text-2xl font-bold text-paa-navy mt-1">{globalStats.totalCirculation}</p>
           </div>
-          <div className="w-12 h-12 bg-paa-navy/5 text-paa-navy rounded-xl flex items-center justify-center">
-            <Users className="w-6 h-6" />
+          <div className="w-10 h-10 bg-paa-navy/5 text-paa-navy rounded-lg flex items-center justify-center">
+            <Users className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-red-500/10 shadow-premium flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold tracking-widest text-red-500 uppercase">Global Low Stock</p>
-            <p className="text-3xl font-bold text-red-600 mt-1">{globalStats.globalLowStock}</p>
+            <p className="text-[10px] font-bold tracking-widest text-red-500 uppercase">Global Low Stock</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{globalStats.globalLowStock}</p>
           </div>
-          <div className="w-12 h-12 bg-red-500/10 text-red-600 rounded-xl flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6" />
+          <div className="w-10 h-10 bg-red-50 text-red-600 rounded-lg flex items-center justify-center border border-red-100">
+            <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* UTILITY BAR */}
-      <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-premium flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+      <div className="bg-white p-3 rounded-xl border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
             placeholder="Search by book title or author..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-black/10 focus:border-paa-navy focus:ring-1 focus:ring-paa-navy outline-none transition-all font-medium"
+            className="w-full pl-9 pr-4 py-2 rounded-lg border focus:border-paa-navy focus:ring-1 focus:ring-paa-navy outline-none transition-all text-sm"
           />
         </div>
 
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 cursor-pointer">
             <div className="relative">
-              <input 
-                type="checkbox" 
-                className="sr-only" 
-                checked={lowStockOnly}
-                onChange={(e) => setLowStockOnly(e.target.checked)}
-              />
-              <div className={`block w-12 h-7 rounded-full transition-colors ${lowStockOnly ? 'bg-red-500' : 'bg-gray-200'}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform ${lowStockOnly ? 'transform translate-x-5' : ''}`}></div>
+               <input 
+                 type="checkbox" 
+                 className="sr-only" 
+                 checked={lowStockOnly}
+                 onChange={(e) => setLowStockOnly(e.target.checked)}
+               />
+               <div className={`block w-8 h-5 rounded-full transition-colors ${lowStockOnly ? 'bg-red-500' : 'bg-gray-200'}`}></div>
+               <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${lowStockOnly ? 'transform translate-x-3' : ''}`}></div>
             </div>
-            <span className="text-sm font-bold text-paa-navy">Show Low Stock Only</span>
+            <span className="text-xs font-bold text-paa-navy">Show Low Stock Only</span>
           </label>
 
           <button
             onClick={exportCsv}
             disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2.5 bg-paa-navy text-paa-cream rounded-xl font-bold tracking-wide hover:bg-[#0c1e30] transition-colors disabled:opacity-70"
+            className="flex items-center gap-2 px-3 py-2 bg-paa-navy text-paa-cream rounded-lg font-bold tracking-wide text-xs hover:bg-[#0c1e30] transition-colors disabled:opacity-70"
           >
-            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
             <span>Export CSV</span>
           </button>
         </div>
       </div>
 
       {/* DATA TABLE */}
-      <div className="bg-white rounded-2xl border border-black/5 shadow-premium overflow-hidden flex-1 flex flex-col min-h-[400px]">
+      <div className="bg-white border border-paa-navy/5 rounded-xl shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out flex flex-col mb-8">
         <div className="overflow-x-auto w-full">
-          <table className="w-full text-left whitespace-nowrap min-w-[1000px]">
-            <thead className="bg-paa-gray-bg border-b border-black/5 text-xs font-bold tracking-widest text-paa-gray-text uppercase">
+          <table className="dash-table w-full">
+            <thead>
               <tr>
-                <th className="p-4 w-12">S.No</th>
-                <th className="p-4">Title</th>
-                <th className="p-4">Author</th>
-                <th className="p-4 text-center">Master Stock</th>
-                <th className="p-4 text-center">Qty Web</th>
-                <th className="p-4 text-center">Qty Airport</th>
-                <th className="p-4 text-center">Qty Fairs</th>
-                <th className="p-4 text-center border-x border-black/5 bg-gray-50/50">Current Stock</th>
-                <th className="p-4">Last Activity</th>
-                <th className="p-4 text-center w-32">Actions</th>
+                <th className="w-12 text-center">S.No</th>
+                <th className="text-left">Title</th>
+                <th className="text-left">Author</th>
+                <th className="text-center">Distribution (Master | Web | Airport | Fairs)</th>
+                <th className="text-center">Current Stock</th>
+                <th className="text-left">Last Activity</th>
+                <th className="text-center w-28">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/5 text-sm">
+            <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    Loading inventory...
-                  </td>
-                </tr>
+                [...Array(10)].map((_, i) => (
+                  <tr key={i} className="animate-pulse bg-white/50 border-b border-black/5 last:border-0">
+                    <td className="py-4"><div className="h-4 bg-gray-200 rounded w-6 mx-auto"></div></td>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="w-6"></div>
+                        <div className="w-8 h-10 bg-gray-200 rounded shrink-0"></div>
+                        <div className="h-4 bg-gray-200 rounded w-32"></div>
+                      </div>
+                    </td>
+                    <td><div className="h-4 bg-gray-200 rounded w-28"></div></td>
+                    <td>
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="h-4 bg-gray-200 rounded w-4"></div>
+                        <span className="text-gray-100">|</span>
+                        <div className="h-4 bg-gray-200 rounded w-4"></div>
+                        <span className="text-gray-100">|</span>
+                        <div className="h-4 bg-gray-200 rounded w-4"></div>
+                        <span className="text-gray-100">|</span>
+                        <div className="h-4 bg-gray-200 rounded w-4"></div>
+                      </div>
+                    </td>
+                    <td><div className="h-5 bg-gray-200 rounded w-6 mx-auto"></div></td>
+                    <td><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                    <td><div className="h-8 bg-gray-200 rounded-lg w-full"></div></td>
+                  </tr>
+                ))
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-400">
+                  <td colSpan={7} className="py-12 text-center text-gray-400 text-sm italic">
                     No books found matching the criteria.
                   </td>
                 </tr>
@@ -225,45 +243,52 @@ export function AdminInventoryTab() {
                   
                   return (
                     <React.Fragment key={book.id}>
-                      <tr className={`group hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-gray-50' : ''}`}>
-                        <td className="p-4 text-gray-500">{sNo}</td>
-                        <td className="p-4">
+                      <tr className={isExpanded ? 'bg-indigo-50/50 outline outline-2 outline-indigo-500/30 -outline-offset-2' : ''}>
+                        <td className="text-center text-gray-500 font-bold">{sNo}</td>
+                        <td>
                           <div className="flex items-center gap-3">
                             {hasDistribution ? (
                               <button 
                                 onClick={() => setExpandedRow(isExpanded ? null : book.id)}
                                 className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/5 text-paa-navy"
                               >
-                                {isExpanded ? <ChevronUp size={16} /> : <ChevronRight size={16} />}
+                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                               </button>
                             ) : (
                               <div className="w-6"></div>
                             )}
                             {book.coverUrl && (
-                              <img src={book.coverUrl} alt="Cover" className="w-8 h-10 object-cover rounded border" />
+                              <img src={book.coverUrl} alt="Cover" className="w-8 h-10 object-cover rounded shadow-sm border border-black/5" />
                             )}
-                            <div className="font-bold text-paa-navy max-w-[200px] truncate" title={book.title}>
+                            <div className="font-bold text-paa-navy max-w-[180px] truncate" title={book.title}>
                               {book.title}
                             </div>
                           </div>
                         </td>
-                        <td className="p-4 font-medium text-gray-700 max-w-[150px] truncate" title={book.authorName}>{book.authorName}</td>
-                        <td className="p-4 text-center">{book.masterStock}</td>
-                        <td className="p-4 text-center">{book.webSold}</td>
-                        <td className="p-4 text-center">{book.airportQty}</td>
-                        <td className="p-4 text-center">{book.eventQty}</td>
-                        <td className="p-4 text-center border-x border-black/5 bg-gray-50/50">
-                          <div className="flex flex-col items-center justify-center">
-                            <span className="font-bold text-paa-navy text-base">{book.currentStock}</span>
+                        <td className="font-medium text-gray-700">{book.authorName}</td>
+                        <td className="text-center">
+                          <div className="flex items-center justify-center gap-2 text-xs">
+                            <span className="font-bold text-gray-700" title="Master Stock">{book.masterStock}</span>
+                            <span className="text-gray-300">|</span>
+                            <span className="font-bold text-green-600" title="Web Sold">{book.webSold}</span>
+                            <span className="text-gray-300">|</span>
+                            <span className="font-bold text-blue-600" title="Airport Qty">{book.airportQty}</span>
+                            <span className="text-gray-300">|</span>
+                            <span className="font-bold text-purple-600" title="Event Qty">{book.eventQty}</span>
+                          </div>
+                        </td>
+                        <td className="text-center">
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <span className={`font-black text-lg leading-none ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>{book.currentStock}</span>
                             {book.isLowStock && (
-                              <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full mt-1">LOW STOCK</span>
+                              <span className="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded animate-pulse">LOW STOCK</span>
                             )}
                           </div>
                         </td>
-                        <td className="p-4 text-gray-500 text-xs">
+                        <td className="text-gray-500 text-xs">
                           {new Date(book.lastActivity).toLocaleDateString()}
                         </td>
-                        <td className="p-4 text-center">
+                        <td className="text-center">
                           {book.isLowStock ? (
                             <button
                               onClick={() => pingAuthor(book.id, book.authorId)}
@@ -284,32 +309,36 @@ export function AdminInventoryTab() {
                         </td>
                       </tr>
                       {/* EXPANDED ROW */}
-                      {isExpanded && hasDistribution && (
+                      {isExpanded && (
                         <tr className="bg-gray-50/80 border-b border-black/5">
-                          <td colSpan={10} className="p-0">
+                          <td colSpan={7} className="p-0">
                             <div className="pl-20 pr-4 py-4">
-                              <h4 className="text-xs font-bold text-paa-gray-text uppercase tracking-wider mb-3">Detailed Distribution</h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {book.distributionBreakdown.map((item: any, i: number) => (
-                                  <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-black/5 shadow-sm">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.type === 'airport' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                                      <BookOpen size={16} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-bold text-paa-navy truncate">{item.label}</p>
-                                      <p className="text-xs text-gray-500">
-                                        {item.type === 'airport' ? 'Airport Library' : `Fairs & Events • ${item.status}`}
-                                      </p>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-lg font-bold text-paa-navy">{item.quantity}</p>
-                                      {item.type === 'event' && (
-                                        <p className="text-[10px] text-gray-400">Sold: {item.sold}</p>
-                                      )}
-                                    </div>
+                              {hasDistribution && (
+                                <>
+                                  <h4 className="text-xs font-bold text-paa-gray-text uppercase tracking-wider mb-3">Detailed Location Breakdown</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {book.distributionBreakdown.map((item: any, i: number) => (
+                                      <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-black/5 shadow-sm">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.type === 'airport' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                                          <BookOpen size={16} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-bold text-paa-navy truncate">{item.label}</p>
+                                          <p className="text-xs text-gray-500">
+                                            {item.type === 'airport' ? 'Airport Library' : `Fairs & Events • ${item.status}`}
+                                          </p>
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="text-lg font-bold text-paa-navy">{item.quantity}</p>
+                                          {item.type === 'event' && (
+                                            <p className="text-[10px] text-gray-400">Sold: {item.sold}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

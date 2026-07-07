@@ -1837,51 +1837,51 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: '100%', boxSizing: 'border-box' }}>
 
       {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(26,26,46,0.06)', paddingBottom: 16 }}>
+      <div className="flex justify-between items-start border-b border-black/5 pb-4">
         <div>
-          <h2 style={{ fontSize: 22, fontFamily: 'var(--font-serif, Georgia)', fontWeight: 700, color: '#1a1a2e', margin: 0, letterSpacing: '-0.3px' }}>
+          <h2 className="text-[22px] font-serif font-bold text-paa-navy m-0 tracking-tight">
             Inventory &amp; Distribution
           </h2>
-          <p style={{ fontSize: 13, color: '#6b6b80', marginTop: 4 }}>
-            Track web orders, airport library donations, and book fair allocations. Click any row to view the granular distribution breakdown.
+          <p className="text-sm text-gray-500 mt-1 mb-0">
+            Track web orders, airport library donations, and book fair allocations.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="flex gap-2">
           <button
             onClick={exportCsv}
             disabled={inventory.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#fff', color: '#1a1a2e', border: '1px solid rgba(26,26,46,0.15)', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: inventory.length === 0 ? 'not-allowed' : 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+            className={`flex items-center gap-1.5 px-4 py-2 bg-white text-paa-navy border border-black/10 rounded-lg text-xs font-bold tracking-widest uppercase transition-colors ${inventory.length === 0 ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-50'}`}
           >
             Export CSV
           </button>
           <button
             onClick={fetchInventory}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#1a1a2e', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-paa-navy text-white border-none rounded-lg text-xs font-bold tracking-widest uppercase cursor-pointer hover:bg-[#0c1e30] transition-colors"
           >
-            <Loader2 size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            <Loader2 size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
         </div>
       </div>
 
       {/* Global Summary: Stat Cards + Inventory Pie Chart side by side */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
 
         {/* Stat Cards (2x2 grid) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { label: 'Total Titles', value: inventory.length, icon: <BookOpen size={18} />, color: '#6366f1', bg: '#eef2ff' },
-            { label: 'QTY Sold (Web)', value: totalWebSold, icon: <ShoppingCart size={18} />, color: '#16a34a', bg: '#f0fdf4' },
-            { label: 'QTY to Airport', value: totalAirport, icon: <MapPin size={18} />, color: '#0284c7', bg: '#f0f9ff' },
-            { label: 'QTY to Book Fairs', value: totalEvent, icon: <CalendarIcon size={18} />, color: '#9333ea', bg: '#fdf4ff' },
+            { label: 'Total Titles', value: inventory.length, icon: <BookOpen size={18} />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+            { label: 'QTY Sold (Web)', value: totalWebSold, icon: <ShoppingCart size={18} />, color: 'text-green-600', bg: 'bg-green-50' },
+            { label: 'QTY to Airport', value: totalAirport, icon: <MapPin size={18} />, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'QTY to Book Fairs', value: totalEvent, icon: <CalendarIcon size={18} />, color: 'text-purple-600', bg: 'bg-purple-50' },
           ].map(({ label, value, icon, color, bg }) => (
-            <div key={label} style={{ background: '#fff', border: '1px solid rgba(26,26,46,0.07)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: bg, color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div key={label} className="bg-white border rounded-xl p-4 flex items-center gap-3 shadow-sm">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${bg} ${color}`}>
                 {icon}
               </div>
               <div>
-                <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', margin: '0 0 2px' }}>{label}</p>
-                <p style={{ fontSize: 22, fontWeight: 900, color: '#1a1a2e', lineHeight: 1, margin: 0 }}>{value}</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
+                <p className="text-2xl font-black text-paa-navy leading-none m-0">{value}</p>
               </div>
             </div>
           ))}
@@ -1889,9 +1889,9 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
 
         {/* Inventory Pie Chart — current stock per book */}
         {inventory.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid rgba(26,26,46,0.07)', borderRadius: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', padding: '14px 18px', width: 280, flexShrink: 0 }}>
-            <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', margin: '0 0 8px' }}>Current Stock Split</p>
-            <div style={{ height: 200 }}>
+          <div className="bg-white border rounded-xl shadow-sm p-4 w-full lg:w-[280px] shrink-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Current Stock Split</p>
+            <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -1915,12 +1915,12 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
               </ResponsiveContainer>
             </div>
             {/* Legend */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+            <div className="flex flex-col gap-1 mt-2">
               {inventory.map((b: any, i: number) => (
-                <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: ['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][i % 8], flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }} title={b.title}>{b.title}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#1a1a2e', marginLeft: 'auto', flexShrink: 0 }}>{b.currentStock}</span>
+                <div key={b.id} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: ['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][i % 8] }} />
+                  <span className="text-[10px] text-gray-500 truncate max-w-[160px]" title={b.title}>{b.title}</span>
+                  <span className="text-[10px] font-bold text-paa-navy ml-auto shrink-0">{b.currentStock}</span>
                 </div>
               ))}
             </div>
@@ -1930,9 +1930,9 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
 
       {/* Low Stock Warning Banner */}
       {lowStockCount > 0 && (
-        <div style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', border: '1px solid #f59e0b', borderRadius: 10, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <AlertCircle size={16} style={{ color: '#b45309', flexShrink: 0 }} />
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#78350f', margin: 0 }}>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3">
+          <AlertCircle size={16} className="text-amber-600 shrink-0" />
+          <p className="text-sm font-semibold text-amber-800 m-0">
             <strong>{lowStockCount} title{lowStockCount > 1 ? 's' : ''}</strong> {lowStockCount > 1 ? 'are' : 'is'} running low (below 10 copies). Update stock immediately to avoid order disruptions.
           </p>
         </div>
@@ -1942,20 +1942,20 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', minWidth: 0 }}>
 
         {/* LEFT — Main Table */}
-        <div style={{ flex: 1, minWidth: 0, background: '#fff', border: '1px solid rgba(26,26,46,0.07)', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div className="bg-white border rounded-xl shadow-sm overflow-hidden flex-1 min-w-0">
+          <div className="overflow-x-auto">
+            <table className="dash-table w-full">
               <thead>
-                <tr style={{ background: '#f0f4f8', borderBottom: '1px solid rgba(26,26,46,0.07)' }}>
+                <tr>
                   {['S.No', 'Title', 'Author', 'MRP', 'QTY Sold (Web)', 'QTY to Airport', 'QTY for Book Fair', 'Current Stock', 'Last Updated', 'Update Stock'].map(h => (
-                    <th key={h} style={{ padding: '11px 14px', fontWeight: 800, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#1a1a2e', whiteSpace: 'nowrap', textAlign: h === 'Title' || h === 'Author' ? 'left' : 'center' }}>{h}</th>
+                    <th key={h} className={h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {inventory.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ padding: '48px 20px', textAlign: 'center', color: '#9ca3af', fontSize: 13, fontStyle: 'italic' }}>
+                    <td colSpan={10} className="py-12 text-center text-gray-400 text-sm italic">
                       No books in your inventory yet. Add books from your Overview tab.
                     </td>
                   </tr>
@@ -1965,62 +1965,51 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                     <tr
                       key={book.id}
                       onClick={() => handleRowClick(book)}
-                      style={{
-                        borderBottom: '1px solid rgba(0,0,0,0.04)',
-                        background: isSelected ? 'rgba(99,102,241,0.06)' : (idx % 2 === 0 ? '#fff' : '#fafafa'),
-                        cursor: 'pointer',
-                        transition: 'background 0.15s',
-                        outline: isSelected ? '2px solid rgba(99,102,241,0.3)' : 'none',
-                        outlineOffset: -2
-                      }}
-                      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f8f9ff'; }}
-                      onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = idx % 2 === 0 ? '#fff' : '#fafafa'; }}
+                      className={`cursor-pointer transition-colors hover:bg-blue-50/50 ${isSelected ? 'bg-indigo-50/60 outline outline-2 outline-indigo-500/30 -outline-offset-2' : ''}`}
                     >
                       {/* S.No */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#9ca3af', fontWeight: 700, fontSize: 12 }}>{idx + 1}</td>
+                      <td className="text-center text-gray-500 font-bold">{idx + 1}</td>
                       {/* Title */}
-                      <td style={{ padding: '12px 14px', maxWidth: 160 }}>
-                        <p style={{ fontWeight: 700, color: '#1a1a2e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }} title={book.title}>{book.title}</p>
-                        <p style={{ fontSize: 10, color: '#9ca3af', margin: '2px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{book.genre}</p>
+                      <td className="max-w-[160px]">
+                        <p className="font-bold text-paa-navy truncate" title={book.title}>{book.title}</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{book.genre}</p>
                       </td>
                       {/* Author */}
-                      <td style={{ padding: '12px 14px', color: '#374151', fontWeight: 500, whiteSpace: 'nowrap' }}>{book.authorName}</td>
+                      <td className="font-medium text-gray-700 whitespace-nowrap">{book.authorName}</td>
                       {/* MRP */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#1a1a2e' }}>₹{book.mrp}</td>
+                      <td className="text-center font-bold text-paa-navy">₹{book.mrp}</td>
                       {/* QTY Web */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                        <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 15 }}>{book.webSold}</span>
+                      <td className="text-center">
+                        <span className="font-bold text-green-600 text-[15px]">{book.webSold}</span>
                       </td>
                       {/* QTY Airport */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                        <span style={{ fontWeight: 800, color: '#0284c7', fontSize: 15 }}>{book.airportQty}</span>
+                      <td className="text-center">
+                        <span className="font-bold text-blue-600 text-[15px]">{book.airportQty}</span>
                       </td>
                       {/* QTY Book Fair */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                        <span style={{ fontWeight: 800, color: '#9333ea', fontSize: 15 }}>{book.eventQty}</span>
+                      <td className="text-center">
+                        <span className="font-bold text-purple-600 text-[15px]">{book.eventQty}</span>
                       </td>
                       {/* Current Stock */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                          <span style={{ fontWeight: 900, fontSize: 17, color: book.isLowStock ? '#dc2626' : '#1a1a2e', lineHeight: 1 }}>
+                      <td className="text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`font-black text-lg leading-none ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>
                             {book.currentStock}
                           </span>
                           {book.isLowStock && (
-                            <span style={{
-                              fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
-                              color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca',
-                              borderRadius: 4, padding: '2px 6px', animation: 'pulse 2s infinite'
-                            }}>⚠ LOW STOCK</span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 animate-pulse">
+                              ⚠ LOW STOCK
+                            </span>
                           )}
                         </div>
                       </td>
                       {/* Last Updated */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#6b7280', fontSize: 12 }}>
+                      <td className="text-center text-gray-500 text-xs">
                         {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
                       </td>
                       {/* Update Stock */}
-                      <td style={{ padding: '12px 14px' }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <td onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5">
                           <input
                             id={`stock-input-${book.id}`}
                             type="number"
@@ -2029,19 +2018,13 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                             value={newStocks[book.id] || ''}
                             onChange={e => setNewStocks(prev => ({ ...prev, [book.id]: e.target.value }))}
                             onKeyDown={e => { if (e.key === 'Enter') handleUpdateStock(book.id); }}
-                            style={{ width: 68, padding: '6px 8px', border: '1px solid rgba(26,26,46,0.15)', borderRadius: 6, fontSize: 12, textAlign: 'center', outline: 'none', background: '#fff', color: '#1a1a2e' }}
+                            className="w-[68px] px-2 py-1.5 border border-black/10 rounded-md text-xs text-center outline-none bg-white text-paa-navy"
                           />
                           <button
                             id={`stock-update-btn-${book.id}`}
                             onClick={() => handleUpdateStock(book.id)}
                             disabled={!newStocks[book.id] || updatingId === book.id}
-                            style={{
-                              padding: '6px 10px', background: newStocks[book.id] ? (parseInt(newStocks[book.id] || '0') < 0 ? '#dc2626' : '#1a1a2e') : '#e5e7eb',
-                              color: newStocks[book.id] ? '#fff' : '#9ca3af', border: 'none',
-                              borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: newStocks[book.id] ? 'pointer' : 'not-allowed',
-                              textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
-                              transition: 'all 0.15s'
-                            }}
+                            className={`px-2.5 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all ${newStocks[book.id] ? (parseInt(newStocks[book.id] || '0') < 0 ? 'bg-red-600 text-white' : 'bg-paa-navy text-white cursor-pointer') : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                           >
                             {updatingId === book.id ? '...' : (parseInt(newStocks[book.id] || '0') < 0 ? 'Remove' : 'Add')}
                           </button>
@@ -2056,105 +2039,91 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
         </div>
 
         {/* RIGHT — Distribution Breakdown Sidebar */}
-        <div style={{
-          flex: '0 0 320px', minWidth: 0, background: '#fff', border: '1px solid rgba(26,26,46,0.07)',
-          borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden',
-          transition: 'opacity 0.2s', opacity: selectedBook ? 1 : 0.5
-        }}>
+        <div className={`shrink-0 w-[320px] min-w-0 bg-white border rounded-xl shadow-sm overflow-hidden transition-opacity duration-200 ${selectedBook ? 'opacity-100' : 'opacity-50'}`}>
           {/* Sidebar Header */}
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(26,26,46,0.06)', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="px-5 py-4 border-b bg-gray-50 flex justify-between items-center">
             <div>
-              <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6366f1', margin: '0 0 2px' }}>Distribution Breakdown</p>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 mb-0.5">Distribution Breakdown</p>
+              <p className="text-sm font-bold text-paa-navy m-0">
                 {selectedBook ? selectedBook.title : 'Select a book row'}
               </p>
             </div>
             {selectedBook && (
-              <button onClick={() => { setSelectedBook(null); setSidebarVisible(false); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
+              <button onClick={() => { setSelectedBook(null); setSidebarVisible(false); }} className="bg-transparent border-none cursor-pointer text-gray-400 p-1 hover:text-gray-600 transition-colors">
                 <X size={16} />
               </button>
             )}
           </div>
 
           {/* Sidebar Body */}
-          <div style={{ padding: '16px 20px' }}>
+          <div className="p-5">
             {!selectedBook ? (
-              <div style={{ textAlign: 'center', padding: '48px 20px', color: '#d1d5db' }}>
-                <Package size={40} style={{ margin: '0 auto 12px', display: 'block' }} />
-                <p style={{ fontSize: 13, margin: 0 }}>Click any book row to see where copies are distributed.</p>
+              <div className="text-center py-12 text-gray-300">
+                <Package size={40} className="mx-auto mb-3 opacity-50" />
+                <p className="text-sm m-0 italic text-gray-400">Select a book row to view distribution details.</p>
               </div>
             ) : (
               <>
                 {/* Book meta */}
-                <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '12px 14px', marginBottom: 16, border: '1px solid rgba(99,102,241,0.1)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="bg-indigo-50/30 rounded-xl p-3.5 mb-4 border border-indigo-100">
+                  <div className="grid grid-cols-2 gap-2.5">
                     {[
-                      { label: 'Current Stock', value: selectedBook.currentStock, color: selectedBook.isLowStock ? '#dc2626' : '#16a34a' },
-                      { label: 'Web Sold', value: selectedBook.webSold, color: '#16a34a' },
-                      { label: 'Airport Donated', value: selectedBook.airportQty, color: '#0284c7' },
-                      { label: 'Book Fairs', value: selectedBook.eventQty, color: '#9333ea' },
+                      { label: 'Current Stock', value: selectedBook.currentStock, color: selectedBook.isLowStock ? 'text-red-600' : 'text-green-600' },
+                      { label: 'Web Sold', value: selectedBook.webSold, color: 'text-green-600' },
+                      { label: 'Airport Donated', value: selectedBook.airportQty, color: 'text-blue-600' },
+                      { label: 'Book Fairs', value: selectedBook.eventQty, color: 'text-purple-600' },
                     ].map(({ label, value, color }) => (
-                      <div key={label} style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9ca3af', margin: '0 0 2px' }}>{label}</p>
-                        <p style={{ fontSize: 20, fontWeight: 900, color, margin: 0, lineHeight: 1 }}>{value}</p>
+                      <div key={label} className="text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
+                        <p className={`text-xl font-black m-0 leading-none ${color}`}>{value}</p>
                       </div>
                     ))}
                   </div>
                   {selectedBook.isLowStock && (
-                    <div style={{ marginTop: 10, borderTop: '1px solid rgba(220,38,38,0.15)', paddingTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <AlertCircle size={13} style={{ color: '#dc2626', flexShrink: 0 }} />
-                      <p style={{ fontSize: 11, color: '#dc2626', fontWeight: 600, margin: 0 }}>Low stock — replenish immediately</p>
+                    <div className="mt-2.5 border-t border-red-200/50 pt-2 flex items-center gap-1.5">
+                      <AlertCircle size={13} className="text-red-600 shrink-0" />
+                      <p className="text-[11px] text-red-600 font-semibold m-0">Low stock — replenish immediately</p>
                     </div>
                   )}
                 </div>
 
                 {/* Distribution items */}
-                <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', margin: '0 0 10px' }}>Location Detail</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">Location Detail</p>
                 {selectedBook.distributionBreakdown.length === 0 ? (
-                  <p style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>No active distribution records for this title.</p>
+                  <p className="text-sm text-gray-400 italic m-0">No active distribution records for this title.</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="flex flex-col gap-2">
                     {selectedBook.distributionBreakdown.map((item: any, i: number) => (
-                      <div key={i} style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '10px 14px', borderRadius: 8,
-                        background: item.type === 'airport' ? '#f0f9ff' : '#fdf4ff',
-                        border: `1px solid ${item.type === 'airport' ? 'rgba(2,132,199,0.12)' : 'rgba(147,51,234,0.12)'}`
-                      }}>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                            <span style={{
-                              fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
-                              color: item.type === 'airport' ? '#0284c7' : '#9333ea',
-                              background: item.type === 'airport' ? '#e0f2fe' : '#f3e8ff',
-                              borderRadius: 4, padding: '1px 5px'
-                            }}>
+                      <div key={i} className={`flex justify-between items-center p-3 rounded-xl border ${item.type === 'airport' ? 'bg-blue-50/50 border-blue-100' : 'bg-purple-50/50 border-purple-100'}`}>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className={`text-[9px] font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${item.type === 'airport' ? 'text-blue-600 bg-blue-100' : 'text-purple-600 bg-purple-100'}`}>
                               {item.type === 'airport' ? '✈ Airport' : '📚 Book Fair'}
                             </span>
                           </div>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.label}>
+                          <p className="text-xs font-semibold text-paa-navy m-0 truncate" title={item.label}>
                             {item.label}
                           </p>
                           {item.location && (
-                            <p style={{ fontSize: 10, color: '#9ca3af', margin: '1px 0 0' }}>{item.location}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5 mb-0">{item.location}</p>
                           )}
                           {item.type === 'event' && item.sold !== undefined && (
-                            <p style={{ fontSize: 10, color: '#6b7280', margin: '2px 0 0' }}>Sold: {item.sold} / Listed: {item.quantity}</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5 mb-0">Sold: {item.sold} / Listed: {item.quantity}</p>
                           )}
                         </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                          <span style={{ fontSize: 18, fontWeight: 900, color: item.type === 'airport' ? '#0284c7' : '#9333ea', lineHeight: 1 }}>
+                        <div className="text-right shrink-0 ml-3">
+                          <span className={`text-lg font-black leading-none ${item.type === 'airport' ? 'text-blue-600' : 'text-purple-600'}`}>
                             {item.quantity}
                           </span>
-                          <p style={{ fontSize: 9, color: '#9ca3af', margin: '2px 0 0', textTransform: 'uppercase' }}>copies</p>
+                          <p className="text-[9px] text-gray-400 mt-0.5 mb-0 uppercase">copies</p>
                         </div>
                       </div>
                     ))}
 
                     {/* Cumulative Total */}
-                    <div style={{ borderTop: '2px solid rgba(26,26,46,0.08)', paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>Total Distributed</span>
-                      <span style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e' }}>
+                    <div className="border-t-2 border-gray-100 pt-2.5 mt-1 flex justify-between items-center">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-paa-navy">Total Distributed</span>
+                      <span className="text-xl font-black text-paa-navy">
                         {selectedBook.distributionBreakdown.reduce((s: number, i: any) => s + i.quantity, 0)}
                       </span>
                     </div>

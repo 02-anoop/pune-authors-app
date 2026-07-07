@@ -5239,15 +5239,15 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
               </form>
             </div>
 
-             {/* Existing Images Section */}
+            {/* Event Images Section */}
             <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
               <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">
-                Your Uploaded Photos ({(selectedGalleryEvent.images?.filter((img: any) => String(img.caption || '').includes(authorNameString)) || []).length})
+                Event Photos ({(selectedGalleryEvent.images?.filter((img: any) => img.status === 'Approved' || String(img.caption || '').includes(authorNameString)) || []).length})
               </h4>
               
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                 {(selectedGalleryEvent.images?.filter((img: any) => String(img.caption || '').includes(authorNameString)) || []).map((img: any) => (
-                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm cursor-pointer" onClick={() => openLightbox(selectedGalleryEvent.images?.filter((i: any) => String(i.caption || '').includes(authorNameString)) || [], selectedGalleryEvent.images?.filter((i: any) => String(i.caption || '').includes(authorNameString)).findIndex((i: any) => i.id === img.id))}>
+                 {(selectedGalleryEvent.images?.filter((img: any) => img.status === 'Approved' || String(img.caption || '').includes(authorNameString)) || []).map((img: any) => (
+                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm cursor-pointer" onClick={() => openLightbox(selectedGalleryEvent.images?.filter((i: any) => i.status === 'Approved' || String(i.caption || '').includes(authorNameString)) || [], selectedGalleryEvent.images?.filter((i: any) => i.status === 'Approved' || String(i.caption || '').includes(authorNameString)).findIndex((i: any) => i.id === img.id))}>
                        <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url || ''}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                        
                        <div className="absolute top-2 left-2 z-10">
@@ -5258,28 +5258,38 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
 
                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 z-20">
                           <div className="flex justify-end items-start">
-                             <button onClick={async () => {
-                               if(window.confirm('Delete this photo completely?')) {
-                                  try {
-                                    await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/images/${img.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                                    toast.success('Photo deleted.');
-                                    setSelectedGalleryEvent({...selectedGalleryEvent, images: selectedGalleryEvent.images.filter((i: any) => i.id !== img.id)});
-                                  } catch (err) { toast.error('Failed to delete photo.'); }
-                               }
-                            }} className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-sm">
-                              <Trash2 size={12} />
-                            </button>
+                             {String(img.caption || '').includes(authorNameString) && (
+                               <button onClick={async (e) => {
+                                 e.stopPropagation();
+                                 if(window.confirm('Delete this photo completely?')) {
+                                    try {
+                                      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/gallery/images/${img.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                      toast.success('Photo deleted.');
+                                      setSelectedGalleryEvent({...selectedGalleryEvent, images: selectedGalleryEvent.images.filter((i: any) => i.id !== img.id)});
+                                    } catch (err) { toast.error('Failed to delete photo.'); }
+                                 }
+                               }} className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-sm" title="Delete Photo">
+                                 <Trash2 size={12} />
+                               </button>
+                             )}
                           </div>
                           
-                          {img.caption && (
-                             <p className="text-white text-xs line-clamp-2 mt-auto pb-1 px-1 font-medium leading-tight drop-shadow-md">
-                               {String(img.caption).replace(/\(Uploaded by .*?\)/, '').trim()}
-                             </p>
-                          )}
+                          <div className="mt-auto pb-1 px-1">
+                             {String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim() && (
+                               <p className="text-white text-xs line-clamp-2 font-medium leading-tight drop-shadow-md mb-1">
+                                 {String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim()}
+                               </p>
+                             )}
+                             {String(img.caption || '').match(/\(Uploaded by (.*?)\)/) && (
+                               <p className="text-paa-gold text-[9px] uppercase tracking-widest font-bold">
+                                 By: {String(img.caption || '').match(/\(Uploaded by (.*?)\)/)?.[1]}
+                               </p>
+                             )}
+                          </div>
                        </div>
                     </div>
                  ))}
-                 {(!selectedGalleryEvent.images || selectedGalleryEvent.images.length === 0) && (
+                 {(!selectedGalleryEvent.images || selectedGalleryEvent.images.filter((img: any) => img.status === 'Approved' || String(img.caption || '').includes(authorNameString)).length === 0) && (
                     <div className="col-span-full py-16 text-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed border-gray-200">
                        <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
                        You haven't uploaded any photos for this event yet.

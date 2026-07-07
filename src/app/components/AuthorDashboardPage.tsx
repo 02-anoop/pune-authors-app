@@ -5218,7 +5218,7 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                  {(selectedGalleryEvent.images?.filter((img: any) => String(img.caption || '').includes(`(Uploaded by ${dashboardData?.authorProfile?.name || ''})`)) || []).map((img: any) => (
                     <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
-                       <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url || ''}`} className="w-full h-full object-cover" alt="Gallery photo" />
+                       <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url || ''}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                        
                        <div className="absolute top-2 left-2 z-10">
                          <span className={`px-2 py-0.5 text-[9px] uppercase font-bold rounded-sm shadow-md ${img.status === 'Approved' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>
@@ -5328,7 +5328,7 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
                     <div className="flex -space-x-2 overflow-hidden mb-5">
                       {ge.images.filter((img: any) => img.status === 'Approved').slice(0, 5).map((img: any, idx: number) => (
                         <div key={img.id} className="relative z-10 inline-block h-10 w-10 rounded-full ring-2 ring-white overflow-hidden bg-gray-100" style={{ zIndex: 10 - idx }}>
-                          <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} className="w-full h-full object-cover" alt="Preview" />
+                          <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} className="w-full h-full object-cover" alt="Preview" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                         </div>
                       ))}
                       {ge.images.filter((img: any) => img.status === 'Approved').length > 5 && (

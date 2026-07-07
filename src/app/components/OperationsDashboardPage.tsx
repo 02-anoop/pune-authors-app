@@ -164,6 +164,17 @@ export function OperationsDashboardPage() {
   const [isEditGalleryModalOpen, setIsEditGalleryModalOpen] = useState(false);
   const [editingGalleryEvent, setEditingGalleryEvent] = useState<any>(null);
 
+  // Gallery Tab State
+  const [galleryTabSearchTerm, setGalleryTabSearchTerm] = useState('');
+  const [galleryTabFilterType, setGalleryTabFilterType] = useState('');
+  const [galleryTabFilterDate, setGalleryTabFilterDate] = useState('');
+  const [galleryTabSortBy, setGalleryTabSortBy] = useState('date_desc');
+  const [galleryUploadFiles, setGalleryUploadFiles] = useState<File[]>([]);
+  const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<any[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
   // Events tab lifted state
   const [selectedEventBreakdown, setSelectedEventBreakdown] = useState<any>(null);
   const [hasGranularData, setHasGranularData] = useState(false);
@@ -4128,19 +4139,7 @@ export function OperationsDashboardPage() {
     </div>
   );
 
-  const GalleryTab = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('');
-    const [filterDate, setFilterDate] = useState('');
-    const [sortBy, setSortBy] = useState('date_desc');
-    const [selectedGalleryEvent, setSelectedGalleryEvent] = useState<any>(null);
-    const [galleryUploadFiles, setGalleryUploadFiles] = useState<File[]>([]);
-    const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
-    const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-
-    // Lightbox
-    const [lightboxImages, setLightboxImages] = useState<any[]>([]);
-    const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const renderGalleryTab = () => {
 
     const openLightbox = (images: any[], index: number) => {
       setLightboxImages(images);
@@ -4206,9 +4205,9 @@ export function OperationsDashboardPage() {
     };
 
     const filteredEvents = events.filter((e: any) => {
-       const matchSearch = (e.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || (e.location?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-       const matchType = filterType ? e.eventType === filterType : true;
-       const matchDate = filterDate ? new Date(e.date).toISOString().startsWith(filterDate) : true;
+       const matchSearch = (e.name?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase()) || (e.location?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase());
+       const matchType = galleryTabFilterType ? e.eventType === galleryTabFilterType : true;
+       const matchDate = galleryTabFilterDate ? new Date(e.date).toISOString().startsWith(galleryTabFilterDate) : true;
        return matchSearch && matchType && matchDate;
     }).sort((a: any, b: any) => {
        const aPending = a.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
@@ -4216,10 +4215,10 @@ export function OperationsDashboardPage() {
        
        if (aPending !== bPending) return bPending - aPending; // Always prioritize events with pending approvals
 
-       if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
-       if (sortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
-       if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
-       if (sortBy === 'name_desc') return (b.name || '').localeCompare(a.name || '');
+       if (galleryTabSortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
+       if (galleryTabSortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
+       if (galleryTabSortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+       if (galleryTabSortBy === 'name_desc') return (b.name || '').localeCompare(a.name || '');
        return 0;
     });
 
@@ -4238,15 +4237,15 @@ export function OperationsDashboardPage() {
             <div className="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm">
               <div className="flex-[3] min-w-[300px] relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input type="text" placeholder="Search by name or location..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="dash-input w-full h-full min-w-[280px]" style={{ paddingLeft: '2.5rem' }} />
+                <input type="text" placeholder="Search by name or location..." value={galleryTabSearchTerm} onChange={e => setGalleryTabSearchTerm(e.target.value)} className="dash-input w-full h-full min-w-[280px]" style={{ paddingLeft: '2.5rem' }} />
               </div>
-              <select value={filterType} onChange={e => setFilterType(e.target.value)} className="dash-input md:w-48">
+              <select value={galleryTabFilterType} onChange={e => setGalleryTabFilterType(e.target.value)} className="dash-input md:w-48">
                 <option value="">All Event Types</option>
                 <option value="Book Fair">Book Fair</option>
                 <option value="Literary Event">Literary Event</option>
               </select>
-              <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="dash-input md:w-40" />
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="dash-input md:w-48">
+              <input type="date" value={galleryTabFilterDate} onChange={e => setGalleryTabFilterDate(e.target.value)} className="dash-input md:w-40" />
+              <select value={galleryTabSortBy} onChange={e => setGalleryTabSortBy(e.target.value)} className="dash-input md:w-48">
                 <option value="date_desc">Latest First</option>
                 <option value="date_asc">Oldest First</option>
                 <option value="name_asc">Name (A-Z)</option>
@@ -4402,6 +4401,7 @@ export function OperationsDashboardPage() {
                                        await axios.put(`${API}/api/admin/gallery/images/${img.id}/approve`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                        toast.success('Photo approved.');
                                        setSelectedGalleryEvent({...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.map((i: any) => i.id === img.id ? {...i, status: 'Approved'} : i) }});
+                                       fetchEvents(true);
                                      } catch (err) { toast.error('Failed to approve photo.'); }
                                   }} className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 shadow-sm" title="Approve Photo">
                                      <CheckCircle2 size={12} />
@@ -4719,7 +4719,7 @@ export function OperationsDashboardPage() {
           {activeTab === 'inventory' && <AdminInventoryTab />}
           {activeTab === 'events' && renderEventsTab()}
           {activeTab === 'forms' && <FormsTab />}
-          {activeTab === 'gallery' && <GalleryTab />}
+          {activeTab === 'gallery' && renderGalleryTab()}
           {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
           {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
           {activeTab === 'library_donations' && <LibraryDonationsTab />}

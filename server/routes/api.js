@@ -1498,6 +1498,7 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
         status: item.status,
         trackingNumber: item.trackingNumber,
         paymentScreenshot: item.order.paymentScreenshot,
+        transactionId: item.order.transactionId,
         paymentVerified: item.order.status === 'Completed',
         paymentFailed: item.order.status === 'Payment Not Received',
         createdAt: item.createdAt,
@@ -1505,8 +1506,6 @@ router.get('/api/author/dashboard-data', verifyToken, async (req, res) => {
         dispatchedAt: item.dispatchedAt,
         deliveredAt: item.deliveredAt,
         expectedDeliveryDate: item.expectedDeliveryDate,
-        lateDeliveryReportedAt: item.lateDeliveryReportedAt,
-        isLateDeliveryReported: item.isLateDeliveryReported,
         autoDelivered: item.autoDelivered,
         date: item.createdAt.toISOString().split('T')[0],
         feedbackRating: item.feedbackRating,
@@ -1992,6 +1991,10 @@ router.put('/api/orders/:id/cancel', verifyToken, async (req, res) => {
     const cannotCancel = order.items.some(i => i.status === 'Dispatched' || i.status === 'Completed');
     if (cannotCancel) return res.status(400).json({ error: 'Cannot cancel dispatched orders' });
 
+    if (order.status === 'Cancelled') {
+      return res.json({ message: 'Order is already cancelled' });
+    }
+
     await prisma.order.update({ where: { id }, data: { status: 'Cancelled' } });
     await prisma.orderItem.updateMany({ where: { orderId: id }, data: { status: 'Cancelled' } });
     
@@ -2032,10 +2035,31 @@ router.post('/api/orders', optionalVerifyToken, upload.single('paymentScreenshot
       }
     }
 
+    const emailToUse = req.user ? req.user.email : (customerEmail || 'guest@example.com');
+    
+    // Find or create customer
+    let customer = await prisma.customer.findUnique({ where: { email: emailToUse } });
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: {
+          name: customerName || 'Guest',
+          email: emailToUse,
+          phone: customerPhone || null
+        }
+      });
+    } else if (customerName && customer.name === 'Guest') {
+      // Update guest name to actual name if provided now
+      customer = await prisma.customer.update({
+        where: { id: customer.id },
+        data: { name: customerName, phone: customerPhone || customer.phone }
+      });
+    }
+
     const order = await prisma.order.create({
       data: {
+        customerId: customer.id,
         customerName,
-        customerEmail: req.user ? req.user.email : (customerEmail || 'guest@example.com'),
+        customerEmail: emailToUse,
         customerPhone,
         address,
         amount: parseFloat(amount),
@@ -2519,6 +2543,24 @@ router.get('/api/admin/orders/export', verifyToken, isAdmin, async (req, res) =>
   }
 });
 
+// Admin Customers Route
+router.get('/api/admin/customers', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const customers = await prisma.customer.findMany({
+      include: {
+        orders: {
+          include: { items: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(customers);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch customers' });
+  }
+});
+
 router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
@@ -2544,8 +2586,7 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
         trackingNumber: i.trackingNumber,
         feedbackCondition: i.feedbackCondition,
         feedbackRating: i.feedbackRating,
-        feedbackComments: i.feedbackComments,
-        isLateDeliveryReported: i.isLateDeliveryReported
+        feedbackComments: i.feedbackComments
       })),
       total: ord.amount,
       status: ord.status === 'Pending Verification' ? 'Pending' : ord.status,
@@ -2729,55 +2770,6 @@ router.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => 
   }
 });
 
-router.post('/api/order-items/:id/report-late', verifyToken, async (req, res) => {
-  try {
-    const orderItemId = parseInt(req.params.id);
-    const existing = await prisma.orderItem.findUnique({
-      where: { id: orderItemId },
-      include: { order: true, book: { include: { author: true } } }
-    });
-    
-    if (!existing) return res.status(404).json({ error: 'Order item not found' });
-    
-    const updated = await prisma.orderItem.update({
-      where: { id: orderItemId },
-      data: {
-        isLateDeliveryReported: true,
-        lateDeliveryReportedAt: new Date()
-      }
-    });
-    
-    // Notify author via email
-    if (existing.book?.author?.email) {
-      await sendNotificationEmail(
-        existing.book.author.email,
-        'Late Delivery Reported',
-        emailWrap('Late Delivery Reported', `The buyer has reported a late delivery for order ${existing.order.id} (Book: ${existing.book.title}). Please contact the buyer or investigate the tracking status.`)
-      ).catch(e => console.error(e));
-
-      // Add in-app notification for Author
-      await prisma.notification.create({
-        data: {
-          message: `Order ORD-${existing.order.id} from ${existing.order.customerName} has been marked as Late Delivery.`,
-          target: existing.book.author.email
-        }
-      });
-
-      // Add in-app notification for Admin
-      await prisma.notification.create({
-        data: {
-          message: `Order ORD-${existing.order.id} from ${existing.order.customerName} (Author: ${existing.book.author.name}) has been marked as Late Delivery.`,
-          target: 'ADMIN'
-        }
-      });
-    }
-    
-    res.json(updated);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to report late delivery' });
-  }
-});
 
 // 8. Operations Dashboard - Verify Order
 router.post('/api/admin/orders/:id/verify', verifyToken, isAdmin, async (req, res) => {

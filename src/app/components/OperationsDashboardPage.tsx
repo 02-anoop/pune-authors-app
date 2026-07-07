@@ -5,13 +5,14 @@ import {
   Eye, Edit, Edit2, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle,
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
   ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, ChevronUp, Loader2, FileText, AlertCircle,
-  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone
+  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line
 } from 'recharts';
 import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
+import { QueryThreadDisplay } from './QueryThreadDisplay';
 
 // Automatically attach token to all admin requests
 axios.interceptors.request.use((config) => {
@@ -1654,7 +1655,7 @@ export function OperationsDashboardPage() {
             { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'text-orange-600 bg-orange-100', bgClass: 'border-orange-100' },
             { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'text-blue-600 bg-blue-100', bgClass: 'border-blue-100' },
             { label: 'Avg Delivery Time', value: Number(avgDeliveryDays) > 0 ? `${avgDeliveryDays} Days` : 'N/A', icon: TrendingUp, colorClass: 'text-teal-600 bg-teal-100', bgClass: 'border-teal-100' },
-            { label: 'Returns & Cancels', value: returnedOrdersCount, icon: XCircle, colorClass: 'text-red-600 bg-red-100', bgClass: 'border-red-100' },
+            { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'text-purple-600 bg-purple-100', bgClass: 'border-purple-100' },
           ].map((kpi, i) => (
             <div key={i} className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col justify-center items-start gap-3 hover:-translate-y-1 hover:shadow-md transition-all`}>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kpi.colorClass}`}>
@@ -5784,9 +5785,11 @@ export function OperationsDashboardPage() {
 
 const HelpdeskTab = ({ refreshTrigger }: any) => {
   const [queries, setQueries] = useState<any[]>([]);
-  const [filterType, setFilterType] = useState<'All' | 'Query' | 'Message'>('All');
+  const [filterType, setFilterType] = useState<'All' | 'Pending' | 'Answered' | 'Resolved' | 'Message'>('All');
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
   const [isReplying, setIsReplying] = useState<{ [key: string]: boolean }>({});
+  const [expandedQueryId, setExpandedQueryId] = useState<number | string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchQueries = async () => {
     try {
@@ -5836,6 +5839,7 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       toast.success('Reply sent successfully!');
+      setReplyText({ ...replyText, [id]: '' });
       fetchQueries();
     } catch (err) {
       toast.error('Failed to send reply');
@@ -5844,99 +5848,193 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
     }
   };
 
-  const filteredQueries = queries.filter(q => filterType === 'All' || q.itemType === filterType);
+  const handleResolve = async (id: string | number) => {
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/queries/${id}/resolve`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Query marked as resolved!');
+      fetchQueries();
+    } catch (err) {
+      toast.error('Failed to resolve query');
+    }
+  };
+
+  const handleDelete = async (id: string | number) => {
+    if (!window.confirm('Are you sure you want to delete this query? This action cannot be undone.')) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/queries/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Query deleted successfully');
+      fetchQueries();
+    } catch (err) {
+      toast.error('Failed to delete query');
+    }
+  };
+
+  const filteredQueries = queries.filter(q => {
+    const matchesFilter = filterType === 'All' || 
+                          (filterType === 'Message' && q.itemType === 'Message') || 
+                          (filterType === 'Pending' && q.itemType === 'Query' && q.status === 'Pending') ||
+                          (filterType === 'Answered' && q.itemType === 'Query' && q.status === 'Answered') ||
+                          (filterType === 'Resolved' && q.itemType === 'Query' && q.status === 'Resolved');
+    
+    if (!matchesFilter) return false;
+    
+    if (searchQuery.trim()) {
+      const lowerQ = searchQuery.toLowerCase();
+      return (q.subject?.toLowerCase().includes(lowerQ) || 
+              q.author?.name?.toLowerCase().includes(lowerQ) || 
+              q.user?.name?.toLowerCase().includes(lowerQ) ||
+              q.author?.email?.toLowerCase().includes(lowerQ) ||
+              q.user?.email?.toLowerCase().includes(lowerQ));
+    }
+    
+    return true;
+  });
 
   return (
-    <div className="space-y-6 max-w-6xl">
-
-      <div className="bg-white p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl">
-        <div className="flex justify-between items-center mb-6 border-b border-paa-navy/5 pb-4">
+    <div className="space-y-6 w-full">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b border-paa-navy/5 pb-4 gap-4">
           <div>
             <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
               <Users className="w-5 h-5" /> Messages / Queries
             </h3>
             <p className="text-paa-gray-text text-sm">Manage author queries and contact inquiries.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
-              {['All', 'Query', 'Message'].map(t => (
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+            <input 
+              type="text" 
+              placeholder="Search Subject, Name, Email..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-200 rounded-3xl-2xl outline-none focus:border-paa-navy w-full sm:w-64"
+            />
+            <div className="flex bg-gray-100 rounded-3xl-2xl p-1 overflow-x-auto w-full sm:w-auto">
+              {[
+                { id: 'All', label: 'All', color: 'bg-gray-800 text-white' },
+                { id: 'Pending', label: 'New Unopened Tickets', color: 'bg-orange-100 text-orange-800' },
+                { id: 'Answered', label: 'Opened Tickets', color: 'bg-blue-100 text-blue-800' },
+                { id: 'Resolved', label: 'Closed Tickets', color: 'bg-green-100 text-green-800' },
+                { id: 'Message', label: 'Messages', color: 'bg-gray-800 text-white' }
+              ].map(t => (
                 <button
-                  key={t}
-                  onClick={() => setFilterType(t as any)}
-                  className={`px-4 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${filterType === t ? 'bg-white text-paa-navy shadow-premium' : 'text-gray-500 hover:text-paa-navy'}`}
+                  key={t.id}
+                  onClick={() => setFilterType(t.id as any)}
+                  className={`px-3 py-1 text-[10px] font-bold tracking-widest uppercase transition-all rounded-3xl-2xl whitespace-nowrap ${filterType === t.id ? `${t.color} shadow-sm` : 'text-gray-500 hover:text-paa-navy'}`}
                 >
-                  {t}
+                  {t.label}
                 </button>
               ))}
             </div>
-            <button onClick={() => fetchQueries()} className="p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+            <button onClick={() => fetchQueries()} className="shrink-0 p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
               <RefreshCw size={18} />
             </button>
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {filteredQueries.length === 0 ? (
             <p className="text-sm text-gray-500 italic text-center py-8">No messages or queries found.</p>
           ) : filteredQueries.map(q => (
-            <div key={q.id} className="border border-gray-200 rounded-3xl-2xl p-6 bg-gray-50 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out relative overflow-hidden">
-              <div className={`absolute left-0 top-0 bottom-0 w-1 ${q.itemType === 'Message' ? 'bg-blue-500' : 'bg-paa-gold'}`}></div>
-              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4 pl-2">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.itemType === 'Message' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                      {q.itemType}
-                    </span>
-                    <h4 className="font-bold text-paa-navy text-lg">{q.subject}</h4>
+            <div key={q.id} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden transition-all duration-200 group">
+              {/* Row Header */}
+              <div 
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+                onClick={() => setExpandedQueryId(expandedQueryId === q.id ? null : q.id)}
+              >
+                <div className="flex items-center gap-4 flex-1">
+                  <div className={`w-1 h-10 rounded-full ${q.itemType === 'Message' ? 'bg-blue-500' : q.status === 'Resolved' ? 'bg-green-500' : q.status === 'Pending' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.itemType === 'Message' ? 'bg-blue-100 text-blue-800' : q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                        {q.itemType} {q.itemType === 'Query' ? `#TKT-${q.id.toString().padStart(4, '0')}` : ''}
+                      </span>
+                      <h4 className="font-bold text-paa-navy text-sm line-clamp-1">{q.subject}</h4>
+                    </div>
+                    {q.itemType !== 'Message' && (
+                      <p className="text-[10px] text-gray-500">From: <span className="font-bold">{q.author?.name || q.user?.name || 'Unknown'}</span> ({q.author?.email || q.user?.email || 'N/A'})</p>
+                    )}
                   </div>
-                  {q.itemType !== 'Message' && (
-                    <p className="text-xs text-gray-500 mt-1">From: <span className="font-bold">{q.author?.name || 'Unknown'}</span> ({q.author?.email || 'N/A'})</p>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  {q.status !== 'Resolved' && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleResolve(q.id); }}
+                      className="px-3 py-1 border border-green-200 text-green-700 bg-white hover:bg-green-50 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 transition-colors shadow-sm"
+                      title="Mark as Resolved"
+                    >
+                      <CheckCircle2 size={12} /> Resolve
+                    </button>
                   )}
-                </div>
-                {q.itemType !== 'Message' && (
-                  <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-3xl-2xl ${q.status === 'Answered' ? 'bg-green-100 text-green-800 border border-green-200' : q.status === 'Unread' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'}`}>
-                    {q.status}
-                  </span>
-                )}
-              </div>
-              <div className="bg-white p-4 rounded-3xl-2xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-inner ml-2">
-                {q.message}
-              </div>
-
-              {q.itemType === 'Query' && q.status === 'Pending' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 ml-2">
-                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Write a Reply</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Type your reply here..."
-                    className="w-full border border-paa-navy/20 p-3 text-sm outline-none focus:border-paa-navy bg-white rounded-3xl-2xl resize-y mb-3 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out"
-                    value={replyText[q.id] || ''}
-                    onChange={e => setReplyText({ ...replyText, [q.id]: e.target.value })}
-                  />
-                  <button
-                    onClick={() => handleReply(q.id)}
-                    disabled={isReplying[q.id]}
-                    className="px-6 py-2 bg-paa-navy text-white text-xs font-bold uppercase tracking-widest hover:bg-paa-gold hover:text-paa-navy transition-colors rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out"
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                    title="Delete Query"
                   >
-                    {isReplying[q.id] ? 'Sending...' : 'Send Reply'}
+                    <Trash2 size={16} />
                   </button>
+                  {q.itemType !== 'Message' && (
+                    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {q.status === 'Resolved' ? 'Closed' : q.status === 'Pending' ? 'New' : 'Opened'}
+                    </span>
+                  )}
+                  <div className="text-gray-400">
+                    <ChevronDown size={20} className={`transform transition-transform duration-300 ${expandedQueryId === q.id ? 'rotate-180' : ''}`} />
+                  </div>
                 </div>
-              )}
-              {q.itemType === 'Query' && q.status === 'Answered' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 bg-green-50/50 p-4 rounded-3xl-2xl ml-2">
-                  <p className="text-xs font-bold uppercase tracking-widest text-paa-gold mb-2">Your Reply:</p>
-                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{q.reply}</p>
-                </div>
-              )}
-              {q.itemType === 'Message' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 ml-2">
-                  <p className="text-xs text-gray-500 italic">Please reply to this inquiry directly via email to {q.author?.email}.</p>
+              </div>
+              
+              {/* Expandable Content */}
+              {expandedQueryId === q.id && (
+                <div className="p-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
+                  <div className="flex-1">
+                    {q.itemType === 'Query' ? (
+                      <QueryThreadDisplay query={q} currentUserType="Admin" />
+                    ) : (
+                      <div className="bg-white p-4 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-sm">
+                        {q.message}
+                      </div>
+                    )}
+                    
+                    {q.itemType === 'Message' && (
+                      <p className="text-[10px] text-gray-500 italic mt-2">Reply to this inquiry directly via email to {q.author?.email || q.user?.email}.</p>
+                    )}
+                  </div>
+                  
+                  {q.itemType === 'Query' && q.status !== 'Resolved' && (
+                    <div className="shrink-0 pt-4 border-t border-gray-100">
+                      <div className="flex items-center gap-2 bg-white rounded-full border border-gray-200 px-4 py-2 shadow-sm focus-within:border-paa-navy focus-within:ring-1 focus-within:ring-paa-navy/20 transition-all">
+                        <input
+                          type="text"
+                          placeholder="Type reply..."
+                          className="flex-1 bg-transparent border-none outline-none text-sm text-gray-800 placeholder:text-gray-400"
+                          value={replyText[q.id] || ''}
+                          onChange={e => setReplyText({ ...replyText, [q.id]: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && replyText[q.id]?.trim() && !isReplying[q.id]) {
+                              handleReply(q.id);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => handleReply(q.id)}
+                          disabled={isReplying[q.id] || !replyText[q.id]?.trim()}
+                          className="p-2 bg-paa-navy text-white rounded-full hover:bg-paa-gold transition-colors disabled:opacity-50 disabled:hover:bg-paa-navy flex shrink-0 items-center justify-center"
+                          title="Send Reply"
+                        >
+                          <Send size={16} className={isReplying[q.id] ? "opacity-50" : ""} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
         </div>
-      </div>
     </div>
   );
 };

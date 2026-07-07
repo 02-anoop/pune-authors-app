@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2 } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -12,6 +12,7 @@ import nonFictionData from './data/non_fiction_catalogue.json';
 import { AuthorRegistrationPage } from './AuthorRegistrationPage';
 import { NavBar } from './NavBar';
 import { Footer } from './Footer';
+import { QueryThreadDisplay } from './QueryThreadDisplay';
 import { AuthorDonationsTab } from './AuthorDonationsTab';
 
 export function AuthorDashboardPage() {
@@ -347,7 +348,7 @@ export function AuthorDashboardPage() {
   let hasLateOrders = false;
   if (dashboardData?.authorOrders) {
     dashboardData.authorOrders.forEach((o: any) => {
-      if ((o.status === 'Pending Verification' || o.status === 'Pending' || o.status === 'Accepted') && o.createdAt) {
+      if ((o.status === 'Pending Verification' || o.status === 'Pending') && o.createdAt) {
         const hours = (new Date().getTime() - new Date(o.createdAt).getTime()) / (1000 * 3600);
         if (hours > 24) hasLateOrders = true;
       }
@@ -395,90 +396,123 @@ export function AuthorDashboardPage() {
 
 
 
-      <div className="min-h-screen font-sans" style={{ background: '#f5f5f3' }}>
-        {/* TOP NAV */}
-        <div className="author-topnav">
-          <div className="max-w-[1600px] mx-auto px-4 md:px-6 flex items-center h-[60px] justify-between w-full">
-            {/* Brand */}
-            <div className="flex items-center gap-2">
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden mr-2 p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
-                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
-              <img
-                src="/logo.png"
-                alt="PAA Logo"
-                className="h-8 w-auto object-contain"
-                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
-              />
-              <div className="hidden w-8 h-8 rounded-full bg-[#b44d28] flex items-center justify-center text-white text-sm font-bold">
-                P
-              </div>
-              <span className="font-serif font-bold text-lg tracking-tight hidden sm:block text-paa-navy ml-1">Author Portal</span>
-            </div>
 
-            {/* Right items */}
-            <div className="flex items-center gap-2 relative shrink-0">
-              <button onClick={() => { setShowNotifications(!showNotifications); }} className={`relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 text-paa-gray-text hover:text-paa-navy transition-colors ${hasUnread && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') ? 'animate-pulse' : ''}`}>
-                <Bell size={16} />
-                {hasUnread && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
-              </button>
-              {/* Auto-open Blinking Toast */}
-              {hasUnread && !showNotifications && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') && (
-                <div className="animate-pulse" style={{ position: 'absolute', top: '100%', right: '100%', marginRight: 12, marginTop: -8, width: 280, background: '#1a1a2e', borderRadius: 12, padding: '12px 16px', color: '#fff', zIndex: 9999, display: 'flex', gap: 12, alignItems: 'flex-start', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
-                  <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => { setShowNotifications(true); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }}>
-                    <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: 2 }}>New Message</p>
-                    <p style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.4 }}>{notifications[0]?.message || (unreadEventInvites.length > 0 ? `New Event: ${unreadEventInvites[0].event.name}` : 'You have unread notifications.')}</p>
-                  </div>
-                  <button onClick={(e) => { e.stopPropagation(); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14} /></button>
-                  <div style={{ position: 'absolute', top: 12, right: -6, width: 0, height: 0, borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '6px solid #1a1a2e' }}></div>
-                </div>
-              )}
-              {showNotifications && (
-                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 12, width: 340, background: '#fff', borderRadius: 16, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', zIndex: 9999, overflow: 'hidden', transformOrigin: 'top right', animation: 'scaleIn 0.2s ease-out' }}>
-                  <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>Notifications</p>
-                    <button onClick={() => setShowNotifications(false)} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14} /></button>
-                  </div>
-                  <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                    {hasUnread ? (
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {unreadEventInvites.map((inv: any) => (
-                          <button key={`inv-${inv.id}`} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6', marginTop: 6, flexShrink: 0 }}></div>
-                            <div>
-                              <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>New Event: {inv.event.name}</p>
-                              <p style={{ fontSize: 12, color: '#6b6b80', lineHeight: 1.4 }}>You are invited to participate!</p>
-                            </div>
-                          </button>
-                        ))}
-                        {notifications.map((notif: any) => (
-                          <div key={`notif-${notif.id}`} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', marginTop: 6, flexShrink: 0 }}></div>
-                            <div>
-                              <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', lineHeight: 1.4 }}>{notif.message}</p>
-                              <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 4 }}>{new Date(notif.createdAt).toLocaleString()}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ padding: '32px 20px', textAlign: 'center', color: '#6b6b80', fontSize: 12 }}>No new notifications.</div>
-                    )}
-                  </div>
-                </div>
-              )}
-              <button onClick={handleLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap">
-                <LogOut size={13} /> Logout
-              </button>
-            </div>
+
+      <div className="min-h-screen font-sans bg-paa-cream flex flex-col md:flex-row">
+
+      {/* SIDEBAR — matches admin layout */}
+      <aside className={`w-64 flex flex-col shrink-0 h-screen fixed md:sticky top-0 bg-paa-cream z-50 transform transition-transform duration-300 border-r border-paa-navy/5 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-4 md:p-6 h-20 flex items-center justify-between shrink-0 border-b border-paa-navy/5">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="PAA Logo" className="h-8 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+            <div className="hidden w-8 h-8 rounded-full bg-[#b44d28] flex items-center justify-center text-white text-sm font-bold">P</div>
+            <span className="font-serif font-bold text-lg tracking-tight text-paa-navy ml-1">Author Portal</span>
           </div>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 text-paa-navy"><X size={20} /></button>
         </div>
 
-        {/* GLOBAL 3-DAY WARNING BANNER */}
+        <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname === '/dashboard' ? 'active' : ''}`}><BarChart3 className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Overview</span></Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/orders" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/orders') ? 'active' : ''}`}><ShoppingCart className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Web Orders</span></Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/sales" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/sales') ? 'active' : ''}`}><TrendingUp className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Sales Report</span></Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/inventory" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/inventory') ? 'active' : ''}`}><BookOpen className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Inventory & Distribution</span></Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/events" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/events') ? 'active' : ''}`}><CalendarIcon className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Events Ecosystem</span></Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/donations" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/donations') ? 'active' : ''}`}><MapPin className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Library Donations</span></Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/reviews" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/reviews') ? 'active' : ''}`}><Star className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Reviews & Ratings</span></Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/queries" className={`author-profile-nav-btn flex items-center gap-3 relative ${location.pathname.includes('/queries') ? 'active' : ''}`}><MessageSquare className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Queries & Issues</span>{hasNewQueries && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 shadow-sm"></span>}</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/gallery" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/gallery') ? 'active' : ''}`}><ImageIcon className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Event Gallery</span></Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/profile" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/profile') ? 'active' : ''}`}><User className="w-4 h-4 shrink-0" /> <span className="flex-1 truncate">Profile Settings</span></Link>
+        </nav>
+
+        <div className="p-4 shrink-0">
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-paa-navy/5 bg-white text-xs font-bold uppercase hover:bg-red-50 text-red-600 transition-colors rounded-full">
+            <LogOut size={14} /> Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative" style={{ background: '#f5f5f3' }}>
+
+        {/* Top Header — breadcrumb */}
+        <header className="dash-header h-[68px] flex items-center justify-between px-6 md:px-8 shrink-0 relative z-50">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2 text-xs font-medium">
+              <span className="text-paa-gray-text">Author Portal</span>
+              <span className="text-paa-navy/20">/</span>
+              <span className="font-semibold text-paa-navy capitalize">{
+                location.pathname === '/dashboard' ? 'Overview' :
+                location.pathname.includes('/orders') ? 'Web Orders' :
+                location.pathname.includes('/sales') ? 'Sales Report' :
+                location.pathname.includes('/inventory') ? 'Inventory & Distribution' :
+                location.pathname.includes('/events') ? 'Events Ecosystem' :
+                location.pathname.includes('/donations') ? 'Library Donations' :
+                location.pathname.includes('/reviews') ? 'Reviews & Ratings' :
+                location.pathname.includes('/queries') ? 'Queries & Issues' :
+                location.pathname.includes('/gallery') ? 'Event Gallery' :
+                location.pathname.includes('/profile') ? 'Profile Settings' : 'Overview'
+              }</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 relative shrink-0">
+            <button onClick={() => { setShowNotifications(!showNotifications); }} className={`relative w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-black/8 text-paa-navy hover:bg-black/4 transition-colors ${hasUnread && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') ? 'animate-pulse' : ''}`}>
+              <Bell size={16} />
+              {hasUnread && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}
+            </button>
+            {hasUnread && !showNotifications && dismissedToastId !== String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast') && (
+              <div className="animate-pulse" style={{ position: 'absolute', top: '100%', right: '100%', marginRight: 12, marginTop: -8, width: 280, background: '#1a1a2e', borderRadius: 12, padding: '12px 16px', color: '#fff', zIndex: 9999, display: 'flex', gap: 12, alignItems: 'flex-start', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
+                <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => { setShowNotifications(true); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }}>
+                  <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: 2 }}>New Message</p>
+                  <p style={{ fontSize: 12, color: '#f3f4f6', lineHeight: 1.4 }}>{notifications[0]?.message || (unreadEventInvites.length > 0 ? `New Event: ${unreadEventInvites[0].event.name}` : 'You have unread notifications.')}</p>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); const latestId = String(notifications[0]?.id || unreadEventInvites[0]?.id || 'toast'); setDismissedToastId(latestId); localStorage.setItem('paa_dismissed_toast', latestId); }} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14} /></button>
+                <div style={{ position: 'absolute', top: 12, right: -6, width: 0, height: 0, borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '6px solid #1a1a2e' }}></div>
+              </div>
+            )}
+            {showNotifications && (
+              <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 12, width: 340, background: '#fff', borderRadius: 16, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', zIndex: 9999, overflow: 'hidden', transformOrigin: 'top right', animation: 'scaleIn 0.2s ease-out' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a1a2e' }}>Notifications</p>
+                  <button onClick={() => setShowNotifications(false)} style={{ color: '#9ca3af', background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}><X size={14} /></button>
+                </div>
+                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                  {hasUnread ? (
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      {unreadEventInvites.map((inv: any) => (
+                        <button key={`inv-${inv.id}`} onClick={() => { setShowNotifications(false); navigate('/dashboard/events'); }} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6', marginTop: 6, flexShrink: 0 }}></div>
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>New Event: {inv.event.name}</p>
+                            <p style={{ fontSize: 12, color: '#6b6b80', lineHeight: 1.4 }}>You are invited to participate!</p>
+                          </div>
+                        </button>
+                      ))}
+                      {notifications.map((notif: any) => (
+                        <div key={`notif-${notif.id}`} style={{ width: '100%', textAlign: 'left', padding: '16px 20px', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', marginTop: 6, flexShrink: 0 }}></div>
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', lineHeight: 1.4 }}>{notif.message}</p>
+                            <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 4 }}>{new Date(notif.createdAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ padding: '32px 20px', textAlign: 'center', color: '#6b6b80', fontSize: 12 }}>No new notifications.</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Warning Banners */}
         {(() => {
           const notifyDateStr = dashboardData?.authorProfile?.extraData?.lateNotificationDate;
           const fineAmt = dashboardData?.authorProfile?.extraData?.lateFines || 0;
-
           if (fineAmt === 0 && notifyDateStr && hasLateOrders) {
             const diffDays = (new Date().getTime() - new Date(notifyDateStr).getTime()) / (1000 * 3600 * 24);
             if (diffDays >= 0 && diffDays <= 3) {
@@ -518,7 +552,6 @@ export function AuthorDashboardPage() {
           const activeDonations = dashboardData?.activeDonations || [];
           const donationRegistrations = dashboardData?.authorProfile?.donationRegistrations || [];
           const unregisteredDonations = activeDonations.filter((ad: any) => !donationRegistrations.find((dr: any) => dr.announcementId === ad.id));
-
           if (unregisteredDonations.length > 0) {
             return (
               <div className="bg-gradient-to-r from-indigo-900 to-paa-navy text-white px-6 py-3 flex flex-col md:flex-row items-center justify-between shadow-sm relative z-[99] border-b border-indigo-950 gap-4">
@@ -537,36 +570,25 @@ export function AuthorDashboardPage() {
           return null;
         })()}
 
-        <div className="max-w-[1600px] mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-6 relative">
-          <div className={`author-profile-sidebar w-full md:w-[240px] p-4 flex-col gap-2 md:sticky md:top-[80px] h-fit bg-white border border-paa-navy/5 shadow-premium transition-all duration-500 ease-out z-30 ${isMobileMenuOpen ? 'flex fixed inset-0 top-[80px] z-[500] bg-white md:static md:shadow-premium' : 'hidden md:flex'}`}>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname === '/dashboard' ? 'active' : ''}`}><BarChart3 className="w-4 h-4" /> Overview</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/orders" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/orders') ? 'active' : ''}`}><ShoppingCart className="w-4 h-4" /> Web Orders</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/sales" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/sales') ? 'active' : ''}`}><TrendingUp className="w-4 h-4" /> Sales Report</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/inventory" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/inventory') ? 'active' : ''}`}><BookOpen className="w-4 h-4" /> Inventory & Distribution</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/events" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/events') ? 'active' : ''}`}><CalendarIcon className="w-4 h-4" /> Events Ecosystem</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/donations" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/donations') ? 'active' : ''}`}><MapPin className="w-4 h-4" /> Library Donations</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/reviews" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/reviews') ? 'active' : ''}`}><Star className="w-4 h-4" /> Reviews & Ratings</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/gallery" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/gallery') ? 'active' : ''}`}><ImageIcon className="w-4 h-4" /> Event Gallery</Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} to="/dashboard/profile" className={`author-profile-nav-btn flex items-center gap-3 ${location.pathname.includes('/profile') ? 'active' : ''}`}><User className="w-4 h-4" /> Profile Settings</Link>
-          </div>
-
-          <div className="flex-1 bg-white border border-paa-navy/5 shadow-premium p-6 md:p-8 min-h-[calc(100vh-160px)] relative">
-            <Routes>
-              <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
-              <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
-              <Route path="/sales" element={<AuthorSalesReport data={dashboardData} />} />
-              <Route path="/forms/*" element={<FormsWrapper />} />
-              <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
-              <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
-              <Route path="/donations" element={<AuthorDonationsTab dashboardData={dashboardData} onRefresh={() => fetchDashboardData(true)} />} />
-              <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
-              <Route path="/gallery" element={<AuthorGallery />} />
-              <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
-              <Route path="/pos/:eventId" element={<LivePosDashboard />} />
-              <Route path="/bundle-offers" element={<BundleOffersTab data={dashboardData} />} />
-            </Routes>
-          </div>
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-6 md:p-8">
+          <Routes>
+            <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
+            <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
+            <Route path="/sales" element={<AuthorSalesReport data={dashboardData} />} />
+            <Route path="/forms/*" element={<FormsWrapper />} />
+            <Route path="/inventory" element={<InventoryPage books={dashboardData.authorProfile.books} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
+            <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
+            <Route path="/donations" element={<AuthorDonationsTab dashboardData={dashboardData} onRefresh={() => fetchDashboardData(true)} />} />
+            <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
+            <Route path="/gallery" element={<AuthorGallery />} />
+            <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
+            <Route path="/pos/:eventId" element={<LivePosDashboard />} />
+            <Route path="/bundle-offers" element={<BundleOffersTab data={dashboardData} />} />
+            <Route path="/queries" element={<AuthorQueries />} />
+          </Routes>
         </div>
+      </main>
       </div>
     </>
   );
@@ -2463,95 +2485,185 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
   });
   const groupedOrdersList = Object.values(groupedOrdersObj).sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
 
-  return (
-    <div>
-      {/* Buyer Info Modal */}
-      {viewBuyerInfoOrder !== null && (
-        <div className="fixed inset-0 bg-paa-navy/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-8 max-w-md w-full shadow-xl relative rounded-xl border border-paa-navy/5">
-            <button onClick={() => setViewBuyerInfoOrder(null)} className="absolute top-4 right-4 text-gray-400 hover:text-paa-navy">
-              <X size={20} />
-            </button>
-            <h2 className="text-2xl font-serif text-paa-navy mb-1">Buyer Details</h2>
-            <p className="text-xs text-gray-500 uppercase tracking-widest mb-6 border-b border-paa-navy/10 pb-4">ORD-{viewBuyerInfoOrder.orderId}</p>
-            <div className="space-y-4 text-sm">
+  if (viewBuyerInfoOrder !== null) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-6 md:p-10 mb-12">
+        <button onClick={() => setViewBuyerInfoOrder(null)} className="text-gray-400 hover:text-paa-navy mb-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest transition-colors">
+          <X size={18} /> Back to Web Orders
+        </button>
+        
+        <div className="flex flex-col lg:flex-row gap-12">
+          {/* Left Column: Details & Timeline */}
+          <div className="flex-1">
+            <h2 className="text-3xl font-serif text-paa-navy mb-2">Order Details</h2>
+            <p className="text-sm text-gray-500 uppercase tracking-widest mb-8 border-b border-paa-navy/10 pb-4">ORD-{viewBuyerInfoOrder.orderId}</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Name</p>
-                <p className="font-bold text-paa-navy">{viewBuyerInfoOrder.customerName}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Customer Name</p>
+                <p className="font-bold text-paa-navy text-lg">{viewBuyerInfoOrder.customerName}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Phone</p>
-                <p className="font-bold text-[#4a90e2]">{viewBuyerInfoOrder.customerPhone || 'N/A'}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Contact Number</p>
+                <p className="font-bold text-[#4a90e2] text-lg">{viewBuyerInfoOrder.customerPhone || 'N/A'}</p>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Delivery Address</p>
-                <p className="text-gray-700 leading-relaxed">{viewBuyerInfoOrder.address}</p>
+              <div className="md:col-span-2">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Delivery Address</p>
+                <p className="text-gray-700 leading-relaxed text-base">{viewBuyerInfoOrder.address}</p>
               </div>
             </div>
-            <div className="mt-6 border-t border-paa-navy/10 pt-4">
-              <p className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-3">Order Timeline</p>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500">Placed On</span>
-                  <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).toLocaleString('en-IN')}</span>
+
+            <div className="border-t border-paa-navy/10 pt-8 mb-8">
+              <p className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-6">Order Timeline</p>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 font-medium">Placed On</span>
+                  <span className="font-bold text-paa-navy">{new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).toLocaleString('en-IN')}</span>
                 </div>
                 {viewBuyerInfoOrder.acceptedAt && (
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500">Accepted</span>
-                    <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.acceptedAt).toLocaleString('en-IN')}</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500 font-medium">Accepted</span>
+                    <span className="font-bold text-paa-navy">{new Date(viewBuyerInfoOrder.acceptedAt).toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 {viewBuyerInfoOrder.dispatchedAt && (
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500">Dispatched</span>
-                    <span className="font-medium text-paa-navy">{new Date(viewBuyerInfoOrder.dispatchedAt).toLocaleString('en-IN')}</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500 font-medium">Dispatched</span>
+                    <span className="font-bold text-paa-navy">{new Date(viewBuyerInfoOrder.dispatchedAt).toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 {(viewBuyerInfoOrder.deliveredAt || viewBuyerInfoOrder.status === 'Completed' || viewBuyerInfoOrder.status === 'Delivered') && (
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500">Delivered</span>
-                    <span className="font-medium text-green-600">{viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).toLocaleString('en-IN') : 'Delivered'}</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500 font-medium">Delivered</span>
+                    <span className="font-bold text-green-600">{viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).toLocaleString('en-IN') : 'Delivered'}</span>
                   </div>
                 )}
                 {(viewBuyerInfoOrder.deliveredAt || viewBuyerInfoOrder.status === 'Completed' || viewBuyerInfoOrder.status === 'Delivered') && (
-                  <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-center font-bold text-green-600 bg-green-50 py-1.5 rounded">
+                  <div className="mt-4 pt-4 border-t border-gray-100 text-sm text-center font-bold text-green-600 bg-green-50 py-3 rounded-lg">
                     Took {Math.max(1, Math.ceil(((viewBuyerInfoOrder.deliveredAt ? new Date(viewBuyerInfoOrder.deliveredAt).getTime() : new Date().getTime()) - new Date(viewBuyerInfoOrder.createdAt || viewBuyerInfoOrder.date).getTime()) / (1000 * 3600 * 24)))} Days to Deliver
                   </div>
                 )}
               </div>
             </div>
+            
             {(viewBuyerInfoOrder.feedbackCondition || viewBuyerInfoOrder.feedbackRating) && (
-              <div className="mt-6 border-t border-paa-navy/10 pt-4">
-                <p className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-3">Customer Feedback</p>
-                <div className="space-y-3 bg-gray-50 p-3 rounded border border-gray-200 text-sm">
-                  <div className="flex justify-between items-center text-xs">
+              <div className="border-t border-paa-navy/10 pt-8">
+                <p className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-4">Customer Feedback</p>
+                <div className="space-y-4 bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Condition</span>
-                    <span className={`font-medium ${viewBuyerInfoOrder.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-paa-navy'}`}>{viewBuyerInfoOrder.feedbackCondition}</span>
+                    <span className={`font-bold ${viewBuyerInfoOrder.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-paa-navy'}`}>{viewBuyerInfoOrder.feedbackCondition}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
+                  <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Delivery Rating</span>
-                    <span className="font-medium text-yellow-500">
+                    <span className="font-medium text-yellow-500 text-lg">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <span key={i}>{i < (viewBuyerInfoOrder.feedbackRating || 0) ? '★' : '☆'}</span>
                       ))}
                     </span>
                   </div>
                   {viewBuyerInfoOrder.feedbackComments && (
-                    <div className="text-xs italic text-gray-600 border-t border-gray-200 mt-2 pt-2">
+                    <div className="text-sm italic text-gray-600 border-t border-gray-200 mt-4 pt-4">
                       "{viewBuyerInfoOrder.feedbackComments}"
                     </div>
                   )}
                 </div>
               </div>
             )}
-            <div className="mt-6 text-center">
-              <button onClick={() => setViewBuyerInfoOrder(null)} className="px-6 py-2 bg-gray-100 text-gray-600 font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors w-full rounded">
-                Close
-              </button>
+          </div>
+          
+          {/* Right Column: Bill/Breakdown */}
+          <div className="w-full lg:w-[400px] shrink-0">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden sticky top-6">
+              <div className="bg-paa-navy text-white px-6 py-4">
+                <p className="text-sm font-bold uppercase tracking-widest">Order Bill</p>
+              </div>
+              <div className="p-6">
+                <div className="space-y-4 mb-6">
+                  {viewBuyerInfoOrder.books.map((b: any, idx: number) => {
+                    const allBooks = [
+                      ...(fictionData.fiction_catalogue || []).flatMap((a: any) => a.books || []),
+                      ...(nonFictionData.non_fiction_catalogue || []).flatMap((a: any) => a.books || [])
+                    ];
+                    const matchedBook = allBooks.find(item => item.title === b.title);
+                    return (
+                      <div key={idx} className="flex justify-between items-start text-sm">
+                        <div className="flex items-start gap-3 pr-4">
+                          {matchedBook && matchedBook.cover_image_url ? (
+                            <img src={matchedBook.cover_image_url} alt={b.title} className="w-12 h-16 object-cover rounded shadow-sm border border-gray-200 shrink-0" />
+                          ) : (
+                            <div className="w-12 h-16 bg-gray-100 rounded shadow-sm border border-gray-200 flex items-center justify-center shrink-0">
+                              <BookOpen size={16} className="text-gray-400" />
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            {matchedBook ? (
+                              <Link to={`/book/${matchedBook.id}`} className="text-gray-700 font-bold hover:text-[#4a90e2] transition-colors leading-tight mb-1" target="_blank">
+                                {b.title}
+                              </Link>
+                            ) : (
+                              <span className="text-gray-700 font-bold leading-tight mb-1">{b.title}</span>
+                            )}
+                            <span className="text-gray-400 text-xs font-medium uppercase tracking-widest">Qty: {b.quantity}</span>
+                          </div>
+                        </div>
+                        <span className="font-bold text-paa-navy whitespace-nowrap mt-1">₹{b.amount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div className="border-t border-gray-200 pt-4 space-y-3 mb-6">
+                  {viewBuyerInfoOrder.deliveryCharges !== undefined && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 font-medium">Delivery Charges</span>
+                      <span className="font-bold text-paa-navy">{viewBuyerInfoOrder.deliveryCharges === 0 ? 'FREE' : `₹${viewBuyerInfoOrder.deliveryCharges}`}</span>
+                    </div>
+                  )}
+                  {viewBuyerInfoOrder.bundleDiscount > 0 && (
+                    <div className="flex justify-between items-center text-sm text-green-600">
+                      <span className="font-medium">Bundle Discount</span>
+                      <span className="font-bold">-₹{viewBuyerInfoOrder.bundleDiscount}</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="bg-paa-navy/5 -mx-6 -mb-6 p-6 border-t border-gray-200">
+                  <div className="flex justify-between items-center mb-6">
+                    <span className="text-paa-navy font-bold uppercase tracking-widest">Total Paid</span>
+                    <span className="text-2xl font-bold text-paa-navy">₹{viewBuyerInfoOrder.totalAmount || viewBuyerInfoOrder.orderAmount}</span>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 space-y-3">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 border-b border-gray-100 pb-2">Payment Info</p>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-500">Transaction ID</span>
+                      <span className="font-bold font-mono text-paa-navy">{viewBuyerInfoOrder.transactionId || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-500">Status</span>
+                      <span className={`font-bold ${viewBuyerInfoOrder.paymentVerified ? 'text-green-600' : viewBuyerInfoOrder.paymentFailed ? 'text-red-600' : 'text-yellow-600'}`}>
+                        {viewBuyerInfoOrder.paymentVerified ? 'Verified' : viewBuyerInfoOrder.paymentFailed ? 'Failed' : 'Pending Verification'}
+                      </span>
+                    </div>
+                    {viewBuyerInfoOrder.paymentScreenshot && (
+                      <div className="flex justify-between items-center text-xs pt-2 border-t border-gray-100">
+                        <span className="text-gray-500">Receipt</span>
+                        <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${viewBuyerInfoOrder.paymentScreenshot}`} target="_blank" rel="noreferrer" className="font-bold text-[#4a90e2] underline uppercase tracking-widest text-[10px]">View Image</a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
 
       {/* Reject Reason Modal */}
       {rejectItemId !== null && (
@@ -2719,13 +2831,14 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                 <th className="px-5 py-4 font-bold text-center">Qty</th>
                 <th className="px-5 py-4 font-bold text-center">Amount</th>
                 <th className="px-5 py-4 font-bold text-center">Payment</th>
-                <th className="px-5 py-4 font-bold text-center">Status & Action</th>
+                <th className="px-5 py-4 font-bold text-center w-32">Status</th>
+                <th className="px-5 py-4 font-bold text-center w-32">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {groupedOrdersList.length === 0 ? <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500 italic">No orders found.</td></tr> : groupedOrdersList.map((ord: any, idx: number) => {
                 const orderDate = new Date(ord.createdAt || ord.date);
-                const isSlaBreached = (new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60) > 24 && ['Pending Verification', 'Pending', 'Accepted', 'Processing'].includes(ord.status);
+                const isSlaBreached = (new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60) > 24 && ['Pending Verification', 'Pending'].includes(ord.status);
                 return (
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-4">
@@ -2739,13 +2852,6 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                           <p className="font-bold text-paa-navy text-xs truncate">{ord.customerName}</p>
                           <p className="text-[10px] text-gray-500 truncate mt-0.5" title={ord.address}>{ord.address}</p>
                         </div>
-                        <button
-                          onClick={() => setViewBuyerInfoOrder(ord)}
-                          className="p-1.5 bg-gray-50 border border-gray-200 hover:border-paa-navy hover:bg-paa-navy hover:text-white text-gray-500 rounded transition-colors shrink-0 mt-0.5"
-                          title="View Full Details"
-                        >
-                          <Eye size={12} />
-                        </button>
                       </div>
                       {ord.customerPhone && <p className="text-[9px] font-bold text-[#4a90e2] mt-1">{ord.customerPhone}</p>}
                     </td>
@@ -2762,90 +2868,119 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                     </td>
                     <td className="px-5 py-4 text-center font-bold text-paa-navy">{ord.totalQuantity}</td>
                     <td className="px-5 py-4 text-center font-bold text-paa-navy">₹{ord.totalAmount}</td>
-                    <td className="px-5 py-4 text-center">
+                    <td className="px-5 py-4 text-center align-middle">
                       {ord.paymentScreenshot ? (
-                        <div className="flex flex-col items-center gap-1.5">
+                        <div className="flex flex-col items-center gap-2">
                           <a
                             href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${ord.paymentScreenshot}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[9px] font-bold text-[#4a90e2] hover:text-paa-navy underline tracking-widest uppercase transition-colors"
+                            className="flex items-center gap-1 text-[9px] font-bold text-paa-navy bg-gray-50 border border-gray-200 hover:border-[#4a90e2] hover:text-[#4a90e2] px-2.5 py-1 rounded transition-colors tracking-widest uppercase"
                           >
-                            View Receipt
+                            <ExternalLink size={10} /> Receipt
                           </a>
                           {ord.paymentVerified && (
-                            <span className="text-[9px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1 bg-green-50 px-2.5 py-1 rounded-full border border-green-100"><Check size={10} /> Verified</span>
+                            <span className="text-[9px] font-bold text-green-600 tracking-widest uppercase flex items-center gap-1"><Check size={12} className="text-green-500" /> Verified</span>
                           )}
                         </div>
-                      ) : <span className="text-[9px] text-gray-400 italic">No receipt</span>}
+                      ) : <span className="text-[9px] text-gray-400 italic">N/A</span>}
                     </td>
-                    <td className="px-5 py-4 text-center">
-                      {ord.status === 'Pending Verification' || ord.status === 'Pending' ? (
-                        <div className="flex gap-2 items-center justify-center">
-                          <button
-                            onClick={() => handleApprove(ord.itemIds)}
-                            disabled={loadingAction !== null}
-                            className="text-[9px] font-bold uppercase tracking-widest px-3 py-2 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 rounded shadow-sm"
-                          >
-                            {loadingAction === String(ord.itemIds[0]) ? '...' : 'Approve'}
-                          </button>
-                          <button
-                            onClick={() => { setRejectItemId(ord.itemIds); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }}
-                            disabled={loadingAction !== null}
-                            className="text-[9px] font-bold uppercase tracking-widest px-3 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 rounded shadow-sm"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          {editingStatusOrderId === String(ord.orderId) ? (
-                            <select
-                              className={`dash-input text-[9px] py-1.5 px-3 uppercase font-bold w-full max-w-[120px] text-center rounded-full border shadow-sm outline-none ${ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
-                                  : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                    : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
-                                      : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
-                                        : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                    <td className="px-5 py-4 align-middle">
+                      <div className="flex flex-col gap-2 items-center w-full max-w-[120px] mx-auto">
+                        
+                        {/* Status Badge */}
+                        {ord.status === 'Pending Verification' || ord.status === 'Pending' ? (
+                          <span className="inline-flex items-center justify-center w-full px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-full border bg-yellow-50 text-yellow-800 border-yellow-200">
+                            Pending
+                          </span>
+                        ) : (
+                          <>
+                            {editingStatusOrderId === String(ord.orderId) ? (
+                              <select
+                                className={`text-[9px] py-1.5 px-2 uppercase font-bold w-full text-center rounded-full border shadow-sm outline-none cursor-pointer ${ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
+                                    : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                      : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
+                                        : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
+                                          : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                                  }`}
+                                value={ord.status === 'Completed' ? 'Delivered' : ord.status}
+                                disabled={loadingAction !== null}
+                                onChange={(e) => {
+                                  handleStatusChange(ord.itemIds, e.target.value);
+                                  setEditingStatusOrderId(null);
+                                }}
+                                onBlur={() => setEditingStatusOrderId(null)}
+                                autoFocus
+                              >
+                                <option value="Accepted">Accepted</option>
+                                <option value="Dispatched">Dispatched</option>
+                              </select>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  if (ord.status !== 'Rejected' && ord.status !== 'Completed' && ord.status !== 'Delivered') {
+                                    setEditingStatusOrderId(String(ord.orderId));
+                                  }
+                                }}
+                                disabled={ord.status === 'Rejected' || ord.status === 'Completed' || ord.status === 'Delivered'}
+                                className={`group flex items-center justify-between w-full px-3 py-1.5 rounded-full border transition-all ${
+                                  ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c] cursor-default'
+                                  : ord.status === 'Dispatched' ? 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 cursor-pointer'
+                                  : ord.status === 'Accepted' ? 'bg-gray-50 text-paa-navy border-gray-200 hover:bg-gray-100 cursor-pointer'
+                                  : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200 cursor-default'
+                                  : 'bg-yellow-50 text-yellow-800 border-yellow-200 cursor-default'
                                 }`}
-                              value={ord.status === 'Completed' ? 'Delivered' : ord.status}
+                                title={ord.status !== 'Rejected' && ord.status !== 'Completed' && ord.status !== 'Delivered' ? 'Click to Edit Status' : ''}
+                              >
+                                <span className="text-[9px] font-bold uppercase tracking-widest mx-auto">{ord.status}</span>
+                                {ord.status !== 'Rejected' && ord.status !== 'Completed' && ord.status !== 'Delivered' && (
+                                  <Edit2 size={10} className="opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
+                                )}
+                              </button>
+                            )}
+                          </>
+                        )}
+                        
+                        {/* Rejection Reason Text */}
+                        {ord.status === 'Rejected' && ord.rejectionReason && (
+                          <div className="mt-0.5 text-[9px] text-red-600 truncate w-full text-center" title={ord.rejectionReason}>
+                            Reason: {ord.rejectionReason}
+                          </div>
+                        )}
+
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 align-middle">
+                      <div className="flex flex-col gap-2 items-center w-full max-w-[120px] mx-auto">
+                        {/* Approve / Reject Actions */}
+                        {(ord.status === 'Pending Verification' || ord.status === 'Pending') && (
+                          <div className="flex w-full gap-1.5">
+                            <button
+                              onClick={() => handleApprove(ord.itemIds)}
                               disabled={loadingAction !== null}
-                              onChange={(e) => {
-                                handleStatusChange(ord.itemIds, e.target.value);
-                                setEditingStatusOrderId(null);
-                              }}
-                              onBlur={() => setEditingStatusOrderId(null)}
-                              autoFocus
+                              className="flex-1 flex items-center justify-center text-[9px] font-bold uppercase tracking-widest py-1.5 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 rounded border border-green-700 shadow-sm"
                             >
-                              <option value="Accepted">Accepted</option>
-                              <option value="Dispatched">Dispatched</option>
-                              <option value="Delivered">Delivered</option>
-                            </select>
-                          ) : (
-                            <div className="flex items-center justify-center gap-2">
-                              <span className={`inline-flex items-center justify-center px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full border ${ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
-                                  : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                    : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
-                                      : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
-                                        : 'bg-yellow-50 text-yellow-800 border-yellow-200'
-                                }`}>
-                                {ord.status}
-                              </span>
-                              {ord.status !== 'Rejected' && ord.status !== 'Completed' && ord.status !== 'Delivered' && (
-                                <button
-                                  onClick={() => setEditingStatusOrderId(String(ord.orderId))}
-                                  className="text-gray-400 hover:text-paa-navy transition-colors shrink-0"
-                                  title="Edit Status"
-                                >
-                                  <Edit2 size={12} />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                          {ord.status === 'Rejected' && ord.rejectionReason && (
-                            <div className="mt-1 text-[9px] text-red-600 truncate max-w-[120px]" title={ord.rejectionReason}>Reason: {ord.rejectionReason}</div>
-                          )}
-                        </div>
-                      )}
+                              {loadingAction === String(ord.itemIds[0]) ? '...' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => { setRejectItemId(ord.itemIds); setRejectReasons(['Item out of stock']); setOtherRejectReason(''); }}
+                              disabled={loadingAction !== null}
+                              className="flex-1 flex items-center justify-center text-[9px] font-bold uppercase tracking-widest py-1.5 bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-50 rounded shadow-sm"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+
+                        {/* View Button */}
+                        <button
+                          onClick={() => setViewBuyerInfoOrder(ord)}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:border-paa-navy hover:bg-gray-50 text-gray-600 rounded transition-colors text-[9px] font-bold uppercase tracking-widest shadow-sm"
+                        >
+                          <Eye size={12} className="text-gray-400" /> View Details
+                        </button>
+                        
+                      </div>
                     </td>
                   </tr>
                 )
@@ -3220,20 +3355,20 @@ const pe = pastEvents.find(p => p.eventId === eventId);
   return (
     <div className="bg-white rounded-xl">
       <div className="flex border-b border-gray-200 mb-6">
-        <button onClick={() => setActiveTab('events')} className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'events' ? 'border-paa-navy text-paa-navy' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Events Overview</button>
-        <button onClick={() => setActiveTab('performance')} className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'performance' ? 'border-paa-navy text-paa-navy' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Book Performance</button>
-        <button onClick={() => setActiveTab('payments')} className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'payments' ? 'border-paa-navy text-paa-navy' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Payments History</button>
+        <button onClick={() => setActiveTab('events')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'events' ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:text-paa-navy hover:bg-paa-navy/5 border border-transparent'}`}>Events Overview</button>
+        <button onClick={() => setActiveTab('performance')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'performance' ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:text-paa-navy hover:bg-paa-navy/5 border border-transparent'}`}>Book Performance</button>
+        <button onClick={() => setActiveTab('payments')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'payments' ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:text-paa-navy hover:bg-paa-navy/5 border border-transparent'}`}>Payments History</button>
       </div>
 
       {activeTab === 'events' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center">
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
               <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-indigo-500" /> Total Events</div>
               <div className="text-3xl font-serif font-bold text-paa-navy">{validParticipations.length}</div>
               <div className="text-xs text-gray-500 mt-2 font-mono font-medium">Fairs: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) === 'Book Fair').length} • Events: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) !== 'Book Fair').length}</div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center">
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
               <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-500" /> Total Books Sold</div>
              <div className="text-3xl font-serif font-bold text-emerald-700">
                  {validParticipations.reduce((acc: number, evt: any) => {
@@ -3249,7 +3384,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                  }, 0)}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center">
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
               <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><DollarSign className="w-4 h-4 text-blue-500" /> Total Revenue</div>
               <div className="text-3xl font-serif font-bold text-blue-700">
                  ₹{validParticipations.reduce((acc: number, evt: any) => {
@@ -3270,7 +3405,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
               <div className="text-3xl font-serif font-bold text-orange-700">₹{validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0).toLocaleString()}</div>
               <div className="text-[10px] text-orange-400 mt-2 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to view details &rarr;</div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center">
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
               <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-500" /> Net Gain/Loss</div>
               <div className="text-3xl font-serif font-bold text-indigo-700">
                  {(() => {
@@ -5002,6 +5137,125 @@ function AuthorReviews({ books }: { books: any[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function AuthorQueries() {
+  const [queries, setQueries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
+  const [isReplying, setIsReplying] = useState<{ [key: string]: boolean }>({});
+
+  useEffect(() => {
+    fetchQueries();
+  }, []);
+
+  const fetchQueries = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/queries`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setQueries(res.data);
+    } catch (err) {
+      toast.error('Failed to load queries');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReply = async (id: number) => {
+    if (!replyText[id]?.trim()) return;
+    setIsReplying({ ...isReplying, [id]: true });
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/queries/${id}/reply`, { reply: replyText[id] }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Reply sent!');
+      setReplyText({ ...replyText, [id]: '' });
+      fetchQueries();
+    } catch (err) {
+      toast.error('Failed to send reply');
+    } finally {
+      setIsReplying({ ...isReplying, [id]: false });
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy" /></div>;
+
+  return (
+    <div className="dash-panel animate-fade-in-up min-h-full">
+      <div className="dash-panel-header bg-white sticky top-0 z-10 shadow-sm flex items-center justify-between">
+        <div>
+          <h3 className="dash-panel-title flex items-center gap-2"><MessageSquare className="w-5 h-5" /> Queries & Issues</h3>
+          <p className="dash-panel-subtitle">View issues reported by your buyers</p>
+        </div>
+      </div>
+      <div className="p-6">
+        {queries.length === 0 ? (
+          <div className="py-16 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">No queries or issues reported yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {queries.map(q => (
+              <div key={q.id} className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                        q.status === 'Resolved' ? 'bg-green-100 text-green-800' : 
+                        q.status === 'Answered' ? 'bg-blue-100 text-blue-800' : 
+                        'bg-orange-100 text-orange-800'
+                      }`}>
+                        #TKT-{q.id.toString().padStart(4, '0')}
+                      </span>
+                      <h4 className="font-bold text-paa-navy text-sm">{q.subject}</h4>
+                    </div>
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(q.createdAt).toLocaleString()}</span>
+                  </div>
+                  <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${
+                    q.status === 'Resolved' ? 'bg-green-100 text-green-800' : 
+                    q.status === 'Answered' ? 'bg-blue-100 text-blue-800' : 
+                    'bg-orange-100 text-orange-800'
+                  }`}>
+                    {q.status === 'Resolved' ? 'Closed' : q.status === 'Answered' ? 'Opened' : 'New'}
+                  </span>
+                </div>
+                <QueryThreadDisplay query={q} currentUserType="Author" />
+                
+                {q.status !== 'Resolved' && (
+                  <div className="pt-4 border-t border-gray-100 mt-4">
+                    <div className="flex items-center gap-2 bg-white rounded-full border border-gray-200 px-4 py-2 shadow-sm focus-within:border-paa-navy focus-within:ring-1 focus-within:ring-paa-navy/20 transition-all">
+                      <input
+                        type="text"
+                        placeholder="Type reply..."
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-800 placeholder:text-gray-400"
+                        value={replyText[q.id] || ''}
+                        onChange={e => setReplyText({ ...replyText, [q.id]: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && replyText[q.id]?.trim() && !isReplying[q.id]) {
+                            handleReply(q.id);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => handleReply(q.id)}
+                        disabled={isReplying[q.id] || !replyText[q.id]?.trim()}
+                        className="p-2 bg-paa-navy text-white rounded-full hover:bg-paa-gold transition-colors disabled:opacity-50 disabled:hover:bg-paa-navy flex shrink-0 items-center justify-center"
+                        title="Send Reply"
+                      >
+                        <Send size={16} className={isReplying[q.id] ? "opacity-50" : ""} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

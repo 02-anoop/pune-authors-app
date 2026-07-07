@@ -259,17 +259,11 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-2xl border border-gray-200 shadow-sm p-8 animate-in fade-in duration-300">
-        <div className="relative flex items-center justify-center mb-6">
-          {/* Animated Outer Ring */}
-          <div className="w-16 h-16 rounded-full border-4 border-gray-100 border-t-paa-navy animate-spin"></div>
-          {/* Animated Inner Ring (reverse spin) */}
-          <div className="absolute w-10 h-10 rounded-full border-4 border-transparent border-t-paa-gold animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
-          {/* Center Point */}
-          <div className="absolute w-4 h-4 rounded-full bg-paa-navy"></div>
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1,2,3,4].map(n => <div key={n} className="h-28 bg-white border border-paa-navy/5 animate-pulse rounded-2xl shadow-sm"></div>)}
         </div>
-        <h3 className="text-lg font-serif font-bold text-paa-navy mb-1 animate-pulse">Loading active donation drives...</h3>
-        <p className="text-xs text-gray-400">Fetching campaigns and verification details from library ecosystem</p>
+        <div className="h-96 bg-white border border-paa-navy/5 animate-pulse rounded-2xl shadow-sm"></div>
       </div>
     );
   }

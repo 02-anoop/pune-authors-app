@@ -775,9 +775,22 @@ export function CataloguePage() {
       {/* Books Grid */}
       <section style={{ maxWidth: 1320, margin: "0 auto", padding: "1.5rem 1.5rem 4rem" }}>
         {isLoading ? (
-          <div style={{ textAlign: "center", padding: "5rem", color: "#6b6b80" }}>
-            <div className="w-8 h-8 border-4 border-paa-navy border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p style={{ fontSize: 15, fontWeight: 600 }}>Loading catalogue...</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} style={{ background: "#fff", borderRadius: 12, border: "1px solid #eaeaea", overflow: "hidden" }}>
+                <div className="animate-pulse bg-gray-200" style={{ height: 350, width: "100%" }}></div>
+                <div style={{ padding: "1.25rem" }}>
+                  <div className="animate-pulse bg-gray-200 rounded" style={{ height: 20, width: "80%", marginBottom: 8 }}></div>
+                  <div className="animate-pulse bg-gray-200 rounded" style={{ height: 14, width: "40%", marginBottom: 16 }}></div>
+                  <div className="animate-pulse bg-gray-200 rounded" style={{ height: 12, width: "100%", marginBottom: 6 }}></div>
+                  <div className="animate-pulse bg-gray-200 rounded" style={{ height: 12, width: "90%", marginBottom: 16 }}></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="animate-pulse bg-gray-200 rounded" style={{ height: 24, width: "30%" }}></div>
+                    <div className="animate-pulse bg-gray-200 rounded-full" style={{ height: 32, width: 80 }}></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredBooks.length === 0 ? (
           <div style={{ textAlign: "center", padding: "5rem", color: "#6b6b80" }}>

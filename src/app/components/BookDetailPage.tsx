@@ -353,21 +353,44 @@ export function BookDetailPage() {
                       {book.author.skills && book.author.skills !== 'NA' && (
                         <div style={{ gridColumn: '1 / -1' }}>
                           <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>SKILLS</span>
-                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{book.author.skills}</span>
+                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>
+                            {(() => {
+                               try {
+                                  const parsed = JSON.parse(book.author.skills);
+                                  if (Array.isArray(parsed)) return parsed.join(', ');
+                               } catch(e) {}
+                               return book.author.skills;
+                            })()}
+                          </span>
                         </div>
                       )}
                       {book.author.hobbies && book.author.hobbies !== 'NA' && (
                         <div style={{ gridColumn: '1 / -1' }}>
                           <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600 }}>HOBBIES</span>
-                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{book.author.hobbies}</span>
+                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>
+                            {(() => {
+                               try {
+                                  const parsed = JSON.parse(book.author.hobbies);
+                                  if (Array.isArray(parsed)) return parsed.join(', ');
+                               } catch(e) {}
+                               return book.author.hobbies;
+                            })()}
+                          </span>
                         </div>
                       )}
-                      {Object.entries(book.author.extraData).filter(([k, v]) => typeof v !== 'object' && v !== null && v !== '' && k !== 'bundleRules' && k !== 'lowStockAlerts' && k !== 'lateFines' && k !== 'isPublishedByPublisher' && k !== 'whyJoining' && k !== 'conflictOfInterestSignature' && k !== 'agreedToGuidelines' && k !== 'agreedToInfoDoc').map(([k, v]) => (
-                        <div key={k}>
-                          <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{k}</span>
-                          <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{String(v)}</span>
-                        </div>
-                      ))}
+                      {book.author.extraData && (() => {
+                        let ed = book.author.extraData;
+                        if (typeof ed === 'string') {
+                           try { ed = JSON.parse(ed); } catch(e) { ed = {}; }
+                        }
+                        if (!ed || typeof ed !== 'object') return null;
+                        return Object.entries(ed).filter(([k, v]) => typeof v !== 'object' && v !== null && v !== '' && !['bundleRules', 'bundleRule', 'lowStockAlerts', 'lateFines', 'isPublishedByPublisher', 'whyJoining', 'conflictOfInterestSignature', 'agreedToGuidelines', 'agreedToInfoDoc'].includes(k)).map(([k, v]) => (
+                          <div key={k}>
+                            <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{k}</span>
+                            <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{String(v)}</span>
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 )}

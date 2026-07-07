@@ -12,8 +12,6 @@ export function OrderFulfillmentTimeline({ currentStatus, trackingNumber }: { cu
     { id: 'Approved', label: 'Payment Verified', icon: <Check size={14} />, color: '#10b981' },
     { id: 'Accepted', label: 'Accepted by Author', icon: <ThumbsUp size={14} />, color: '#10b981' },
     { id: 'Dispatched', label: 'Dispatched', icon: <Package size={14} />, color: '#10b981' },
-    { id: 'In Transit', label: 'In Transit', icon: <Truck size={14} />, color: '#10b981' },
-    { id: 'Delivered', label: 'Out for Delivery', icon: <Truck size={14} />, color: '#10b981' },
     { id: 'Completed', label: 'Delivered', icon: <Home size={14} />, color: '#10b981' }
   ];
 

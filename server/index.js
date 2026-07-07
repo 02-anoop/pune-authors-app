@@ -38,16 +38,7 @@ setInterval(async () => {
     const expiredOrders = await prisma.orderItem.findMany({
       where: {
         status: 'Dispatched',
-        OR: [
-          {
-            isLateDeliveryReported: false,
-            dispatchedAt: { lt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000) }
-          },
-          {
-            isLateDeliveryReported: true,
-            lateDeliveryReportedAt: { lt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) }
-          }
-        ]
+        dispatchedAt: { lt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000) }
       }
     });
 

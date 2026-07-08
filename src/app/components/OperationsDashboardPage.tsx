@@ -139,7 +139,7 @@ export function OperationsDashboardPage() {
   const [reportEventId, setReportEventId] = useState<number | null>(null);
   const [eventReportData, setEventReportData] = useState<any>(null);
   const [pendingReportStatus, setPendingReportStatus] = useState<any>(null);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
   const [selectedPendingAuthor, setSelectedPendingAuthor] = useState<any>(null);
   const handleViewEditAuthor = (author: any) => setSelectedPendingAuthor(author);
@@ -857,27 +857,7 @@ export function OperationsDashboardPage() {
     } finally { setLoadingAction(null); }
   };
 
-  const handleVerifyOrder = async (id: number) => {
-    if (window.confirm('Are you sure you want to verify this payment?')) {
-      setLoadingAction('verifyOrder_' + id);
-      try {
-        await axios.post(`${API}/api/admin/orders/${id}/verify`);
-        fetchOrders();
-        setSelectedOrder(null);
-      } finally { setLoadingAction(null); }
-    }
-  };
 
-  const handleRejectOrder = async (id: number) => {
-    if (window.confirm('Are you sure you want to mark this payment as not received?')) {
-      setLoadingAction('rejectOrder_' + id);
-      try {
-        await axios.post(`${API}/api/admin/orders/${id}/reject-payment`);
-        fetchOrders();
-        setSelectedOrder(null);
-      } finally { setLoadingAction(null); }
-    }
-  };
 
 
   const handleEscalateOrder = async (id: number) => {
@@ -1702,27 +1682,139 @@ export function OperationsDashboardPage() {
     });
     const avgDeliveryDays = deliveredCount > 0 ? (totalDeliveryTime / deliveredCount / (1000 * 3600 * 24)).toFixed(1) : 0;
 
+    const handleDeleteOrder = async (id: number) => {
+      if (window.confirm('Are you sure you want to permanently delete this order?')) {
+        try {
+          await axios.delete(`${API}/api/admin/orders/${id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          fetchOrders();
+          toast.success('Order deleted successfully');
+        } catch (err) {
+          toast.error('Failed to delete order');
+        }
+      }
+    };
+
+    const getAggregateStatus = (ord: any) => {
+      const { status: ordStatus, items } = ord;
+      if (ordStatus === 'Cancelled') return { text: 'Cancelled', style: 'bg-red-50 text-red-700 border-red-200' };
+      if (ordStatus === 'Payment Not Received') return { text: 'Payment Failed', style: 'bg-red-50 text-red-700 border-red-200' };
+      if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') return { text: 'Pending Verification', style: 'bg-yellow-50 text-yellow-800 border-yellow-200' };
+      
+      if (!items || items.length === 0) return { text: ordStatus, style: 'bg-gray-100 text-gray-700 border-gray-200' };
+      
+      const allCompleted = items.every((it: any) => it.status === 'Completed' || it.status === 'Delivered');
+      const anyDispatched = items.some((it: any) => it.status === 'Dispatched' || it.status === 'Completed' || it.status === 'Delivered');
+      const anyAccepted = items.some((it: any) => it.status === 'Accepted');
+      const anyRejected = items.some((it: any) => it.status === 'Rejected');
+      
+      if (allCompleted) return { text: 'Delivered', style: 'bg-[#43a047] text-white border-[#4cae4c]' };
+      if (anyDispatched) return { text: 'Dispatched', style: 'bg-blue-50 text-blue-800 border-blue-200' };
+      if (anyAccepted) return { text: 'Accepted', style: 'bg-gray-50 text-paa-navy border-gray-200' };
+      if (anyRejected) return { text: 'Rejected', style: 'bg-red-50 text-red-700 border-red-200' };
+      
+      return { text: 'Pending', style: 'bg-yellow-50 text-yellow-800 border-yellow-200' };
+    };
+
+    // State Distribution Extraction
+    const stateCounts: Record<string, number> = {};
+    orders.forEach((o: any) => {
+      if (o.address) {
+        const parts = o.address.split(',');
+        const lastPart = parts[parts.length - 1]; // e.g. " Maharashtra - 411001"
+        if (lastPart) {
+          const stateStr = lastPart.split('-')[0].trim();
+          if (stateStr) {
+            stateCounts[stateStr] = (stateCounts[stateStr] || 0) + 1;
+          }
+        }
+      }
+    });
+    
+    const sortedStates = Object.entries(stateCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+    
+    const topStates = sortedStates.slice(0, 6);
+    const othersCount = sortedStates.slice(6).reduce((sum, s) => sum + s.value, 0);
+    if (othersCount > 0) {
+      topStates.push({ name: 'Others', value: othersCount });
+    }
+    const pieColors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6', '#9CA3AF'];
+
 
     return (
       <div className="space-y-6">
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Order Tracking KPIs ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'text-green-600 bg-green-100', bgClass: 'border-green-100' },
-            { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'text-orange-600 bg-orange-100', bgClass: 'border-orange-100' },
-            { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'text-blue-600 bg-blue-100', bgClass: 'border-blue-100' },
-            { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'text-purple-600 bg-purple-100', bgClass: 'border-purple-100' },
-          ].map((kpi, i) => (
-            <div key={i} className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col justify-center items-start gap-3 hover:-translate-y-1 hover:shadow-md transition-all`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kpi.colorClass}`}>
-                <kpi.icon size={18} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
-                <h3 className="text-2xl font-bold text-paa-navy">{kpi.value}</h3>
-              </div>
+        {/* Order Tracking KPIs & State Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="text-[11px] font-bold tracking-widest uppercase text-paa-gray-text flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-500" /> Order KPIs
+            </h3>
+            <div className="grid grid-cols-2 gap-4 h-[calc(100%-2rem)]">
+              {[
+                { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'text-green-600 bg-green-100', bgClass: 'border-green-100' },
+                { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'text-orange-600 bg-orange-100', bgClass: 'border-orange-100' },
+                { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'text-blue-600 bg-blue-100', bgClass: 'border-blue-100' },
+                { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'text-purple-600 bg-purple-100', bgClass: 'border-purple-100' },
+              ].map((kpi, i) => (
+                <div key={i} className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col justify-center items-start gap-3 hover:-translate-y-1 hover:shadow-md transition-all`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kpi.colorClass}`}>
+                    <kpi.icon size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+                    <h3 className="text-2xl font-bold text-paa-navy">{kpi.value}</h3>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div className="lg:col-span-1 bg-white border border-gray-100 rounded-2xl shadow-sm p-4 flex flex-col hover:shadow-md transition-shadow">
+            <h3 className="text-[11px] font-bold tracking-widest uppercase text-paa-gray-text mb-4 flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-indigo-500" /> State Distribution
+            </h3>
+            <div className="flex-1 w-full min-h-[160px]">
+              {topStates.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsPieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <Pie
+                      data={topStates}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={75}
+                      paddingAngle={2}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {topStates.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontWeight: 'bold' }}
+                      itemStyle={{ color: '#1a1a2e' }}
+                    />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 font-medium">No location data available</div>
+              )}
+            </div>
+            {topStates.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                {topStates.map((entry, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pieColors[idx % pieColors.length] }}></span>
+                    {entry.name} ({entry.value})
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
 
@@ -1802,43 +1894,102 @@ export function OperationsDashboardPage() {
             </div>
           </div>
 
-          <div className="hidden md:block overflow-x-auto">
-            <table className="dash-table w-full">
+          <div className="hidden md:block w-full overflow-hidden">
+            <table className="dash-table w-full table-fixed">
               <thead>
                 <tr>
-                  <th>Order ID & Date</th>
-                  <th>Customer</th>
-                  <th>Items / Books</th>
-                  <th style={{ textAlign: 'center' }}>Amount</th>
-                  <th style={{ textAlign: 'center' }}>Status</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
+                  <th className="w-1/6">Order ID & Date</th>
+                  <th className="w-1/5">Customer</th>
+                  <th className="w-1/3">Items / Books</th>
+                  <th className="w-[10%]" style={{ textAlign: 'center' }}>Amount</th>
+                  <th className="w-[12%]" style={{ textAlign: 'center' }}>Status</th>
+                  <th className="w-[12%]" style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((ord: any) => (
-                  <tr key={ord.dbId}>
-                    <td>
-                      <p className="font-bold text-paa-navy mb-1">{ord.id}</p>
-                      <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3" /> {ord.date}</p>
-                    </td>
-                    <td className="font-bold text-paa-navy">{ord.customer}</td>
-                    <td>
-                      <ul className="text-xs text-paa-gray-text font-medium space-y-1">
-                        {ord.items.map((it: any, idx: number) => (
-                          <li key={idx} className="flex gap-2"><span className="text-paa-navy font-bold">{it.qty}x</span> <span>{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span></li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td style={{ textAlign: 'center' }} className="font-bold text-paa-navy">₹{ord.total}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className={`dash-badge ${ord.status === 'Completed' ? 'active' : ord.status === 'Payment Not Received' ? 'rejected' : 'pending'}`}>
-                        {ord.status === 'Completed' ? 'Payment Verified' : ord.status === 'Payment Not Received' ? 'Payment Failed' : 'Pending Verification'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button onClick={() => setSelectedOrder(ord)} className="dash-btn dash-btn-ghost">Details</button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={ord.dbId}>
+                    <tr onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)} className={`cursor-pointer transition-colors ${expandedOrderId === ord.dbId ? 'bg-indigo-50/30' : 'hover:bg-gray-50'}`}>
+                      <td className="truncate">
+                        <p className="font-bold text-paa-navy mb-1 truncate">{ord.id}</p>
+                        <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium truncate"><CalendarIcon className="w-3 h-3 shrink-0" /> {ord.date}</p>
+                      </td>
+                      <td className="font-bold text-paa-navy truncate pr-2" title={ord.customer}>{ord.customer}</td>
+                      <td className="truncate pr-2">
+                        <ul className="text-xs text-paa-gray-text font-medium space-y-1">
+                          {ord.items.slice(0, 2).map((it: any, idx: number) => (
+                            <li key={idx} className="flex gap-2 items-center truncate">
+                              <span className="text-paa-navy font-bold shrink-0">{it.qty}x</span> 
+                              <span className="truncate">{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span>
+                            </li>
+                          ))}
+                          {ord.items.length > 2 && <li className="text-indigo-500 font-bold text-[10px] uppercase tracking-widest">+ {ord.items.length - 2} more items</li>}
+                        </ul>
+                      </td>
+                      <td style={{ textAlign: 'center' }} className="font-bold text-paa-navy">₹{ord.total}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={`inline-flex items-center justify-center w-full px-2 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full border ${getAggregateStatus(ord).style}`}>
+                          {getAggregateStatus(ord).text}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="flex items-center justify-center gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteOrder(ord.dbId); }} className="p-1.5 rounded-full hover:bg-red-50 text-red-500 transition-colors" title="Delete Order">
+                            <Trash2 size={16} />
+                          </button>
+                          <button className="text-gray-400 p-1.5 rounded-full hover:bg-gray-100 transition-colors" title="Toggle Details">
+                            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${expandedOrderId === ord.dbId ? 'rotate-180' : ''}`} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedOrderId === ord.dbId && (
+                      <tr className="bg-indigo-50/10 border-b border-indigo-100/50 shadow-inner">
+                        <td colSpan={6} className="p-0">
+                          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in-up">
+                            {/* Order Details Column */}
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3 border-b border-indigo-100 pb-2">Order Details</h4>
+                              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                <p className="text-sm font-bold text-paa-navy mb-1">{ord.customer}</p>
+                                <p className="text-xs text-gray-500 mb-0.5">{ord.customerEmail}</p>
+                                <p className="text-xs text-gray-500 mb-3">{ord.customerPhone}</p>
+                                <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                  <span className="font-bold text-paa-navy block mb-1">Shipping Address:</span>
+                                  {ord.address}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Bill Summary Column */}
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3 border-b border-indigo-100 pb-2">Bill Summary</h4>
+                              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-2 text-sm">
+                                <div className="flex justify-between text-gray-600">
+                                  <span>Subtotal</span>
+                                  <span className="font-semibold text-paa-navy">₹{ord.subtotal}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600">
+                                  <span>Logistics Fees (Delivery)</span>
+                                  <span className="font-semibold text-paa-navy">₹{ord.deliveryCharges}</span>
+                                </div>
+                                {ord.bundleDiscount > 0 && (
+                                  <div className="flex justify-between text-green-600">
+                                    <span>Promotional Discount</span>
+                                    <span className="font-semibold">-₹{ord.bundleDiscount}</span>
+                                  </div>
+                                )}
+                                <div className="border-t border-gray-100 pt-2 mt-2 flex justify-between items-center">
+                                  <span className="font-bold text-paa-navy">Final Payable Amount</span>
+                                  <span className="text-lg font-black text-indigo-600">₹{ord.total}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
                 {orders.length === 0 && <tr><td colSpan={6} className="text-center py-8">No orders yet.</td></tr>}
               </tbody>
@@ -1853,8 +2004,8 @@ export function OperationsDashboardPage() {
                     <p className="font-bold text-paa-navy text-sm">{ord.id}</p>
                     <p className="text-[10px] text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3" /> {ord.date}</p>
                   </div>
-                  <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-widest ${ord.status === 'Completed' ? 'bg-green-100 text-green-700' : ord.status === 'Payment Not Received' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {ord.status === 'Completed' ? 'Verified' : ord.status === 'Payment Not Received' ? 'Failed' : 'Pending'}
+                  <span className={`text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-widest border ${getAggregateStatus(ord).style}`}>
+                    {getAggregateStatus(ord).text}
                   </span>
                 </div>
                 <div>
@@ -1869,12 +2020,34 @@ export function OperationsDashboardPage() {
                     ))}
                   </ul>
                 </div>
-                <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-1">
+                <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-1 cursor-pointer" onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)}>
                   <div className="text-sm font-bold text-paa-navy">₹{ord.total}</div>
-                  <button onClick={() => setSelectedOrder(expandedOrderId === ord.dbId ? null : ord)} className="p-1 rounded-full hover:bg-gray-100 text-paa-navy" title="View Details">
-                    <ChevronDown size={16} className={`transition-transform duration-200 ${expandedOrderId === ord.dbId ? 'rotate-180' : ''}`} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteOrder(ord.dbId); }} className="p-1.5 rounded-full hover:bg-red-50 text-red-500 transition-colors" title="Delete Order">
+                      <Trash2 size={16} />
+                    </button>
+                    <button className="p-1 rounded-full hover:bg-gray-100 text-paa-navy" title="Toggle Details">
+                      <ChevronDown size={16} className={`transition-transform duration-200 ${expandedOrderId === ord.dbId ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
                 </div>
+                
+                {/* Mobile Expanded Details */}
+                {expandedOrderId === ord.dbId && (
+                  <div className="mt-2 pt-4 border-t border-dashed border-gray-200 space-y-4 animate-fade-in-up">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-1">Shipping Details</p>
+                      <p className="text-xs text-gray-500">{ord.customerEmail} • {ord.customerPhone}</p>
+                      <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">{ord.address}</p>
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-2">Bill Summary</p>
+                      <div className="flex justify-between text-gray-600"><span>Subtotal</span> <span className="font-semibold text-paa-navy">₹{ord.subtotal}</span></div>
+                      <div className="flex justify-between text-gray-600"><span>Delivery</span> <span className="font-semibold text-paa-navy">₹{ord.deliveryCharges}</span></div>
+                      {ord.bundleDiscount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span> <span className="font-semibold">-₹{ord.bundleDiscount}</span></div>}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
             {orders.length === 0 && <div className="text-center py-8 text-sm text-gray-500">No orders yet.</div>}
@@ -5080,97 +5253,7 @@ export function OperationsDashboardPage() {
         </div>
       )}
 
-      {/* Order Details Modal */}
-      <Modal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} title={`Order Details: ${selectedOrder?.id}`}>
-        {selectedOrder && (
-          <div className="space-y-6">
-            <div className="bg-gray-50 p-4 border border-paa-navy/5 flex justify-between items-start">
-              <div>
-                <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">Customer Details</p>
-                <p className="font-bold text-paa-navy">{selectedOrder.customer}</p>
-                <p className="text-sm font-medium text-paa-gray-text mt-1">Placed on: {selectedOrder.date}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Amount</p>
-                <p className="font-bold text-xl text-paa-navy">₹{selectedOrder.total}</p>
-              </div>
-            </div>
 
-            <div>
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-3">Ordered Books</h3>
-              <ul className="space-y-2">
-                {selectedOrder.items.map((it: any, idx: number) => {
-                  let processingDays = null;
-                  let deliveryDays = null;
-                  if (it.createdAt && it.dispatchedAt) {
-                    processingDays = Math.max(0, Math.round((new Date(it.dispatchedAt).getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600 * 24)));
-                  }
-                  if (it.dispatchedAt && it.deliveredAt) {
-                    deliveryDays = Math.max(0, Math.round((new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24)));
-                  }
-
-                  return (
-                    <li key={idx} className="flex flex-col border-b border-paa-navy/5 pb-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-sm text-paa-navy">{it.title} <span className="text-gray-400 italic font-normal text-xs ml-1">by {it.authorName}</span></span>
-                        <span className="font-bold text-paa-navy text-sm">Qty: {it.qty}</span>
-                      </div>
-                      {(processingDays !== null || deliveryDays !== null) && (
-                        <div className="flex gap-4 mt-1 text-[10px] uppercase font-bold tracking-widest text-paa-gray-text">
-                          {processingDays !== null && <span>Processing Time: <span className="text-paa-navy">{processingDays} {processingDays === 1 ? 'day' : 'days'}</span></span>}
-                          {deliveryDays !== null && <span>Delivery Time: <span className="text-paa-navy">{deliveryDays} {deliveryDays === 1 ? 'day' : 'days'}</span></span>}
-                        </div>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-3">Payment Information</h3>
-              {selectedOrder.payment === 'Paid' ? (
-                <div className="bg-[#f0f4f8] p-4 border border-paa-navy/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-paa-navy mb-1 uppercase tracking-widest">Payment Uploaded</p>
-                    <a href={`${API}${selectedOrder.paymentScreenshot}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">View Screenshot</a>
-                  </div>
-                  {selectedOrder.status === 'Completed' ? (
-                    <div className="flex items-center gap-2 text-green-700 bg-green-100 px-3 py-1 border border-green-300">
-                      <CheckCircle2 className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">Verified</span>
-                    </div>
-                  ) : selectedOrder.status === 'Payment Not Received' ? (
-                    <div className="flex items-center gap-2 text-red-700 bg-red-100 px-3 py-1 border border-red-300">
-                      <XCircle className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">Rejected</span>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} disabled={loadingAction === 'verifyOrder_' + selectedOrder.dbId} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
-                        {loadingAction === 'verifyOrder_' + selectedOrder.dbId ? 'Verifying...' : 'Verify'}
-                      </button>
-                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
-                        {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Rejecting...' : 'Reject'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="bg-red-50 p-4 border border-red-200 text-red-700 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="w-5 h-5" />
-                    <span className="text-sm font-bold">No payment screenshot uploaded</span>
-                  </div>
-                  {selectedOrder.status !== 'Payment Not Received' && (
-                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
-                      {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Updating...' : 'Mark Failed'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
 
       <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Create New Form">
         <form className="space-y-4" onSubmit={async (e) => {

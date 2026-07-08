@@ -3375,6 +3375,23 @@ export function OperationsDashboardPage() {
     };
     const handleDownloadEventReport = () => {
         if (!selectedEventBreakdown) return;
+
+        const eventNameStr = (selectedEventBreakdown.name || "").toLowerCase();
+        let staticFile = null;
+        if (eventNameStr.includes("dehradun")) staticFile = "DehradunBookFair (5).xlsx";
+        else if (eventNameStr.includes("goa")) staticFile = "GoaBookFair (2).xlsx";
+        else if (eventNameStr.includes("jammu")) staticFile = "JammuBookFair (1).xlsx";
+        else if (eventNameStr.includes("srinagar")) staticFile = "SrinagarBookFair (1).xlsx";
+
+        if (staticFile) {
+            const aLink = document.createElement('a');
+            aLink.href = `/Events/${staticFile}`;
+            aLink.download = staticFile;
+            document.body.appendChild(aLink);
+            aLink.click();
+            document.body.removeChild(aLink);
+            return;
+        }
         
         const totalParticipants = eventRegistrations.length;
         const totalBooksListed = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || (a.manualTotalListed || 0)), 0);

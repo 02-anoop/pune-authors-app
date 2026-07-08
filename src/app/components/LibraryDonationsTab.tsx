@@ -460,6 +460,23 @@ export function LibraryDonationsTab() {
   const handleExportCampaignReport = () => {
     if (!selectedDriveBreakdown) return;
 
+    const driveNameStr = (selectedDriveBreakdown.library?.name || selectedDriveBreakdown.campaignName || "").toLowerCase();
+    let staticFile = null;
+    if (driveNameStr.includes("kolkata")) staticFile = "KolkataAirport (2).xlsx";
+    else if (driveNameStr.includes("mangalor")) staticFile = "MangalorAirport (1).xlsx";
+    else if (driveNameStr.includes("pune")) staticFile = "PuneAirport (1).xlsx";
+    else if (driveNameStr.includes("thiruvananthapuram")) staticFile = "THIRUVANANTHAPURAM AIRPORT (1).xlsx";
+
+    if (staticFile) {
+        const aLink = document.createElement('a');
+        aLink.href = `/Airports/${staticFile}`;
+        aLink.download = staticFile;
+        document.body.appendChild(aLink);
+        aLink.click();
+        document.body.removeChild(aLink);
+        return;
+    }
+
     let csvContent = 'Author Name,Library Name,Book Title,Genre,Qty Committed,Qty Collected,Qty Dispatched,Qty Received,Pending Qty,Library Confirmation Status,Donation Value (MRP)\n';
 
     registrations.forEach((reg: any) => {

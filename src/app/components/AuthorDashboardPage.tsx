@@ -1515,12 +1515,24 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     {row.title}
                     {(() => {
                       const bk = authorBooks.find((b: any) => b.id === row.id);
-                      const avgRating = bk?.reviews?.length ? (bk.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / bk.reviews.length).toFixed(1) : null;
-                      if (avgRating) return (
-                        <div className="flex items-center gap-0.5 mt-1 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded w-max">
-                          {avgRating} <Star size={10} className="fill-amber-500 text-amber-500" />
-                        </div>
-                      );
+                      const avgRating = bk?.reviews?.length ? (bk.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / bk.reviews.length) : null;
+                      if (avgRating) {
+                        const roundedRating = Math.round(avgRating);
+                        return (
+                          <div className="flex items-center gap-0.5 mt-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={12}
+                                className={star <= roundedRating ? "text-amber-500 fill-amber-500" : "text-gray-300"}
+                              />
+                            ))}
+                            <span className="text-[10px] text-amber-600 font-bold ml-1">
+                              ({avgRating.toFixed(1)})
+                            </span>
+                          </div>
+                        );
+                      }
                       return null;
                     })()}
                   </td>

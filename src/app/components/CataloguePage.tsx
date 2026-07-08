@@ -72,12 +72,9 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     setDownloading(true);
     const html2pdf = await loadHtml2Pdf();
     
-    // Filter out books with broken local storage covers that crash html2canvas
-    const validBooks = books.filter(b => !(b.coverUrl && b.coverUrl.includes('uploads/')));
-
     // Group books by author
     const byAuthor: Record<string, { name: string; bio: string; photoUrl: string; instagram: string; facebook: string; whatsapp: string; qualification?: string; age?: string; experience?: string; skills?: string; hobbies?: string; books: CatalogueBook[] }> = {};
-    validBooks.forEach(b => {
+    books.forEach(b => {
       let safePhoto = b.authorPhotoUrl || "";
       if (safePhoto.includes('uploads/')) safePhoto = "";
 
@@ -97,7 +94,13 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
           books: []
         };
       }
-      byAuthor[b.authorName].books.push(b);
+      // nullify broken local storage covers that crash html2canvas, and ignore NO_BOOK stubs
+      if (b.id !== 'NO_BOOK') {
+        if (b.coverUrl && b.coverUrl.includes('uploads/')) {
+          b.coverUrl = '';
+        }
+        byAuthor[b.authorName].books.push(b);
+      }
     });
     
       let currentPage = 2; // Cover is page 1

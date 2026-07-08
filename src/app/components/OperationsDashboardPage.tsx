@@ -44,6 +44,7 @@ const AuthorFullProfileView = lazy(() => import('./AuthorFullProfileView').then(
 const AuthorRegistrationPage = lazy(() => import('./AuthorRegistrationPage').then(m => ({ default: m.AuthorRegistrationPage })));
 const LibraryDonationsTab = lazy(() => import('./LibraryDonationsTab').then(m => ({ default: m.LibraryDonationsTab })));
 const AdminInventoryTab = lazy(() => import('./AdminInventoryTab').then(m => ({ default: m.AdminInventoryTab })));
+import { downloadCataloguePDF } from './CataloguePage';
 
 const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
   if (!isOpen) return null;
@@ -66,6 +67,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
 
 export function OperationsDashboardPage() {
   const [selectedAuthorsForCatalogue, setSelectedAuthorsForCatalogue] = useState<number[]>([]);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
@@ -1796,13 +1798,30 @@ export function OperationsDashboardPage() {
     const [fineAmount, setFineAmount] = useState('500');
     const [isSubmittingFine, setIsSubmittingFine] = useState(false);
     const [expandedOrderId, setExpandedOrderId] = useState(null);
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
 
-    const successfulOrders = orders.filter((o: any) => o.status === 'Completed').length;
-    const toApproveOrders = orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
-    const underDeliveryOrders = orders.filter((o: any) => o.status === 'Dispatched').length;
-    const returnedOrdersCount = orders.filter((o: any) => o.status === 'Returned' || o.status === 'Cancelled').length;
+    const filteredOrders = orders.filter((ord: any) => {
+      if (!localSearchTerm) return true;
+      const term = localSearchTerm.toLowerCase();
+      return (
+        (ord.id && ord.id.toLowerCase().includes(term)) ||
+        (ord.customer && ord.customer.toLowerCase().includes(term)) ||
+        (ord.customerEmail && ord.customerEmail.toLowerCase().includes(term)) ||
+        (ord.customerPhone && ord.customerPhone.toLowerCase().includes(term)) ||
+        (ord.address && ord.address.toLowerCase().includes(term)) ||
+        (ord.items && ord.items.some((it: any) => 
+           (it.title && it.title.toLowerCase().includes(term)) || 
+           (it.authorName && it.authorName.toLowerCase().includes(term))
+        ))
+      );
+    });
 
-    const totalRevenueWebOrders = orders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
+    const successfulOrders = filteredOrders.filter((o: any) => o.status === 'Completed').length;
+    const toApproveOrders = filteredOrders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
+    const underDeliveryOrders = filteredOrders.filter((o: any) => o.status === 'Dispatched').length;
+    const returnedOrdersCount = filteredOrders.filter((o: any) => o.status === 'Returned' || o.status === 'Cancelled').length;
+
+    const totalRevenueWebOrders = filteredOrders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
 
     // Additional Insights
 
@@ -1811,7 +1830,7 @@ export function OperationsDashboardPage() {
 
     const lateDeliveriesMap: Record<number, { authorName: string, authorEmail: string, orderId: string, hours: number, count: number }> = {};
 
-    orders.forEach((o: any) => {
+    filteredOrders.forEach((o: any) => {
       o.items?.forEach((it: any) => {
         if (it.status === 'Delivered' && it.dispatchedAt && it.deliveredAt) {
           const time = new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime();
@@ -1859,7 +1878,7 @@ export function OperationsDashboardPage() {
 
     // State Distribution Extraction
     const stateCounts: Record<string, number> = {};
-    orders.forEach((o: any) => {
+    filteredOrders.forEach((o: any) => {
       if (o.address) {
         const parts = o.address.split(',');
         const lastPart = parts[parts.length - 1]; // e.g. " Maharashtra - 411001"
@@ -1958,65 +1977,7 @@ export function OperationsDashboardPage() {
         </div>
 
 
-        {/* Author Logistics Alerts */}
-        {(() => {
-          const alerts: any[] = [];
-          orders.forEach((ord: any) => {
-            ord.items?.forEach((it: any) => {
-              if (it.status === 'Completed' && it.deliveredAt && it.dispatchedAt) {
-                const days = (new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24);
-                if (days > 10 || (it.feedbackRating && it.feedbackRating <= 2) || (it.feedbackCondition === 'Damaged')) {
-                  alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: it.feedbackCondition === 'Damaged' ? 'Damaged Condition Reported' : (it.feedbackRating && it.feedbackRating <= 2) ? `Low Rating (${it.feedbackRating} Stars)` : `Slow Delivery (${Math.round(days)} days)` });
-                }
-              } else if (it.status === 'Dispatched' && it.dispatchedAt) {
-                const days = (new Date().getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24);
-                if (days > 14) alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: `Stuck in Transit (${Math.round(days)} days)` });
-              } else if ((it.status === 'Pending' || it.status === 'Accepted' || it.status === 'Pending Verification') && it.createdAt) {
-                const days = (new Date().getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600 * 24);
-                if (days > 7) alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: `Not Dispatched (${Math.round(days)} days)` });
-              }
-            });
-          });
 
-          if (alerts.length === 0) return null;
-
-          return (
-            <div className="bg-red-50 border border-red-200 shadow-sm flex flex-col mb-6">
-              <div className="p-4 border-b border-red-200 flex items-center gap-2 bg-red-100/50">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <h3 className="text-lg font-serif font-semibold text-red-900 tracking-tight">Author Logistics Alerts (Defaulters)</h3>
-              </div>
-              <div className="p-4 overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="text-xs uppercase tracking-widest text-red-800 border-b border-red-200">
-                      <th className="pb-2 font-bold">Author</th>
-                      <th className="pb-2 font-bold">Book</th>
-                      <th className="pb-2 font-bold">Issue</th>
-                      <th className="pb-2 font-bold">Order Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {alerts.map((a, idx) => (
-                      <tr key={idx} className="border-b border-red-100 last:border-0 text-sm text-red-900">
-                        <td className="py-3 font-bold">{a.authorName}</td>
-                        <td className="py-3">{a.title}</td>
-                        <td className="py-3 font-bold flex items-center gap-2">
-                          <span className="bg-red-200 text-red-800 px-2 py-1 rounded text-xs">{a.issue}</span>
-                          {a.feedbackComments && <span className="text-xs italic text-red-700 bg-red-50 px-2 py-1 rounded border border-red-100">"{a.feedbackComments}"</span>}
-                        </td>
-                        <td className="py-3">
-                          <p className="font-mono text-xs">{a.orderId}</p>
-                          <p className="text-xs opacity-80">{a.customer} ({a.date})</p>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        })()}
 
         <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out flex flex-col">
           <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
@@ -2026,7 +1987,13 @@ export function OperationsDashboardPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                <input type="text" placeholder="SEARCH ORDErs..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64" />
+                <input 
+                  type="text" 
+                  placeholder="SEARCH ORDErs..." 
+                  value={localSearchTerm}
+                  onChange={(e) => setLocalSearchTerm(e.target.value)}
+                  className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64" 
+                />
               </div>
               <button onClick={handleExportCSV} className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium rounded-full">
                 <ClipboardList className="w-4 h-4" /> Export CSV
@@ -2047,7 +2014,7 @@ export function OperationsDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((ord: any) => (
+                {filteredOrders.map((ord: any) => (
                   <React.Fragment key={ord.dbId}>
                     <tr onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)} className={`cursor-pointer transition-colors ${expandedOrderId === ord.dbId ? 'bg-indigo-50/30' : 'hover:bg-gray-50'}`}>
                       <td className="truncate">
@@ -2621,34 +2588,95 @@ export function OperationsDashboardPage() {
       link.click();
       document.body.removeChild(link);
     };
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
     const handleDownloadCatalogue = () => {
       if (selectedAuthorIds.length === 0) return;
       const selectedAuthorsData = authors.filter(a => selectedAuthorIds.includes(a.id));
-      let csv = 'Author Name,Title,Subtitle,Genre,Sub-Genre,Pages,MRP,Language,Format,Publisher,Publication Date,ISBN,Synopsis\n';
       
+      const formattedBooks: any[] = [];
       selectedAuthorsData.forEach(author => {
+        let ed = author.extraData;
+        if (typeof ed === 'string') {
+          try { ed = JSON.parse(ed); } catch (e) { ed = {}; }
+        }
+        ed = ed || {};
+
         const approvedBooks = author.books?.filter((b: any) => b.status === 'Approved') || [];
-        approvedBooks.forEach((book: any) => {
-          const safe = (val: any) => `"${String(val || '').replace(/"/g, '""')}"`;
-          const row = [
-            author.name, book.title, book.subtitle, book.genre, book.subGenre, 
-            book.pages, book.mrp, book.language, book.format, book.publisher, 
-            book.publicationDate, book.isbn, book.synopsis
-          ].map(safe);
-          csv += row.join(',') + '\n';
-        });
+        
+        if (approvedBooks.length === 0) {
+          formattedBooks.push({
+            id: 'NO_BOOK',
+            title: '',
+            synopsis: '',
+            mrp: null,
+            mrpRaw: '',
+            coverUrl: '',
+            authorName: author.name || 'Unknown Author',
+            authorBio: author.bio || '',
+            authorPhotoUrl: author.photoUrl || '',
+            authorInstagram: author.instagram || ed.instagram || '',
+            authorFacebook: author.facebook || ed.facebook || '',
+            authorWhatsapp: author.whatsapp || ed.whatsapp || '',
+            authorQualification: author.qualification || ed.qualification || '',
+            authorAge: author.age || ed.age || '',
+            authorExperience: author.experience || ed.experience || '',
+            authorSkills: author.skills || ed.skills || '',
+            authorHobbies: author.hobbies || ed.hobbies || '',
+            genre: '',
+            subGenre: '',
+            pages: null,
+            language: '',
+            isbn: '',
+            publisher: '',
+            publicationDate: '',
+            edition: '',
+            format: '',
+            rating: 5,
+            reviewsCount: 10
+          });
+        } else {
+          approvedBooks.forEach((book: any) => {
+            formattedBooks.push({
+              id: book.id || String(Math.random()),
+              title: book.title || 'Untitled',
+              synopsis: book.synopsis || '',
+              mrp: parseFloat(book.mrp) || null,
+              mrpRaw: String(book.mrp || ''),
+              coverUrl: book.coverUrl || '',
+              authorName: author.name || 'Unknown Author',
+              authorBio: author.bio || '',
+              authorPhotoUrl: author.photoUrl || '',
+              authorInstagram: author.instagram || ed.instagram || '',
+              authorFacebook: author.facebook || ed.facebook || '',
+              authorWhatsapp: author.whatsapp || ed.whatsapp || '',
+              authorQualification: author.qualification || ed.qualification || '',
+              authorAge: author.age || ed.age || '',
+              authorExperience: author.experience || ed.experience || '',
+              authorSkills: author.skills || ed.skills || '',
+              authorHobbies: author.hobbies || ed.hobbies || '',
+              genre: book.genre || 'General',
+              subGenre: book.subGenre || '',
+              pages: parseInt(book.pages) || null,
+              language: book.language || 'English',
+              isbn: book.isbn || '',
+              publisher: book.publisher || '',
+              publicationDate: book.publicationDate || '',
+              edition: book.edition || '',
+              format: book.format || '',
+              rating: 5,
+              reviewsCount: 10
+            });
+          });
+        }
       });
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'selected_authors_catalogue.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadCataloguePDF('Exclusive', formattedBooks, setIsDownloadingPdf).then(() => {
+        toast.success("PDF generated successfully!");
+      }).catch(err => {
+        console.error(err);
+        toast.error("Error generating PDF catalogue.");
+      });
     };
 
     if (selectedPendingAuthor) {
@@ -2683,8 +2711,8 @@ export function OperationsDashboardPage() {
             <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">{authors.length} Total</span>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handleDownloadCatalogue} disabled={selectedAuthorIds.length === 0} className="dash-btn dash-btn-ghost flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed">
-              <Download className="w-4 h-4" /> Download Catalogue
+            <button onClick={handleDownloadCatalogue} disabled={selectedAuthorIds.length === 0 || isDownloadingPdf} className="dash-btn dash-btn-ghost flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed">
+              {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {isDownloadingPdf ? 'Generating PDF...' : 'Download Catalogue'}
             </button>
             <button onClick={handleExportAuthorsCSV} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
               <Download className="w-4 h-4" /> Export CSV

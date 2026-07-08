@@ -1544,19 +1544,68 @@ export function OperationsDashboardPage() {
           </div>
 
           {salesChartData.length > 0 && (
-            <div className="mb-8 border border-paa-navy/5 p-4 rounded-xl overflow-x-auto">
-              <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Books Sold By Channel</h4>
-              <div className="h-64 min-w-[500px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={salesChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                    <XAxis dataKey="name" fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                    <YAxis fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                    <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                    <Area type="monotone" dataKey="Web" stackId="1" stroke="#3b82f6" fill="#bfdbfe" name="Online Orders (Web)" />
-                    <Area type="monotone" dataKey="POS" stackId="1" stroke="#10b981" fill="#a7f3d0" name="Event Sales (POS)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="lg:col-span-2 border border-paa-navy/5 p-4 rounded-xl overflow-x-auto bg-white">
+                <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Books Sold By Channel Over Time</h4>
+                <div className="h-64 min-w-[500px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={salesChartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                      <XAxis dataKey="name" fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                      <YAxis fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                      <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Area type="monotone" dataKey="Web" stackId="1" stroke="#3b82f6" fill="#bfdbfe" name="Online Orders (Web)" />
+                      <Area type="monotone" dataKey="POS" stackId="1" stroke="#10b981" fill="#a7f3d0" name="Event Sales (POS)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              
+              <div className="border border-paa-navy/5 p-4 rounded-xl bg-white flex flex-col">
+                <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Sales by Channel</h4>
+                <div className="h-64 w-full flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={(() => {
+                          const filtered = salesTableData.filter(r => {
+                            const evt = (r.Event || '').toLowerCase();
+                            return !evt.includes('legacy archive') && !evt.includes('airport');
+                          });
+                          const agg = filtered.reduce((acc: any, row: any) => {
+                            acc[row.Channel] = (acc[row.Channel] || 0) + (row.QuantitySold || 0);
+                            return acc;
+                          }, {});
+                          return Object.keys(agg).map((k, i) => ({ 
+                            name: k === 'Web' ? 'Web Orders' : 'Event POS', 
+                            value: agg[k],
+                            color: k === 'Web' ? '#3b82f6' : '#10b981'
+                          }));
+                        })()}
+                        cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
+                      >
+                        {(() => {
+                          const filtered = salesTableData.filter(r => {
+                            const evt = (r.Event || '').toLowerCase();
+                            return !evt.includes('legacy archive') && !evt.includes('airport');
+                          });
+                          const agg = filtered.reduce((acc: any, row: any) => {
+                            acc[row.Channel] = (acc[row.Channel] || 0) + (row.QuantitySold || 0);
+                            return acc;
+                          }, {});
+                          return Object.keys(agg).map((k, i) => (
+                            <Cell key={i} fill={k === 'Web' ? '#3b82f6' : '#10b981'} />
+                          ));
+                        })()}
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex justify-center gap-4 mt-2">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-xs text-gray-600 font-medium">Web</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500"></div><span className="text-xs text-gray-600 font-medium">POS</span></div>
+                </div>
               </div>
             </div>
           )}

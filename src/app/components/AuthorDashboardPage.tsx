@@ -1954,6 +1954,7 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', minWidth: 0 }}>
 
         {/* LEFT — Main Table */}
+<<<<<<< Updated upstream
         <div className="bg-white border rounded-xl shadow-sm overflow-hidden flex-1 min-w-0">
           <div className="overflow-x-auto">
             <table className="dash-table w-full">
@@ -1961,6 +1962,17 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                 <tr>
                   {['S.No', 'Title', 'Author', 'MRP', 'QTY Sold (Web)', 'QTY to Airport', 'QTY for Book Fair', 'Current Stock', 'Last Updated', 'Update Stock'].map(h => (
                     <th key={h} className={h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}>{h}</th>
+=======
+        <div style={{ flex: 1, minWidth: 0, background: '#fff', border: '1px solid rgba(26,26,46,0.07)', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="dash-table w-full text-left min-w-[800px]">
+              <thead className="bg-[#f0f4f8]">
+                <tr>
+                  {['S.No', 'Title', 'Author', 'MRP', 'QTY Sold (Web)', 'QTY to Airport', 'QTY for Book Fair', 'Current Stock', 'Last Updated', 'Update Stock'].map(h => (
+                    <th key={h} className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 whitespace-nowrap text-center">
+                      {h}
+                    </th>
+>>>>>>> Stashed changes
                   ))}
                 </tr>
               </thead>
@@ -1977,6 +1989,7 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                     <tr
                       key={book.id}
                       onClick={() => handleRowClick(book)}
+<<<<<<< Updated upstream
                       className={`cursor-pointer transition-colors hover:bg-blue-50/50 ${isSelected ? 'bg-indigo-50/60 outline outline-2 outline-indigo-500/30 -outline-offset-2' : ''}`}
                     >
                       {/* S.No */}
@@ -2006,22 +2019,66 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                       <td className="text-center">
                         <div className="flex flex-col items-center gap-1">
                           <span className={`font-black text-lg leading-none ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>
+=======
+                      className={`cursor-pointer transition-colors hover:bg-gray-50 border-b border-black/5 ${isSelected ? 'bg-indigo-50/40 ring-2 ring-indigo-200 ring-inset' : 'bg-white'}`}
+                    >
+                      {/* S.No */}
+                      <td className="px-4 py-3 text-center text-sm font-bold text-paa-gray-text">{idx + 1}</td>
+                      {/* Title */}
+                      <td className="px-4 py-3 max-w-[160px]">
+                        <p className="font-bold text-paa-navy m-0 truncate" title={book.title}>{book.title}</p>
+                        <p className="text-[10px] text-paa-gray-text m-0 uppercase tracking-widest mt-1">{book.genre}</p>
+                      </td>
+                      {/* Author */}
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">{book.authorName}</td>
+                      {/* MRP */}
+                      <td className="px-4 py-3 text-center text-sm font-bold text-paa-navy">₹{book.mrp}</td>
+                      {/* QTY Web */}
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-green-600 text-sm">{book.webSold}</span>
+                      </td>
+                      {/* QTY Airport */}
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-sky-600 text-sm">{book.airportQty}</span>
+                      </td>
+                      {/* QTY Book Fair */}
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-purple-600 text-sm">{book.eventQty}</span>
+                      </td>
+                      {/* Current Stock */}
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`font-bold text-sm ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>
+>>>>>>> Stashed changes
                             {book.currentStock}
                           </span>
                           {book.isLowStock && (
                             <span className="text-[9px] font-bold uppercase tracking-widest text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 animate-pulse">
+<<<<<<< Updated upstream
                               ⚠ LOW STOCK
+=======
+                              LOW STOCK
+>>>>>>> Stashed changes
                             </span>
                           )}
                         </div>
                       </td>
                       {/* Last Updated */}
+<<<<<<< Updated upstream
                       <td className="text-center text-gray-500 text-xs">
                         {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
                       </td>
                       {/* Update Stock */}
                       <td onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
+=======
+                      <td className="px-4 py-3 text-center text-gray-500 text-xs">
+                        {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                      </td>
+                      {/* Update Stock */}
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+>>>>>>> Stashed changes
                           <input
                             id={`stock-input-${book.id}`}
                             type="number"

@@ -668,7 +668,8 @@ router.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
           name: true,
           email: true,
           phone: true,
-          location: true,
+          city: true,
+          state: true,
           status: true,
           createdAt: true,
           _count: {

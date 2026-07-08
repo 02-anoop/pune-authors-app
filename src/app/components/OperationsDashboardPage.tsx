@@ -148,7 +148,21 @@ export function OperationsDashboardPage() {
 
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
   const [selectedPendingAuthor, setSelectedPendingAuthor] = useState<any>(null);
-  const handleViewEditAuthor = (author: any) => setSelectedPendingAuthor(author);
+  const handleViewEditAuthor = async (author: any) => {
+    toast.promise(
+      axios.get(`${API}/api/admin/authors/${author.id}/dashboard-data`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => res.data.authorProfile),
+      {
+        loading: 'Loading author details...',
+        success: (fullAuthor) => {
+          setSelectedPendingAuthor(fullAuthor);
+          return 'Details loaded!';
+        },
+        error: 'Failed to load author details'
+      }
+    );
+  };
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isEditBookModalOpen, setIsEditBookModalOpen] = useState(false);
   const [rejectAuthorTarget, setRejectAuthorTarget] = useState<any>(null);

@@ -180,6 +180,7 @@ export function OperationsDashboardPage() {
   const [galleryUploadFiles, setGalleryUploadFiles] = useState<File[]>([]);
   const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [viewingGalleryImage, setViewingGalleryImage] = useState<string | null>(null);
 
   // Events tab lifted state
   const [selectedEventBreakdown, setSelectedEventBreakdown] = useState<any>(null);
@@ -279,7 +280,7 @@ export function OperationsDashboardPage() {
   const fetchAuthors = async (isBackground = false) => {
     if (!isBackground) setIsRefreshing(true);
     try {
-      const res = await axios.get(`${API}/api/admin/authors?page=${authorsPage}&limit=50`);
+      const res = await axios.get(`${API}/api/admin/authors?page=${authorsPage}&limit=50`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       if (res.data.data) {
         setAuthors(res.data.data);
         setAuthorsMeta(res.data.meta);
@@ -300,7 +301,7 @@ export function OperationsDashboardPage() {
   const fetchBooks = async (isBackground = false) => {
     if (!isBackground) setIsRefreshing(true);
     try {
-      const res = await axios.get(`${API}/api/admin/books`);
+      const res = await axios.get(`${API}/api/admin/books`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       setBooks(res.data); sessionStorage.setItem('adminBooks', JSON.stringify(res.data));
       const c = res.data.filter((b: any) => b.status === 'Pending').length; if (c > prevCountsRef.current.books) setPendingAlerts(prev => ({ ...prev, books: true })); prevCountsRef.current.books = c;
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
@@ -4826,7 +4827,7 @@ export function OperationsDashboardPage() {
                     if (b.status === 'Pending' && a.status !== 'Pending') return 1;
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                  }).map((img: any) => (
-                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
+                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm cursor-pointer" onClick={() => setViewingGalleryImage(`${API}${img.url}`)}>
                        <img src={`${API}${img.url}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                        
                        {/* Always visible status badge */}
@@ -5474,6 +5475,15 @@ export function OperationsDashboardPage() {
       )}
 
 
+
+      {viewingGalleryImage && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewingGalleryImage(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-50 p-2" onClick={() => setViewingGalleryImage(null)}>
+            <X className="w-8 h-8 drop-shadow-md" />
+          </button>
+          <img src={viewingGalleryImage} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" alt="Gallery Fullscreen" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
 
       <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Create New Form">
         <form className="space-y-4" onSubmit={async (e) => {

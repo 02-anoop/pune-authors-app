@@ -14,9 +14,12 @@ export function Footer() {
         <div>
           <h4 style={{ color: "#fff", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.5rem", textTransform: "uppercase" }}>Quick Navigation</h4>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-            <Link to="/about" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>About Our Journey</Link>
-            <Link to="/services" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Publishing Architecture</Link>
-            <Link to="/catalogue" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Bookstore Catalogue</Link>
+            <Link to="/catalogue" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Buy Books</Link>
+            <Link to="/register" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Authors - join the group</Link>
+            <Link to="/services" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Publishing Support</Link>
+            <Link to="/about" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>About the Group</Link>
+            <Link to="/catalogue" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Browse & Download the Catalog</Link>
+            <Link to="/events" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>View Group Initiatives like Literary Events, Flybraries, Book Fairs</Link>
           </div>
         </div>
         <div>

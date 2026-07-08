@@ -326,10 +326,19 @@ async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDo
 
 // ── Component ────────────────────────────────────────────────────────────────
 export function CataloguePage() {
-  const [activeCategory, setActiveCategory] = useState<string>("All");
-  const [activeSubcategory, setActiveSubcategory] = useState<string>("All");
+  const [activeCategory, setActiveCategory] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("category") || "All";
+  });
+  const [activeSubcategory, setActiveSubcategory] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("subcategory") || "All";
+  });
   const [activeSubSubcategory, setActiveSubSubcategory] = useState<string>("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("search") || "";
+  });
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "title">("default");
   const [cart, setCart] = useState<string[]>(() => {
     try {
@@ -460,7 +469,8 @@ export function CataloguePage() {
         (b) =>
           b.title.toLowerCase().includes(q) ||
           b.authorName.toLowerCase().includes(q) ||
-          b.synopsis.toLowerCase().includes(q)
+          b.synopsis.toLowerCase().includes(q) ||
+          (b.language || "").toLowerCase().includes(q)
       );
     }
     

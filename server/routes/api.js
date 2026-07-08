@@ -75,7 +75,7 @@ router.get('/api/public-stats', async (req, res) => {
   const cached = getCache('public-stats');
   if (cached) return res.json(cached);
   try {
-    const authors = await prisma.author.count({ where: { status: 'Approved' } });
+    const authors = await prisma.author.count({ where: { status: 'Active' } });
     const books = await prisma.book.count({ where: { status: 'Approved' } });
     const genres = await prisma.book.findMany({ select: { genre: true }, distinct: ['genre'], where: { status: 'Approved' } });
     const categories = genres.filter(g => g.genre).length;
@@ -86,7 +86,7 @@ router.get('/api/public-stats', async (req, res) => {
     // For fairs, if we don't have a specific tag, we can just use 3 or derive it.
     const fairs = 3; 
     
-    const stats = { authors: authors || 100, books: books || 350, categories: categories || 50, events: events || 12, fairs: fairs, airportLibraries: libraries || 6 };
+    const stats = { authors: authors, books: books, categories: categories, events: events, fairs: fairs, airportLibraries: libraries };
     setCache('public-stats', stats, 5 * 60 * 1000); // 5 mins
     res.json(stats);
   } catch (err) {

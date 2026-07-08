@@ -56,19 +56,18 @@ export function ServicesPage() {
       <section style={{ padding: "8rem 1.5rem", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "6rem" }}>
           
-          {/* Publish */}
+          {/* 1. Reviving Book Reading */}
           <FadeIn delay={100}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "4rem", borderTop: "1px solid #111", paddingTop: "2rem" }} className="service-row">
               <div>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#b44d28", fontStyle: "italic", marginBottom: "1rem" }}>I.</div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111" }}>Publishing <br/>Support</h2>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111" }}>Reviving <br/>Book Reading</h2>
               </div>
               <div>
-                <p style={{ fontSize: 14, color: "#222", lineHeight: 1.8, marginBottom: "2rem", fontWeight: 400 }}>
-                  We provide professional end-to-end manuscript production to ensure your book meets exact industry standards before hitting the market.
-                </p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {["Formatting of Manuscript", "Book Cover Design", "Editing", "Proof Reading", "Printing as low as 50 copies at minimal cost"].map((item, i) => (
+                  {[
+                    "Organise literary events in housing societies, educational institutions and organisation."
+                  ].map((item, i) => (
                     <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
                       <span style={{ color: "#b44d28", fontSize: 12, marginTop: "0.2rem" }}>—</span>
                       <span style={{ fontSize: 14, color: "#333", fontWeight: 400 }}>{item}</span>
@@ -79,19 +78,19 @@ export function ServicesPage() {
             </div>
           </FadeIn>
 
-          {/* Promote */}
+          {/* 2. Reaching out to Readers */}
           <FadeIn delay={200}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "4rem", borderTop: "1px solid #111", paddingTop: "2rem" }} className="service-row">
               <div>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#b44d28", fontStyle: "italic", marginBottom: "1rem" }}>II.</div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111" }}>Promotional <br/>Support</h2>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111" }}>Reaching out <br/>to Readers</h2>
               </div>
               <div>
-                <p style={{ fontSize: 14, color: "#222", lineHeight: 1.8, marginBottom: "2rem", fontWeight: 400 }}>
-                  Strategic visibility is crucial. We position your literature directly in front of discerning audiences using collective brand power.
-                </p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {["Catalogue of fiction and non-fiction books", "Giving books to the Airport Libraries", "Donating books to well known local libraries", "LinkedIn page management", "Merchandise - caps & branding"].map((item, i) => (
+                  {[
+                    "Participate in Book Fairs organised by the National Book Trust of India",
+                    "Online presence through group's website"
+                  ].map((item, i) => (
                     <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
                       <span style={{ color: "#b44d28", fontSize: 12, marginTop: "0.2rem" }}>—</span>
                       <span style={{ fontSize: 14, color: "#333", fontWeight: 400 }}>{item}</span>
@@ -102,19 +101,47 @@ export function ServicesPage() {
             </div>
           </FadeIn>
 
-          {/* Sell */}
+          {/* 3. Publishing Support */}
           <FadeIn delay={300}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "4rem", borderTop: "1px solid #111", paddingTop: "2rem" }} className="service-row">
               <div>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#b44d28", fontStyle: "italic", marginBottom: "1rem" }}>III.</div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111" }}>Selling <br/>Books</h2>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111" }}>Publishing <br/>Support</h2>
               </div>
               <div>
-                <p style={{ fontSize: 14, color: "#222", lineHeight: 1.8, marginBottom: "2rem", fontWeight: 400 }}>
-                  Securing reliable revenue streams through vetted physical and digital distribution networks.
-                </p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {["Participation in book fairs all over India (NBT)", "Literary Events/Festivals in large housing societies", "Literary Events in Educational Institutes", "Participating in general fairs by taking a stall", "Setting up stalls in housing societies"].map((item, i) => (
+                  {[
+                    "Formatting of manuscript",
+                    "Editing",
+                    "Proof Reading",
+                    "Cover Designing",
+                    "Printing support"
+                  ].map((item, i) => (
+                    <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+                      <span style={{ color: "#b44d28", fontSize: 12, marginTop: "0.2rem" }}>—</span>
+                      <span style={{ fontSize: 14, color: "#333", fontWeight: 400 }}>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* 4. Promotional Initiatives */}
+          <FadeIn delay={400}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "4rem", borderTop: "1px solid #111", paddingTop: "2rem" }} className="service-row">
+              <div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "#b44d28", fontStyle: "italic", marginBottom: "1rem" }}>IV.</div>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111" }}>Promotional <br/>Initiatives</h2>
+              </div>
+              <div>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {[
+                    "Donating to small libraries in residential areas",
+                    "Setting up airport flybraries",
+                    "Marketing the website",
+                    "Arranging author events and sessions"
+                  ].map((item, i) => (
                     <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
                       <span style={{ color: "#b44d28", fontSize: 12, marginTop: "0.2rem" }}>—</span>
                       <span style={{ fontSize: 14, color: "#333", fontWeight: 400 }}>{item}</span>

@@ -1404,249 +1404,243 @@ export function OperationsDashboardPage() {
 
 
   const SalesReportTab = ({ refreshTrigger }: { refreshTrigger?: number }) => {
-    const [reportPeriod, setReportPeriod] = useState('daily');
-    const [isExporting, setIsExporting] = useState(false);
-    const [salesChartData, setSalesChartData] = useState<any[]>([]);
-    const [salesTableData, setSalesTableData] = useState<any[]>([]);
-    const [isLoadingTable, setIsLoadingTable] = useState(false);
+    const [filterType, setFilterType] = useState('monthly');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [salesData, setSalesData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(false);
     const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
     useEffect(() => {
-      const fetchChartData = async () => {
-        try {
-          const res = await axios.get(`${API}/api/admin/reports/chart?period=${reportPeriod}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          });
-          setSalesChartData(res.data);
-        } catch (err) {
-          toast.error('Failed to load chart data');
-        }
-      };
-      const fetchTableData = async () => {
-        setIsLoadingTable(true);
-        try {
-          const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}&format=json`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          });
-          setSalesTableData(res.data);
-        } catch (err) {
-          setSalesTableData([]);
-        } finally {
-          setIsLoadingTable(false);
-        }
-      };
-      fetchChartData();
-      fetchTableData();
-    }, [reportPeriod, API, refreshTrigger]);
+      if (filterType === 'custom') return;
+      const today = new Date();
+      const end = new Date(today);
+      let start = new Date(today);
 
-    const handleExportSalesReport = async () => {
-      setIsExporting(true);
-      try {
-        const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          responseType: 'blob',
-        });
-        const url = window.URL.createObjectURL(new Blob([res.data]));
-        const link = document.createElement('a');
-        const today = new Date().toISOString().split('T')[0];
-        link.href = url;
-        link.setAttribute('download', `sales_report_${reportPeriod}_${today}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        toast.success('Sales report exported successfully');
-      } catch (err: any) {
-        if (err.response && err.response.status === 404) {
-          toast.error('No sales data found for this period format.');
-        } else {
-          toast.error('Failed to export sales report');
-        }
-      } finally {
-        setIsExporting(false);
+      if (filterType === 'today' || filterType === 'daily') {
+        start.setHours(0,0,0,0);
+      } else if (filterType === 'weekly') {
+        start.setDate(today.getDate() - 7);
+      } else if (filterType === 'monthly') {
+        start.setDate(today.getDate() - 30);
+      } else if (filterType === 'lifetime') {
+        start = new Date('2000-01-01');
       }
-    };
 
-    const todayStr = new Date().toDateString();
-    const todaysOrders = orders.filter((o: any) => new Date(o.createdAt).toDateString() === todayStr);
-    const ordersArrivedToday = todaysOrders.length;
-    const ordersAcceptedToday = todaysOrders.filter((o: any) => ['Processing', 'Dispatched', 'Completed'].includes(o.status)).length;
-    const ordersUnderDeliveryToday = todaysOrders.filter((o: any) => o.status === 'Dispatched').length;
-    const revenueToday = todaysOrders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
+      setStartDate(start.toISOString().split('T')[0]);
+      setEndDate(end.toISOString().split('T')[0]);
+    }, [filterType]);
+
+    useEffect(() => {
+      if (!startDate || !endDate) return;
+      let isMounted = true;
+      const fetchSalesData = async () => {
+        setIsLoading(true);
+        try {
+          const res = await axios.get(`${API}/api/admin/sales-report?startDate=${startDate}&endDate=${endDate}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (isMounted) setSalesData(res.data);
+        } catch (err) {
+          if (isMounted) toast.error('Failed to load sales report');
+        } finally {
+          if (isMounted) setIsLoading(false);
+        }
+      };
+      fetchSalesData();
+      return () => { isMounted = false; };
+    }, [startDate, endDate, API, refreshTrigger]);
+
+    const handleExport = () => {
+       if (!salesData?.tableData?.length) return;
+       const csv = 'Date,Order ID,Channel,Event,Author,Title,Qty,Revenue\n' + 
+         salesData.tableData.map((r: any) => `${r.date},${r.orderId},${r.channel},"${r.event}","${r.author}","${r.title}",${r.qty},${r.revenue}`).join('\n');
+       const blob = new Blob([csv], { type: 'text/csv' });
+       const url = window.URL.createObjectURL(blob);
+       const a = document.createElement('a');
+       a.href = url;
+       a.download = `sales_report_${startDate}_to_${endDate}.csv`;
+       a.click();
+    };
 
     return (
       <div className="space-y-6">
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Daily Sales Stats ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <h3 className="text-xl font-serif font-medium text-paa-navy flex items-center gap-2">
-          <Activity className="w-5 h-5 text-paa-gold" /> Today's Sales Activity
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="dash-kpi-card blue">
+        {/* Top Bar: Controls */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div>
+            <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-paa-gold" /> Dynamic Sales Report
+            </h3>
+            <p className="text-xs text-gray-500 font-medium">Aggregate revenue data instantly across any date range.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <select 
+              value={filterType} 
+              onChange={(e) => setFilterType(e.target.value)}
+              className="text-xs font-bold tracking-widest uppercase py-2.5 px-4 rounded-xl border border-gray-200 bg-gray-50 text-paa-navy outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-full sm:w-auto cursor-pointer"
+            >
+              <option value="today">Today</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly (Last 7 Days)</option>
+              <option value="monthly">Monthly (Last 30 Days)</option>
+              <option value="lifetime">Lifetime (All Time)</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+            
+            {filterType === 'custom' && (
+              <div className="flex items-center gap-2 animate-fade-in">
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="text-xs font-bold tracking-widest uppercase py-2 px-3 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500"
+                />
+                <span className="text-gray-400 font-medium text-sm">to</span>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="text-xs font-bold tracking-widest uppercase py-2 px-3 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
+            
+            <button onClick={handleExport} disabled={!salesData?.tableData?.length || isLoading} className="flex items-center justify-center gap-2 bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+              <Download size={14} /> Export
+            </button>
+          </div>
+        </div>
+
+        {/* Row 1: KPI Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative">
+          {isLoading && <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-2xl"><Loader2 className="w-8 h-8 animate-spin text-paa-navy" /></div>}
+          
+          <div className="dash-kpi-card emerald">
             <div className="flex items-start justify-between mb-4">
-              <div className="dash-kpi-icon blue"><ShoppingCart className="w-5 h-5" /></div>
+              <div className="dash-kpi-icon emerald"><DollarSign className="w-5 h-5" /></div>
             </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Orders Arrived Today</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersArrivedToday}</h3>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Revenue</p>
+            <h3 className="text-3xl font-black text-paa-navy tracking-tight">₹{(salesData?.kpis?.totalRevenue || 0).toLocaleString()}</h3>
           </div>
 
-          <div className="dash-kpi-card green">
+          <div className="dash-kpi-card blue">
             <div className="flex items-start justify-between mb-4">
-              <div className="dash-kpi-icon green"><CheckCircle className="w-5 h-5" /></div>
+              <div className="dash-kpi-icon blue"><BookOpen className="w-5 h-5" /></div>
             </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Orders Accepted Today</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersAcceptedToday}</h3>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Books Sold</p>
+            <h3 className="text-3xl font-black text-paa-navy tracking-tight">{salesData?.kpis?.totalBooksSold || 0} <span className="text-xs font-medium text-gray-400 lowercase tracking-normal">units</span></h3>
           </div>
 
           <div className="dash-kpi-card amber">
             <div className="flex items-start justify-between mb-4">
-              <div className="dash-kpi-icon amber"><Package className="w-5 h-5" /></div>
+              <div className="dash-kpi-icon amber"><ShoppingCart className="w-5 h-5" /></div>
             </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Made For Delivery Today</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersUnderDeliveryToday}</h3>
-          </div>
-
-          <div className="dash-kpi-card emerald">
-            <div className="flex items-start justify-between mb-4">
-              <div className="dash-kpi-icon emerald"><TrendingUp className="w-5 h-5" /></div>
-            </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Today's Revenue</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">₹{revenueToday.toLocaleString()}</h3>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Orders</p>
+            <h3 className="text-3xl font-black text-paa-navy tracking-tight">{salesData?.kpis?.totalOrders || 0}</h3>
           </div>
         </div>
 
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Sales & Revenue Reports ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <div className="bg-white p-4 md:p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl mt-8">
-          <div className="mb-6 border-b border-paa-navy/5 pb-4">
-            <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
-              <FileText className="w-5 h-5" /> Sales & Revenue Reports
-            </h3>
-            <p className="text-paa-gray-text text-sm">Generate comprehensive reports on books sold through all channels (Web & Live Events).</p>
-          </div>
-
-          {salesChartData.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="lg:col-span-2 border border-paa-navy/5 p-4 rounded-xl overflow-x-auto bg-white">
-                <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Books Sold By Channel Over Time</h4>
-                <div className="h-64 min-w-[500px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={salesChartData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                      <XAxis dataKey="name" fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                      <YAxis fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                      <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                      <Area type="monotone" dataKey="Web" stackId="1" stroke="#3b82f6" fill="#bfdbfe" name="Online Orders (Web)" />
-                      <Area type="monotone" dataKey="POS" stackId="1" stroke="#10b981" fill="#a7f3d0" name="Event Sales (POS)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              
-              <div className="border border-paa-navy/5 p-4 rounded-xl bg-white flex flex-col">
-                <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Sales by Channel</h4>
-                <div className="h-64 w-full flex-1">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPieChart>
-                      <Pie
-                        data={(() => {
-                          const filtered = salesTableData.filter(r => {
-                            const evt = (r.Event || '').toLowerCase();
-                            return !evt.includes('legacy archive') && !evt.includes('airport');
-                          });
-                          const agg = filtered.reduce((acc: any, row: any) => {
-                            acc[row.Channel] = (acc[row.Channel] || 0) + (row.QuantitySold || 0);
-                            return acc;
-                          }, {});
-                          return Object.keys(agg).map((k, i) => ({ 
-                            name: k === 'Web' ? 'Web Orders' : 'Event POS', 
-                            value: agg[k],
-                            color: k === 'Web' ? '#3b82f6' : '#10b981'
-                          }));
-                        })()}
-                        cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
-                      >
-                        {(() => {
-                          const filtered = salesTableData.filter(r => {
-                            const evt = (r.Event || '').toLowerCase();
-                            return !evt.includes('legacy archive') && !evt.includes('airport');
-                          });
-                          const agg = filtered.reduce((acc: any, row: any) => {
-                            acc[row.Channel] = (acc[row.Channel] || 0) + (row.QuantitySold || 0);
-                            return acc;
-                          }, {});
-                          return Object.keys(agg).map((k, i) => (
-                            <Cell key={i} fill={k === 'Web' ? '#3b82f6' : '#10b981'} />
-                          ));
-                        })()}
-                      </Pie>
-                      <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-center gap-4 mt-2">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-xs text-gray-600 font-medium">Web</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500"></div><span className="text-xs text-gray-600 font-medium">POS</span></div>
-                </div>
-              </div>
+        {/* Row 2: Visualizations */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative min-h-[300px]">
+          {isLoading && <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-2xl"><Loader2 className="w-8 h-8 animate-spin text-paa-navy" /></div>}
+          
+          <div className="lg:col-span-2 border border-paa-navy/5 p-5 md:p-6 rounded-2xl bg-white shadow-sm flex flex-col">
+            <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-6">Revenue Over Time</h4>
+            <div className="flex-1 w-full min-h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={salesData?.chartData || []}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="date" fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickMargin={10} minTickGap={20} />
+                  <YAxis fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val) => `₹${val}`} width={60} />
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                    itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
+                    labelStyle={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
+                    formatter={(value: number) => [`₹${value}`, 'Revenue']}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          )}
-
-          <div className="flex flex-col md:flex-row gap-6 items-end">
-            <div className="flex-1 w-full">
-              <label className="dash-label mb-3 block">Report Grouping Period</label>
-              <div className="flex flex-wrap gap-2">
-                {['daily', 'weekly', 'monthly', 'yearly', 'lifelong'].map(period => (
-                  <button
-                    key={period}
-                    onClick={() => setReportPeriod(period)}
-                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-full transition-all border ${reportPeriod === period
-                      ? 'bg-paa-navy text-white border-paa-navy shadow-md'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-paa-navy/30'
-                      }`}
+          </div>
+          
+          <div className="border border-paa-navy/5 p-5 md:p-6 rounded-2xl bg-white shadow-sm flex flex-col">
+            <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2">Sales by Channel</h4>
+            <p className="text-[10px] text-gray-400 mb-6 font-medium">Excludes Legacy Archive & Airport Libraries</p>
+            <div className="flex-1 w-full min-h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={salesData?.channelData || []}
+                    cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value"
                   >
-                    {period === 'lifelong' ? 'Lifetime' : period}
-                  </button>
-                ))}
-              </div>
+                    {(salesData?.channelData || []).map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.name === 'Web Orders' ? '#3b82f6' : '#10b981'} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                  />
+                </RechartsPieChart>
+              </ResponsiveContainer>
             </div>
-            <button
-              onClick={handleExportSalesReport}
-              disabled={isExporting}
-              className="dash-btn dash-btn-primary whitespace-nowrap h-12 px-8 w-full md:w-auto"
-            >
-              {isExporting ? 'Generating Report...' : 'Download CSV Report'}
-            </button>
+            <div className="flex justify-center gap-6 mt-4">
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">Web</span></div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">POS</span></div>
+            </div>
           </div>
-          <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="dash-table w-full text-left min-w-[600px]">
-                <thead className="bg-[#f0f4f8]">
-                  <tr>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Period</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Channel</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Author</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Book Title</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Qty</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Revenue</th>
+        </div>
+
+        {/* Row 3: Granular Data Table */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden relative min-h-[200px]">
+          {isLoading && <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-paa-navy" /></div>}
+          <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest">Raw Sales Data</h4>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-gray-100 shadow-sm">{salesData?.tableData?.length || 0} Records</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="dash-table w-full text-left table-fixed">
+              <thead className="bg-white">
+                <tr>
+                  <th className="w-[12%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Date</th>
+                  <th className="w-[15%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Order ID</th>
+                  <th className="w-[12%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Channel</th>
+                  <th className="w-[20%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Author</th>
+                  <th className="w-[25%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Book Title</th>
+                  <th className="w-[8%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right">Qty</th>
+                  <th className="w-[10%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right">Rev (₹)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 bg-white">
+                {!isLoading && salesData?.tableData?.length === 0 && (
+                  <tr><td colSpan={7} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period.</td></tr>
+                )}
+                {salesData?.tableData?.map((row: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
+                    <td className="px-5 py-3 text-xs">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                        {row.channel === 'Web Orders' ? 'Web' : 'POS'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate pr-2" title={row.author}>{row.author}</td>
+                    <td className="px-5 py-3 text-xs text-paa-navy truncate pr-2" title={row.title}>{row.title}</td>
+                    <td className="px-5 py-3 text-xs font-bold text-paa-navy text-right">{row.qty}</td>
+                    <td className="px-5 py-3 text-xs font-black text-indigo-600 text-right">₹{row.revenue}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-paa-navy/5 bg-white">
-                  {isLoadingTable ? (
-                    <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text"><Loader2 className="w-5 h-5 animate-spin mx-auto text-paa-navy" /></td></tr>
-                  ) : salesTableData.length === 0 ? (
-                    <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text italic">No sales data found for this period.</td></tr>
-                  ) : salesTableData.map((row: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-paa-navy">{row.Period}</td>
-                      <td className="px-4 py-3 text-sm text-paa-gray-text"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${row.Channel === 'Web' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>{row.Channel}</span></td>
-                      <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{row.Author}</td>
-                      <td className="px-4 py-3 text-sm text-paa-navy">{row.BookTitle}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{row.QuantitySold}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{row.Revenue}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                ))}
+              </tbody>
               </table>
             </div>
           </div>
-        </div>
       </div>
     );
   };

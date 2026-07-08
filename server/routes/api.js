@@ -2364,7 +2364,105 @@ router.put('/api/order-items/:id/author-reject', verifyToken, async (req, res) =
   }
 });
 
-// 7. Operations/Author Dashboard - Get all orders
+// 7. Operations/Dashboard - Dynamic Sales Report
+router.get('/api/admin/sales-report', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const webOrders = await prisma.order.findMany({
+      where: {
+        status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] },
+        createdAt: { gte: start, lte: end }
+      },
+      include: { items: { include: { book: { include: { author: true } } } } }
+    });
+
+    const posOrders = await prisma.posOrder.findMany({
+      where: {
+        createdAt: { gte: start, lte: end }
+      },
+      include: { event: true, items: { include: { book: { include: { author: true } } } } }
+    });
+
+    let totalRevenue = 0;
+    let totalBooksSold = 0;
+    let totalOrders = webOrders.length + posOrders.length;
+
+    const chartDataMap = {};
+    const channelDataMap = { Web: 0, POS: 0 };
+    const tableData = [];
+
+    const processItem = (date, channel, eventName, authorName, title, qty, price, orderId) => {
+      const dateStr = date.toISOString().split('T')[0];
+      const rev = qty * price;
+      
+      totalRevenue += rev;
+      totalBooksSold += qty;
+
+      if (!chartDataMap[dateStr]) chartDataMap[dateStr] = { date: dateStr, revenue: 0, books: 0 };
+      chartDataMap[dateStr].revenue += rev;
+      chartDataMap[dateStr].books += qty;
+
+      tableData.push({
+        date: dateStr,
+        orderId,
+        channel,
+        event: eventName,
+        author: authorName,
+        title,
+        qty,
+        revenue: rev
+      });
+    };
+
+    webOrders.forEach(o => {
+      o.items.forEach(i => {
+        processItem(o.createdAt, 'Web Orders', '-', i.book.author.name, i.book.title, i.quantity, i.book.mrp, `PAA-${String(o.id).padStart(4,'0')}`);
+        channelDataMap.Web += (i.quantity * i.book.mrp);
+      });
+    });
+
+    posOrders.forEach(po => {
+      const isLegacyOrAirport = po.event && (po.event.name === 'Legacy Archive' || po.event.name.toLowerCase().includes('airport'));
+      
+      po.items.forEach(i => {
+        processItem(po.createdAt, 'Fairs & POS', po.event?.name || '-', i.book.author.name, i.book.title, i.quantity, i.price, `POS-${String(po.id).padStart(4,'0')}`);
+        
+        if (!isLegacyOrAirport) {
+          channelDataMap.POS += (i.quantity * i.price);
+        }
+      });
+    });
+
+    const chartData = Object.values(chartDataMap).sort((a, b) => a.date.localeCompare(b.date));
+    const channelData = [
+      { name: 'Web Orders', value: channelDataMap.Web },
+      { name: 'Fairs & Exhibitions', value: channelDataMap.POS }
+    ];
+
+    res.json({
+      kpis: {
+        totalRevenue,
+        totalBooksSold,
+        totalOrders
+      },
+      chartData,
+      channelData,
+      tableData: tableData.sort((a, b) => b.date.localeCompare(a.date))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to generate sales report' });
+  }
+});
+
 router.get('/api/admin/reports/sales', verifyToken, isAdmin, async (req, res) => {
   try {
     const period = req.query.period || 'daily';

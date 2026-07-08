@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import axios from "axios";
-import { ArrowRight, Book, BookOpen, Megaphone, Store, Mic, Sparkles, Users, Plane, Library, PenTool, Palette, Printer, FileText, Mail, Phone, MapPin, Download, ExternalLink, Heart, Search, Landmark, Rocket, Feather } from "lucide-react";
+import { ArrowRight, Book, BookOpen, Megaphone, Store, Mic, Sparkles, Users, Plane, Library, PenTool, Palette, Printer, FileText, Mail, Phone, MapPin, Download, ExternalLink, Heart, Search, Landmark, Rocket, Feather, ChevronLeft, ChevronRight, Calendar, User } from "lucide-react";
 import { toast } from "sonner";
 
 // --- ANIMATED COUNTER ---
@@ -141,6 +141,16 @@ export function LandingPage() {
   const [stats, setStats] = useState({
     events: 0, fairs: 0, airportLibraries: 0, authors: 0, books: 0, categories: 0,
   });
+  const [heroSearch, setHeroSearch] = useState("");
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % 4);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Contact State
   const [contactName, setContactName] = useState("");
@@ -255,195 +265,250 @@ export function LandingPage() {
     <main style={{ fontFamily: "var(--font-body)", background: C.cream, color: C.dark, overflowX: "hidden" }}>
 
       {/* ════════════════════════════════════════════
-          HERO — GOLDEN GRADIENT BANNER
+          HERO — LIGHT BLUE SPLIT LAYOUT
       ════════════════════════════════════════════ */}
       <section
         style={{
-          background: `linear-gradient(135deg, #262319 0%, #242217 100%)`,
+          background: `url(/bridge_bg.png) no-repeat 10% center / 60% auto, linear-gradient(to right, #e3f1f8, #eef7fc)`,
           position: "relative",
           overflow: "hidden",
-          borderTop: "3px solid #d9ac42"
+          borderTop: "3px solid #f16522"
         }}
       >
         <div
           style={{
-            maxWidth: 1200,
+            maxWidth: 1400,
             margin: "0 auto",
-            padding: "3rem 2rem",
             display: "grid",
-            gridTemplateColumns: "1.2fr 1fr",
-            gap: "4rem",
-            alignItems: "center",
+            gridTemplateColumns: "1fr 1fr",
+            minHeight: 320,
           }}
           className="hero-grid"
         >
-          <FadeIn>
-            <div>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.6rem",
-                  background: "#353023",
-                  border: `1px solid #d9ac42`,
-                  borderRadius: 50,
-                  padding: "0.4rem 1.2rem",
-                  marginBottom: "2rem",
-                }}
-              >
-                <Sparkles size={14} color="#d9ac42" />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#d9ac42", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  Est. December 2024
-                </span>
-              </div>
-
+          {/* LEFT SIDE - STATIC */}
+          <div style={{ padding: "1.5rem 2rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <FadeIn>
               <h1
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: "clamp(2.2rem, 4vw, 3.4rem)",
-                  fontWeight: 400,
-                  color: "#ffffff",
-                  lineHeight: 1.15,
-                  marginBottom: "1.5rem",
-                  letterSpacing: "-0.01em",
+                  fontSize: "clamp(2.2rem, 3.5vw, 3.2rem)",
+                  fontWeight: 800,
+                  color: "#1e293b",
+                  lineHeight: 1.1,
+                  marginBottom: "0.5rem",
+                  letterSpacing: "-0.02em",
                 }}
               >
-                Helping indie{" "}
-                <span style={{ fontStyle: "italic", color: "#d9ac42" }}>authors</span>
-                <br />
-                publish, promote and sell.
+                Helping indie <br/>
+                <span style={{ color: "#f16522" }}>authors</span> publish, promote and sell.
               </h1>
 
-              <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: "2.5rem", maxWidth: 480 }}>
-                A dedicated, self-governing independent collective built to publish, distribute, promote, and establish high visibility for modern Indian writers.
+              <p style={{ fontSize: 15, color: "#475569", lineHeight: 1.5, marginBottom: "1.2rem", maxWidth: 450, fontWeight: 500 }}>
+                We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels.
               </p>
 
+              {/* Search Bar */}
+              <div style={{ display: "flex", background: "#fff", borderRadius: 50, padding: "0.2rem", boxShadow: "0 4px 15px rgba(0,0,0,0.05)", marginBottom: "1.2rem", maxWidth: 440, border: "1px solid rgba(0,0,0,0.05)" }}>
+                <input 
+                  type="text" 
+                  placeholder="Search books, authors, genres..." 
+                  value={heroSearch}
+                  onChange={(e) => setHeroSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/catalogue?q=${heroSearch}`)}
+                  style={{ flex: 1, border: "none", outline: "none", background: "transparent", padding: "0 1.2rem", fontSize: 14, color: "#333" }}
+                />
+                <button 
+                  onClick={() => navigate(`/catalogue?q=${heroSearch}`)}
+                  style={{ background: "#f16522", color: "#fff", border: "none", width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "transform 0.2s" }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  <Search size={16} />
+                </button>
+              </div>
+
+              {/* Stats Row */}
+              <div style={{ display: "flex", gap: "1.2rem", marginBottom: "1.2rem", flexWrap: "wrap" }}>
+                {[
+                  { icon: <Book size={14}/>, count: stats.books, label: "Books" },
+                  { icon: <User size={14}/>, count: stats.authors, label: "Authors" },
+                  { icon: <Calendar size={14}/>, count: stats.events, label: "Events" },
+                  { icon: <Users size={14}/>, count: stats.categories, label: "Categories" }
+                ].map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#334155" }}>
+                    <div style={{ color: "#0f172a" }}>{s.icon}</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", lineHeight: 1 }}><CountUp end={s.count} suffix="+" /></div>
+                      <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.02em", color: "#64748b", marginTop: "0.1rem" }}>{s.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Buttons */}
               <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                 <Link
-                  to="/register"
-                  className="hero-btn-primary"
+                  to="/catalogue"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "0.5rem",
-                    background: "#dbab3f",
-                    color: "#242217",
-                    padding: "0.85rem 2rem",
-                    fontSize: 13,
+                    background: "#f16522",
+                    color: "#ffffff",
+                    padding: "1rem 2.5rem",
+                    fontSize: 14,
                     fontWeight: 700,
-                    letterSpacing: "0.04em",
+                    letterSpacing: "0.02em",
                     textTransform: "uppercase",
                     textDecoration: "none",
-                    borderRadius: 6,
+                    borderRadius: 50,
+                    boxShadow: "0 4px 14px rgba(241,101,34,0.3)",
                     transition: "all 0.3s ease",
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
                 >
-                  <Users size={16} /> New Authors — Join Us
+                  Explore Books
                 </Link>
                 <Link
                   to="/gallery"
-                  className="hero-btn-outline"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "0.5rem",
-                    background: "transparent",
-                    color: "#d9ac42",
-                    border: `1px solid #d9ac42`,
-                    padding: "0.85rem 2rem",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    letterSpacing: "0.04em",
+                    background: "#ffffff",
+                    color: "#0f172a",
+                    border: `2px solid #e2e8f0`,
+                    padding: "1rem 2.5rem",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    letterSpacing: "0.02em",
                     textTransform: "uppercase",
                     textDecoration: "none",
-                    borderRadius: 6,
+                    borderRadius: 50,
                     transition: "all 0.3s ease",
                   }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.transform = "translateY(0)"; }}
                 >
-                  Gallery <ArrowRight size={14} />
+                  Gallery
                 </Link>
               </div>
-            </div>
-          </FadeIn>
-
-          {/* Right side — 4 Pillars */}
-          <FadeIn delay={200}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-              {[
-                { icon: <PenTool size={22} />, label: "We Publish", color: "#b84b3f" },
-                { icon: <Megaphone size={22} />, label: "We Promote", color: "#385c40" },
-                { icon: <Store size={22} />, label: "We Sell", color: "#b38d33" },
-                { icon: <BookOpen size={22} />, label: "We Revive", color: "#36546b" },
-              ].map((p, i) => (
-                <div
-                  key={i}
-                  className="pillar-card"
-                  style={{
-                    background: "#312c20",
-                    borderRadius: 12,
-                    padding: "2.5rem 1.5rem",
-                    textAlign: "center",
-                    transition: "all 0.3s ease",
-                    cursor: "default",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: "50%",
-                      background: p.color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 1.5rem",
-                      color: "#ffffff",
-                    }}
-                  >
-                    {p.icon}
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#ffffff", letterSpacing: "0.02em" }}>{p.label}</div>
-                </div>
-              ))}
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════
-          IMPACT STATS — GOLD ACCENT BAR
-      ════════════════════════════════════════════ */}
-      <section style={{ background: C.white, borderBottom: `1px solid ${C.border}` }}>
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            padding: "3rem 2rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-            gap: "2rem",
-          }}
-          className="stats-grid"
-        >
-          {[
-            { num: stats.events, suffix: "+", label: "Literary Events" },
-            { num: stats.fairs, suffix: "+", label: "Book Fairs" },
-            { num: stats.airportLibraries, suffix: "", label: "Airport Libraries" },
-            { num: stats.authors, suffix: "+", label: "Authors" },
-            { num: stats.books, suffix: "+", label: "Books" },
-            { num: stats.categories, suffix: "+", label: "Categories" },
-          ].map((stat, i) => (
-            <FadeIn key={i} delay={i * 60}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", fontWeight: 400, color: C.dark, lineHeight: 1 }}>
-                  <CountUp end={stat.num} suffix={stat.suffix} />
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: "0.4rem" }}>
-                  {stat.label}
-                </div>
-              </div>
             </FadeIn>
-          ))}
+          </div>
+
+          {/* RIGHT SIDE - SLIDER */}
+          <div style={{ position: "relative", background: "#f4f9fc", borderTopLeftRadius: "15rem", borderBottomLeftRadius: "15rem", overflow: "hidden", display: "flex", flexDirection: "column", transform: "translateZ(0)", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}>
+            
+            {/* Carousel Container */}
+            <div style={{ flex: 1, position: "relative" }}>
+              <div 
+                style={{ 
+                  display: "flex", 
+                  width: "400%", 
+                  height: "100%", 
+                  transform: `translateX(-${currentSlide * 25}%)`, 
+                  transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)" 
+                }}
+              >
+                {/* SLIDE 1: Founder */}
+                <div style={{ width: "25%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+                  <div style={{ width: 160, height: 160, borderRadius: "50%", overflow: "hidden", border: "4px solid #ffffff", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", marginBottom: "1.5rem" }}>
+                    <img src="/founder_shiv.png" alt="Cdr Shiv Mathur" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                  <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 800, marginBottom: "0.2rem", textAlign: "center" }}>Cdr Shiv Mathur</h3>
+                  <p style={{ color: "#f16522", fontSize: "1rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", textAlign: "center" }}>Founder & Visionary</p>
+                </div>
+
+                {/* SLIDE 2: Top Books */}
+                <div style={{ width: "25%", height: "100%", background: "rgba(255, 255, 255, 0.5)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                   <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Top Selling <span style={{color: "#f16522"}}>Books</span></h3>
+                   <div style={{ display: "flex", gap: "1rem" }}>
+                     {galleryItems.slice(0, 3).map((book, i) => (
+                       <Link key={i} to={`/catalogue?q=${book.title}`} style={{ flex: 1, textDecoration: "none" }}>
+                         <div style={{ width: "100%", paddingTop: "140%", position: "relative", borderRadius: 6, overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.15)", background: "#e2e8f0" }}>
+                           {book.coverUrl ? (
+                             <img src={book.coverUrl} onError={(e) => { e.currentTarget.style.display = 'none'; }} alt="Book Cover" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                           ) : (
+                             <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "#e2e8f0" }} />
+                           )}
+                         </div>
+                       </Link>
+                     ))}
+                   </div>
+                </div>
+
+                {/* SLIDE 3: Pillars */}
+                <div style={{ width: "25%", height: "100%", background: "transparent", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    {[
+                      { icon: <PenTool size={24} />, label: "We Publish", color: "#f16522" },
+                      { icon: <Megaphone size={24} />, label: "We Promote", color: "#385c40" },
+                      { icon: <Store size={24} />, label: "We Sell", color: "#d9ac42" },
+                      { icon: <BookOpen size={24} />, label: "We Revive", color: "#3b82f6" },
+                    ].map((p, i) => (
+                      <div key={i} style={{ background: "rgba(255,255,255,0.7)", padding: "1.5rem 1rem", borderRadius: 12, border: "1px solid rgba(255,255,255,0.8)", textAlign: "center", boxShadow: "0 4px 15px rgba(0,0,0,0.03)" }}>
+                        <div style={{ width: 48, height: 48, borderRadius: "50%", background: p.color, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 0.8rem", color: "#fff" }}>
+                          {p.icon}
+                        </div>
+                        <h4 style={{ color: "#1e293b", fontSize: "1.1rem", fontWeight: 700 }}>{p.label}</h4>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SLIDE 4: Categories */}
+                <div style={{ width: "25%", height: "100%", background: "rgba(255,255,255,0.3)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                   <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Featured <span style={{color: "#f16522"}}>Categories</span></h3>
+                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
+                     {availableGenres.slice(0, 8).map((g, i) => (
+                       <Link key={i} to="/catalogue" style={{ padding: "0.6rem 1.2rem", fontSize: 13, background: "#ffffff", borderRadius: 50, color: "#1e293b", textDecoration: "none", fontWeight: 700, border: "1px solid rgba(0,0,0,0.05)", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#f16522"; e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#1e293b"; }}>
+                         {g.name}
+                       </Link>
+                     ))}
+                   </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Slider Controls Area */}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "4rem", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", gap: "2rem", zIndex: 10 }}>
+              <button 
+                onClick={() => setCurrentSlide(p => (p - 1 + 4) % 4)}
+                style={{ background: "transparent", border: "none", color: "#1e293b", cursor: "pointer", display: "flex", alignItems: "center", padding: "0.5rem" }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                {[0, 1, 2, 3].map(idx => (
+                  <button 
+                    key={idx}
+                    onClick={() => setCurrentSlide(idx)}
+                    style={{ 
+                      width: currentSlide === idx ? 24 : 8, 
+                      height: 8, 
+                      borderRadius: 4, 
+                      background: currentSlide === idx ? "#f16522" : "rgba(30,41,59,0.2)", 
+                      border: "none", 
+                      padding: 0, 
+                      cursor: "pointer", 
+                      transition: "all 0.3s ease" 
+                    }} 
+                  />
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setCurrentSlide(p => (p + 1) % 4)}
+                style={{ background: "transparent", border: "none", color: "#1e293b", cursor: "pointer", display: "flex", alignItems: "center", padding: "0.5rem" }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
+
         </div>
       </section>
 

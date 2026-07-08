@@ -196,8 +196,8 @@ export function LibraryDonationsTab() {
 
   const fetchAuthors = async () => {
     try {
-      const res = await axios.get(`${API}/api/admin/authors`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      setAdminAuthors(res.data);
+      const res = await axios.get(`${API}/api/admin/authors?limit=10000`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setAdminAuthors(res.data.data || res.data);
     } catch (err) { }
   };
 
@@ -581,7 +581,7 @@ export function LibraryDonationsTab() {
       const systemTitles = systemAuthor?.books?.map((b: any) => b.title) || [];
       const uniqueSystemTitles = Array.from(new Set(systemTitles));
       
-      const systemTitlesStr = uniqueSystemTitles.map(t => t.replace(/"/g, '""')).join('; ');
+      const systemTitlesStr = uniqueSystemTitles.map((t: any) => String(t).replace(/"/g, '""')).join('; ');
       const donatedTitlesStr = Array.from(data.donatedTitles).map((t: any) => t.replace(/"/g, '""')).join('; ');
 
       csvContent += `"${data.name.replace(/"/g, '""')}",${data.campaigns.size},${data.libraries.size},"${systemTitlesStr}","${donatedTitlesStr}",${data.totalBooks},${data.totalValue}\n`;

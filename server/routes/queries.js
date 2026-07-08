@@ -15,6 +15,10 @@ router.get('/api/author/queries', verifyToken, async (req, res) => {
     if (!author) return res.status(403).json({ error: 'Not an author' });
     const queries = await prisma.query.findMany({
       where: { authorId: author.id },
+      include: { 
+        author: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true } }
+      },
       orderBy: { createdAt: 'desc' }
     });
     res.json(queries);

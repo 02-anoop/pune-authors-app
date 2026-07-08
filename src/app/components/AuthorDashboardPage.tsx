@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send, ChevronLeft, ChevronRight, RefreshCw, Users } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell , AreaChart, Area } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -5656,8 +5656,11 @@ function AuthorReviews({ books, orders }: { books: any[], orders: any[] }) {
 function AuthorQueries() {
   const [queries, setQueries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState<'All' | 'Pending' | 'Answered' | 'Resolved'>('All');
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
   const [isReplying, setIsReplying] = useState<{ [key: string]: boolean }>({});
+  const [expandedQueryId, setExpandedQueryId] = useState<number | string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchQueries();
@@ -5668,7 +5671,14 @@ function AuthorQueries() {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/queries`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setQueries(res.data);
+      // Filter out any contact form / system messages if they exist
+      const mappedQueries = res.data
+        .filter((q: any) => !q.subject?.startsWith('Contact Form'))
+        .map((q: any) => ({
+          ...q,
+          itemType: 'Query'
+        }));
+      setQueries(mappedQueries);
     } catch (err) {
       toast.error('Failed to load queries');
     } finally {
@@ -5693,52 +5703,112 @@ function AuthorQueries() {
     }
   };
 
+  const filteredQueries = queries.filter(q => {
+    const matchesFilter = filterType === 'All' || 
+                          (filterType === 'Pending' && q.status === 'Pending') ||
+                          (filterType === 'Answered' && q.status === 'Answered') ||
+                          (filterType === 'Resolved' && q.status === 'Resolved');
+    
+    if (!matchesFilter) return false;
+    
+    if (searchQuery.trim()) {
+      const lowerQ = searchQuery.toLowerCase();
+      return (q.subject?.toLowerCase().includes(lowerQ) || 
+              q.author?.name?.toLowerCase().includes(lowerQ) || 
+              q.user?.name?.toLowerCase().includes(lowerQ) ||
+              q.author?.email?.toLowerCase().includes(lowerQ) ||
+              q.user?.email?.toLowerCase().includes(lowerQ));
+    }
+    
+    return true;
+  });
+
   if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy" /></div>;
 
   return (
-    <div className="dash-panel animate-fade-in-up min-h-full">
-      <div className="dash-panel-header bg-white sticky top-0 z-10 shadow-sm flex items-center justify-between">
+    <div className="space-y-6 w-full dash-panel animate-fade-in-up min-h-full">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b border-paa-navy/5 pb-4 gap-4 p-6">
         <div>
-          <h3 className="dash-panel-title flex items-center gap-2"><MessageSquare className="w-5 h-5" /> Queries & Issues</h3>
-          <p className="dash-panel-subtitle">View issues reported by your buyers</p>
+          <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
+            <Users className="w-5 h-5" /> Queries & Issues
+          </h3>
+          <p className="text-paa-gray-text text-sm">Manage and view queries reported by your buyers.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <input 
+            type="text" 
+            placeholder="Search Subject, Name, Email..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-3xl-2xl outline-none focus:border-paa-navy w-full sm:w-64"
+          />
+          <div className="flex bg-gray-100 rounded-3xl-2xl p-1 overflow-x-auto w-full sm:w-auto">
+            {[
+              { id: 'All', label: 'All', color: 'bg-gray-800 text-white' },
+              { id: 'Pending', label: 'New Unopened Tickets', color: 'bg-orange-100 text-orange-800' },
+              { id: 'Answered', label: 'Opened Tickets', color: 'bg-blue-100 text-blue-800' },
+              { id: 'Resolved', label: 'Closed Tickets', color: 'bg-green-100 text-green-800' }
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setFilterType(t.id as any)}
+                className={`px-3 py-1 text-[10px] font-bold tracking-widest uppercase transition-all rounded-3xl-2xl whitespace-nowrap ${filterType === t.id ? `${t.color} shadow-sm` : 'text-gray-500 hover:text-paa-navy'}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => fetchQueries()} className="shrink-0 p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+            <RefreshCw size={18} />
+          </button>
         </div>
       </div>
-      <div className="p-6">
-        {queries.length === 0 ? (
+
+      <div className="p-6 pt-0 space-y-4">
+        {filteredQueries.length === 0 ? (
           <div className="py-16 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">No queries or issues reported yet.</p>
+            <p className="text-gray-500 font-medium">No queries or issues found.</p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {queries.map(q => (
-              <div key={q.id} className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                        q.status === 'Resolved' ? 'bg-green-100 text-green-800' : 
-                        q.status === 'Answered' ? 'bg-blue-100 text-blue-800' : 
-                        'bg-orange-100 text-orange-800'
-                      }`}>
-                        #TKT-{q.id.toString().padStart(4, '0')}
-                      </span>
-                      <h4 className="font-bold text-paa-navy text-sm">{q.subject}</h4>
-                    </div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(q.createdAt).toLocaleString()}</span>
+        ) : filteredQueries.map(q => (
+          <div key={q.id} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden transition-all duration-200 group">
+            {/* Row Header */}
+            <div 
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+              onClick={() => setExpandedQueryId(expandedQueryId === q.id ? null : q.id)}
+            >
+              <div className="flex items-center gap-4 flex-1">
+                <div className={`w-1 h-10 rounded-full ${q.status === 'Resolved' ? 'bg-green-500' : q.status === 'Pending' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                      Query #TKT-{q.id.toString().padStart(4, '0')}
+                    </span>
+                    <h4 className="font-bold text-paa-navy text-sm line-clamp-1">{q.subject}</h4>
                   </div>
-                  <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${
-                    q.status === 'Resolved' ? 'bg-green-100 text-green-800' : 
-                    q.status === 'Answered' ? 'bg-blue-100 text-blue-800' : 
-                    'bg-orange-100 text-orange-800'
-                  }`}>
-                    {q.status === 'Resolved' ? 'Closed' : q.status === 'Answered' ? 'Opened' : 'New'}
-                  </span>
+                  <p className="text-[10px] text-gray-500">From: <span className="font-bold">{q.author?.name || q.user?.name || 'Unknown'}</span> ({q.author?.email || q.user?.email || 'N/A'})</p>
                 </div>
-                <QueryThreadDisplay query={q} currentUserType="Author" />
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                  {q.status === 'Resolved' ? 'Closed' : q.status === 'Pending' ? 'New' : 'Opened'}
+                </span>
+                <div className="text-gray-400">
+                  <ChevronDown size={20} className={`transform transition-transform duration-300 ${expandedQueryId === q.id ? 'rotate-180' : ''}`} />
+                </div>
+              </div>
+            </div>
+            
+            {/* Expandable Content */}
+            {expandedQueryId === q.id && (
+              <div className="p-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
+                <div className="flex-1">
+                  <QueryThreadDisplay query={q} currentUserType="Author" />
+                </div>
                 
                 {q.status !== 'Resolved' && (
-                  <div className="pt-4 border-t border-gray-100 mt-4">
+                  <div className="shrink-0 pt-4 border-t border-gray-100">
                     <div className="flex items-center gap-2 bg-white rounded-full border border-gray-200 px-4 py-2 shadow-sm focus-within:border-paa-navy focus-within:ring-1 focus-within:ring-paa-navy/20 transition-all">
                       <input
                         type="text"
@@ -5764,9 +5834,9 @@ function AuthorQueries() {
                   </div>
                 )}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

@@ -156,6 +156,15 @@ export function CheckoutPage() {
   };
 
   const handleAddressSubmit = () => {
+    if (useSavedAddress) {
+      if (!savedAddress?.name || !savedAddress?.phone || !savedAddress?.address) {
+        alert("Saved address is incomplete.");
+        return;
+      }
+      setCheckoutStep(2);
+      return;
+    }
+
     if (!form.name || !form.phone || !form.houseNo || !form.address || !form.city || !form.state || !form.pincode) {
       alert("Please fill all required delivery details (marked with *)");
       return;

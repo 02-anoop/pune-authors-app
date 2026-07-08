@@ -655,20 +655,68 @@ router.get('/api/authors/:email', async (req, res) => {
 // 4. Operations Dashboard - Get all authors
 router.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
   try {
-    const authors = await prisma.author.findMany({
-      include: { books: { include: { reviews: true } }, eventRegistrations: true, eventAuthors: true }
-    });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [authors, total] = await Promise.all([
+      prisma.author.findMany({
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          location: true,
+          status: true,
+          createdAt: true,
+          _count: {
+            select: { books: true, eventRegistrations: true, eventAuthors: true }
+          },
+          eventAuthors: {
+            select: {
+              eventId: true,
+              optInStatus: true,
+              event: { select: { name: true, date: true } }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.author.count()
+    ]);
+    
+    // Get global totals for dashboard stats (lightweight counts)
+    const [totalActive, totalPending, totalSuspended] = await Promise.all([
+      prisma.author.count({ where: { status: 'Approved' } }),
+      prisma.author.count({ where: { status: 'Pending Verification' } }),
+      prisma.author.count({ where: { status: 'Suspended' } })
+    ]);
+
     const mapped = authors.map(a => ({
       ...a,
       joined: a.createdAt.toISOString().split('T')[0],
-      totalBooks: a.books.length,
-      eventsPart: a.eventRegistrations.length + a.eventAuthors.length,
+      totalBooks: a._count.books,
+      eventsPart: a._count.eventRegistrations + a._count.eventAuthors,
       eventParticipation: a.eventAuthors.map(ea => ({
         ...ea,
         status: ea.optInStatus === 'Awaiting Approval' ? 'Pending' : ea.optInStatus
       }))
     }));
-    res.json(mapped);
+    
+    res.json({
+      data: mapped,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        totalActive,
+        totalPending,
+        totalSuspended
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed' });
   }
@@ -2753,10 +2801,63 @@ router.delete('/api/admin/orders/:id', verifyToken, isAdmin, async (req, res) =>
 
 router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
   try {
-    const orders = await prisma.order.findMany({
-      include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } },
-      orderBy: { createdAt: 'desc' }
-    });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          createdAt: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          address: true,
+          subtotal: true,
+          deliveryCharges: true,
+          bundleDiscount: true,
+          amount: true,
+          status: true,
+          paymentScreenshot: true,
+          items: {
+            select: {
+              id: true,
+              quantity: true,
+              status: true,
+              createdAt: true,
+              dispatchedAt: true,
+              deliveredAt: true,
+              trackingNumber: true,
+              feedbackCondition: true,
+              feedbackRating: true,
+              feedbackComments: true,
+              book: {
+                select: {
+                  title: true,
+                  coverUrl: true,
+                  author: {
+                    select: { id: true, name: true, email: true }
+                  }
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.order.count()
+    ]);
+    
+    const [pendingCount, toApproveOrders, shippedCount, totalRevenueAgg] = await Promise.all([
+      prisma.order.count({ where: { status: 'Pending Verification' } }),
+      prisma.orderItem.count({ where: { status: 'Pending' } }),
+      prisma.orderItem.count({ where: { status: 'Dispatched' } }),
+      prisma.order.aggregate({ _sum: { amount: true }, where: { status: 'Completed' } })
+    ]);
+
     const mapped = orders.map(ord => ({
       id: `ORD-${ord.id.toString().padStart(4, '0')}`,
       dbId: ord.id,
@@ -2784,14 +2885,27 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
         feedbackCondition: i.feedbackCondition,
         feedbackRating: i.feedbackRating,
         feedbackComments: i.feedbackComments,
-        bookAvgRating: i.book.reviews?.length ? (i.book.reviews.reduce((a, r) => a + r.rating, 0) / i.book.reviews.length).toFixed(1) : null
+        bookAvgRating: null // Extracted out for speed
       })),
       total: ord.amount,
       status: ord.status === 'Pending Verification' ? 'Pending' : ord.status,
       payment: ord.paymentScreenshot ? 'Paid' : 'Unpaid',
       paymentScreenshot: ord.paymentScreenshot
     }));
-    res.json(mapped);
+    
+    res.json({
+      data: mapped,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        pendingVerificationCount: pendingCount,
+        toApproveOrders: toApproveOrders,
+        shippedCount: shippedCount,
+        totalRevenue: totalRevenueAgg._sum.amount || 0
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch orders' });

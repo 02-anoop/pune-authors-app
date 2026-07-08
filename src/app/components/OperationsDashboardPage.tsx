@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import axios from 'axios';
 import {
   RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search,
@@ -40,10 +40,10 @@ axios.interceptors.response.use(
   }
 );
 
-import { AuthorFullProfileView } from './AuthorFullProfileView';
-import { AuthorRegistrationPage } from './AuthorRegistrationPage';
-import { LibraryDonationsTab } from './LibraryDonationsTab';
-import { AdminInventoryTab } from './AdminInventoryTab';
+const AuthorFullProfileView = lazy(() => import('./AuthorFullProfileView').then(m => ({ default: m.AuthorFullProfileView })));
+const AuthorRegistrationPage = lazy(() => import('./AuthorRegistrationPage').then(m => ({ default: m.AuthorRegistrationPage })));
+const LibraryDonationsTab = lazy(() => import('./LibraryDonationsTab').then(m => ({ default: m.LibraryDonationsTab })));
+const AdminInventoryTab = lazy(() => import('./AdminInventoryTab').then(m => ({ default: m.AdminInventoryTab })));
 
 const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
   if (!isOpen) return null;
@@ -124,6 +124,10 @@ export function OperationsDashboardPage() {
     const cached = sessionStorage.getItem('adminOrders');
     return cached ? JSON.parse(cached) : [];
   });
+  const [ordersMeta, setOrdersMeta] = useState<any>({});
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [authorsMeta, setAuthorsMeta] = useState<any>({});
+  const [authorsPage, setAuthorsPage] = useState(1);
 
   // Modals state
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
@@ -273,9 +277,21 @@ export function OperationsDashboardPage() {
   const fetchAuthors = async (isBackground = false) => {
     if (!isBackground) setIsRefreshing(true);
     try {
-      const res = await axios.get(`${API}/api/admin/authors`);
-      setAuthors(res.data); sessionStorage.setItem('adminAuthors', JSON.stringify(res.data));
-      const c = res.data.filter((a: any) => a.status === 'Pending').length; if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true })); prevCountsRef.current.authors = c;
+      const res = await axios.get(`${API}/api/admin/authors?page=${authorsPage}&limit=50`);
+      if (res.data.data) {
+        setAuthors(res.data.data);
+        setAuthorsMeta(res.data.meta);
+        sessionStorage.setItem('adminAuthors', JSON.stringify(res.data.data));
+        const c = res.data.meta.totalPending || 0; 
+        if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true })); 
+        prevCountsRef.current.authors = c;
+      } else {
+        setAuthors(res.data);
+        sessionStorage.setItem('adminAuthors', JSON.stringify(res.data));
+        const c = res.data.filter((a: any) => a.status === 'Pending').length; 
+        if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true })); 
+        prevCountsRef.current.authors = c;
+      }
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
@@ -412,20 +428,29 @@ export function OperationsDashboardPage() {
       w.__apiCache = w.__apiCache || {};
       if (!background && w.__apiCache.adminOrders) {
         setOrders(w.__apiCache.adminOrders);
+        if (w.__apiCache.adminOrdersMeta) setOrdersMeta(w.__apiCache.adminOrdersMeta);
         prevOrderCountRef.current = w.__apiCache.adminOrders.length;
       }
 
-      const res = await axios.get(`${API}/api/admin/orders`);
-      const newCount = res.data.length;
+      const res = await axios.get(`${API}/api/admin/orders?page=${ordersPage}&limit=50`);
+      const newCount = res.data.meta?.total || res.data.length;
 
       if (background && prevOrderCountRef.current > 0 && newCount > prevOrderCountRef.current && activeTab !== 'orders') {
         setPendingAlerts(prev => ({ ...prev, orders: true }));
       }
       prevOrderCountRef.current = newCount;
-      w.__apiCache.adminOrders = res.data;
-      sessionStorage.setItem('adminOrders', JSON.stringify(res.data));
-      setOrders(res.data);
-      const c = res.data.filter((o: any) => o.status === 'Pending').length; if (c > prevCountsRef.current.orders) setPendingAlerts(prev => ({ ...prev, orders: true })); prevCountsRef.current.orders = c;
+      if (res.data.data) {
+        w.__apiCache.adminOrders = res.data.data;
+        w.__apiCache.adminOrdersMeta = res.data.meta;
+        sessionStorage.setItem('adminOrders', JSON.stringify(res.data.data));
+        setOrders(res.data.data);
+        setOrdersMeta(res.data.meta);
+        const c = res.data.meta.toApproveOrders || 0; 
+        if (c > prevCountsRef.current.orders) setPendingAlerts(prev => ({ ...prev, orders: true })); 
+        prevCountsRef.current.orders = c;
+      } else {
+        setOrders(res.data);
+      }
     } catch (err) { } finally { if (!background) setIsRefreshing(false); }
   };
 
@@ -1084,7 +1109,7 @@ export function OperationsDashboardPage() {
         }
       }
     });
-    const uniqueDates = Array.from(new Set(orders.filter((o: any) => o.date).map((o: any) => o.date)));
+    const uniqueDates = Array.from(new Set<string>(orders.filter((o: any) => o.date).map((o: any) => o.date)));
     const recentDates = uniqueDates.slice(0, 7).reverse();
     const revenueTrendData = recentDates.map(d => ({ date: d, revenue: revenueTrendMap[d] || 0 }));
 
@@ -2167,8 +2192,29 @@ export function OperationsDashboardPage() {
             ))}
             {orders.length === 0 && <div className="text-center py-8 text-sm text-gray-500">No orders yet.</div>}
           </div>
+          
+          {ordersMeta?.totalPages > 1 && (
+            <div className="flex justify-between items-center mt-6 py-4 border-t border-gray-100">
+              <span className="text-sm text-gray-500">Showing page {ordersPage} of {ordersMeta.totalPages} (Total: {ordersMeta.total} orders)</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setOrdersPage(p => Math.max(1, p - 1)); setTimeout(fetchOrders, 0); }}
+                  disabled={ordersPage === 1}
+                  className="px-4 py-2 border border-gray-200 rounded text-sm text-paa-navy disabled:opacity-50 font-medium bg-white hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => { setOrdersPage(p => Math.min(ordersMeta.totalPages, p + 1)); setTimeout(fetchOrders, 0); }}
+                  disabled={ordersPage === ordersMeta.totalPages}
+                  className="px-4 py-2 border border-gray-200 rounded text-sm text-paa-navy disabled:opacity-50 font-medium bg-white hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
       </div>
     );
   };
@@ -2832,6 +2878,27 @@ export function OperationsDashboardPage() {
             </tbody>
           </table>
         </div>
+        {authorsMeta?.totalPages > 1 && (
+          <div className="flex justify-between items-center mt-6 py-4 border-t border-gray-100">
+            <span className="text-sm text-gray-500">Showing page {authorsPage} of {authorsMeta.totalPages} (Total: {authorsMeta.total} authors)</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setAuthorsPage(p => Math.max(1, p - 1)); setTimeout(fetchAuthors, 0); }}
+                disabled={authorsPage === 1}
+                className="px-4 py-2 border border-gray-200 rounded text-sm text-paa-navy disabled:opacity-50 font-medium bg-white hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => { setAuthorsPage(p => Math.min(authorsMeta.totalPages, p + 1)); setTimeout(fetchAuthors, 0); }}
+                disabled={authorsPage === authorsMeta.totalPages}
+                className="px-4 py-2 border border-gray-200 rounded text-sm text-paa-navy disabled:opacity-50 font-medium bg-white hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -5024,24 +5091,26 @@ export function OperationsDashboardPage() {
 
         {/* Scrollable Body */}
         <div id="admin-dashboard-scroll" className="flex-1 overflow-auto p-4 sm:p-7">
-          {activeTab === 'overview' && <OverviewTab refreshTrigger={lastRefreshTime} />}
-          {activeTab === 'web_orders' && <WebOrdersTab refreshTrigger={lastRefreshTime} />}
-          {activeTab === 'sales_report' && <SalesReportTab refreshTrigger={lastRefreshTime} />}
-          {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
-          {activeTab === 'books' && <BooksTab />}
-          {activeTab === 'inventory' && <AdminInventoryTab />}
-          {activeTab === 'events' && renderEventsTab()}
-          {activeTab === 'forms' && <FormsTab />}
-          {activeTab === 'gallery' && renderGalleryTab()}
-          {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
-          {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
-          {activeTab === 'library_donations' && <LibraryDonationsTab />}
-          {activeTab === 'settings' && (
-            <div className="p-8 text-center text-gray-500">
-              <h2 className="text-2xl font-bold mb-2">System Settings</h2>
-              <p>Settings panel coming soon...</p>
-            </div>
-          )}
+          <Suspense fallback={<div className="p-10 text-center text-gray-500 font-medium">Loading module...</div>}>
+            {activeTab === 'overview' && <OverviewTab refreshTrigger={lastRefreshTime} />}
+            {activeTab === 'web_orders' && <WebOrdersTab refreshTrigger={lastRefreshTime} />}
+            {activeTab === 'sales_report' && <SalesReportTab refreshTrigger={lastRefreshTime} />}
+            {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
+            {activeTab === 'books' && <BooksTab />}
+            {activeTab === 'inventory' && <AdminInventoryTab />}
+            {activeTab === 'events' && renderEventsTab()}
+            {activeTab === 'forms' && <FormsTab />}
+            {activeTab === 'gallery' && renderGalleryTab()}
+            {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
+            {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
+            {activeTab === 'library_donations' && <LibraryDonationsTab />}
+            {activeTab === 'settings' && (
+              <div className="p-8 text-center text-gray-500">
+                <h2 className="text-2xl font-bold mb-2">System Settings</h2>
+                <p>Settings panel coming soon...</p>
+              </div>
+            )}
+          </Suspense>
         </div>
       </main>
 

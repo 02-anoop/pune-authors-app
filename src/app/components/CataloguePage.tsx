@@ -72,14 +72,20 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     setDownloading(true);
     const html2pdf = await loadHtml2Pdf();
     
+    // Filter out books with broken local storage covers that crash html2canvas
+    const validBooks = books.filter(b => !(b.coverUrl && b.coverUrl.includes('uploads/')));
+
     // Group books by author
     const byAuthor: Record<string, { name: string; bio: string; photoUrl: string; instagram: string; facebook: string; whatsapp: string; qualification?: string; age?: string; experience?: string; skills?: string; hobbies?: string; books: CatalogueBook[] }> = {};
-    books.forEach(b => {
+    validBooks.forEach(b => {
+      let safePhoto = b.authorPhotoUrl || "";
+      if (safePhoto.includes('uploads/')) safePhoto = "";
+
       if (!byAuthor[b.authorName]) {
         byAuthor[b.authorName] = {
           name: b.authorName,
           bio: b.authorBio,
-          photoUrl: b.authorPhotoUrl || "",
+          photoUrl: safePhoto,
           instagram: b.authorInstagram || "",
           facebook: b.authorFacebook || "",
           whatsapp: b.authorWhatsapp || "",
@@ -163,7 +169,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
         const socialHtml = socials.length > 0 ? `<div style="margin-top: 25px; font-size: 11px; display: flex; gap: 10px; flex-wrap: wrap;">${socials.join('')}</div>` : '';
   
         const authorPageHtml = `
-           <div style="width: 800px; height: 1131px; position: relative; background: #0f172a; color: #fff; page-break-after: always; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 80px 60px;">
+           <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #0f172a; color: #fff; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 60px;">
              <div style="position: absolute; top: 40px; right: 40px;">
                 <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 40px; filter: brightness(0) invert(1);" />
              </div>
@@ -242,7 +248,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
            `).join("");
   
            return `
-           <div style="width: 800px; height: 1131px; position: relative; background: #f0f9ff; color: #0f172a; page-break-after: always; box-sizing: border-box; padding: 60px 50px; overflow: hidden; display: flex; flex-direction: column; justify-content: center;">
+           <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #f0f9ff; color: #0f172a; box-sizing: border-box; padding: 60px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start;">
               <!-- Branding Header -->
               <div style="position: absolute; top: 40px; right: 40px;">
                 <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 30px;" />
@@ -267,17 +273,19 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
   
       const container = document.createElement('div');
       container.style.position = 'absolute';
-      container.style.left = '-9999px';
+      container.style.left = '-2px';
       container.style.top = '0';
+      container.style.opacity = '0';
+      container.style.zIndex = '-9999';
       document.body.appendChild(container);
   
       container.innerHTML = `
-        <div id="pdf-content-wrapper" style="width: 800px; background: #fff;">
+        <div id="pdf-content-wrapper" style="width: 802px; background: #0f172a;">
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&display=swap');
           </style>
           <!-- Magazine Cover Page -->
-          <div style="position: relative; width: 800px; height: 1131px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a; page-break-after: always; box-sizing: border-box;">
+          <div style="position: relative; width: 802px; height: 1120px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a; box-sizing: border-box;">
             <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop" crossorigin="anonymous" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: grayscale(100%);" />
             <div style="position: relative; z-index: 10; padding: 80px; width: 80%; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box;">
               <div style="margin-bottom: 40px;">
@@ -310,7 +318,8 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
         scrollY: 0,
         scrollX: 0
       },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: 'css', before: '.pdf-page' }
     };
 
     await html2pdf().set(opt).from(container.firstElementChild).save();

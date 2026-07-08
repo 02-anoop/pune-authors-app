@@ -2367,13 +2367,19 @@ router.put('/api/order-items/:id/author-reject', verifyToken, async (req, res) =
 // 7. Operations/Dashboard - Dynamic Sales Report
 router.get('/api/admin/sales-report', verifyToken, isAdmin, async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, filterType, selectedMonth, selectedYear } = req.query;
     if (!startDate || !endDate) {
       return res.status(400).json({ error: 'startDate and endDate are required' });
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    let start = new Date(startDate);
+    let end = new Date(endDate);
+    
+    if (filterType === 'select_month' && selectedMonth && selectedYear) {
+      start = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1);
+      end = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0);
+    }
+    
     end.setHours(23, 59, 59, 999);
 
     const webOrders = await prisma.order.findMany({
@@ -2396,8 +2402,14 @@ router.get('/api/admin/sales-report', verifyToken, isAdmin, async (req, res) => 
     let totalOrders = webOrders.length + posOrders.length;
 
     const chartDataMap = {};
-    const channelDataMap = { Web: 0, POS: 0 };
+    const channelDataMap = { Web: 0, Events: 0, 'Book Fairs': 0 };
     const tableData = [];
+    
+    const kpiSplits = {
+      web: { revenue: 0, books: 0, orders: webOrders.length },
+      events: { revenue: 0, books: 0, orders: 0 },
+      bookFairs: { revenue: 0, books: 0, orders: 0 }
+    };
 
     const processItem = (date, channel, eventName, authorName, title, qty, price, orderId) => {
       const dateStr = date.toISOString().split('T')[0];
@@ -2425,33 +2437,90 @@ router.get('/api/admin/sales-report', verifyToken, isAdmin, async (req, res) => 
     webOrders.forEach(o => {
       o.items.forEach(i => {
         processItem(o.createdAt, 'Web Orders', '-', i.book.author.name, i.book.title, i.quantity, i.book.mrp, `PAA-${String(o.id).padStart(4,'0')}`);
-        channelDataMap.Web += (i.quantity * i.book.mrp);
+        const rev = i.quantity * i.book.mrp;
+        channelDataMap.Web += rev;
+        kpiSplits.web.revenue += rev;
+        kpiSplits.web.books += i.quantity;
       });
     });
 
     posOrders.forEach(po => {
-      const isLegacyOrAirport = po.event && (po.event.name === 'Legacy Archive' || po.event.name.toLowerCase().includes('airport'));
+      const isBookFair = po.event?.eventType === 'Book Fair' || po.event?.name?.toLowerCase().includes('fair');
+      const channelName = isBookFair ? 'Book Fairs' : 'Events';
+      const kpiKey = isBookFair ? 'bookFairs' : 'events';
+      kpiSplits[kpiKey].orders += 1;
       
       po.items.forEach(i => {
-        processItem(po.createdAt, 'Fairs & POS', po.event?.name || '-', i.book.author.name, i.book.title, i.quantity, i.price, `POS-${String(po.id).padStart(4,'0')}`);
-        
-        if (!isLegacyOrAirport) {
-          channelDataMap.POS += (i.quantity * i.price);
-        }
+        processItem(po.createdAt, channelName, po.event?.name || '-', i.book.author.name, i.book.title, i.quantity, i.price, po.event?.name || `POS-${String(po.id).padStart(4,'0')}`);
+        const rev = i.quantity * i.price;
+        channelDataMap[channelName] += rev;
+        kpiSplits[kpiKey].revenue += rev;
+        kpiSplits[kpiKey].books += i.quantity;
       });
+    });
+
+    const legacyEvents = await prisma.event.findMany({
+      where: {
+        status: 'Legacy Archive'
+      }
+    });
+
+    legacyEvents.forEach(evt => {
+      let evtDate = new Date(evt.date);
+      if (isNaN(evtDate.getTime())) {
+        evtDate = new Date(evt.createdAt);
+      }
+      
+      if (evtDate >= start && evtDate <= end) {
+        const qty = evt.aggSold || 0;
+        const rev = evt.aggRevenue || (qty * 200) || 0;
+        
+        const isBookFair = evt.eventType === 'Book Fair' || evt.name?.toLowerCase().includes('fair');
+        const channelName = isBookFair ? 'Book Fairs' : 'Events';
+        const kpiKey = isBookFair ? 'bookFairs' : 'events';
+        
+        if (qty > 0 || rev > 0) {
+          totalRevenue += rev;
+          totalBooksSold += qty;
+          const dateStr = evtDate.toISOString().split('T')[0];
+          
+          if (!chartDataMap[dateStr]) chartDataMap[dateStr] = { date: dateStr, revenue: 0, books: 0 };
+          chartDataMap[dateStr].revenue += rev;
+          chartDataMap[dateStr].books += qty;
+          
+          channelDataMap[channelName] += rev;
+          kpiSplits[kpiKey].revenue += rev;
+          kpiSplits[kpiKey].books += qty;
+          kpiSplits[kpiKey].orders += 1;
+          totalOrders += 1;
+          
+          tableData.push({
+            date: dateStr,
+            orderId: evt.name || `LEGACY-${evt.id}`,
+            channel: channelName,
+            event: evt.name,
+            author: `${evt.aggAuthors || 0} Authors`,
+            title: '-',
+            qty,
+            revenue: rev
+          });
+        }
+      }
     });
 
     const chartData = Object.values(chartDataMap).sort((a, b) => a.date.localeCompare(b.date));
     const channelData = [
       { name: 'Web Orders', value: channelDataMap.Web },
-      { name: 'Fairs & Exhibitions', value: channelDataMap.POS }
-    ];
+      { name: 'Events', value: channelDataMap.Events },
+      { name: 'Book Fairs', value: channelDataMap['Book Fairs'] }
+    ].filter(c => c.value > 0);
 
     res.json({
       kpis: {
         totalRevenue,
         totalBooksSold,
-        totalOrders
+        totalOrders,
+        splits: kpiSplits
       },
       chartData,
       channelData,

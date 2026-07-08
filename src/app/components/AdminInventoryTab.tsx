@@ -202,20 +202,20 @@ export function AdminInventoryTab() {
       </div>
 
       {/* DATA TABLE */}
-      <div className="overflow-x-auto">
-        <table className="dash-table w-full whitespace-nowrap min-w-[1000px]">
+      <div>
+        <table className="dash-table w-full table-fixed">
           <thead>
             <tr>
-              <th className="w-12 text-center">S.No</th>
-              <th>Title</th>
-              <th>Author</th>
+              <th className="w-10 text-center">S.No</th>
+              <th className="w-[22%]">Title</th>
+              <th className="w-[15%]">Author</th>
               <th className="text-center">Master Stock</th>
               <th className="text-center">Qty Web</th>
               <th className="text-center">Qty Airport</th>
               <th className="text-center">Qty Fairs</th>
               <th className="text-center">Current Stock</th>
               <th className="text-center">Last Activity</th>
-              <th className="text-center w-32">Actions</th>
+              <th className="text-center w-28">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -280,12 +280,12 @@ export function AdminInventoryTab() {
                           {book.coverUrl && (
                             <img src={book.coverUrl} alt="Cover" className="w-8 h-10 object-cover rounded shadow-sm border border-black/5" />
                           )}
-                          <div className="font-bold text-paa-navy max-w-[180px] truncate" title={book.title}>
+                          <div className="font-bold text-paa-navy truncate" title={book.title}>
                             {book.title}
                           </div>
                         </div>
                       </td>
-                      <td className="font-medium text-gray-700 max-w-[150px] truncate" title={book.authorName}>{book.authorName}</td>
+                      <td className="font-medium text-gray-700 truncate" title={book.authorName}>{book.authorName}</td>
                       <td className="text-center">{book.masterStock}</td>
                       <td className="text-center">{book.webSold}</td>
                       <td className="text-center">{book.airportQty}</td>
@@ -300,8 +300,8 @@ export function AdminInventoryTab() {
                           )}
                         </div>
                       </td>
-                      <td className="text-center text-gray-500">
-                        {new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      <td className="text-center text-gray-500 text-xs">
+                        {new Date(book.lastActivity).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                       <td className="text-center">
                         {book.isLowStock ? (

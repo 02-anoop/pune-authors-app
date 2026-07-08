@@ -2555,8 +2555,6 @@ export function OperationsDashboardPage() {
       link.click();
       document.body.removeChild(link);
     };
-    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-
     const handleDownloadCatalogue = () => {
       if (selectedAuthorIds.length === 0) return;
       const selectedAuthorsData = authors.filter(a => selectedAuthorIds.includes(a.id));

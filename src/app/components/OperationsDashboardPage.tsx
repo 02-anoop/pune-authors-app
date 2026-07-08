@@ -65,6 +65,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
 };
 
 export function OperationsDashboardPage() {
+  const [selectedAuthorsForCatalogue, setSelectedAuthorsForCatalogue] = useState<number[]>([]);
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
@@ -1627,6 +1628,7 @@ export function OperationsDashboardPage() {
     const [fineModalAuthor, setFineModalAuthor] = useState<{ id: number, name: string } | null>(null);
     const [fineAmount, setFineAmount] = useState('500');
     const [isSubmittingFine, setIsSubmittingFine] = useState(false);
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
 
     const successfulOrders = orders.filter((o: any) => o.status === 'Completed').length;
     const toApproveOrders = orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
@@ -1634,7 +1636,6 @@ export function OperationsDashboardPage() {
     const returnedOrdersCount = orders.filter((o: any) => o.status === 'Returned' || o.status === 'Cancelled').length;
 
     const totalRevenueWebOrders = orders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
-    const avgOrderValueWeb = successfulOrders > 0 ? Math.round(totalRevenueWebOrders / successfulOrders) : 0;
 
     // Additional Insights
 
@@ -1658,13 +1659,11 @@ export function OperationsDashboardPage() {
     return (
       <div className="space-y-6">
         {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Order Tracking KPIs ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'text-green-600 bg-green-100', bgClass: 'border-green-100' },
-            { label: 'Avg Order Value', value: `₹${avgOrderValueWeb}`, icon: DollarSign, colorClass: 'text-emerald-600 bg-emerald-100', bgClass: 'border-emerald-100' },
             { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'text-orange-600 bg-orange-100', bgClass: 'border-orange-100' },
             { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'text-blue-600 bg-blue-100', bgClass: 'border-blue-100' },
-            { label: 'Avg Delivery Time', value: Number(avgDeliveryDays) > 0 ? `${avgDeliveryDays} Days` : 'N/A', icon: TrendingUp, colorClass: 'text-teal-600 bg-teal-100', bgClass: 'border-teal-100' },
             { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'text-purple-600 bg-purple-100', bgClass: 'border-purple-100' },
           ].map((kpi, i) => (
             <div key={i} className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col justify-center items-start gap-3 hover:-translate-y-1 hover:shadow-md transition-all`}>
@@ -1825,7 +1824,9 @@ export function OperationsDashboardPage() {
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-1">
                   <div className="text-sm font-bold text-paa-navy">₹{ord.total}</div>
-                  <button onClick={() => setSelectedOrder(ord)} className="text-xs font-bold text-paa-gold hover:text-paa-navy uppercase tracking-widest">Details</button>
+                  <button onClick={() => setSelectedOrder(expandedOrderId === ord.dbId ? null : ord)} className="p-1 rounded-full hover:bg-gray-100 text-paa-navy" title="View Details">
+                    <ChevronDown size={16} className={`transition-transform duration-200 ${expandedOrderId === ord.dbId ? 'rotate-180' : ''}`} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -2198,6 +2199,7 @@ export function OperationsDashboardPage() {
   };
 
   const renderAuthorsTab = ({ refreshTrigger }: any) => {
+    
     const handleExportAuthorsCSV = () => {
       const dynamicKeys = Array.from(new Set<string>(
         authors.reduce((acc: string[], author: any) => {
@@ -2464,10 +2466,13 @@ export function OperationsDashboardPage() {
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">MRP</span><span className="text-lg font-black text-green-700">₹{selectedBookDetails.mrp}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Language</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
+              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Print Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.printFormat || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pages</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.pages || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Publisher</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
+              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Edition</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.edition || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pub Date</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">ISBN</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
+              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Purpose of Writing</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.purpose || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Current Stock</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.stock}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Total Sales</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.sales}</span></div>
             </div>
@@ -3047,7 +3052,7 @@ export function OperationsDashboardPage() {
                   <span className="text-xs text-gray-400">Event Summary</span>
                   {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === "Past" || selectedEventBreakdown.status === "Legacy Archive") && ( isEditingKPIs ? ( <div className="flex gap-2"><button onClick={() => setIsEditingKPIs(false)} className="text-xs font-bold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-full transition-colors">Cancel</button><button onClick={async () => { await handleSaveAggregateData(); setIsEditingKPIs(false); }} className="text-xs font-bold bg-paa-navy text-paa-cream px-4 py-1.5 rounded-full hover:bg-paa-gold hover:text-paa-navy transition-colors active:scale-95">Save Stats</button></div> ) : ( <button onClick={() => setIsEditingKPIs(true)} className="text-xs font-bold text-paa-navy border border-paa-navy/20 bg-gray-50 hover:bg-paa-navy/5 px-4 py-1.5 rounded-full transition-colors">Edit Stats</button> ) )}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
                        <div>
                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>

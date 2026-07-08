@@ -21,7 +21,7 @@ const getCategoryColor = (cat: string) => {
 };
 
 // ── Normalise both JSON files into one flat list ─────────────────────────────
-interface CatalogueBook {
+export interface CatalogueBook {
   id: string;
   title: string;
   synopsis: string;
@@ -67,7 +67,7 @@ const loadHtml2Pdf = (): Promise<any> => {
   });
 };
 
-async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDownloading: (val: boolean) => void) {
+export async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDownloading: (val: boolean) => void) {
   try {
     setDownloading(true);
     const html2pdf = await loadHtml2Pdf();
@@ -330,6 +330,27 @@ export function CataloguePage() {
   const [activeSubcategory, setActiveSubcategory] = useState<string>("All");
   const [activeSubSubcategory, setActiveSubSubcategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pdf = params.get('pdf');
+    const authorsParam = params.get('authors');
+    if (pdf === 'true') {
+        setTimeout(() => {
+           if (authorsParam) {
+               const checkBooks = setInterval(() => {
+                   if (document.querySelectorAll('.book-card').length > 0) {
+                      clearInterval(checkBooks);
+                      setTimeout(() => generatePDF(), 1000);
+                   }
+               }, 500);
+           } else {
+               setTimeout(() => generatePDF(), 2000);
+           }
+        }, 1000);
+    }
+  }, []);
+
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "title">("default");
   const [cart, setCart] = useState<string[]>(() => {
     try {
@@ -432,6 +453,13 @@ export function CataloguePage() {
   };
 
   const filteredBooks = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authorsParam = params.get('authors');
+    let baseAllBooks = allBooks;
+    if (authorsParam) {
+        const ids = authorsParam.split(',').map(Number);
+        baseAllBooks = allBooks.filter((b: any) => ids.includes(b.authorId));
+    }
     let list = allBooks;
 
     if (activeCategory !== "All") {

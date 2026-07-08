@@ -1251,6 +1251,11 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
 router.get('/api/admin/books', verifyToken, isAdmin, async (req, res) => {
   try {
     const books = await prisma.book.findMany({
+      where: {
+        author: {
+          status: 'Active'
+        }
+      },
       include: { author: true, orderItems: { include: { order: true } } }
     });
     const mapped = books.map(b => {
@@ -2566,6 +2571,19 @@ router.get('/api/admin/customers', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// Delete Order
+router.delete('/api/admin/orders/:id', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    await prisma.orderItem.deleteMany({ where: { orderId } });
+    await prisma.order.delete({ where: { id: orderId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete order error:', error);
+    res.status(500).json({ error: 'Failed to delete order' });
+  }
+});
+
 router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
@@ -2577,9 +2595,16 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
       dbId: ord.id,
       date: ord.createdAt.toISOString().split('T')[0],
       customer: ord.customerName,
+      customerEmail: ord.customerEmail,
+      customerPhone: ord.customerPhone,
+      address: ord.address,
+      subtotal: ord.subtotal || 0,
+      deliveryCharges: ord.deliveryCharges || 0,
+      bundleDiscount: ord.bundleDiscount || 0,
       items: ord.items.map(i => ({ 
         id: i.id,
         title: i.book.title, 
+        coverUrl: i.book.coverUrl,
         qty: i.quantity, 
         authorName: i.book.author.name,
         authorId: i.book.author.id,
@@ -2591,7 +2616,8 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
         trackingNumber: i.trackingNumber,
         feedbackCondition: i.feedbackCondition,
         feedbackRating: i.feedbackRating,
-        feedbackComments: i.feedbackComments
+        feedbackComments: i.feedbackComments,
+        bookAvgRating: i.book.reviews?.length ? (i.book.reviews.reduce((a, r) => a + r.rating, 0) / i.book.reviews.length).toFixed(1) : null
       })),
       total: ord.amount,
       status: ord.status === 'Pending Verification' ? 'Pending' : ord.status,
@@ -2767,6 +2793,17 @@ router.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => 
         feedbackBuyAgain: buyAgain || null
       }
     });
+
+    if (req.body.bookRating && existing) {
+      await prisma.bookReview.create({
+        data: {
+          rating: parseInt(req.body.bookRating),
+          comment: req.body.bookReviewComment || '',
+          reviewerName: existing.order?.customerName || 'Anonymous',
+          bookId: existing.bookId
+        }
+      });
+    }
 
     res.json(orderItem);
 
@@ -3969,6 +4006,7 @@ router.delete('/api/admin/gallery/images/:id', verifyToken, isAdmin, async (req,
 router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (req, res) => {
   try {
     const authorId = parseInt(req.params.id);
+    const { orderId, count, hours } = req.body;
     const author = await prisma.author.findUnique({ where: { id: authorId } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
     
@@ -3979,6 +4017,16 @@ router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (r
       where: { id: authorId },
       data: { extraData }
     });
+
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      const emailContent = `
+        <p>Dear ${author.name},</p>
+        <p>This is an automated notification from the Pune Authors' Association.</p>
+        <p>You have <strong>${count || 'some'} pending unaccepted item(s)</strong> for order <strong>${orderId || 'recent orders'}</strong> that have been delayed by <strong>${hours || 'more than 24'} hours</strong>.</p>
+        <p>Please log in to your Author Dashboard immediately to review and accept pending orders. Continued delays may result in fines or account suspension.</p>
+      `;
+      sendNotificationEmail(author.email, "Urgent: Late Delivery Notification", emailWrap("Late Delivery Notice", emailContent));
+    }
 
     // Notifications are handled dynamically via AuthorDashboard banner
 
@@ -3994,7 +4042,7 @@ router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (r
 router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res) => {
   try {
     const authorId = parseInt(req.params.id);
-    const { amount } = req.body;
+    const { amount, orderId, count, hours } = req.body;
     const author = await prisma.author.findUnique({ where: { id: authorId } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
     
@@ -4009,6 +4057,16 @@ router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res
       data: { extraData }
     });
     
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      const emailContent = `
+        <p>Dear ${author.name},</p>
+        <p>A fine of <strong>₹${amount}</strong> has been charged to your account due to severe delays in dispatching orders.</p>
+        ${orderId ? `<p>Specifically, you had <strong>${count || 'multiple'} items</strong> pending for order <strong>${orderId}</strong> delayed by <strong>${hours || 'more than 24'} hours</strong>.</p>` : ''}
+        <p>Your account will remain suspended for new orders until this fine is cleared. Please log in to your Author Dashboard to complete the payment.</p>
+      `;
+      sendNotificationEmail(author.email, "Action Required: Fine Imposed for Late Delivery", emailWrap("Fine Charged", emailContent));
+    }
+
     invalidateCache('adminAuthors');
     res.json(updatedAuthor);
   } catch (err) {
@@ -4019,12 +4077,18 @@ router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res
 
 router.get('/api/admin/reviews', verifyToken, isAdmin, async (req, res) => {
   try {
-    const reviews = await prisma.bookReview.findMany({
+    const bookReviews = await prisma.bookReview.findMany({
       include: { book: { select: { title: true, author: { select: { name: true } } } } },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(reviews);
+    const deliveryReviews = await prisma.orderItem.findMany({
+      where: { feedbackRating: { not: null } },
+      include: { book: { select: { title: true, author: { select: { name: true } } } }, order: { select: { customerName: true, id: true } } },
+      orderBy: { deliveredAt: 'desc' }
+    });
+    res.json({ bookReviews, deliveryReviews });
   } catch (err) {
+    console.error('Failed to fetch reviews:', err);
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
@@ -4355,21 +4419,27 @@ async function computeBookInventory(books) {
 
   const bookIds = books.map(b => b.id);
 
-  // Aggregate web order quantities per book (only accepted/dispatched/completed)
+  const CUTOFF_DATE = new Date('2026-07-08T00:00:00Z');
+
+  // Aggregate web order quantities per book (upcoming only)
   const orderItemAgg = await prisma.orderItem.groupBy({
     by: ['bookId'],
     where: { 
       bookId: { in: bookIds },
-      status: { in: ['Accepted', 'Dispatched', 'Completed', 'Delivered'] }
+      status: { in: ['Accepted', 'Dispatched', 'Completed', 'Delivered'] },
+      createdAt: { gte: CUTOFF_DATE }
     },
     _sum: { quantity: true },
     _max: { createdAt: true }
   });
 
-  // Aggregate donation quantities per book
+  // Aggregate donation quantities per book (upcoming only)
   const donationAgg = await prisma.donationBook.groupBy({
     by: ['bookId'],
-    where: { bookId: { in: bookIds } },
+    where: { 
+      bookId: { in: bookIds },
+      createdAt: { gte: CUTOFF_DATE }
+    },
     _sum: { quantityDonated: true },
     _max: { createdAt: true }
   });
@@ -4395,9 +4465,12 @@ async function computeBookInventory(books) {
     _max: { createdAt: true }
   });
 
-  // Granular donation breakdown per book (library-level)
+  // Granular donation breakdown per book (library-level, upcoming only)
   const donationBooksRaw = await prisma.donationBook.findMany({
-    where: { bookId: { in: bookIds } },
+    where: { 
+      bookId: { in: bookIds },
+      createdAt: { gte: CUTOFF_DATE }
+    },
     include: {
       registration: {
         include: {
@@ -4438,8 +4511,8 @@ async function computeBookInventory(books) {
     }
   });
 
-  const eventMap = {}; // bookId -> total listedStock
-  const eventBreakdownMap = {}; // bookId -> [{name, location, listed, sold}]
+  const eventMap = {};
+  const eventBreakdownMap = {}; 
   eventBooksRaw.forEach(eb => {
     eventMap[eb.bookId] = (eventMap[eb.bookId] || 0) + eb.listedStock;
     if (!eventBreakdownMap[eb.bookId]) eventBreakdownMap[eb.bookId] = [];
@@ -4453,7 +4526,7 @@ async function computeBookInventory(books) {
     });
   });
 
-  const donationBreakdownMap = {}; // bookId -> [{library, qty}]
+  const donationBreakdownMap = {};
   donationBooksRaw.forEach(db => {
     const lib = db.registration?.announcement?.library;
     if (!donationBreakdownMap[db.bookId]) donationBreakdownMap[db.bookId] = [];
@@ -4468,7 +4541,11 @@ async function computeBookInventory(books) {
     const webSold = webSoldMap[book.id] || 0;
     const airportQty = airportMap[book.id] || 0;
     const eventQty = eventMap[book.id] || 0;
-    const currentStock = book.stock; // Already reflects all real-time deductions
+    
+    // Initial stock entered by author
+    const masterStock = book.stock; 
+    // Dynamically deduct upcoming data (web, airport, events)
+    const currentStock = masterStock - webSold - airportQty - eventQty;
 
     const distributionBreakdown = [
       ...(donationBreakdownMap[book.id] || []),
@@ -4477,23 +4554,29 @@ async function computeBookInventory(books) {
     
     // Last activity fallback to book.createdAt
     const lastActivityDate = lastActivityMap[book.id] || book.createdAt;
+    
+    // Check if stale (no activity in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const isStale = new Date(lastActivityDate) < thirtyDaysAgo;
 
     return {
       id: book.id,
       title: book.title,
-      mrp: book.mrp,
-      genre: book.genre,
-      coverUrl: book.coverUrl,
+      authorName: book.author ? book.author.name : 'Unknown',
       authorId: book.authorId,
-      authorName: book.author?.name || book.authorName || 'Unknown',
-      masterStock: currentStock + webSold + airportQty + eventQty,
+      mrp: book.mrp,
+      masterStock,
       currentStock,
       webSold,
       airportQty,
       eventQty,
-      isLowStock: currentStock < 10,
       lastActivity: lastActivityDate,
-      distributionBreakdown
+      isLowStock: currentStock < 10,
+      isStale,
+      distributionBreakdown,
+      genre: book.genre,
+      coverUrl: book.coverImage
     };
   });
 }
@@ -4701,16 +4784,31 @@ router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
     
     // Global stats across ALL platform
     const globalTotalTitles = await prisma.book.count({ where: {} });
-    const globalLowStock = await prisma.book.count({ where: { stock: { lt: 10 } } });
     
-    const stockAgg = await prisma.book.aggregate({
-      _sum: { stock: true }
+    // We need to fetch all books to compute accurate global KPIs based on dynamic inventory logic
+    const allBooks = await prisma.book.findMany({
+      include: { author: { select: { name: true } } }
     });
-    const totalCirculation = stockAgg._sum.stock || 0;
+    const enrichedGlobalBooks = await computeBookInventory(allBooks);
+    
+    const globalLowStock = enrichedGlobalBooks.filter(b => b.currentStock < 10).length;
 
-    // If initial load sorting is dynamic on frontend, we can also sort enrichedBooks here to guarantee <10 at top if limit > 1
-    // The requirement says: "On initial page load, the data table must automatically sort dynamically to push all "Low Stock" (<10 copies) items to the very top of the list."
-    // We already ordered by `stock asc` in DB, which correctly puts lowest stock (e.g. 0, 1, 2) at top.
+    // Dead Stock: No activity in last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const staleInventory = enrichedGlobalBooks.filter(b => new Date(b.lastActivity) < thirtyDaysAgo).length;
+
+    // Pending Restocks: Pinged authors in the last 14 days whose books are STILL low stock
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    const recentPings = await prisma.notification.findMany({
+      where: {
+        message: { contains: 'running low' },
+        createdAt: { gte: fourteenDaysAgo }
+      }
+    });
+    const pingedAuthorNames = new Set(recentPings.map(n => n.target));
+    const pendingRestocks = enrichedGlobalBooks.filter(b => b.currentStock < 10 && pingedAuthorNames.has(b.authorName)).length;
 
     res.json({
       data: enrichedBooks,
@@ -4720,7 +4818,8 @@ router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
         limit: Number(limit),
         globalStats: {
           totalTitles: globalTotalTitles,
-          totalCirculation,
+          staleInventory,
+          pendingRestocks,
           globalLowStock
         }
       }
@@ -4729,6 +4828,147 @@ router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
   } catch (err) {
     console.error('[GET admin inventory]', err);
     res.status(500).json({ error: 'Failed to fetch admin inventory' });
+  }
+});
+
+// ----------------------------------------------------
+// GLOBAL SALES ANALYTICS
+// ----------------------------------------------------
+router.get('/api/admin/sales-analytics', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    const dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter.gte = new Date(startDate);
+      dateFilter.lte = new Date(endDate);
+    }
+    
+    // 1. Fetch Web Orders
+    const webOrders = await prisma.orderItem.findMany({
+      where: {
+        createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+        order: { paymentVerified: true },
+        status: { notIn: ['Cancelled', 'Rejected'] }
+      },
+      include: {
+        order: { select: { customerName: true, id: true } },
+        book: { select: { title: true, author: { select: { name: true } } } }
+      }
+    });
+
+    // 2. Fetch POS Orders
+    const posOrders = await prisma.posOrderItem.findMany({
+      where: {
+        createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+        posOrder: { status: 'PAID' }
+      },
+      include: {
+        posOrder: { select: { id: true, event: { select: { name: true } } } },
+        book: { select: { title: true, author: { select: { name: true } } } }
+      }
+    });
+
+    // 3. Fetch Event Manual Sales (if they have dates)
+    const manualSales = await prisma.eventRegistration.findMany({
+      where: {
+        manualSoldQty: { gt: 0 },
+        ...(Object.keys(dateFilter).length > 0 ? { updatedAt: dateFilter } : {})
+      },
+      include: {
+        author: { select: { name: true } },
+        event: { select: { name: true } }
+      }
+    });
+
+    const ledger = [];
+    let totalRevenue = 0;
+    let totalUnits = 0;
+    
+    webOrders.forEach(item => {
+      const revenue = item.quantity * item.price;
+      totalRevenue += revenue;
+      totalUnits += item.quantity;
+      ledger.push({
+        date: item.createdAt,
+        channel: 'Web',
+        refId: `ORD-${String(item.order.id).padStart(4, '0')}`,
+        customer: item.order.customerName,
+        title: item.book.title,
+        author: item.book.author.name,
+        qty: item.quantity,
+        revenue: revenue
+      });
+    });
+
+    posOrders.forEach(item => {
+      const revenue = item.quantity * item.price;
+      totalRevenue += revenue;
+      totalUnits += item.quantity;
+      ledger.push({
+        date: item.createdAt,
+        channel: 'POS',
+        refId: `POS-${String(item.posOrder.id).padStart(4, '0')}`,
+        customer: 'Walk-in (POS)',
+        title: item.book.title,
+        author: item.book.author.name,
+        qty: item.quantity,
+        revenue: revenue
+      });
+    });
+
+    manualSales.forEach(item => {
+      totalRevenue += item.manualSoldAmount || 0;
+      totalUnits += item.manualSoldQty || 0;
+      ledger.push({
+        date: item.updatedAt || item.createdAt,
+        channel: 'Manual',
+        refId: `EVT-${item.eventId}`,
+        customer: 'Walk-in (Manual)',
+        title: 'Mixed Books',
+        author: item.author.name,
+        qty: item.manualSoldQty,
+        revenue: item.manualSoldAmount || 0
+      });
+    });
+
+    ledger.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const bookMap = {};
+    const authorMap = {};
+    const channelMap = { Web: 0, POS: 0, Manual: 0 };
+    
+    ledger.forEach(item => {
+      if (channelMap[item.channel] !== undefined) {
+        channelMap[item.channel] += item.revenue;
+      }
+      
+      if (item.channel !== 'Manual') {
+        if (!bookMap[item.title]) bookMap[item.title] = { title: item.title, qty: 0, revenue: 0, author: item.author };
+        bookMap[item.title].qty += item.qty;
+        bookMap[item.title].revenue += item.revenue;
+      }
+      
+      if (!authorMap[item.author]) authorMap[item.author] = { author: item.author, revenue: 0, qty: 0 };
+      authorMap[item.author].revenue += item.revenue;
+      authorMap[item.author].qty += item.qty;
+    });
+
+    const topBooks = Object.values(bookMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
+    const topAuthors = Object.values(authorMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+
+    res.json({
+      totalRevenue,
+      totalUnits,
+      channelBreakdown: channelMap,
+      topBooks,
+      topAuthors,
+      ledger
+    });
+    
+  } catch (err) {
+    console.error('[GET sales analytics]', err);
+    res.status(500).json({ error: 'Failed to fetch sales analytics' });
   }
 });
 

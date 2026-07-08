@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
 import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send, ChevronLeft, ChevronRight } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell , AreaChart, Area } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { bookCategories } from '../data/categories';
@@ -580,7 +580,7 @@ export function AuthorDashboardPage() {
             <Route path="/inventory" element={<InventoryPage onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
             <Route path="/donations" element={<AuthorDonationsTab dashboardData={dashboardData} onRefresh={() => fetchDashboardData(true)} />} />
-            <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
+            <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} orders={dashboardData.authorOrders || []} />} />
             <Route path="/gallery" element={<AuthorGallery dashboardData={dashboardData} />} />
             <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
             <Route path="/pos/:eventId" element={<LivePosDashboard />} />
@@ -1052,15 +1052,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         {[
           { label: 'Total Titles', value: authorBooks.length, colorClass: 'blue' },
-          { label: 'Total Stock', value: authorBooks.reduce((a: number, b: any) => a + b.stock, 0), colorClass: 'green' },
           { label: 'Gross Sales', value: '\u20b9' + grossSales.toFixed(0), colorClass: 'amber' },
           { label: 'Total Fees Paid', value: '\u20b9' + totalFeesPaid, colorClass: 'red' },
           { label: 'Web Sales', value: '\u20b9' + webSalesAmount.toFixed(0), colorClass: 'blue' },
           { label: 'POS/Event Sales', value: '\u20b9' + posSalesAmount.toFixed(0), colorClass: 'amber' },
-          { label: 'Avg Order Value', value: '\u20b9' + avgOrderValue, colorClass: 'blue' },
-          { label: 'Avg Delivery', value: Number(avgDeliveryDays) > 0 ? `${avgDeliveryDays} Days` : 'N/A', colorClass: 'teal' },
-          { label: 'Pending Web Orders', value: toApproveOrders, colorClass: 'amber' },
-          { label: 'Low Stock Titles', value: lowStockCount, colorClass: 'red' },
         ].map((kpi, i) => (
           <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
             <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
@@ -1516,7 +1511,19 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-9 h-12 object-cover rounded-lg shadow-sm" />
                     : <div className="w-9 h-12 bg-gray-100 rounded-lg border flex items-center justify-center text-[9px] text-gray-400">No cover</div>}
                   </td>
-                  <td className="font-semibold text-paa-navy">{row.title}</td>
+                  <td className="font-semibold text-paa-navy">
+                    {row.title}
+                    {(() => {
+                      const bk = authorBooks.find((b: any) => b.id === row.id);
+                      const avgRating = bk?.reviews?.length ? (bk.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / bk.reviews.length).toFixed(1) : null;
+                      if (avgRating) return (
+                        <div className="flex items-center gap-0.5 mt-1 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded w-max">
+                          {avgRating} <Star size={10} className="fill-amber-500 text-amber-500" />
+                        </div>
+                      );
+                      return null;
+                    })()}
+                  </td>
                   <td><span className={`dash-badge ${row.status === 'Approved' ? 'approved' : row.status === 'Rejected' ? 'rejected' : 'pending'}`}>{row.status}</span>
                     {row.status === 'Rejected' && row.rejectionReason && <div className="mt-1 text-[10px] text-red-600">{row.rejectionReason}</div>}
                   </td>
@@ -1543,7 +1550,6 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           </table>
         </div>
       </div>
-
       {/* ── Charts ── */}
       <div className="grid lg:grid-cols-3 gap-5 mb-6">
         <div className="dash-panel">
@@ -1551,11 +1557,17 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           <div className="h-[250px] p-5">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorSold" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4a90e2" stopOpacity={0.9}/>
+                    <stop offset="95%" stopColor="#4a90e2" stopOpacity={0.2}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="name" fontSize={10} tick={{ fill: '#71717A' }} />
                 <YAxis fontSize={10} tick={{ fill: '#71717A' }} />
-                <Tooltip cursor={{ fill: 'rgba(24,24,27,0.03)' }} contentStyle={{ borderRadius: 10, border: '1px solid rgba(24,24,27,0.08)', fontSize: 12 }} />
-                <Bar dataKey="sold" fill="#18181B" radius={[4, 4, 0, 0]} />
+                <Tooltip cursor={{ fill: 'rgba(24,24,27,0.03)' }} contentStyle={{ borderRadius: 10, border: '1px solid rgba(24,24,27,0.08)', fontSize: 12, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="sold" fill="url(#colorSold)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -2682,7 +2694,13 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
       groupedOrdersObj[o.orderId].totalAmount += o.amount;
     }
   });
-  const groupedOrdersList = Object.values(groupedOrdersObj).sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+  const groupedOrdersList = Object.values(groupedOrdersObj).sort((a: any, b: any) => {
+     const aPending = a.status === 'Pending Verification' || a.status === 'Pending' || a.status === 'Processing';
+     const bPending = b.status === 'Pending Verification' || b.status === 'Pending' || b.status === 'Processing';
+     if (aPending && !bPending) return -1;
+     if (!aPending && bPending) return 1;
+     return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
+  });
 
   if (viewBuyerInfoOrder !== null) {
     return (
@@ -2976,15 +2994,6 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
         </div>
         <div className="dash-kpi-card border border-red-500/20" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#fef2f2' }}>
           <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-            <AlertCircle size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-red-500 mb-1">Late Deliveries</p>
-            <h3 className="text-2xl font-bold text-red-600">{orders.filter((o: any) => o.dispatchedAt && (new Date(o.dispatchedAt).getTime() - new Date(o.createdAt).getTime() > 24 * 60 * 60 * 1000)).length}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card border border-red-500/20" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#fef2f2' }}>
-          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
             <TrendingDown size={20} />
           </div>
           <div>
@@ -2993,6 +3002,56 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
           </div>
         </div>
       </div>
+
+      {/* Order Geography Pie Chart */}
+      {(() => {
+        const stateCounts: Record<string, number> = {};
+        const knownStates = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
+        
+        orders.forEach((o: any) => {
+          if (o.address) {
+            let foundState = "Other";
+            for (const s of knownStates) {
+               if (o.address.toLowerCase().includes(s.toLowerCase())) {
+                  foundState = s; break;
+               }
+            }
+            stateCounts[foundState] = (stateCounts[foundState] || 0) + 1;
+          }
+        });
+
+        const stateEntries = Object.entries(stateCounts).sort((a, b) => b[1] - a[1]);
+        const topStates = stateEntries.slice(0, 6);
+        const topStatesTotal = topStates.reduce((acc, curr) => acc + curr[1], 0);
+        const totalWithAddress = orders.filter((o:any) => o.address).length;
+        if (totalWithAddress > topStatesTotal) {
+          topStates.push(['Other', totalWithAddress - topStatesTotal]);
+        }
+        const statePieData = topStates.map(([name, value]) => ({ name, value }));
+        const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#94a3b8'];
+
+        return (
+          <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm mb-8">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4">Orders by State</h3>
+            <div className="h-64">
+              {statePieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={statePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value" label={({name, value}) => `${name} (${value})`}>
+                      {statePieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-paa-gray-text text-sm italic">No state data available.</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar max-w-full">
@@ -3056,12 +3115,23 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-col gap-2 max-w-[200px]">
-                        {ord.books.map((b: any, i: number) => (
-                          <div key={i} className="border-b border-gray-100 last:border-0 pb-1 last:pb-0">
-                            <p className="font-medium text-paa-navy text-xs truncate" title={b.title}>{b.title}</p>
-                            <p className="text-[9px] text-gray-500 uppercase tracking-widest mt-0.5">Qty: {b.quantity} &nbsp;&middot;&nbsp; ₹{b.amount}</p>
-                          </div>
-                        ))}
+                        {ord.books.map((b: any, i: number) => {
+                          const bookData = dashboardData?.authorProfile?.books?.find((bk: any) => bk.id === b.bookId || bk.title === b.title);
+                          const avgRating = bookData?.reviews?.length ? (bookData.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / bookData.reviews.length).toFixed(1) : null;
+                          return (
+                            <div key={i} className="border-b border-gray-100 last:border-0 pb-2 last:pb-0">
+                              <p className="font-medium text-paa-navy text-xs truncate" title={b.title}>{b.title}</p>
+                              <div className="flex justify-between items-center mt-1">
+                                <p className="text-[9px] text-gray-500 uppercase tracking-widest">Qty: {b.quantity} &nbsp;&middot;&nbsp; ₹{b.amount}</p>
+                                {avgRating && (
+                                  <div className="flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                    {avgRating} <Star size={8} className="fill-amber-500 text-amber-500" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                         {ord.order?.totalDiscount > 0 && <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded inline-block w-max mt-1">Discount Applied</span>}
                       </div>
                     </td>
@@ -3144,6 +3214,16 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                         {ord.status === 'Rejected' && ord.rejectionReason && (
                           <div className="mt-0.5 text-[9px] text-red-600 truncate w-full text-center" title={ord.rejectionReason}>
                             Reason: {ord.rejectionReason}
+                          </div>
+                        )}
+                        
+                        {/* Delivery Feedback */}
+                        {ord.feedbackRating && (
+                          <div className="mt-1 flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-gray-50 border border-gray-200 px-2 py-1 rounded w-full">
+                            Deliv: {ord.feedbackRating} <Star size={8} className="text-amber-500 fill-amber-500 mr-1" /> 
+                            <span className={ord.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-green-600'}>
+                              {ord.feedbackCondition}
+                            </span>
                           </div>
                         )}
 
@@ -4408,7 +4488,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
 }
 
 function AuthorSalesReport({ data }: { data: any }) {
-  const [reportPeriod, setReportPeriod] = useState('today');
+  const [reportPeriod, setReportPeriod] = useState('lifetime');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [customMonth, setCustomMonth] = useState(new Date().getMonth().toString());
@@ -4447,7 +4527,7 @@ function AuthorSalesReport({ data }: { data: any }) {
     return true; // lifetime
   };
 
-  const webOrders = (data.authorOrders || []).filter((o: any) => o.paymentVerified && filterByDate(new Date(o.createdAt)));
+  const webOrders = (data.authorOrders || []).filter((o: any) => o.paymentVerified && filterByDate(new Date(o.createdAt || o.date)));
   const posOrders = (data.posOrders || []).filter((o: any) => o.paymentStatus === 'CONFIRMED' && filterByDate(new Date(o.createdAt)));
 
   // Daily Aggregation
@@ -4485,7 +4565,7 @@ function AuthorSalesReport({ data }: { data: any }) {
   }
 
   webOrders.forEach((o: any) => {
-    const d = new Date(o.createdAt).toLocaleDateString('en-GB');
+    const d = new Date(o.createdAt || o.date).toLocaleDateString('en-GB');
     if (!salesByDate[d]) salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
     salesByDate[d].webSales += o.amount;
     salesByDate[d].totalRevenue += o.amount;
@@ -4500,7 +4580,9 @@ function AuthorSalesReport({ data }: { data: any }) {
 
     const qty = o.items.reduce((acc: number, item: any) => acc + item.quantity, 0);
     salesByDate[d].totalBooks += qty;
-  }); const chartData = Object.values(salesByDate).sort((a, b) => {
+  }); 
+  
+  const chartData = Object.values(salesByDate).sort((a, b) => {
     const [d1, m1, y1] = a.date.split('/');
     const [d2, m2, y2] = b.date.split('/');
     return new Date(`${y1}-${m1}-${d1}`).getTime() - new Date(`${y2}-${m2}-${d2}`).getTime();
@@ -4528,15 +4610,15 @@ function AuthorSalesReport({ data }: { data: any }) {
 
   const allTransactions = [
     ...webOrders.map((o: any) => ({
-      rawDate: new Date(o.createdAt).getTime(),
+      rawDate: new Date(o.createdAt || o.date).getTime(),
       type: 'Web',
-      date: new Date(o.createdAt).toLocaleString('en-GB'),
+      date: new Date(o.createdAt || o.date).toLocaleString('en-GB'),
       id: `WEB-${o.orderId}`,
       customer: o.customerName || 'N/A',
       email: o.customerEmail || 'N/A',
       phone: o.customerPhone || 'N/A',
       address: (o.address || 'N/A').replace(/,/g, ' '),
-      items: `${o.bookTitle} (x${o.quantity})`,
+      items: `${o.bookTitle || o.title} (x${o.quantity})`,
       quantity: o.quantity,
       amount: o.amount,
       status: o.status
@@ -4550,7 +4632,7 @@ function AuthorSalesReport({ data }: { data: any }) {
       email: 'N/A',
       phone: 'N/A',
       address: 'N/A',
-      items: o.items.map((i: any) => `${i.book.title} (x${i.quantity})`).join('; '),
+      items: o.items.map((i: any) => `${i.book?.title} (x${i.quantity})`).join('; '),
       quantity: o.items.reduce((acc: number, i: any) => acc + i.quantity, 0),
       amount: o.totalAmount,
       status: o.paymentMethod
@@ -4571,182 +4653,221 @@ function AuthorSalesReport({ data }: { data: any }) {
   };
 
   return (
-    <div className="animate-fade-in-up">
-      <div className="flex justify-between items-center mb-6">
+    <div className="animate-fade-in-up pb-20">
+      
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
         <div>
-          <h2 className="text-2xl font-serif text-paa-navy font-bold tracking-tight">Sales & Revenue Report</h2>
-          <p className="text-xs text-paa-gray-text font-bold uppercase tracking-widest mt-1">Track your earnings across platforms</p>
+          <h2 className="text-3xl font-serif text-paa-navy font-bold tracking-tight mb-2">Sales Intelligence</h2>
+          <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Real-time revenue tracking across all channels</p>
         </div>
-        <button onClick={exportCSV} className="dash-btn dash-btn-primary flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
-          Export CSV
-        </button>
-      </div>
-
-      <div className="flex items-center gap-3 mb-6 bg-gray-50 p-2 rounded-xl border border-gray-200 inline-flex flex-wrap">
-        {['today', 'week', 'month', 'lifetime', 'custom'].map(p => (
-          <button key={p} onClick={() => setReportPeriod(p)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${reportPeriod === p ? 'bg-white shadow-sm text-paa-navy border border-gray-200' : 'text-gray-500 hover:text-paa-navy'}`}>
-            {p === 'today' ? 'Today' : p === 'week' ? 'Week' : p === 'month' ? 'Month' : p === 'lifetime' ? 'Lifetime' : 'Custom'}
+        
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          {/* Dynamic Filters */}
+          <div className="flex bg-white rounded-lg shadow-sm border border-paa-navy/5 overflow-hidden">
+            {['today', 'week', 'month', 'lifetime', 'custom'].map(p => (
+              <button key={p} onClick={() => setReportPeriod(p)} className={`px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all ${reportPeriod === p ? 'bg-paa-navy text-white' : 'hover:bg-gray-50 text-gray-500'}`}>
+                {p === 'today' ? 'Today' : p === 'week' ? 'Week' : p === 'month' ? 'Month' : p === 'lifetime' ? 'Lifetime' : 'Custom'}
+              </button>
+            ))}
+          </div>
+          <button onClick={exportCSV} className="dash-btn-primary flex items-center gap-2 whitespace-nowrap shadow-sm text-xs">
+            <Download size={14} /> Export CSV
           </button>
-        ))}
-
-        {reportPeriod === 'custom' && (
-          <div className="flex items-center gap-2 px-2 border-l border-gray-300 ml-2">
-            <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
-            <span className="text-gray-400">to</span>
-            <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} />
-          </div>
-        )}
-
-        {reportPeriod === 'month' && (
-          <div className="flex items-center gap-2 px-2 border-l border-gray-300 ml-2">
-            <select className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customMonth} onChange={e => setCustomMonth(e.target.value)}>
-              <option value="0">January</option>
-              <option value="1">February</option>
-              <option value="2">March</option>
-              <option value="3">April</option>
-              <option value="4">May</option>
-              <option value="5">June</option>
-              <option value="6">July</option>
-              <option value="7">August</option>
-              <option value="8">September</option>
-              <option value="9">October</option>
-              <option value="10">November</option>
-              <option value="11">December</option>
-            </select>
-            <select className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customYear} onChange={e => setCustomYear(e.target.value)}>
-              <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-              <option value={new Date().getFullYear() - 1}>{new Date().getFullYear() - 1}</option>
-              <option value={new Date().getFullYear() - 2}>{new Date().getFullYear() - 2}</option>
-            </select>
-          </div>
-        )}</div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Revenue</p>
-          <div className="text-2xl font-bold text-paa-navy">₹{totalRevenue}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between relative group">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Fees Paid</p>
-          <div className="text-2xl font-bold text-red-600">₹{totalFeesPaid}</div>
-          <div className="hidden group-hover:block absolute bottom-full left-0 mb-2 w-max bg-gray-900 text-white text-xs p-2 rounded shadow-lg z-50">
-            Platform Fee: ₹{platformFeePaid}<br />
-            Event Fees: ₹{totalEventFees}
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Web Sales</p>
-          <div className="text-2xl font-bold text-blue-600">₹{totalWebRevenue}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">POS Sales</p>
-          <div className="text-2xl font-bold text-purple-600">₹{totalPosRevenue}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Sold</p>
-          <div className="text-2xl font-bold text-paa-navy">{totalBooksSold}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Events Attended</p>
-          <div className="text-2xl font-bold text-emerald-600">{eventsParticipated}</div>
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm p-6 mb-8">
-        <h3 className="font-serif font-bold text-lg mb-6">Revenue Trend</h3>
-        <div className="h-[300px] w-full">
+      {reportPeriod === 'custom' && (
+        <div className="flex items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm inline-flex">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">From</span>
+            <input type="date" className="border-none bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold text-paa-navy outline-none" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">To</span>
+            <input type="date" className="border-none bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold text-paa-navy outline-none" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} />
+          </div>
+        </div>
+      )}
+
+      {reportPeriod === 'month' && (
+        <div className="flex items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm inline-flex">
+          <select className="border-none bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold text-paa-navy outline-none" value={customMonth} onChange={e => setCustomMonth(e.target.value)}>
+            {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
+              <option key={i} value={i}>{m}</option>
+            ))}
+          </select>
+          <select className="border-none bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold text-paa-navy outline-none" value={customYear} onChange={e => setCustomYear(e.target.value)}>
+            {[new Date().getFullYear(), new Date().getFullYear() - 1, new Date().getFullYear() - 2].map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* METRICS GRID */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Total Revenue</p>
+          <div className="text-2xl font-bold text-paa-navy relative z-10">₹{totalRevenue.toLocaleString('en-IN')}</div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-red-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Fees Paid</p>
+          <div className="text-2xl font-bold text-red-500 relative z-10">₹{totalFeesPaid.toLocaleString('en-IN')}</div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Web Sales</p>
+          <div className="text-2xl font-bold text-blue-600 relative z-10">₹{totalWebRevenue.toLocaleString('en-IN')}</div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-purple-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">POS Sales</p>
+          <div className="text-2xl font-bold text-purple-600 relative z-10">₹{totalPosRevenue.toLocaleString('en-IN')}</div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Books Sold</p>
+          <div className="text-2xl font-bold text-emerald-600 relative z-10">{totalBooksSold}</div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Events</p>
+          <div className="text-2xl font-bold text-amber-500 relative z-10">{eventsParticipated}</div>
+        </div>
+      </div>
+
+      {/* TREND CHART */}
+      <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-8 mb-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h3 className="text-lg font-serif font-bold text-paa-navy">Revenue Trajectory</h3>
+            <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mt-1">Web vs POS Sales Distribution</p>
+          </div>
+          <div className="flex gap-4">
+             <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>
+                <span className="text-xs font-bold text-gray-500">Web</span>
+             </div>
+             <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-sm shadow-purple-500/20"></div>
+                <span className="text-xs font-bold text-gray-500">POS</span>
+             </div>
+          </div>
+        </div>
+        <div className="h-[350px] w-full">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
-                <Tooltip cursor={{ fill: '#f8f9fa' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                <Bar dataKey="webSales" name="Web Sales" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="posSales" name="POS Sales" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-              </BarChart>
+              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorWeb" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorPos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
+                <YAxis tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
+                <Tooltip 
+                  cursor={{ stroke: '#e5e7eb', strokeWidth: 1, strokeDasharray: '4 4' }} 
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold' }} 
+                />
+                <Area type="monotone" dataKey="webSales" name="Web Sales" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorWeb)" />
+                <Area type="monotone" dataKey="posSales" name="POS Sales" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorPos)" />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-gray-400 text-sm">No sales data for this period.</div>
+            <div className="h-full flex items-center justify-center text-gray-400 text-sm italic font-bold">No sales data for this period.</div>
           )}
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b">
-          <h3 className="font-serif font-bold text-lg">Daily Breakdown</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Web Sales</th>
-                <th>POS Sales</th>
-                <th>Total Revenue</th>
-                <th>Books Sold</th>
-              </tr>
-            </thead>
-            <tbody>
-              {chartData.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-6 text-gray-400">No data available</td></tr>
-              )}
-              {chartData.reverse().map((row, i) => (
-                <tr key={i}>
-                  <td className="font-semibold">{row.date}</td>
-                  <td className="text-blue-600 font-semibold">₹{row.webSales}</td>
-                  <td className="text-purple-600 font-semibold">₹{row.posSales}</td>
-                  <td className="font-bold text-paa-navy">₹{row.totalRevenue}</td>
-                  <td>{row.totalBooks}</td>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        
+        {/* DAILY BREAKDOWN */}
+        <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Daily Breakdown</h3>
+          </div>
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="bg-white text-gray-400 uppercase tracking-widest text-[10px] sticky top-0 border-b border-gray-100 shadow-sm">
+                <tr>
+                  <th className="px-6 py-4 font-bold">Date</th>
+                  <th className="px-6 py-4 font-bold">Web</th>
+                  <th className="px-6 py-4 font-bold">POS</th>
+                  <th className="px-6 py-4 font-bold text-paa-navy">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {chartData.length === 0 && (
+                  <tr><td colSpan={4} className="text-center py-10 text-gray-400 italic">No daily data available</td></tr>
+                )}
+                {chartData.reverse().map((row, i) => (
+                  <tr key={i} className="hover:bg-blue-50/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-gray-600">{row.date}</td>
+                    <td className="px-6 py-4 font-bold text-blue-600">₹{row.webSales.toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-4 font-bold text-purple-600">₹{row.posSales.toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-4 font-black text-paa-navy">₹{row.totalRevenue.toLocaleString('en-IN')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b">
-          <h3 className="font-serif font-bold text-lg">Detailed Transactions</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Books Included</th>
-                <th>Amount</th>
-                <th>Status / Mode</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allTransactions.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-6 text-gray-400">No transactions found</td></tr>
-              )}
-              {allTransactions.map((tx, i) => (
-                <tr key={i}>
-                  <td className="text-xs text-gray-500 whitespace-nowrap">{tx.date}</td>
-                  <td><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${tx.type === 'Web' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{tx.type}</span></td>
-                  <td className="font-mono text-xs">{tx.id}</td>
-                  <td className="font-semibold text-paa-navy">{tx.customer}</td>
-                  <td className="text-sm max-w-xs truncate" title={tx.items}>{tx.items}</td>
-                  <td className="font-bold text-emerald-600 whitespace-nowrap">₹{tx.amount}</td>
-                  <td><span className="text-xs text-gray-500 font-bold uppercase tracking-widest bg-gray-100 px-2 py-1 rounded">{tx.status}</span></td>
+        {/* DETAILED TRANSACTIONS */}
+        <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Recent Transactions</h3>
+            <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded">{allTransactions.length} total</span>
+          </div>
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="bg-white text-gray-400 uppercase tracking-widest text-[10px] sticky top-0 border-b border-gray-100 shadow-sm">
+                <tr>
+                  <th className="px-6 py-4 font-bold">Type</th>
+                  <th className="px-6 py-4 font-bold">Details</th>
+                  <th className="px-6 py-4 font-bold text-right">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {allTransactions.length === 0 && (
+                  <tr><td colSpan={3} className="text-center py-10 text-gray-400 italic">No transactions found</td></tr>
+                )}
+                {allTransactions.map((tx, i) => (
+                  <tr key={i} className="hover:bg-blue-50/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm border ${tx.type === 'Web' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
+                        {tx.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="font-bold text-paa-navy mb-0.5">{tx.customer}</p>
+                      <p className="text-[10px] text-gray-400 max-w-[200px] truncate" title={tx.items}>{tx.items}</p>
+                      <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-widest font-bold">{tx.date}</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-black text-emerald-600 text-sm">₹{tx.amount.toLocaleString('en-IN')}</p>
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1 block group-hover:text-paa-navy transition-colors">{tx.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+
       </div>
     </div>
   );
 }
-
-
 
 export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }: { data: any, onRefresh: () => void, buttonStates: any, setButtonStates: any }) {
   const authorProfile = data.authorProfile;
@@ -5432,57 +5553,102 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
 
 
 
-function AuthorReviews({ books }: { books: any[] }) {
+function AuthorReviews({ books, orders }: { books: any[], orders: any[] }) {
+  const [view, setView] = useState<'book' | 'delivery'>('book');
   const booksWithReviews = books.filter(b => b.reviews && b.reviews.length > 0);
+  const deliveryReviews = orders.filter(o => o.feedbackRating != null);
 
-  if (booksWithReviews.length === 0) {
+  if (booksWithReviews.length === 0 && deliveryReviews.length === 0) {
     return (
       <div className="text-center py-20 bg-white rounded-3xl-2xl border border-gray-100 border-dashed">
         <Star className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <h3 className="text-lg font-serif text-paa-navy">No reviews yet</h3>
-        <p className="text-gray-500 text-sm mt-1">Your books haven't received any customer reviews yet.</p>
+        <p className="text-gray-500 text-sm mt-1">Your books haven't received any customer reviews or delivery feedback yet.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-8 animate-fade-in-up">
-      <div className="mb-6">
+      <div className="mb-2">
         <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Customer Reviews & Ratings</h2>
-        <p className="text-sm text-gray-500 mt-1">See what readers are saying about your published works.</p>
+        <p className="text-sm text-gray-500 mt-1">See what readers are saying about your published works and delivery experience.</p>
       </div>
 
-      {booksWithReviews.map(book => {
-        const avgRating = book.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / book.reviews.length;
-        return (
-          <div key={book.id} className="bg-white rounded-3xl-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-bold text-paa-navy text-lg">{book.title}</h3>
-              <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span className="font-bold text-paa-navy">{avgRating.toFixed(1)}</span>
-                <span className="text-xs text-gray-500">({book.reviews.length} reviews)</span>
-              </div>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {book.reviews.map((r: any) => (
-                <div key={r.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-bold text-sm text-paa-navy">{r.reviewerName}</div>
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Star key={star} className={`w-3 h-3 ${star <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
-                      ))}
-                    </div>
+      <div className="flex gap-2">
+        <button onClick={() => setView('book')} className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors ${view === 'book' ? 'bg-paa-navy text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Book Reviews ({booksWithReviews.reduce((acc, b) => acc + b.reviews.length, 0)})
+        </button>
+        <button onClick={() => setView('delivery')} className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors ${view === 'delivery' ? 'bg-paa-navy text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Delivery Feedback ({deliveryReviews.length})
+        </button>
+      </div>
+
+      {view === 'book' ? (
+        booksWithReviews.length > 0 ? (
+          booksWithReviews.map(book => {
+            const avgRating = book.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / book.reviews.length;
+            return (
+              <div key={book.id} className="bg-white rounded-3xl-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <h3 className="font-bold text-paa-navy text-lg">{book.title}</h3>
+                  <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    <span className="font-bold text-paa-navy">{avgRating.toFixed(1)}</span>
+                    <span className="text-xs text-gray-500">({book.reviews.length} reviews)</span>
                   </div>
-                  <p className="text-sm text-gray-600 italic">"{r.comment}"</p>
-                  <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest">{new Date(r.createdAt).toLocaleDateString()}</div>
                 </div>
-              ))}
-            </div>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {book.reviews.map((r: any) => (
+                    <div key={r.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="font-bold text-sm text-paa-navy">{r.reviewerName}</div>
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map(star => (
+                            <Star key={star} className={`w-3 h-3 ${star <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 italic">"{r.comment || 'No comment provided'}"</p>
+                      <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest">{new Date(r.createdAt).toLocaleDateString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="text-center py-10 text-gray-500 bg-white rounded-2xl border border-gray-100">No book reviews found.</div>
+        )
+      ) : (
+        deliveryReviews.length > 0 ? (
+          <div className="bg-white rounded-3xl-2xl border border-gray-100 shadow-sm overflow-hidden p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {deliveryReviews.map((r: any) => (
+              <div key={r.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-bold text-sm text-paa-navy">{r.bookTitle}</div>
+                    <div className="text-xs text-gray-500">Order #PAA-{String(r.orderId).padStart(4, '0')}</div>
+                  </div>
+                  <div className={`flex px-2 py-1 rounded-lg w-fit items-center gap-1 ${r.feedbackRating <= 3 ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+                    <span className="font-bold text-sm">{r.feedbackRating}</span>
+                    <Star className={`w-3 h-3 ${r.feedbackRating <= 3 ? 'fill-red-500 text-red-500' : 'fill-amber-500 text-amber-500'}`} />
+                  </div>
+                </div>
+                <div className="mb-2">
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest ${r.feedbackCondition === 'Damaged' || r.feedbackCondition === 'Average' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    {r.feedbackCondition}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 italic mt-2">"{r.feedbackComments || 'No comment provided'}"</p>
+                <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest">{new Date(r.date).toLocaleDateString()}</div>
+              </div>
+            ))}
           </div>
-        );
-      })}
+        ) : (
+          <div className="text-center py-10 text-gray-500 bg-white rounded-2xl border border-gray-100">No delivery feedback found.</div>
+        )
+      )}
     </div>
   );
 }

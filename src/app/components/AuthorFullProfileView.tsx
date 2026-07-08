@@ -116,9 +116,14 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
 
           
           <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Book Catalogue</h3>
             <div className="space-y-4">
-              {authorProfile.books.length === 0 ? <p className="text-sm text-paa-gray-text">No books found.</p> : authorProfile.books.map((b: any, idx: number) => (
+              {(() => {
+                const catalogueBooks = authorProfile.books.filter((b: any) => new Date(b.createdAt).getTime() > new Date(authorProfile.createdAt).getTime() + 60000);
+                if (catalogueBooks.length === 0) {
+                  return <p className="text-sm text-paa-gray-text font-medium bg-gray-50 p-4 border border-paa-navy/5 rounded">No new book added by the author.</p>;
+                }
+                return catalogueBooks.map((b: any, idx: number) => (
                 <div key={b.id} className="border border-paa-navy/5 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
                   {b.coverUrl && <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + b.coverUrl : "http://localhost:3001" + b.coverUrl} alt="Cover" className="w-20 h-28 object-cover border border-paa-navy/20" />}
                   <div className="flex-1">
@@ -133,17 +138,21 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">MRP</span><span className="text-sm font-bold text-green-700">₹{b.mrp}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Language</span><span className="text-sm font-bold text-paa-navy">{b.language || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Format</span><span className="text-sm font-bold text-paa-navy">{b.format || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Print Format</span><span className="text-sm font-bold text-paa-navy">{b.printFormat || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Pages</span><span className="text-sm font-bold text-paa-navy">{b.pages || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Publisher</span><span className="text-sm font-bold text-paa-navy">{b.publisher || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Edition</span><span className="text-sm font-bold text-paa-navy">{b.edition || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Pub Date</span><span className="text-sm font-bold text-paa-navy">{b.publicationDate || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">ISBN</span><span className="text-sm font-bold text-paa-navy">{b.isbn || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Purpose of Writing</span><span className="text-sm font-bold text-paa-navy">{b.purpose || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Initial Stock</span><span className="text-sm font-bold text-paa-navy">{b.stock}</span></div>
                     </div>
                     
                     <div className="mt-4"><span className="text-[10px] uppercase text-paa-gray-text block mb-1">Synopsis</span><p className="text-sm text-paa-navy font-medium whitespace-pre-wrap leading-relaxed">{b.synopsis}</p></div>
                   </div>
                 </div>
-              ))}
+              ));
+              })()}
             </div>
           </div>
           

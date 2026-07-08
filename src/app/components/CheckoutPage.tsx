@@ -374,20 +374,31 @@ export function CheckoutPage() {
                           <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#111", marginBottom: "0.3rem" }}>
                             {field.label} {field.required && <span style={{ color: "#ef4444" }}>*</span>}
                           </label>
-                          <input
-                            type="text"
-                            placeholder={field.placeholder}
-                            maxLength={field.maxLength}
-                            value={form[field.key as keyof typeof form] || ""}
-                            onChange={(e) => {
-                              let val = e.target.value;
-                              if (field.isNumeric) {
-                                val = val.replace(/[^0-9]/g, '');
-                              }
-                              setForm({ ...form, [field.key]: val });
-                            }}
-                            style={{ width: "100%", padding: "0.6rem 0.85rem", border: "1px solid #eaeaea", borderRadius: 8, fontFamily: "var(--font-body)", fontSize: 14, background: "#fafafa", outline: "none", boxSizing: "border-box" }}
-                          />
+                          {field.key === "state" ? (
+                            <select
+                              value={form[field.key as keyof typeof form] || ""}
+                              onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+                              style={{ width: "100%", padding: "0.6rem 0.85rem", border: "1px solid #eaeaea", borderRadius: 8, fontFamily: "var(--font-body)", fontSize: 14, background: "#fafafa", outline: "none", boxSizing: "border-box" }}
+                            >
+                              <option value="" disabled>Select State</option>
+                              {["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"].map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder={field.placeholder}
+                              maxLength={field.maxLength}
+                              value={form[field.key as keyof typeof form] || ""}
+                              onChange={(e) => {
+                                let val = e.target.value;
+                                if (field.isNumeric) {
+                                  val = val.replace(/[^0-9]/g, '');
+                                }
+                                setForm({ ...form, [field.key]: val });
+                              }}
+                              style={{ width: "100%", padding: "0.6rem 0.85rem", border: "1px solid #eaeaea", borderRadius: 8, fontFamily: "var(--font-body)", fontSize: 14, background: "#fafafa", outline: "none", boxSizing: "border-box" }}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>

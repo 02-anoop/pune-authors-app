@@ -2,15 +2,23 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Search, Download, Bell, BellRing, Loader2, ChevronDown, ChevronUp, ChevronRight, CheckCircle2,
-  BookOpen, Users, AlertTriangle, AlertCircle, RefreshCw
+  BookOpen, Users, AlertTriangle, AlertCircle, RefreshCw, Package
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface GlobalStats {
+  totalTitles: number;
+  totalCirculation: number;
+  globalLowStock: number;
+  staleInventory: number;
+  pendingRestocks: number;
+}
 
 export function AdminInventoryTab() {
   const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const token = localStorage.getItem('token');
   const [data, setData] = useState<any[]>([]);
-  const [globalStats, setGlobalStats] = useState({ totalTitles: 0, totalCirculation: 0, globalLowStock: 0 });
+  const [globalStats, setGlobalStats] = useState<GlobalStats>({ totalTitles: 0, totalCirculation: 0, globalLowStock: 0, staleInventory: 0, pendingRestocks: 0 });
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [pinging, setPinging] = useState<Record<number, boolean>>({});
@@ -112,34 +120,44 @@ export function AdminInventoryTab() {
     <div className="space-y-4 lg:space-y-6">
       
       {/* GLOBAL SUMMARY CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div title="The total number of unique book titles currently registered and managed in the inventory." className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between cursor-help hover:shadow-md transition-shadow">
           <div>
             <p className="text-[10px] font-bold tracking-widest text-paa-gray-text uppercase">Total Titles Active</p>
-            <p className="text-2xl font-bold text-paa-navy mt-1">{globalStats.totalTitles}</p>
+            <p className="text-2xl font-bold text-paa-navy mt-1">{globalStats.totalTitles || 0}</p>
           </div>
-          <div className="w-10 h-10 bg-paa-navy/5 text-paa-navy rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-paa-navy/5 text-paa-navy rounded-lg flex items-center justify-center shrink-0">
             <BookOpen className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
+        <div title="Number of titles that currently have fewer than 10 copies in stock and need restocking." className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between cursor-help hover:shadow-md transition-shadow">
           <div>
-            <p className="text-[10px] font-bold tracking-widest text-paa-gray-text uppercase">Total in Circulation</p>
-            <p className="text-2xl font-bold text-paa-navy mt-1">{globalStats.totalCirculation}</p>
+            <p className="text-[10px] font-bold tracking-widest text-paa-gray-text uppercase">Global Low Stock</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{globalStats.globalLowStock || 0}</p>
           </div>
-          <div className="w-10 h-10 bg-paa-navy/5 text-paa-navy rounded-lg flex items-center justify-center">
-            <Users className="w-5 h-5" />
+          <div className="w-10 h-10 bg-red-50 text-red-600 rounded-lg flex items-center justify-center border border-red-100 shrink-0">
+            <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
+        <div title="Titles that have not had any sales, distributions, or inventory movement in the last 30 days." className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between cursor-help hover:shadow-md transition-shadow">
           <div>
-            <p className="text-[10px] font-bold tracking-widest text-red-500 uppercase">Global Low Stock</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">{globalStats.globalLowStock}</p>
+            <p className="text-[10px] font-bold tracking-widest text-paa-gray-text uppercase">Stale Inventory</p>
+            <p className="text-2xl font-bold text-paa-navy mt-1">{globalStats.staleInventory || 0}</p>
           </div>
-          <div className="w-10 h-10 bg-red-50 text-red-600 rounded-lg flex items-center justify-center border border-red-100">
-            <AlertTriangle className="w-5 h-5" />
+          <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center border border-orange-100 shrink-0">
+            <Package className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div title="Authors who were sent a low-stock warning in the last 14 days but have not replenished their stock yet." className="bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between cursor-help hover:shadow-md transition-shadow">
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-paa-gray-text uppercase">Pending Restocks</p>
+            <p className="text-2xl font-bold text-paa-navy mt-1">{globalStats.pendingRestocks || 0}</p>
+          </div>
+          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center border border-blue-100 shrink-0">
+            <RefreshCw className="w-5 h-5" />
           </div>
         </div>
       </div>
@@ -280,9 +298,14 @@ export function AdminInventoryTab() {
                         <td className="text-center">
                           <div className="flex flex-col items-center justify-center gap-1">
                             <span className={`font-black text-lg leading-none ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>{book.currentStock}</span>
-                            {book.isLowStock && (
-                              <span className="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded animate-pulse">LOW STOCK</span>
-                            )}
+                            <div className="flex flex-col gap-1 mt-1">
+                              {book.isLowStock && (
+                                <span className="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded animate-pulse text-center">LOW STOCK</span>
+                              )}
+                              {book.isStale && (
+                                <span className="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded text-center">STALE</span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="text-gray-500 text-xs">

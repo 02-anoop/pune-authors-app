@@ -71,7 +71,7 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'inventory' | 'events' | 'forms' | 'gallery' | 'gallery_review' | 'reviews' | 'late_authors' | 'helpdesk' | 'settings' | 'library_donations'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'inventory' | 'events' | 'forms' | 'gallery' | 'reviews' | 'late_authors' | 'helpdesk' | 'settings' | 'library_donations'>(
     (() => { const t = localStorage.getItem('adminActiveTab'); return t === 'author_data' ? 'overview' : ((t as any) || 'overview'); })()
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -4936,7 +4936,6 @@ export function OperationsDashboardPage() {
             { id: 'inventory', label: 'Inventory / Distribution', icon: BookOpen },
             { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
             { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
-            { id: 'gallery_review', label: 'Gallery Review', icon: CheckSquare },
             { id: 'late_authors', label: 'Late Authors System', icon: AlertCircle },
             { id: 'helpdesk', label: 'Helpdesk / Queries', icon: Users, hasAlert: pendingAlerts.queries },
             { id: 'settings', label: 'System Settings', icon: Settings },
@@ -5112,7 +5111,6 @@ export function OperationsDashboardPage() {
             {activeTab === 'events' && renderEventsTab()}
             {activeTab === 'forms' && <FormsTab />}
             {activeTab === 'gallery' && renderGalleryTab()}
-            {activeTab === 'gallery_review' && <GalleryReviewTab />}
             {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
             {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
             {activeTab === 'library_donations' && <LibraryDonationsTab />}

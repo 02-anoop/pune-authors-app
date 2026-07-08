@@ -2556,60 +2556,38 @@ export function OperationsDashboardPage() {
       link.click();
       document.body.removeChild(link);
     };
-    const handleDownloadCatalogue = () => {
+    const handleDownloadCatalogue = async () => {
       if (selectedAuthorIds.length === 0) return;
-      const selectedAuthorsData = authors.filter(a => selectedAuthorIds.includes(a.id));
+      setIsDownloadingPdf(true);
       
-      const formattedBooks: any[] = [];
-      selectedAuthorsData.forEach(author => {
-        let ed = author.extraData;
-        if (typeof ed === 'string') {
-          try { ed = JSON.parse(ed); } catch (e) { ed = {}; }
-        }
-        ed = ed || {};
-
-        const approvedBooks = author.books?.filter((b: any) => b.status === 'Approved') || [];
+      try {
+        // Fetch full author data from the backend so we get all books, hobbies, skills, etc.
+        const fullAuthorsData = await Promise.all(
+          selectedAuthorIds.map(id =>
+            axios.get(`${API}/api/admin/authors/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+              .then(res => res.data)
+          )
+        );
         
-        if (approvedBooks.length === 0) {
-          formattedBooks.push({
-            id: 'NO_BOOK',
-            title: '',
-            synopsis: '',
-            mrp: null,
-            mrpRaw: '',
-            coverUrl: '',
-            authorName: author.name || 'Unknown Author',
-            authorBio: author.bio || '',
-            authorPhotoUrl: author.photoUrl || '',
-            authorInstagram: author.instagram || ed.instagram || '',
-            authorFacebook: author.facebook || ed.facebook || '',
-            authorWhatsapp: author.whatsapp || ed.whatsapp || '',
-            authorQualification: author.qualification || ed.qualification || '',
-            authorAge: author.age || ed.age || '',
-            authorExperience: author.experience || ed.experience || '',
-            authorSkills: author.skills || ed.skills || '',
-            authorHobbies: author.hobbies || ed.hobbies || '',
-            genre: '',
-            subGenre: '',
-            pages: null,
-            language: '',
-            isbn: '',
-            publisher: '',
-            publicationDate: '',
-            edition: '',
-            format: '',
-            rating: 5,
-            reviewsCount: 10
-          });
-        } else {
-          approvedBooks.forEach((book: any) => {
+        const formattedBooks: any[] = [];
+        fullAuthorsData.forEach(author => {
+          if (!author) return;
+          let ed = author.extraData;
+          if (typeof ed === 'string') {
+            try { ed = JSON.parse(ed); } catch (e) { ed = {}; }
+          }
+          ed = ed || {};
+
+          const approvedBooks = author.books?.filter((b: any) => b.status === 'Approved') || [];
+          
+          if (approvedBooks.length === 0) {
             formattedBooks.push({
-              id: book.id || String(Math.random()),
-              title: book.title || 'Untitled',
-              synopsis: book.synopsis || '',
-              mrp: parseFloat(book.mrp) || null,
-              mrpRaw: String(book.mrp || ''),
-              coverUrl: book.coverUrl || '',
+              id: 'NO_BOOK',
+              title: '',
+              synopsis: '',
+              mrp: null,
+              mrpRaw: '',
+              coverUrl: '',
               authorName: author.name || 'Unknown Author',
               authorBio: author.bio || '',
               authorPhotoUrl: author.photoUrl || '',
@@ -2621,28 +2599,65 @@ export function OperationsDashboardPage() {
               authorExperience: author.experience || ed.experience || '',
               authorSkills: author.skills || ed.skills || '',
               authorHobbies: author.hobbies || ed.hobbies || '',
-              genre: book.genre || 'General',
-              subGenre: book.subGenre || '',
-              pages: parseInt(book.pages) || null,
-              language: book.language || 'English',
-              isbn: book.isbn || '',
-              publisher: book.publisher || '',
-              publicationDate: book.publicationDate || '',
-              edition: book.edition || '',
-              format: book.format || '',
+              genre: '',
+              subGenre: '',
+              pages: null,
+              language: '',
+              isbn: '',
+              publisher: '',
+              publicationDate: '',
+              edition: '',
+              format: '',
               rating: 5,
               reviewsCount: 10
             });
-          });
-        }
-      });
+          } else {
+            approvedBooks.forEach((book: any) => {
+              formattedBooks.push({
+                id: book.id || String(Math.random()),
+                title: book.title || 'Untitled',
+                synopsis: book.synopsis || '',
+                mrp: parseFloat(book.mrp) || null,
+                mrpRaw: String(book.mrp || ''),
+                coverUrl: book.coverUrl || '',
+                authorName: author.name || 'Unknown Author',
+                authorBio: author.bio || '',
+                authorPhotoUrl: author.photoUrl || '',
+                authorInstagram: author.instagram || ed.instagram || '',
+                authorFacebook: author.facebook || ed.facebook || '',
+                authorWhatsapp: author.whatsapp || ed.whatsapp || '',
+                authorQualification: author.qualification || ed.qualification || '',
+                authorAge: author.age || ed.age || '',
+                authorExperience: author.experience || ed.experience || '',
+                authorSkills: author.skills || ed.skills || '',
+                authorHobbies: author.hobbies || ed.hobbies || '',
+                genre: book.genre || 'General',
+                subGenre: book.subGenre || '',
+                pages: parseInt(book.pages) || null,
+                language: book.language || 'English',
+                isbn: book.isbn || '',
+                publisher: book.publisher || '',
+                publicationDate: book.publicationDate || '',
+                edition: book.edition || '',
+                format: book.format || '',
+                rating: 5,
+                reviewsCount: 10
+              });
+            });
+          }
+        });
 
-      downloadCataloguePDF('Exclusive', formattedBooks, setIsDownloadingPdf).then(() => {
-        toast.success("PDF generated successfully!");
-      }).catch(err => {
+        downloadCataloguePDF('Exclusive', formattedBooks, setIsDownloadingPdf).then(() => {
+          toast.success("PDF generated successfully!");
+        }).catch(err => {
+          console.error(err);
+          toast.error("Error generating PDF catalogue.");
+        });
+      } catch (err) {
         console.error(err);
-        toast.error("Error generating PDF catalogue.");
-      });
+        toast.error("Error fetching full author details.");
+        setIsDownloadingPdf(false);
+      }
     };
 
     if (selectedPendingAuthor) {

@@ -76,7 +76,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     const byAuthor: Record<string, { name: string; bio: string; photoUrl: string; instagram: string; facebook: string; whatsapp: string; qualification?: string; age?: string; experience?: string; skills?: string; hobbies?: string; books: CatalogueBook[] }> = {};
     books.forEach(b => {
       let safePhoto = b.authorPhotoUrl || "";
-      if (safePhoto.includes('uploads/')) safePhoto = "";
+      if (safePhoto && !safePhoto.startsWith('http')) safePhoto = "";
 
       if (!byAuthor[b.authorName]) {
         byAuthor[b.authorName] = {
@@ -94,9 +94,9 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
           books: []
         };
       }
-      // nullify broken local storage covers that crash html2canvas, and ignore NO_BOOK stubs
+      // nullify local covers that crash html2canvas, and ignore NO_BOOK stubs
       if (b.id !== 'NO_BOOK') {
-        if (b.coverUrl && b.coverUrl.includes('uploads/')) {
+        if (b.coverUrl && !b.coverUrl.startsWith('http')) {
           b.coverUrl = '';
         }
         byAuthor[b.authorName].books.push(b);
@@ -343,25 +343,7 @@ export function CataloguePage() {
   const [activeSubSubcategory, setActiveSubSubcategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
   
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pdf = params.get('pdf');
-    const authorsParam = params.get('authors');
-    if (pdf === 'true') {
-        setTimeout(() => {
-           if (authorsParam) {
-               const checkBooks = setInterval(() => {
-                   if (document.querySelectorAll('.book-card').length > 0) {
-                      clearInterval(checkBooks);
-                      setTimeout(() => generatePDF(), 1000);
-                   }
-               }, 500);
-           } else {
-               setTimeout(() => generatePDF(), 2000);
-           }
-        }, 1000);
-    }
-  }, []);
+
 
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "title">("default");
   const [cart, setCart] = useState<string[]>(() => {

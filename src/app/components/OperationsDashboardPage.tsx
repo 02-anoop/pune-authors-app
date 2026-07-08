@@ -2564,8 +2564,8 @@ export function OperationsDashboardPage() {
         // Fetch full author data from the backend so we get all books, hobbies, skills, etc.
         const fullAuthorsData = await Promise.all(
           selectedAuthorIds.map(id =>
-            axios.get(`${API}/api/admin/authors/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-              .then(res => res.data)
+            axios.get(`${API}/api/admin/authors/${id}/dashboard-data`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+              .then(res => res.data.authorProfile)
           )
         );
         

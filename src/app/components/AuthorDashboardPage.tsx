@@ -661,13 +661,35 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
   const filteredTitles = filter === 'all' ? titlesData : titlesData.filter((t: any) => t.genre === filter);
 
-  const chartData = titlesData.map((t: any) => ({ name: t.title.substring(0, 15) + '...', sold: t.sold.total }));
-  const webOrdersPieData = titlesData.filter((t: any) => t.sold.web > 0).map((t: any) => ({ name: t.title.substring(0, 15) + '...', value: t.sold.web }));
+  const chartData = titlesData.map((t: any) => ({
+    name: t.title.length > 12 ? t.title.substring(0, 12) + '…' : t.title,
+    fullTitle: t.title,
+    sold: t.sold.total
+  }));
 
-  const activityData = [
-    { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Registered').length || 0 },
-    { name: 'Total Web Orders', count: authorOrders.length || 0 },
-    { name: 'Completed Orders', count: authorOrders.filter((o: any) => o.status === 'Completed').length || 0 },
+  const webOrdersPieData = titlesData
+    .filter((t: any) => t.sold.web > 0)
+    .map((t: any) => ({
+      name: t.title.length > 12 ? t.title.substring(0, 12) + '…' : t.title,
+      fullTitle: t.title,
+      value: t.sold.web
+    }));
+
+  const distributionActivityData = titlesData.map((t: any) => {
+    const bk = authorBooks.find((b: any) => b.id === t.id) || {};
+    return {
+      name: t.title.length > 12 ? t.title.substring(0, 12) + '…' : t.title,
+      fullTitle: t.title,
+      'Web Sold': t.sold.web || 0,
+      'Airport Qty': bk.airportQty || 0,
+      'Book Fair Qty': bk.eventQty || 0
+    };
+  });
+
+  const participationsData = [
+    { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Registered' || inv.optInStatus === 'Approved').length || 0 },
+    { name: 'Donation Drives', count: data.authorProfile?.donationRegistrations?.length || 0 },
+    { name: 'Support Queries', count: data.queries?.length || 0 }
   ];
 
   const completedOrders = authorOrders.filter((o: any) => o.paymentVerified);
@@ -1562,63 +1584,120 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           </table>
         </div>
       </div>
-      {/* ── Charts ── */}
-      <div className="grid lg:grid-cols-3 gap-5 mb-6">
-        <div className="dash-panel">
-          <div className="dash-panel-header"><h3 className="dash-panel-title">Books Sold per Title</h3></div>
-          <div className="h-[250px] p-5">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorSold" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4a90e2" stopOpacity={0.9}/>
-                    <stop offset="95%" stopColor="#4a90e2" stopOpacity={0.2}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" fontSize={10} tick={{ fill: '#71717A' }} />
-                <YAxis fontSize={10} tick={{ fill: '#71717A' }} />
-                <Tooltip cursor={{ fill: 'rgba(24,24,27,0.03)' }} contentStyle={{ borderRadius: 10, border: '1px solid rgba(24,24,27,0.08)', fontSize: 12, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Bar dataKey="sold" fill="url(#colorSold)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* ── Charts Grid (2x2 Grid) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fade-in-up">
+        
+        {/* Chart 1: Books (Books Sold per Title) */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Books Sold per Title</h3>
+          </div>
+          <div className="p-6">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorBooks" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.2}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{ fill: 'rgba(99,102,241,0.03)' }} 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} 
+                    formatter={(value: any, name: any, props: any) => [`${value} copies`, props.payload?.fullTitle || props.name]}
+                  />
+                  <Bar dataKey="sold" fill="url(#colorBooks)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
-        <div className="dash-panel">
-          <div className="dash-panel-header"><h3 className="dash-panel-title">Web Orders Distribution</h3></div>
-          <div className="h-[250px] p-5">
-            <ResponsiveContainer width="100%" height="100%">
-              {webOrdersPieData.length > 0 ? (
-                <PieChart>
-                  <Pie data={webOrdersPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
-                    {webOrdersPieData.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][index % 5]} />
-                    ))}
-                  </Pie>
-                  <Tooltip wrapperClassName="shadow-premium border-none rounded-lg" />
-                </PieChart>
-              ) : (
-                <div className="h-full flex items-center justify-center text-xs text-gray-400">No web orders yet.</div>
-              )}
-            </ResponsiveContainer>
+        {/* Chart 2: Title Web Orders (Web Orders Distribution) */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Title Web Orders Distribution</h3>
+          </div>
+          <div className="p-6">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                {webOrdersPieData.length > 0 ? (
+                  <PieChart>
+                    <Pie 
+                      data={webOrdersPieData} 
+                      cx="50%" cy="50%" 
+                      innerRadius={55} outerRadius={80} 
+                      paddingAngle={3} dataKey="value"
+                    >
+                      {webOrdersPieData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'][index % 6]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value: any, name: any, props: any) => [`${value} web orders`, props.payload?.fullTitle || props.name]}
+                    />
+                  </PieChart>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm text-gray-400 italic">No web orders yet.</div>
+                )}
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
-        <div className="dash-panel">
-          <div className="dash-panel-header"><h3 className="dash-panel-title">Activity Participation</h3></div>
-          <div className="h-[250px] p-5">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" fontSize={10} tick={{ fill: '#71717A' }} />
-                <YAxis dataKey="name" type="category" width={90} fontSize={10} tick={{ fill: '#71717A' }} />
-                <Tooltip cursor={{ fill: 'rgba(24,24,27,0.03)' }} contentStyle={{ borderRadius: 10, border: '1px solid rgba(24,24,27,0.08)', fontSize: 12 }} />
-                <Bar dataKey="count" fill="#C0A062" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        {/* Chart 3: Distribution Activity */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Distribution Activity Breakdown</h3>
+          </div>
+          <div className="p-6">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={distributionActivityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} 
+                    formatter={(value: any, name: any, props: any) => [`${value} copies`, `${name} (${props.payload?.fullTitle || props.name})`]}
+                  />
+                  <Bar dataKey="Web Sold" stackId="dist" fill="#16a34a" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Airport Qty" stackId="dist" fill="#0284c7" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Book Fair Qty" stackId="dist" fill="#9333ea" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
+
+        {/* Chart 4: Participations */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Ecosystem Activity Participation</h3>
+          </div>
+          <div className="p-6">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={participationsData} layout="vertical" margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <YAxis dataKey="name" type="category" width={90} fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{ fill: 'rgba(192,160,98,0.03)' }} 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} 
+                  />
+                  <Bar dataKey="count" name="Participations" fill="#C0A062" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* ── Edit Book Modal (Reapply) ── */}
@@ -4624,11 +4703,11 @@ const pe = pastEvents.find(p => p.eventId === eventId);
 }
 
 function AuthorSalesReport({ data }: { data: any }) {
-  const [reportPeriod, setReportPeriod] = useState('lifetime');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-  const [customMonth, setCustomMonth] = useState(new Date().getMonth().toString());
-  const [customYear, setCustomYear] = useState(new Date().getFullYear().toString());
+  const [filterType, setFilterType] = useState('monthly'); // today, weekly, monthly, this_month, ytd, select_month, lifetime, custom
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedMonthValue, setSelectedMonthValue] = useState(new Date().toISOString().slice(0, 7));
+  const [tableChannelFilter, setTableChannelFilter] = useState('All');
 
   const getStartOfWeek = (d: Date) => {
     const date = new Date(d);
@@ -4639,96 +4718,149 @@ function AuthorSalesReport({ data }: { data: any }) {
     return date;
   };
 
-  const filterByDate = (date: Date) => {
-    const now = new Date();
-    if (reportPeriod === 'today') return date.toDateString() === now.toDateString();
-    if (reportPeriod === 'week') {
-      const startOfWeek = getStartOfWeek(now);
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-      return date >= startOfWeek && date <= endOfWeek;
+  useEffect(() => {
+    if (filterType === 'custom') return;
+    const today = new Date();
+    let end = new Date(today);
+    let start = new Date(today);
+
+    if (filterType === 'today') {
+      start.setHours(0,0,0,0);
+    } else if (filterType === 'weekly') {
+      start.setDate(today.getDate() - 7);
+    } else if (filterType === 'monthly') {
+      start.setDate(today.getDate() - 30);
+    } else if (filterType === 'this_month') {
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+    } else if (filterType === 'ytd') {
+      start = new Date(today.getFullYear(), 0, 1);
+    } else if (filterType === 'select_month') {
+      if (selectedMonthValue) {
+        const [yyyy, mm] = selectedMonthValue.split('-');
+        start = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+        end = new Date(parseInt(yyyy), parseInt(mm), 0);
+      } else {
+        return;
+      }
+    } else if (filterType === 'lifetime') {
+      start = new Date('2000-01-01');
     }
-    if (reportPeriod === 'month') {
-      return date.getMonth() === parseInt(customMonth) && date.getFullYear() === parseInt(customYear);
-    }
-    if (reportPeriod === 'custom') {
-      if (!customStartDate || !customEndDate) return true;
-      const s = new Date(customStartDate);
-      s.setHours(0, 0, 0, 0);
-      const e = new Date(customEndDate);
-      e.setHours(23, 59, 59, 999);
-      return date >= s && date <= e;
-    }
-    return true; // lifetime
+
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  }, [filterType, selectedMonthValue]);
+
+  const startLimit = startDate ? new Date(startDate) : new Date('2000-01-01');
+  startLimit.setHours(0, 0, 0, 0);
+  const endLimit = endDate ? new Date(endDate) : new Date();
+  endLimit.setHours(23, 59, 59, 999);
+
+  const webOrders = (data.authorOrders || []).filter((o: any) => {
+    const orderDate = new Date(o.createdAt || o.date);
+    return o.paymentVerified && orderDate >= startLimit && orderDate <= endLimit;
+  });
+
+  const posOrders = (data.posOrders || []).filter((o: any) => {
+    const orderDate = new Date(o.createdAt);
+    return o.paymentStatus === 'CONFIRMED' && orderDate >= startLimit && orderDate <= endLimit;
+  });
+
+  let totalRevenue = 0;
+  let totalBooksSold = 0;
+  
+  const chartDataMap: Record<string, { date: string, revenue: number, books: number }> = {};
+  const channelDataMap = { Web: 0, Events: 0, 'Book Fairs': 0 };
+  const tableData: any[] = [];
+  
+  const kpiSplits = {
+    web: { revenue: 0, books: 0, orders: webOrders.length },
+    events: { revenue: 0, books: 0, orders: 0 },
+    bookFairs: { revenue: 0, books: 0, orders: 0 }
   };
 
-  const webOrders = (data.authorOrders || []).filter((o: any) => o.paymentVerified && filterByDate(new Date(o.createdAt || o.date)));
-  const posOrders = (data.posOrders || []).filter((o: any) => o.paymentStatus === 'CONFIRMED' && filterByDate(new Date(o.createdAt)));
+  const processItem = (date: Date, channel: string, eventName: string, title: string, qty: number, price: number, orderId: string, status: string, details: any) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const rev = qty * price;
+    
+    totalRevenue += rev;
+    totalBooksSold += qty;
 
-  // Daily Aggregation
-  const salesByDate: Record<string, { date: string, webSales: number, posSales: number, totalRevenue: number, totalBooks: number }> = {};
+    if (!chartDataMap[dateStr]) chartDataMap[dateStr] = { date: dateStr, revenue: 0, books: 0 };
+    chartDataMap[dateStr].revenue += rev;
+    chartDataMap[dateStr].books += qty;
 
-  const now = new Date();
-  let rangeStart: Date | null = null;
-  let rangeEnd: Date | null = null;
-
-  if (reportPeriod === 'today') {
-    rangeStart = new Date(now);
-    rangeEnd = new Date(now);
-  } else if (reportPeriod === 'week') {
-    rangeStart = getStartOfWeek(now);
-    rangeEnd = new Date(rangeStart);
-    rangeEnd.setDate(rangeStart.getDate() + 6);
-  } else if (reportPeriod === 'month') {
-    rangeStart = new Date(parseInt(customYear), parseInt(customMonth), 1);
-    rangeEnd = new Date(parseInt(customYear), parseInt(customMonth) + 1, 0);
-  } else if (reportPeriod === 'custom' && customStartDate && customEndDate) {
-    rangeStart = new Date(customStartDate);
-    rangeEnd = new Date(customEndDate);
-  }
-
-  if (rangeStart && rangeEnd) {
-    const curr = new Date(rangeStart);
-    curr.setHours(0, 0, 0, 0);
-    const end = new Date(rangeEnd);
-    end.setHours(23, 59, 59, 999);
-    while (curr <= end) {
-      const d = curr.toLocaleDateString('en-GB');
-      salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
-      curr.setDate(curr.getDate() + 1);
-    }
-  }
+    tableData.push({
+      date: dateStr,
+      orderId,
+      channel,
+      event: eventName,
+      title,
+      qty,
+      revenue: rev,
+      status,
+      customer: details.customer,
+      items: details.items
+    });
+  };
 
   webOrders.forEach((o: any) => {
-    const d = new Date(o.createdAt || o.date).toLocaleDateString('en-GB');
-    if (!salesByDate[d]) salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
-    salesByDate[d].webSales += o.amount;
-    salesByDate[d].totalRevenue += o.amount;
-    salesByDate[d].totalBooks += o.quantity;
+    const qty = o.quantity || 1;
+    const price = o.mrp || 0;
+    const rev = qty * price;
+    
+    processItem(
+      new Date(o.createdAt || o.date),
+      'Web Orders',
+      '-',
+      o.bookTitle || o.title || 'Unknown Title',
+      qty,
+      price,
+      `WEB-${o.orderId}`,
+      o.status || 'Paid',
+      {
+        customer: o.customerName || 'N/A',
+        items: `${o.bookTitle || o.title || 'Unknown'} (x${qty})`
+      }
+    );
+    
+    channelDataMap.Web += rev;
+    kpiSplits.web.revenue += rev;
+    kpiSplits.web.books += qty;
   });
 
-  posOrders.forEach((o: any) => {
-    const d = new Date(o.createdAt).toLocaleDateString('en-GB');
-    if (!salesByDate[d]) salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
-    salesByDate[d].posSales += o.totalAmount;
-    salesByDate[d].totalRevenue += o.totalAmount;
-
-    const qty = o.items.reduce((acc: number, item: any) => acc + item.quantity, 0);
-    salesByDate[d].totalBooks += qty;
-  }); 
-  
-  const chartData = Object.values(salesByDate).sort((a, b) => {
-    const [d1, m1, y1] = a.date.split('/');
-    const [d2, m2, y2] = b.date.split('/');
-    return new Date(`${y1}-${m1}-${d1}`).getTime() - new Date(`${y2}-${m2}-${d2}`).getTime();
+  posOrders.forEach((po: any) => {
+    const isBookFair = po.event?.eventType === 'Book Fair' || po.event?.name?.toLowerCase().includes('fair');
+    const channelName = isBookFair ? 'Book Fairs' : 'Events';
+    const kpiKey = isBookFair ? 'bookFairs' : 'events';
+    kpiSplits[kpiKey].orders += 1;
+    
+    po.items.forEach((i: any) => {
+      const qty = i.quantity || 0;
+      const price = i.price || 0;
+      const rev = qty * price;
+      
+      processItem(
+        new Date(po.createdAt),
+        channelName,
+        po.event?.name || 'POS Order',
+        i.book?.title || 'Unknown Title',
+        qty,
+        price,
+        po.event?.name || `POS-${po.id}`,
+        po.paymentMethod || 'Paid',
+        {
+          customer: 'Walk-in',
+          items: `${i.book?.title || 'Unknown'} (x${qty})`
+        }
+      );
+      
+      channelDataMap[channelName] += rev;
+      kpiSplits[kpiKey].revenue += rev;
+      kpiSplits[kpiKey].books += qty;
+    });
   });
 
-  const totalWebRevenue = webOrders.reduce((acc: number, o: any) => acc + o.amount, 0);
-  const totalPosRevenue = posOrders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
-  const totalBooksSold = chartData.reduce((acc, curr) => acc + curr.totalBooks, 0);
-  const totalRevenue = totalWebRevenue + totalPosRevenue;
-  const eventsParticipated = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered' || inv.optInStatus === 'Approved').length;
+  const chartData = Object.values(chartDataMap).sort((a, b) => a.date.localeCompare(b.date));
 
   const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered').reduce((acc: number, inv: any) => {
     const evt = inv.event;
@@ -4744,47 +4876,16 @@ function AuthorSalesReport({ data }: { data: any }) {
   const platformFeePaid = 1000;
   const totalFeesPaid = platformFeePaid + totalEventFees;
 
-  const allTransactions = [
-    ...webOrders.map((o: any) => ({
-      rawDate: new Date(o.createdAt || o.date).getTime(),
-      type: 'Web',
-      date: new Date(o.createdAt || o.date).toLocaleString('en-GB'),
-      id: `WEB-${o.orderId}`,
-      customer: o.customerName || 'N/A',
-      email: o.customerEmail || 'N/A',
-      phone: o.customerPhone || 'N/A',
-      address: (o.address || 'N/A').replace(/,/g, ' '),
-      items: `${o.bookTitle || o.title} (x${o.quantity})`,
-      quantity: o.quantity,
-      amount: o.amount,
-      status: o.status
-    })),
-    ...posOrders.map((o: any) => ({
-      rawDate: new Date(o.createdAt).getTime(),
-      type: 'POS',
-      date: new Date(o.createdAt).toLocaleString('en-GB'),
-      id: `POS-${o.id}`,
-      customer: 'Walk-in',
-      email: 'N/A',
-      phone: 'N/A',
-      address: 'N/A',
-      items: o.items.map((i: any) => `${i.book?.title} (x${i.quantity})`).join('; '),
-      quantity: o.items.reduce((acc: number, i: any) => acc + i.quantity, 0),
-      amount: o.totalAmount,
-      status: o.paymentMethod
-    }))
-  ].sort((a, b) => b.rawDate - a.rawDate);
-
   const exportCSV = () => {
-    let csv = 'Transaction Date,Order Type,Order ID,Customer Name,Email,Phone,Delivery Address,Books Included,Total Quantity,Total Amount,Status/Payment Method\n';
-    allTransactions.forEach(tx => {
-      csv += `"${tx.date}","${tx.type}","${tx.id}","${tx.customer}","${tx.email}","${tx.phone}","${tx.address}","${tx.items}","${tx.quantity}","₹${tx.amount}","${tx.status}"\n`;
+    let csv = 'Transaction Date,Order Type,Order ID,Customer Name,Books Included,Total Quantity,Total Amount,Status/Payment Method\n';
+    tableData.forEach(tx => {
+      csv += `"${tx.date}","${tx.channel}","${tx.orderId}","${tx.customer}","${tx.items}",${tx.qty},"₹${tx.revenue}","${tx.status}"\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `detailed_sales_report_${reportPeriod}.csv`;
+    a.download = `detailed_sales_report_${filterType}_${startDate}_to_${endDate}.csv`;
     a.click();
   };
 
@@ -4792,215 +4893,257 @@ function AuthorSalesReport({ data }: { data: any }) {
     <div className="animate-fade-in-up pb-20">
       
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
         <div>
           <h2 className="text-3xl font-serif text-paa-navy font-bold tracking-tight mb-2">Sales Intelligence</h2>
           <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Real-time revenue tracking across all channels</p>
         </div>
         
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          {/* Dynamic Filters */}
-          <div className="flex bg-white rounded-lg shadow-sm border border-paa-navy/5 overflow-hidden">
-            {['today', 'week', 'month', 'lifetime', 'custom'].map(p => (
-              <button key={p} onClick={() => setReportPeriod(p)} className={`px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all ${reportPeriod === p ? 'bg-paa-navy text-white' : 'hover:bg-gray-50 text-gray-500'}`}>
-                {p === 'today' ? 'Today' : p === 'week' ? 'Week' : p === 'month' ? 'Month' : p === 'lifetime' ? 'Lifetime' : 'Custom'}
-              </button>
-            ))}
-          </div>
-          <button onClick={exportCSV} className="dash-btn-primary flex items-center gap-2 whitespace-nowrap shadow-sm text-xs">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <select 
+            value={filterType} 
+            onChange={(e) => setFilterType(e.target.value)}
+            className="text-xs font-bold tracking-widest uppercase py-2.5 px-4 rounded-xl border border-gray-200 bg-gray-50 text-paa-navy outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-full sm:w-auto cursor-pointer"
+          >
+            <option value="today">Today</option>
+            <option value="weekly">Weekly (Last 7 Days)</option>
+            <option value="monthly">Monthly (Last 30 Days)</option>
+            <option value="this_month">This Month</option>
+            <option value="ytd">Year to Date (YTD)</option>
+            <option value="select_month">Specific Month</option>
+            <option value="lifetime">Lifetime (All Time)</option>
+            <option value="custom">Custom Date Range</option>
+          </select>
+          
+          {filterType === 'select_month' && (
+            <div className="flex items-center gap-2 animate-fade-in w-full sm:w-auto">
+              <input 
+                type="month" 
+                value={selectedMonthValue}
+                onChange={(e) => setSelectedMonthValue(e.target.value)}
+                className="text-xs font-bold tracking-widest uppercase py-2.5 px-4 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500 transition-all cursor-pointer w-full sm:w-auto"
+              />
+            </div>
+          )}
+          
+          {filterType === 'custom' && (
+            <div className="flex items-center gap-2 animate-fade-in w-full sm:w-auto">
+              <input 
+                type="date" 
+                value={startDate} 
+                onChange={(e) => setStartDate(e.target.value)}
+                className="text-xs font-bold tracking-widest uppercase py-2 px-3 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500"
+              />
+              <span className="text-gray-400 font-medium text-sm">to</span>
+              <input 
+                type="date" 
+                value={endDate} 
+                onChange={(e) => setEndDate(e.target.value)}
+                className="text-xs font-bold tracking-widest uppercase py-2 px-3 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500"
+              />
+            </div>
+          )}
+
+          <button onClick={exportCSV} className="dash-btn-primary flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-0.5 transition-all w-full sm:w-auto cursor-pointer">
             <Download size={14} /> Export CSV
           </button>
         </div>
       </div>
 
-      {reportPeriod === 'custom' && (
-        <div className="flex items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm inline-flex">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">From</span>
-            <input type="date" className="border-none bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold text-paa-navy outline-none" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">To</span>
-            <input type="date" className="border-none bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold text-paa-navy outline-none" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} />
-          </div>
-        </div>
-      )}
-
-      {reportPeriod === 'month' && (
-        <div className="flex items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm inline-flex">
-          <select className="border-none bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold text-paa-navy outline-none" value={customMonth} onChange={e => setCustomMonth(e.target.value)}>
-            {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
-              <option key={i} value={i}>{m}</option>
-            ))}
-          </select>
-          <select className="border-none bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold text-paa-navy outline-none" value={customYear} onChange={e => setCustomYear(e.target.value)}>
-            {[new Date().getFullYear(), new Date().getFullYear() - 1, new Date().getFullYear() - 2].map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
       {/* METRICS GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Total Revenue</p>
-          <div className="text-2xl font-bold text-paa-navy relative z-10">₹{totalRevenue.toLocaleString('en-IN')}</div>
-        </div>
-        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-red-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Fees Paid</p>
-          <div className="text-2xl font-bold text-red-500 relative z-10">₹{totalFeesPaid.toLocaleString('en-IN')}</div>
-        </div>
-        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Web Sales</p>
-          <div className="text-2xl font-bold text-blue-600 relative z-10">₹{totalWebRevenue.toLocaleString('en-IN')}</div>
-        </div>
-        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-purple-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">POS Sales</p>
-          <div className="text-2xl font-bold text-purple-600 relative z-10">₹{totalPosRevenue.toLocaleString('en-IN')}</div>
-        </div>
-        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        {/* Card 1: Total Revenue */}
+        <div className="dash-kpi-card emerald flex flex-col justify-between p-5 bg-white border border-paa-navy/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Books Sold</p>
-          <div className="text-2xl font-bold text-emerald-600 relative z-10">{totalBooksSold}</div>
-        </div>
-        <div className="bg-white p-5 rounded-xl border border-paa-navy/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 relative z-10">Events</p>
-          <div className="text-2xl font-bold text-amber-500 relative z-10">{eventsParticipated}</div>
-        </div>
-      </div>
-
-      {/* TREND CHART */}
-      <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-8 mb-8">
-        <div className="flex justify-between items-center mb-8">
           <div>
-            <h3 className="text-lg font-serif font-bold text-paa-navy">Revenue Trajectory</h3>
-            <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mt-1">Web vs POS Sales Distribution</p>
+            <div className="flex items-start justify-between mb-4 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <DollarSign className="w-5 h-5" />
+              </div>
+            </div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1 relative z-10">Total Revenue</p>
+            <h3 className="text-3xl font-black text-paa-navy tracking-tight relative z-10">₹{totalRevenue.toLocaleString('en-IN')}</h3>
           </div>
-          <div className="flex gap-4">
-             <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>
-                <span className="text-xs font-bold text-gray-500">Web</span>
-             </div>
-             <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-sm shadow-purple-500/20"></div>
-                <span className="text-xs font-bold text-gray-500">POS</span>
-             </div>
+          <div className="mt-4 pt-3 border-t border-emerald-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-emerald-800 relative z-10">
+            <span>Web: ₹{kpiSplits.web.revenue.toLocaleString('en-IN')}</span>
+            <span>Events: ₹{kpiSplits.events.revenue.toLocaleString('en-IN')}</span>
+            <span>Fairs: ₹{kpiSplits.bookFairs.revenue.toLocaleString('en-IN')}</span>
           </div>
         </div>
-        <div className="h-[350px] w-full">
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorWeb" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorPos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
-                <YAxis tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
-                <Tooltip 
-                  cursor={{ stroke: '#e5e7eb', strokeWidth: 1, strokeDasharray: '4 4' }} 
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold' }} 
-                />
-                <Area type="monotone" dataKey="webSales" name="Web Sales" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorWeb)" />
-                <Area type="monotone" dataKey="posSales" name="POS Sales" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorPos)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex items-center justify-center text-gray-400 text-sm italic font-bold">No sales data for this period.</div>
-          )}
+
+        {/* Card 2: Books Sold */}
+        <div className="dash-kpi-card blue flex flex-col justify-between p-5 bg-white border border-paa-navy/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div>
+            <div className="flex items-start justify-between mb-4 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <BookOpen className="w-5 h-5" />
+              </div>
+            </div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1 relative z-10">Total Books Sold</p>
+            <h3 className="text-3xl font-black text-paa-navy tracking-tight relative z-10">{totalBooksSold} <span className="text-xs font-medium text-gray-400 lowercase tracking-normal">units</span></h3>
+          </div>
+          <div className="mt-4 pt-3 border-t border-blue-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-blue-800 relative z-10">
+            <span>Web: {kpiSplits.web.books}</span>
+            <span>Events: {kpiSplits.events.books}</span>
+            <span>Fairs: {kpiSplits.bookFairs.books}</span>
+          </div>
+        </div>
+
+        {/* Card 3: Net Earnings */}
+        <div className="dash-kpi-card amber flex flex-col justify-between p-5 bg-white border border-paa-navy/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div>
+            <div className="flex items-start justify-between mb-4 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+            </div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1 relative z-10">Net Earnings</p>
+            <h3 className={`text-3xl font-black tracking-tight relative z-10 ${(totalRevenue - totalFeesPaid) < 0 ? 'text-red-600' : 'text-paa-navy'}`}>
+              ₹{(totalRevenue - totalFeesPaid).toLocaleString('en-IN')}
+            </h3>
+          </div>
+          <div className="mt-4 pt-3 border-t border-amber-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-amber-800 relative z-10">
+            <span>Gross: ₹{totalRevenue.toLocaleString('en-IN')}</span>
+            <span>Fees: -₹{totalFeesPaid.toLocaleString('en-IN')}</span>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      {/* Row 2: Visualizations */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         
-        {/* DAILY BREAKDOWN */}
-        <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Daily Breakdown</h3>
-          </div>
-          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-            <table className="w-full text-left text-xs whitespace-nowrap">
-              <thead className="bg-white text-gray-400 uppercase tracking-widest text-[10px] sticky top-0 border-b border-gray-100 shadow-sm">
-                <tr>
-                  <th className="px-6 py-4 font-bold">Date</th>
-                  <th className="px-6 py-4 font-bold">Web</th>
-                  <th className="px-6 py-4 font-bold">POS</th>
-                  <th className="px-6 py-4 font-bold text-paa-navy">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {chartData.length === 0 && (
-                  <tr><td colSpan={4} className="text-center py-10 text-gray-400 italic">No daily data available</td></tr>
-                )}
-                {chartData.reverse().map((row, i) => (
-                  <tr key={i} className="hover:bg-blue-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-gray-600">{row.date}</td>
-                    <td className="px-6 py-4 font-bold text-blue-600">₹{row.webSales.toLocaleString('en-IN')}</td>
-                    <td className="px-6 py-4 font-bold text-purple-600">₹{row.posSales.toLocaleString('en-IN')}</td>
-                    <td className="px-6 py-4 font-black text-paa-navy">₹{row.totalRevenue.toLocaleString('en-IN')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* AreaChart: Revenue Trajectory */}
+        <div className="lg:col-span-2 border border-paa-navy/5 p-5 md:p-6 rounded-2xl bg-white shadow-sm flex flex-col justify-between">
+          <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-6">Revenue Trajectory</h4>
+          <div className="h-[250px] w-full">
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorReportRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="date" fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickMargin={10} minTickGap={20} />
+                  <YAxis fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val) => `₹${val}`} width={60} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                    itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
+                    labelStyle={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
+                    formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorReportRev)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400 text-sm italic">No sales data for this period.</div>
+            )}
           </div>
         </div>
 
-        {/* DETAILED TRANSACTIONS */}
-        <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Recent Transactions</h3>
-            <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded">{allTransactions.length} total</span>
+        {/* PieChart: Sales by Channel */}
+        <div className="border border-paa-navy/5 p-5 md:p-6 rounded-2xl bg-white shadow-sm flex flex-col justify-between">
+          <div>
+            <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2">Sales by Channel</h4>
+            <p className="text-[10px] text-gray-400 mb-6 font-medium">Split of total revenue earned per channel</p>
           </div>
-          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-            <table className="w-full text-left text-xs whitespace-nowrap">
-              <thead className="bg-white text-gray-400 uppercase tracking-widest text-[10px] sticky top-0 border-b border-gray-100 shadow-sm">
-                <tr>
-                  <th className="px-6 py-4 font-bold">Type</th>
-                  <th className="px-6 py-4 font-bold">Details</th>
-                  <th className="px-6 py-4 font-bold text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {allTransactions.length === 0 && (
-                  <tr><td colSpan={3} className="text-center py-10 text-gray-400 italic">No transactions found</td></tr>
-                )}
-                {allTransactions.map((tx, i) => (
-                  <tr key={i} className="hover:bg-blue-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm border ${tx.type === 'Web' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
-                        {tx.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-paa-navy mb-0.5">{tx.customer}</p>
-                      <p className="text-[10px] text-gray-400 max-w-[200px] truncate" title={tx.items}>{tx.items}</p>
-                      <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-widest font-bold">{tx.date}</p>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <p className="font-black text-emerald-600 text-sm">₹{tx.amount.toLocaleString('en-IN')}</p>
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1 block group-hover:text-paa-navy transition-colors">{tx.status}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="h-[200px] w-full">
+            {totalRevenue === 0 ? (
+              <div className="h-full flex items-center justify-center text-gray-400 text-xs italic">No channel data available.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Web Orders', value: channelDataMap.Web },
+                      { name: 'Events', value: channelDataMap.Events },
+                      { name: 'Book Fairs', value: channelDataMap['Book Fairs'] }
+                    ].filter(item => item.value > 0)}
+                    cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value"
+                  >
+                    {[
+                      { name: 'Web Orders', color: '#3b82f6' },
+                      { name: 'Events', color: '#f59e0b' },
+                      { name: 'Book Fairs', color: '#10b981' }
+                    ].filter(c => channelDataMap[c.name === 'Web Orders' ? 'Web' : c.name === 'Events' ? 'Events' : 'Book Fairs'] > 0).map((c, index) => (
+                      <Cell key={`cell-${index}`} fill={c.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="flex justify-center gap-4 mt-4 flex-wrap">
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Web</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Events</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Fairs</span></div>
           </div>
         </div>
 
       </div>
+
+      {/* Row 3: Granular Data Table */}
+      <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden relative min-h-[200px]">
+        <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/50">
+          <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest">Raw Sales Data</h4>
+          <div className="flex items-center gap-2 flex-wrap">
+            {['All', 'Web Orders', 'Events', 'Book Fairs'].map(ch => (
+              <button
+                key={ch}
+                onClick={() => setTableChannelFilter(ch)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer ${tableChannelFilter === ch ? 'bg-paa-navy text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}
+              >
+                {ch}
+              </button>
+            ))}
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm ml-2 md:ml-4">
+              {(tableData.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter)).length} Records
+            </span>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="dash-table w-full text-left table-fixed">
+            <thead className="bg-white">
+              <tr>
+                <th className="w-[15%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Date</th>
+                <th className="w-[18%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Order ID</th>
+                <th className="w-[15%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Channel</th>
+                <th className="w-[30%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Book Title</th>
+                <th className="w-[10%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right">Qty</th>
+                <th className="w-[12%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right">Rev (₹)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 bg-white">
+              {(tableData.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter)).length === 0 && (
+                <tr><td colSpan={6} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period for the selected filter.</td></tr>
+              )}
+              {(tableData.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter)).map((row: any, idx: number) => (
+                <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
+                  <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
+                  <td className="px-5 py-3 text-xs">
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-50 text-blue-700 border border-blue-100' : row.channel === 'Events' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                      {row.channel === 'Web Orders' ? 'Web' : row.channel === 'Events' ? 'Events' : 'Fairs'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 pr-2 text-xs text-paa-navy truncate" title={row.title}>{row.title}</td>
+                  <td className="px-5 py-3 text-xs font-bold text-paa-navy text-right">{row.qty}</td>
+                  <td className="px-5 py-3 text-xs font-black text-indigo-600 text-right">₹{row.revenue.toLocaleString('en-IN')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 }

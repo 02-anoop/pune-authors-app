@@ -137,6 +137,7 @@ model Book {
   posOrderItems   PosOrderItem[]
   donationBooks   DonationBook[]
   donationLogs    DonationLog[]
+  stockHistory    StockHistory[]
 }
 
 model Customer {
@@ -491,4 +492,14 @@ model DonationLog {
   library          Library @relation(fields: [libraryId], references: [id], onDelete: Cascade)
   author           Author  @relation(fields: [authorId], references: [id], onDelete: Cascade)
   book             Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+model StockHistory {
+  id           Int      @id @default(autoincrement())
+  bookId       Int
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  changeQty    Int
+  lastStock    Int
+  currentStock Int
+  updatedAt    DateTime @default(now())
 }

@@ -4746,6 +4746,12 @@ async function computeBookInventory(books) {
     _max: { createdAt: true }
   });
 
+  // Stock history logs
+  const stockHistoryList = await prisma.stockHistory.findMany({
+    where: { bookId: { in: bookIds } },
+    orderBy: { updatedAt: 'desc' }
+  });
+
   // Granular donation breakdown per book (library-level, upcoming only)
   const donationBooksRaw = await prisma.donationBook.findMany({
     where: { 
@@ -4822,6 +4828,7 @@ async function computeBookInventory(books) {
     const webSold = webSoldMap[book.id] || 0;
     const airportQty = airportMap[book.id] || 0;
     const eventQty = eventMap[book.id] || 0;
+    const stockHistory = stockHistoryList.filter(h => h.bookId === book.id);
     
     // Initial stock entered by author
     const masterStock = book.stock; 
@@ -4857,7 +4864,8 @@ async function computeBookInventory(books) {
       isStale,
       distributionBreakdown,
       genre: book.genre,
-      coverUrl: book.coverImage
+      coverUrl: book.coverImage,
+      stockHistory
     };
   });
 }
@@ -4915,6 +4923,15 @@ router.put('/api/author/books/:id/stock', verifyToken, async (req, res) => {
     const updated = await prisma.book.update({
       where: { id: bookId },
       data: { stock: newStock }
+    });
+
+    await prisma.stockHistory.create({
+      data: {
+        bookId: bookId,
+        changeQty: qty,
+        lastStock: book.stock,
+        currentStock: newStock
+      }
     });
 
     if (qty < 0 && newStock < 10 && book.stock >= 10) {

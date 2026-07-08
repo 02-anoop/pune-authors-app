@@ -1768,6 +1768,8 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
   const [newStocks, setNewStocks] = useState<{ [key: number]: string }>({});
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [activeHistoryId, setActiveHistoryId] = useState<number | null>(null);
+  const [showStockHistory, setShowStockHistory] = useState(false);
 
   const fetchInventory = async () => {
     try {
@@ -1888,69 +1890,127 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
         </div>
       </div>
 
-      {/* Global Summary: Stat Cards + Inventory Pie Chart side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
-
-        {/* Stat Cards (2x2 grid) */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Total Titles', value: inventory.length, icon: <BookOpen size={18} />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-            { label: 'QTY Sold (Web)', value: totalWebSold, icon: <ShoppingCart size={18} />, color: 'text-green-600', bg: 'bg-green-50' },
-            { label: 'QTY to Airport', value: totalAirport, icon: <MapPin size={18} />, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'QTY to Book Fairs', value: totalEvent, icon: <CalendarIcon size={18} />, color: 'text-purple-600', bg: 'bg-purple-50' },
-          ].map(({ label, value, icon, color, bg }) => (
-            <div key={label} className="bg-white border rounded-xl p-4 flex items-center gap-3 shadow-sm">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${bg} ${color}`}>
-                {icon}
-              </div>
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
-                <p className="text-2xl font-black text-paa-navy leading-none m-0">{value}</p>
-              </div>
+      {/* Stat Cards Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total Titles', value: inventory.length, icon: <BookOpen size={18} />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'QTY Sold (Web)', value: totalWebSold, icon: <ShoppingCart size={18} />, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'QTY to Airport', value: totalAirport, icon: <MapPin size={18} />, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'QTY to Book Fairs', value: totalEvent, icon: <CalendarIcon size={18} />, color: 'text-purple-600', bg: 'bg-purple-50' },
+        ].map(({ label, value, icon, color, bg }) => (
+          <div key={label} className="bg-white border rounded-xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${bg} ${color}`}>
+              {icon}
             </div>
-          ))}
-        </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
+              <p className="text-2xl font-black text-paa-navy leading-none m-0">{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        {/* Inventory Pie Chart — current stock per book */}
-        {inventory.length > 0 && (
-          <div className="bg-white border rounded-xl shadow-sm p-4 w-full lg:w-[280px] shrink-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Current Stock Split</p>
-            <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={inventory.map(b => ({ name: b.title.length > 14 ? b.title.substring(0, 14) + '…' : b.title, value: b.currentStock, fullTitle: b.title }))}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={48}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {inventory.map((_: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][index % 8]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any, _: any, props: any) => [`${value} copies`, props.payload?.fullTitle || props.name]}
-                    contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid rgba(26,26,46,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+      {/* Charts Row */}
+      {inventory.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          
+          {/* Chart 1: Current Stock Split */}
+          <div className="bg-white border rounded-xl shadow-sm p-5 flex flex-col justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Current Stock Split</p>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={inventory.map(b => ({ name: b.title.length > 14 ? b.title.substring(0, 14) + '…' : b.title, value: b.currentStock, fullTitle: b.title }))}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={48}
+                      outerRadius={72}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {inventory.map((_: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][index % 8]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: any, _: any, props: any) => [`${value} copies`, props.payload?.fullTitle || props.name]}
+                      contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid rgba(26,26,46,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
             {/* Legend */}
-            <div className="flex flex-col gap-1 mt-2">
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 border-t pt-3 max-h-[80px] overflow-y-auto">
               {inventory.map((b: any, i: number) => (
-                <div key={b.id} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: ['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][i % 8] }} />
-                  <span className="text-[10px] text-gray-500 truncate max-w-[160px]" title={b.title}>{b.title}</span>
-                  <span className="text-[10px] font-bold text-paa-navy ml-auto shrink-0">{b.currentStock}</span>
+                <div key={b.id} className="flex items-center gap-2 text-[10px]">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][i % 8] }} />
+                  <span className="text-gray-500 truncate max-w-[120px]" title={b.title}>{b.title}</span>
+                  <span className="font-bold text-paa-navy ml-1">{b.currentStock}</span>
                 </div>
               ))}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Chart 2: Distribution Split */}
+          <div className="bg-white border rounded-xl shadow-sm p-5 flex flex-col justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Distribution Channel Split</p>
+              <div className="h-[200px]">
+                {totalAirport === 0 && totalEvent === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-xs italic">
+                    No airport or book fair distribution records yet.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Airport Library', value: totalAirport },
+                          { name: 'Book Fairs', value: totalEvent }
+                        ].filter(item => item.value > 0)}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={48}
+                        outerRadius={72}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {[
+                          { name: 'Airport Library', color: '#0284c7' },
+                          { name: 'Book Fairs', color: '#9333ea' }
+                        ].filter(item => (item.name === 'Airport Library' ? totalAirport : totalEvent) > 0).map((item, index) => (
+                          <Cell key={`cell-${index}`} fill={item.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any) => [`${value} copies`]}
+                        contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid rgba(26,26,46,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+            {/* Legend */}
+            <div className="flex justify-center gap-6 mt-3 border-t pt-3">
+              {[
+                { name: 'Airport Library', value: totalAirport, color: '#0284c7' },
+                { name: 'Book Fairs', value: totalEvent, color: '#9333ea' }
+              ].map(item => (
+                <div key={item.name} className="flex items-center gap-2 text-[10px]">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
+                  <span className="text-gray-500">{item.name}</span>
+                  <span className="font-bold text-paa-navy ml-1">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
 
       {/* Low Stock Warning Banner */}
       {lowStockCount > 0 && (
@@ -2028,8 +2088,44 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                         </div>
                       </td>
                       {/* Last Updated */}
-                      <td className="text-center text-gray-500 text-xs">
-                        {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                      <td className="text-center text-gray-500 text-xs relative" onClick={e => e.stopPropagation()}>
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span>
+                            {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                          </span>
+                          {book.stockHistory && book.stockHistory.length > 0 && (
+                            <div className="relative">
+                              <button
+                                onClick={() => setActiveHistoryId(activeHistoryId === book.id ? null : book.id)}
+                                className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-paa-navy hover:text-paa-gold border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded transition-colors shadow-sm cursor-pointer"
+                              >
+                                View Logs <ChevronDown size={10} className={`transform transition-transform duration-300 ${activeHistoryId === book.id ? 'rotate-180' : ''}`} />
+                              </button>
+                              
+                              {activeHistoryId === book.id && (
+                                <div className="absolute top-full mt-1.5 right-1/2 translate-x-1/2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-50 text-left max-h-56 overflow-y-auto">
+                                  <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2 border-b pb-1">Stock Changes</p>
+                                  <div className="space-y-2">
+                                    {book.stockHistory.map((log: any) => (
+                                      <div key={log.id} className="border-b border-gray-100 last:border-0 pb-1.5 last:pb-0 text-[10px]">
+                                        <div className="flex justify-between items-center text-gray-400 font-semibold mb-0.5">
+                                          <span>{new Date(log.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                          <span className={`font-bold ${log.changeQty > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600">
+                                          <span>Last: {log.lastStock}</span>
+                                          <span>Current: {log.currentStock}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       {/* Update Stock */}
                       <td onClick={e => e.stopPropagation()}>
@@ -2063,100 +2159,128 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
         </div>
 
         {/* RIGHT — Distribution Breakdown Sidebar */}
-        <div className={`shrink-0 w-[320px] min-w-0 bg-white border rounded-xl shadow-sm overflow-hidden transition-opacity duration-200 ${selectedBook ? 'opacity-100' : 'opacity-50'}`}>
-          {/* Sidebar Header */}
-          <div className="px-5 py-4 border-b bg-gray-50 flex justify-between items-center">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 mb-0.5">Distribution Breakdown</p>
-              <p className="text-sm font-bold text-paa-navy m-0">
-                {selectedBook ? selectedBook.title : 'Select a book row'}
-              </p>
-            </div>
-            {selectedBook && (
+        {selectedBook && (
+          <div className="shrink-0 w-[320px] min-w-0 bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden animate-fade-in-right">
+            {/* Sidebar Header */}
+            <div className="px-5 py-4 border-b bg-gray-50 flex justify-between items-center">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 mb-0.5">Distribution Breakdown</p>
+                <p className="text-sm font-bold text-paa-navy m-0 truncate max-w-[220px]" title={selectedBook.title}>
+                  {selectedBook.title}
+                </p>
+              </div>
               <button onClick={() => { setSelectedBook(null); setSidebarVisible(false); }} className="bg-transparent border-none cursor-pointer text-gray-400 p-1 hover:text-gray-600 transition-colors">
                 <X size={16} />
               </button>
-            )}
-          </div>
+            </div>
 
-          {/* Sidebar Body */}
-          <div className="p-5">
-            {!selectedBook ? (
-              <div className="text-center py-12 text-gray-300">
-                <Package size={40} className="mx-auto mb-3 opacity-50" />
-                <p className="text-sm m-0 italic text-gray-400">Select a book row to view distribution details.</p>
-              </div>
-            ) : (
-              <>
-                {/* Book meta */}
-                <div className="bg-indigo-50/30 rounded-xl p-3.5 mb-4 border border-indigo-100">
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {[
-                      { label: 'Current Stock', value: selectedBook.currentStock, color: selectedBook.isLowStock ? 'text-red-600' : 'text-green-600' },
-                      { label: 'Web Sold', value: selectedBook.webSold, color: 'text-green-600' },
-                      { label: 'Airport Donated', value: selectedBook.airportQty, color: 'text-blue-600' },
-                      { label: 'Book Fairs', value: selectedBook.eventQty, color: 'text-purple-600' },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} className="text-center">
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
-                        <p className={`text-xl font-black m-0 leading-none ${color}`}>{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {selectedBook.isLowStock && (
-                    <div className="mt-2.5 border-t border-red-200/50 pt-2 flex items-center gap-1.5">
-                      <AlertCircle size={13} className="text-red-600 shrink-0" />
-                      <p className="text-[11px] text-red-600 font-semibold m-0">Low stock — replenish immediately</p>
+            {/* Sidebar Body */}
+            <div className="p-5">
+              {/* Book meta */}
+              <div className="bg-indigo-50/30 rounded-xl p-3.5 mb-4 border border-indigo-100">
+                <div className="grid grid-cols-2 gap-2.5">
+                  {[
+                    { label: 'Current Stock', value: selectedBook.currentStock, color: selectedBook.isLowStock ? 'text-red-600' : 'text-green-600' },
+                    { label: 'Web Sold', value: selectedBook.webSold, color: 'text-green-600' },
+                    { label: 'Airport Donated', value: selectedBook.airportQty, color: 'text-blue-600' },
+                    { label: 'Book Fairs', value: selectedBook.eventQty, color: 'text-purple-600' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
+                      <p className={`text-xl font-black m-0 leading-none ${color}`}>{value}</p>
                     </div>
-                  )}
+                  ))}
                 </div>
-
-                {/* Distribution items */}
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">Location Detail</p>
-                {selectedBook.distributionBreakdown.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic m-0">No active distribution records for this title.</p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {selectedBook.distributionBreakdown.map((item: any, i: number) => (
-                      <div key={i} className={`flex justify-between items-center p-3 rounded-xl border ${item.type === 'airport' ? 'bg-blue-50/50 border-blue-100' : 'bg-purple-50/50 border-purple-100'}`}>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className={`text-[9px] font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${item.type === 'airport' ? 'text-blue-600 bg-blue-100' : 'text-purple-600 bg-purple-100'}`}>
-                              {item.type === 'airport' ? '✈ Airport' : '📚 Book Fair'}
-                            </span>
-                          </div>
-                          <p className="text-xs font-semibold text-paa-navy m-0 truncate" title={item.label}>
-                            {item.label}
-                          </p>
-                          {item.location && (
-                            <p className="text-[10px] text-gray-400 mt-0.5 mb-0">{item.location}</p>
-                          )}
-                          {item.type === 'event' && item.sold !== undefined && (
-                            <p className="text-[10px] text-gray-500 mt-0.5 mb-0">Sold: {item.sold} / Listed: {item.quantity}</p>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0 ml-3">
-                          <span className={`text-lg font-black leading-none ${item.type === 'airport' ? 'text-blue-600' : 'text-purple-600'}`}>
-                            {item.quantity}
-                          </span>
-                          <p className="text-[9px] text-gray-400 mt-0.5 mb-0 uppercase">copies</p>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Cumulative Total */}
-                    <div className="border-t-2 border-gray-100 pt-2.5 mt-1 flex justify-between items-center">
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-paa-navy">Total Distributed</span>
-                      <span className="text-xl font-black text-paa-navy">
-                        {selectedBook.distributionBreakdown.reduce((s: number, i: any) => s + i.quantity, 0)}
-                      </span>
-                    </div>
+                {selectedBook.isLowStock && (
+                  <div className="mt-2.5 border-t border-red-200/50 pt-2 flex items-center gap-1.5">
+                    <AlertCircle size={13} className="text-red-600 shrink-0" />
+                    <p className="text-[11px] text-red-600 font-semibold m-0">Low stock — replenish immediately</p>
                   </div>
                 )}
-              </>
-            )}
+              </div>
+
+              {/* Distribution items */}
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">Location Detail</p>
+              {selectedBook.distributionBreakdown.length === 0 ? (
+                <p className="text-sm text-gray-400 italic m-0">No active distribution records for this title.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {selectedBook.distributionBreakdown.map((item: any, i: number) => (
+                    <div key={i} className={`flex justify-between items-center p-3 rounded-xl border ${item.type === 'airport' ? 'bg-blue-50/50 border-blue-100' : 'bg-purple-50/50 border-purple-100'}`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className={`text-[9px] font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${item.type === 'airport' ? 'text-blue-600 bg-blue-100' : 'text-purple-600 bg-purple-100'}`}>
+                            {item.type === 'airport' ? '✈ Airport' : '📚 Book Fair'}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-paa-navy m-0 truncate" title={item.label}>
+                          {item.label}
+                        </p>
+                        {item.location && (
+                          <p className="text-[10px] text-gray-400 mt-0.5 mb-0">{item.location}</p>
+                        )}
+                        {item.type === 'event' && item.sold !== undefined && (
+                          <p className="text-[10px] text-gray-500 mt-0.5 mb-0">Sold: {item.sold} / Listed: {item.quantity}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <span className={`text-lg font-black leading-none ${item.type === 'airport' ? 'text-blue-600' : 'text-purple-600'}`}>
+                          {item.quantity}
+                        </span>
+                        <p className="text-[9px] text-gray-400 mt-0.5 mb-0 uppercase">copies</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Cumulative Total */}
+                  <div className="border-t-2 border-gray-100 pt-2.5 mt-1 flex justify-between items-center">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-paa-navy">Total Distributed</span>
+                    <span className="text-xl font-black text-paa-navy">
+                      {selectedBook.distributionBreakdown.reduce((s: number, i: any) => s + i.quantity, 0)}
+                    </span>
+                  </div>
+
+                  {/* Collapsible Stock Update Logs */}
+                  <div className="mt-4 border-t pt-4">
+                    <button
+                      onClick={() => setShowStockHistory(!showStockHistory)}
+                      className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-paa-navy transition-colors outline-none cursor-pointer"
+                    >
+                      <span>Stock Update History ({selectedBook.stockHistory?.length || 0})</span>
+                      <ChevronDown
+                        size={14}
+                        className={`transform transition-transform duration-300 ${showStockHistory ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                    
+                    {showStockHistory && (
+                      <div className="mt-2.5 space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                        {!selectedBook.stockHistory || selectedBook.stockHistory.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic m-0">No stock update history recorded yet.</p>
+                        ) : (
+                          selectedBook.stockHistory.map((log: any) => (
+                            <div key={log.id} className="bg-gray-50 border border-gray-100 p-2.5 rounded-lg text-[11px]">
+                              <div className="flex justify-between items-center mb-1 text-gray-400 font-bold uppercase tracking-widest text-[9px]">
+                                <span>{new Date(log.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className={log.changeQty > 0 ? 'text-green-600' : 'text-red-600'}>
+                                  {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-gray-500">
+                                <span>Last Stock: <strong className="text-paa-navy">{log.lastStock}</strong></span>
+                                <span>Current: <strong className="text-paa-navy">{log.currentStock}</strong></span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -148,6 +148,7 @@ export function OperationsDashboardPage() {
   const [rejectAuthorTarget, setRejectAuthorTarget] = useState<any>(null);
   const [rejectReasons, setRejectReasons] = useState<string[]>([]);
   const [otherReason, setOtherReason] = useState('');
+  const [selectedAuthorIds, setSelectedAuthorIds] = useState<number[]>([]);
   const [editingAuthor, setEditingAuthor] = useState<any>(null);
   const [isEditAuthorModalOpen, setIsEditAuthorModalOpen] = useState(false);
 
@@ -2455,6 +2456,35 @@ export function OperationsDashboardPage() {
       document.body.removeChild(link);
     };
 
+    const handleDownloadCatalogue = () => {
+      if (selectedAuthorIds.length === 0) return;
+      const selectedAuthorsData = authors.filter(a => selectedAuthorIds.includes(a.id));
+      let csv = 'Author Name,Title,Subtitle,Genre,Sub-Genre,Pages,MRP,Language,Format,Publisher,Publication Date,ISBN,Synopsis\n';
+      
+      selectedAuthorsData.forEach(author => {
+        const approvedBooks = author.books?.filter((b: any) => b.status === 'Approved') || [];
+        approvedBooks.forEach((book: any) => {
+          const safe = (val: any) => `"${String(val || '').replace(/"/g, '""')}"`;
+          const row = [
+            author.name, book.title, book.subtitle, book.genre, book.subGenre, 
+            book.pages, book.mrp, book.language, book.format, book.publisher, 
+            book.publicationDate, book.isbn, book.synopsis
+          ].map(safe);
+          csv += row.join(',') + '\n';
+        });
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'selected_authors_catalogue.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
     if (selectedPendingAuthor) {
       return (
         <div className="bg-white fixed inset-0 z-50 overflow-y-auto">
@@ -2487,6 +2517,9 @@ export function OperationsDashboardPage() {
             <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">{authors.length} Total</span>
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={handleDownloadCatalogue} disabled={selectedAuthorIds.length === 0} className="dash-btn dash-btn-ghost flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed">
+              <Download className="w-4 h-4" /> Download Catalogue
+            </button>
             <button onClick={handleExportAuthorsCSV} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
               <Download className="w-4 h-4" /> Export CSV
             </button>
@@ -2520,6 +2553,20 @@ export function OperationsDashboardPage() {
           <table className="dash-table">
             <thead>
               <tr>
+                <th className="w-10 text-center">
+                  <input 
+                    type="checkbox" 
+                    checked={authors.length > 0 && selectedAuthorIds.length === authors.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedAuthorIds(authors.map(a => a.id));
+                      } else {
+                        setSelectedAuthorIds([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-paa-navy focus:ring-paa-navy cursor-pointer"
+                  />
+                </th>
                 <th>Author Details</th>
                 <th>Contact</th>
                 <th>Payment Info</th>
@@ -2548,7 +2595,21 @@ export function OperationsDashboardPage() {
                 if (a.status !== 'Pending' && b.status === 'Pending') return 1;
                 return 0;
               }).map((author) => (
-                <tr key={author.id}>
+                <tr key={author.id} className={selectedAuthorIds.includes(author.id) ? 'bg-indigo-50/30' : ''}>
+                  <td className="text-center">
+                    <input 
+                      type="checkbox"
+                      checked={selectedAuthorIds.includes(author.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedAuthorIds(prev => [...prev, author.id]);
+                        } else {
+                          setSelectedAuthorIds(prev => prev.filter(id => id !== author.id));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-paa-navy focus:ring-paa-navy cursor-pointer"
+                    />
+                  </td>
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-[#f0f4f8] border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
@@ -4870,18 +4931,29 @@ export function OperationsDashboardPage() {
         {selectedBookDetails && (
           <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
             <div className="flex gap-4">
-              {selectedBookDetails.coverUrl && (
-                <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-32 h-44 object-cover border border-paa-navy/20 shadow-sm" />
-              )}
+              <div className="flex gap-2">
+                {selectedBookDetails.coverUrl && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Front Cover</span>
+                    <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-28 h-40 object-cover border border-paa-navy/20 shadow-sm rounded" />
+                  </div>
+                )}
+                {selectedBookDetails.backCoverUrl && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Back Cover</span>
+                    <img src={selectedBookDetails.backCoverUrl.startsWith('http') ? selectedBookDetails.backCoverUrl : `${API}${selectedBookDetails.backCoverUrl}`} alt="Back Cover" className="w-28 h-40 object-cover border border-paa-navy/20 shadow-sm rounded" />
+                  </div>
+                )}
+              </div>
               <div>
-                <h3 className="text-xl font-bold text-paa-navy">{selectedBookDetails.title}</h3>
+                <h3 className="text-xl font-bold text-paa-navy mt-4">{selectedBookDetails.title}</h3>
                 {selectedBookDetails.subtitle && <p className="text-sm font-medium text-paa-gray-text">{selectedBookDetails.subtitle}</p>}
                 <p className="text-sm font-medium mt-1">Author: <span className="font-bold">{selectedBookDetails.authorName}</span></p>
                 <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mt-2 bg-[#eef2f6] inline-block px-2 py-0.5">{selectedBookDetails.genre} {selectedBookDetails.subGenre && `> ${selectedBookDetails.subGenre}`}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-paa-navy/5 pt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-paa-navy/5 pt-4">
               <div><span className="text-[10px] uppercase text-paa-gray-text block">MRP</span><span className="text-sm font-bold text-green-700">₹{selectedBookDetails.mrp}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Language</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Format</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
@@ -4889,8 +4961,11 @@ export function OperationsDashboardPage() {
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Publisher</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Pub Date</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">ISBN</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
+              <div><span className="text-[10px] uppercase text-paa-gray-text block">Edition</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.edition || '-'}</span></div>
+              <div><span className="text-[10px] uppercase text-paa-gray-text block">Print Format</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.printFormat || '-'}</span></div>
+              <div><span className="text-[10px] uppercase text-paa-gray-text block">Purpose</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.purpose || '-'}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Current Stock</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.stock}</span></div>
-              <div><span className="text-[10px] uppercase text-paa-gray-text block">Total Sales</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.sales}</span></div>
+              <div><span className="text-[10px] uppercase text-paa-gray-text block">Total Sales</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.sales || 0}</span></div>
             </div>
 
             <div className="border-t border-paa-navy/5 pt-4">

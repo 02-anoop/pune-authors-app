@@ -177,32 +177,48 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
         {activeProfileTab === 'inventory' && (
         <div id="inventory">
           <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Books & Inventory</h3>
-          <div className="overflow-x-auto">
-            <table className="dash-table">
-               <thead>
-                 <tr>
-                   <th>Title</th>
-                   <th style={{textAlign: 'center'}}>MRP</th>
-                   <th style={{textAlign: 'center'}}>Stock</th>
-                   <th style={{textAlign: 'center'}}>Status</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {authorProfile.books.length === 0 ? <tr><td colSpan={4} className="text-center py-4 text-paa-gray-text">No books published.</td></tr> : authorProfile.books.map((b: any) => (
-                   <tr key={b.id}>
-                     <td className="font-bold text-paa-navy">{b.title} <span className="text-xs text-gray-500 font-medium block">{b.genre}</span></td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">₹{b.mrp}</td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">{b.stock}</td>
-                     <td style={{textAlign: 'center'}}>
-                        <span className={`dash-badge ${b.status === 'Approved' ? 'approved' : 'pending'}`}>
-                          {b.status}
-                        </span>
-                     </td>
-                   </tr>
-                 ))}
-               </tbody>
-            </table>
-          </div>
+          {(() => {
+            const authorCreatedAt = new Date(authorProfile.createdAt).getTime();
+            // Add a 2-minute buffer to filter out books submitted during initial registration
+            const newBooks = authorProfile.books.filter((b: any) => new Date(b.createdAt).getTime() > authorCreatedAt + 120000);
+            
+            if (newBooks.length === 0) {
+              return (
+                <blockquote className="border-l-4 border-paa-navy pl-4 py-2 italic text-paa-gray-text bg-gray-50">
+                  "No new book added by the author."
+                </blockquote>
+              );
+            }
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="dash-table w-full">
+                   <thead>
+                     <tr>
+                       <th>Title</th>
+                       <th style={{textAlign: 'center'}}>MRP</th>
+                       <th style={{textAlign: 'center'}}>Stock</th>
+                       <th style={{textAlign: 'center'}}>Status</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {newBooks.map((b: any) => (
+                       <tr key={b.id}>
+                         <td className="font-bold text-paa-navy">{b.title} <span className="text-xs text-gray-500 font-medium block">{b.genre}</span></td>
+                         <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">₹{b.mrp}</td>
+                         <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">{b.stock}</td>
+                         <td style={{textAlign: 'center'}}>
+                            <span className={`dash-badge ${b.status === 'Approved' ? 'approved' : 'pending'}`}>
+                              {b.status}
+                            </span>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
         )}
 

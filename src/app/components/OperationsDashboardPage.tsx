@@ -2592,9 +2592,9 @@ export function OperationsDashboardPage() {
           }
           ed = ed || {};
 
-          const approvedBooks = author.books?.filter((b: any) => b.status === 'Approved') || [];
+          const authorBooks = author.books || [];
           
-          if (approvedBooks.length === 0) {
+          if (authorBooks.length === 0) {
             formattedBooks.push({
               id: 'NO_BOOK',
               title: '',
@@ -2626,7 +2626,7 @@ export function OperationsDashboardPage() {
               reviewsCount: 10
             });
           } else {
-            approvedBooks.forEach((book: any) => {
+            authorBooks.forEach((book: any) => {
               formattedBooks.push({
                 id: book.id || String(Math.random()),
                 title: book.title || 'Untitled',

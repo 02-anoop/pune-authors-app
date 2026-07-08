@@ -4201,7 +4201,7 @@ router.delete('/api/author/gallery/images/:id', verifyToken, async (req, res) =>
     const image = await prisma.galleryImage.findUnique({ where: { id: imageId } });
     if (!image) return res.status(404).json({ error: 'Image not found' });
     
-    if (!image.caption || !image.caption.includes(`(Uploaded by ${author.name})`)) {
+    if (!image.caption || !image.caption.includes(`Uploaded by ${author.name}`)) {
        return res.status(403).json({ error: 'You can only delete your own images' });
     }
 

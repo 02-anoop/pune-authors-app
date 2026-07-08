@@ -71,7 +71,7 @@ export function OperationsDashboardPage() {
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'inventory' | 'events' | 'forms' | 'gallery' | 'reviews' | 'late_authors' | 'helpdesk' | 'settings' | 'library_donations'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'web_orders' | 'sales_report' | 'authors' | 'books' | 'inventory' | 'events' | 'forms' | 'gallery' | 'gallery_review' | 'reviews' | 'late_authors' | 'helpdesk' | 'settings' | 'library_donations'>(
     (() => { const t = localStorage.getItem('adminActiveTab'); return t === 'author_data' ? 'overview' : ((t as any) || 'overview'); })()
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -481,40 +481,7 @@ export function OperationsDashboardPage() {
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
-  const handleUploadGalleryImage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const target = e.target as any;
-    if (!selectedGalleryEvent) return;
 
-    const formData = new FormData();
-    formData.append('photo', target.photo.files[0]);
-    formData.append('caption', target.caption.value);
-    formData.append('dateTaken', target.dateTaken.value);
-
-    try {
-      await axios.post(`${API}/api/admin/gallery/${selectedGalleryEvent.id}/images`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      toast.success('Image added to gallery');
-      const updatedRes = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      setEvents(updatedRes.data);
-      setSelectedGalleryEvent(updatedRes.data.find((e: any) => e.id === selectedGalleryEvent.id));
-      target.reset();
-    } catch (err) {
-      toast.error('Failed to upload image');
-    }
-  };
-
-  const handleDeleteGalleryImage = async (imageId: number) => {
-    if (!window.confirm("Delete this image?")) return;
-    try {
-      await axios.delete(`${API}/api/admin/gallery/images/${imageId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      toast.success('Image deleted');
-      const updatedRes = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      setEvents(updatedRes.data);
-      setSelectedGalleryEvent(updatedRes.data.find((e: any) => e.id === selectedGalleryEvent.id));
-    } catch (err) {
-      toast.error('Failed to delete image');
-    }
-  };
 
   useEffect(() => {
     if (location.pathname === '/operations' || location.pathname === '/operations/') {
@@ -4971,6 +4938,7 @@ export function OperationsDashboardPage() {
             { id: 'inventory', label: 'Inventory / Distribution', icon: BookOpen },
             { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
             { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
+            { id: 'gallery_review', label: 'Gallery Review', icon: CheckSquare },
             { id: 'late_authors', label: 'Late Authors System', icon: AlertCircle },
             { id: 'helpdesk', label: 'Helpdesk / Queries', icon: Users, hasAlert: pendingAlerts.queries },
             { id: 'settings', label: 'System Settings', icon: Settings },
@@ -5146,6 +5114,7 @@ export function OperationsDashboardPage() {
             {activeTab === 'events' && renderEventsTab()}
             {activeTab === 'forms' && <FormsTab />}
             {activeTab === 'gallery' && renderGalleryTab()}
+            {activeTab === 'gallery_review' && <GalleryReviewTab />}
             {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
             {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
             {activeTab === 'library_donations' && <LibraryDonationsTab />}
@@ -5290,54 +5259,6 @@ export function OperationsDashboardPage() {
         )}
       </Modal>
 
-      {/* Gallery Images Management Modal */}
-      <Modal isOpen={!!selectedGalleryEvent} onClose={() => setSelectedGalleryEvent(null)} title={`Manage Images: ${selectedGalleryEvent?.name}`}>
-        {selectedGalleryEvent && (
-          <div className="space-y-6">
-            <form onSubmit={handleUploadGalleryImage} className="space-y-4 bg-gray-50 p-4 border border-paa-navy/5 rounded-3xl-2xl">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Upload New Image</h4>
-              <div>
-                <input required type="file" name="photo" accept="image/*" className="w-full text-sm text-paa-gray-text file:mr-4 file:py-2 file:px-4 file:rounded-3xl-2xl file:border-0 file:text-xs file:font-bold file:bg-paa-navy/10 file:text-paa-navy hover:file:bg-paa-navy/20 transition-colors" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1 block">Caption (Optional)</label><input type="text" name="caption" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-white focus:border-paa-navy" placeholder="E.g. Audience cheering" /></div>
-                <div><label className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1 block">Date Taken (Optional)</label><input type="date" name="dateTaken" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-white focus:border-paa-navy" /></div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold transition-colors rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">Upload</button>
-              </div>
-            </form>
-
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Uploaded Images ({selectedGalleryEvent.galleryEvent?.images?.length || 0})</h4>
-              {(!selectedGalleryEvent.galleryEvent?.images || selectedGalleryEvent.galleryEvent.images.length === 0) ? (
-                <div className="text-center py-8 text-paa-gray-text text-sm">No additional images uploaded for this event.</div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
-                  {selectedGalleryEvent.galleryEvent.images.map((img: any) => (
-                    <div key={img.id} className="relative group rounded-3xl-2xl overflow-hidden border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out bg-white">
-                      <img src={img.url.startsWith('http') ? img.url : `${API}${img.url}`} alt={img.caption || 'Event Image'} className="w-full h-32 object-cover" />
-                      <button
-                        onClick={() => handleDeleteGalleryImage(img.id)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-3xl-2xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow"
-                        title="Delete Image"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                      {(img.caption || img.dateTaken) && (
-                        <div className="p-2 text-xs">
-                          {img.caption && <p className="font-medium text-paa-navy truncate" title={img.caption}>{img.caption}</p>}
-                          {img.dateTaken && <p className="text-[10px] text-paa-gray-text mt-0.5">{new Date(img.dateTaken).toLocaleDateString()}</p>}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
 
 
       {/* Event Report Modal */}

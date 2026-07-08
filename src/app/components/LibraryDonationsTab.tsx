@@ -525,7 +525,7 @@ export function LibraryDonationsTab() {
   };
 
   const handleExportAuthorDonationReport = () => {
-    let csvContent = 'Author Name,Donation Campaigns Participated,Libraries Donated To,Total Books Donated,Total Donation Value (MRP)\n';
+    let csvContent = 'Author Name,Donation Campaigns Participated,Libraries Donated To,Registered Book Titles (System),Donated Book Titles,Total Books Donated,Total Donation Value (MRP)\n';
 
     const authorLogsMap = new Map();
     globalLogs.forEach((log: any) => {
@@ -534,6 +534,7 @@ export function LibraryDonationsTab() {
           name: log.author?.name || 'Unknown',
           campaigns: new Set(),
           libraries: new Set(),
+          donatedTitles: new Set(),
           totalBooks: 0,
           totalValue: 0
         });
@@ -551,11 +552,22 @@ export function LibraryDonationsTab() {
         const qty = b.quantityDonated || 0;
         authorData.totalBooks += qty;
         authorData.totalValue += qty * (b.book?.mrp || 0);
+        if (b.book?.title) {
+          authorData.donatedTitles.add(b.book.title);
+        }
       });
     });
 
-    authorLogsMap.forEach((data: any) => {
-      csvContent += `"${data.name}",${data.campaigns.size},${data.libraries.size},${data.totalBooks},${data.totalValue}\n`;
+    authorLogsMap.forEach((data: any, authorId: number) => {
+      // Find matching author in adminAuthors to get all system-registered books
+      const systemAuthor = adminAuthors?.find((a: any) => a.id === authorId);
+      const systemTitles = systemAuthor?.books?.map((b: any) => b.title) || [];
+      const uniqueSystemTitles = Array.from(new Set(systemTitles));
+      
+      const systemTitlesStr = uniqueSystemTitles.map(t => t.replace(/"/g, '""')).join('; ');
+      const donatedTitlesStr = Array.from(data.donatedTitles).map((t: any) => t.replace(/"/g, '""')).join('; ');
+
+      csvContent += `"${data.name.replace(/"/g, '""')}",${data.campaigns.size},${data.libraries.size},"${systemTitlesStr}","${donatedTitlesStr}",${data.totalBooks},${data.totalValue}\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

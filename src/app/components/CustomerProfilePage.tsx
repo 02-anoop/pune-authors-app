@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import axios from "axios";
-import { User, LogOut, Package, ArrowRight, MessageSquare, Mail, Phone, Check, BookOpen, Send } from "lucide-react";
+import { User, LogOut, Package, ArrowRight, MessageSquare, Mail, Phone, Check, BookOpen, Send, Star } from "lucide-react";
 import fictionData from "./data/fiction_catalogue.json";
 import nonFictionData from "./data/non_fiction_catalogue.json";
 import { OrderFulfillmentTimeline } from "./OrderFulfillmentTimeline";

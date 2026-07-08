@@ -2785,11 +2785,15 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Delivery Rating</span>
-                    <span className="font-medium text-yellow-500 text-lg">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i}>{i < (viewBuyerInfoOrder.feedbackRating || 0) ? '★' : '☆'}</span>
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          size={14}
+                          className={star <= (viewBuyerInfoOrder.feedbackRating || 0) ? "text-amber-500 fill-amber-500" : "text-gray-300"}
+                        />
                       ))}
-                    </span>
+                    </div>
                   </div>
                   {viewBuyerInfoOrder.feedbackComments && (
                     <div className="text-sm italic text-gray-600 border-t border-gray-200 mt-4 pt-4">
@@ -2966,91 +2970,76 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
         </button>
       </div>
 
-      {/* ── Order Tracking KPIs ── */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-        <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-            <Check size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Successful Orders</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Completed' || o.status === 'Delivered').length}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card amber" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
-            <AlertCircle size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Approved</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-            <Package size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Dispatched</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Accepted').length}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card blue" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <MapPin size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Under Delivery</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Dispatched').length}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card border border-red-500/20" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#fef2f2' }}>
-          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-            <TrendingDown size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-red-500 mb-1">Late Fines</p>
-            <h3 className="text-2xl font-bold text-red-600">₹{dashboardData?.authorProfile?.extraData?.lateFines || 0}</h3>
-          </div>
-        </div>
-      </div>
-
-      {/* Order Geography Pie Chart */}
-      {(() => {
-        const stateCounts: Record<string, number> = {};
-        const knownStates = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
+      {/* ── Web Orders Layout (KPIs + Pie) ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 mb-8">
         
-        orders.forEach((o: any) => {
-          if (o.address) {
-            let foundState = "Other";
-            for (const s of knownStates) {
-               if (o.address.toLowerCase().includes(s.toLowerCase())) {
-                  foundState = s; break;
-               }
-            }
-            stateCounts[foundState] = (stateCounts[foundState] || 0) + 1;
-          }
-        });
+        {/* KPI Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 h-max">
+          <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-4 flex items-center gap-4 hover:border-green-500/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+              <Check size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">Successful Orders</p>
+              <h3 className="text-xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Completed' || o.status === 'Delivered').length}</h3>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-4 flex items-center gap-4 hover:border-yellow-500/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center shrink-0">
+              <AlertCircle size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">To Be Approved</p>
+              <h3 className="text-xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length}</h3>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-4 flex items-center gap-4 hover:border-indigo-500/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Package size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">To Be Dispatched</p>
+              <h3 className="text-xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Accepted').length}</h3>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-4 flex items-center gap-4 hover:border-blue-500/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <MapPin size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">Under Delivery</p>
+              <h3 className="text-xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Dispatched').length}</h3>
+            </div>
+          </div>
+          <div className="bg-red-50 rounded-xl shadow-sm border border-red-200 p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-white text-red-600 flex items-center justify-center shrink-0 shadow-sm border border-red-100">
+              <TrendingDown size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-red-500 mb-0.5">Late Fines</p>
+              <h3 className="text-xl font-bold text-red-600">₹{dashboardData?.authorProfile?.extraData?.lateFines || 0}</h3>
+            </div>
+          </div>
+        </div>
 
-        const stateEntries = Object.entries(stateCounts).sort((a, b) => b[1] - a[1]);
-        const topStates = stateEntries.slice(0, 6);
-        const topStatesTotal = topStates.reduce((acc, curr) => acc + curr[1], 0);
-        const totalWithAddress = orders.filter((o:any) => o.address).length;
-        if (totalWithAddress > topStatesTotal) {
-          topStates.push(['Other', totalWithAddress - topStatesTotal]);
-        }
-        const statePieData = topStates.map(([name, value]) => ({ name, value }));
-        const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#94a3b8'];
+        {/* Orders by Status Chart */}
+        <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-5">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-2 border-b pb-2">Orders by Status</p>
+          <div className="h-[200px]">
+            {(() => {
+              const statusCounts: Record<string, number> = {};
+              orders.forEach((o: any) => {
+                const st = o.status || 'Pending';
+                statusCounts[st] = (statusCounts[st] || 0) + 1;
+              });
+              const statusPieData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+              const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#94a3b8'];
 
-        return (
-          <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm mb-8">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4">Orders by State</h3>
-            <div className="h-64">
-              {statePieData.length > 0 ? (
+              return statusPieData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={statePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value" label={({name, value}) => `${name} (${value})`}>
-                      {statePieData.map((entry, index) => (
+                    <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value" label={({name, value}) => `${name} (${value})`}>
+                      {statusPieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                       ))}
                     </Pie>
@@ -3058,12 +3047,13 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-paa-gray-text text-sm italic">No state data available.</div>
-              )}
-            </div>
+                <div className="flex items-center justify-center h-full text-paa-gray-text text-sm italic">No data</div>
+              );
+            })()}
           </div>
-        );
-      })()}
+        </div>
+
+      </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar max-w-full">
@@ -3231,11 +3221,21 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                         
                         {/* Delivery Feedback */}
                         {ord.feedbackRating && (
-                          <div className="mt-1 flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-gray-50 border border-gray-200 px-2 py-1 rounded w-full">
-                            Deliv: {ord.feedbackRating} <Star size={8} className="text-amber-500 fill-amber-500 mr-1" /> 
-                            <span className={ord.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-green-600'}>
-                              {ord.feedbackCondition}
-                            </span>
+                          <div className="mt-1 flex flex-col items-center justify-center gap-1 p-1 bg-gray-50 border border-gray-200 rounded w-full">
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  size={10}
+                                  className={star <= ord.feedbackRating ? "text-amber-500 fill-amber-500" : "text-gray-300"}
+                                />
+                              ))}
+                            </div>
+                            {ord.feedbackCondition && (
+                              <span className={`text-[8px] font-bold uppercase tracking-widest ${ord.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-green-600'}`}>
+                                {ord.feedbackCondition}
+                              </span>
+                            )}
                           </div>
                         )}
 

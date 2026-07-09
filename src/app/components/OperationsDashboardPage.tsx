@@ -113,11 +113,23 @@ export function OperationsDashboardPage() {
   });
   const [authors, setAuthors] = useState<any[]>(() => {
     const cached = sessionStorage.getItem('adminAuthors');
-    return cached ? JSON.parse(cached) : [];
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return Array.isArray(parsed) ? parsed.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })) : [];
+      } catch (e) {}
+    }
+    return [];
   });
   const [books, setBooks] = useState<any[]>(() => {
     const cached = sessionStorage.getItem('adminBooks');
-    return cached ? JSON.parse(cached) : [];
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return Array.isArray(parsed) ? parsed.sort((a: any, b: any) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' })) : [];
+      } catch (e) {}
+    }
+    return [];
   });
   const [events, setEvents] = useState<any[]>(() => {
     const cached = sessionStorage.getItem('adminEvents');
@@ -301,15 +313,17 @@ export function OperationsDashboardPage() {
     try {
       const res = await axios.get(`${API}/api/admin/authors?page=${authorsPage}&limit=50`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       if (res.data.data) {
-        setAuthors(res.data.data);
+        const sortedData = res.data.data.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+        setAuthors(sortedData);
         setAuthorsMeta(res.data.meta);
-        sessionStorage.setItem('adminAuthors', JSON.stringify(res.data.data));
+        sessionStorage.setItem('adminAuthors', JSON.stringify(sortedData));
         const c = res.data.meta.totalPending || 0;
         if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true }));
         prevCountsRef.current.authors = c;
       } else {
-        setAuthors(res.data);
-        sessionStorage.setItem('adminAuthors', JSON.stringify(res.data));
+        const sortedData = res.data.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+        setAuthors(sortedData);
+        sessionStorage.setItem('adminAuthors', JSON.stringify(sortedData));
         const c = res.data.filter((a: any) => a.status === 'Pending').length;
         if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true }));
         prevCountsRef.current.authors = c;
@@ -321,8 +335,9 @@ export function OperationsDashboardPage() {
     if (!isBackground) setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/admin/books`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      setBooks(res.data); sessionStorage.setItem('adminBooks', JSON.stringify(res.data));
-      const c = res.data.filter((b: any) => b.status === 'Pending').length; if (c > prevCountsRef.current.books) setPendingAlerts(prev => ({ ...prev, books: true })); prevCountsRef.current.books = c;
+      const sortedData = res.data.sort((a: any, b: any) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+      setBooks(sortedData); sessionStorage.setItem('adminBooks', JSON.stringify(sortedData));
+      const c = sortedData.filter((b: any) => b.status === 'Pending').length; if (c > prevCountsRef.current.books) setPendingAlerts(prev => ({ ...prev, books: true })); prevCountsRef.current.books = c;
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
@@ -2882,7 +2897,7 @@ export function OperationsDashboardPage() {
                 if (!edA?.isReapplied && edB?.isReapplied) return 1;
                 if (a.status === 'Pending' && b.status !== 'Pending') return -1;
                 if (a.status !== 'Pending' && b.status === 'Pending') return 1;
-                return 0;
+                return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
               }).map((author) => (
                 <tr key={author.id} className={selectedAuthorIds.includes(author.id) ? 'bg-indigo-50/30' : ''}>
                   <td className="text-center">
@@ -3115,7 +3130,9 @@ export function OperationsDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter)).map((book) => (
+              {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter))
+                .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }))
+                .map((book) => (
                 <tr key={book.id}>
                   <td>
                     <div className="flex items-center gap-3">

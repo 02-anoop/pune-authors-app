@@ -322,8 +322,8 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
       }).join("");
   
       const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
+      container.style.position = 'absolute';
+      container.style.left = '0';
       container.style.top = '0';
       container.style.zIndex = '-9999';
       document.body.appendChild(container);
@@ -440,7 +440,13 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
             scale: 1.5, 
             useCORS: true, 
             logging: false,
-            backgroundColor: '#0f172a'
+            backgroundColor: '#0f172a',
+            width: 802,
+            height: 1120,
+            windowWidth: 802,
+            windowHeight: 1120,
+            x: 0,
+            y: 0
         });
         const imgData = canvas.toDataURL('image/jpeg', 0.85);
         

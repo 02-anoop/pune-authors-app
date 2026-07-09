@@ -5,7 +5,7 @@ import {
   Eye, Edit, Edit2, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle,
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
   ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, ChevronUp, Loader2, FileText, AlertCircle,
-  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, ChevronLeft, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send
+  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, ChevronLeft, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send, User, Phone
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line
@@ -194,6 +194,10 @@ export function OperationsDashboardPage() {
   const [galleryUploadFiles, setGalleryUploadFiles] = useState<File[]>([]);
   const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [gallerySubTab, setGallerySubTab] = useState<'events' | 'carousel'>('events');
+  const [carouselImages, setCarouselImages] = useState<any[]>([]);
+  const [uploadingCarousel, setUploadingCarousel] = useState(false);
+  const carouselFileInputRef = useRef<HTMLInputElement>(null);
   const [viewingGalleryImage, setViewingGalleryImage] = useState<string | null>(null);
 
   // Events tab lifted state
@@ -492,8 +496,16 @@ export function OperationsDashboardPage() {
     if (!isBackground) setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/gallery`);
-      setGallery(res.data);
+      const now = new Date();
+      setGallery(res.data.filter((e: any) => new Date(e.date) <= now));
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
+  };
+
+  const fetchCarouselImages = async () => {
+    try {
+      const res = await axios.get(`${API}/api/carousel`);
+      setCarouselImages(res.data);
+    } catch(e) { console.error(e); }
   };
 
 
@@ -550,6 +562,7 @@ export function OperationsDashboardPage() {
           promises.push(fetchForms(isBackground));
         } else if (activeTab === 'gallery') {
           promises.push(fetchGallery(isBackground));
+          promises.push(fetchCarouselImages());
         } else if (activeTab === 'helpdesk') {
           promises.push(fetchQueriesAlert(true));
         }
@@ -2158,37 +2171,73 @@ export function OperationsDashboardPage() {
 
   const LateAuthorsSystemTab = () => {
     const [activeTable, setActiveTable] = React.useState<'approvals' | 'suspended' | 'late' | 'history'>('late');
-    const [fineModalAuthor, setFineModalAuthor] = React.useState<{ id: number, name: string } | null>(null);
+    const [fineModalAuthor, setFineModalAuthor] = React.useState<{ id: number, name: string, orderId?: string, count?: number, hours?: number, delayType?: string } | null>(null);
     const [fineAmount, setFineAmount] = React.useState('500');
     const [isSubmittingFine, setIsSubmittingFine] = React.useState(false);
+    const [expandedCustomerRow, setExpandedCustomerRow] = React.useState<number | null>(null);
 
     // Reconstruct lateDeliveriesMap for active deliveries (to charge fine)
-    const lateDeliveriesMap: Record<number, any> = {};
+    const lateDeliveriesMap: Record<string, any> = {};
     orders.forEach((o: any) => {
       o.items?.forEach((it: any) => {
         if ((it.status === 'Pending Verification' || it.status === 'Pending' || it.status === 'Accepted') && it.createdAt) {
           const hours = (new Date().getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600);
+          
+          const aId = it.authorId || it.book?.author?.id;
+          const aName = it.authorName || it.book?.author?.name || 'Unknown Author';
+          const aEmail = it.authorEmail || it.book?.author?.email;
+
           let ignoreForLate = false;
-          const authorData = authors.find((a: any) => a.id === it.authorId);
+          const authorData = authors.find((a: any) => a.id === aId);
           if (authorData?.extraData?.lastFinePaidAt) {
             if (new Date(it.createdAt).getTime() < new Date(authorData.extraData.lastFinePaidAt).getTime()) {
               ignoreForLate = true;
             }
           }
 
-          if (hours > 24 && it.authorId && !ignoreForLate) {
-            if (!lateDeliveriesMap[it.authorId]) {
-              lateDeliveriesMap[it.authorId] = { authorName: it.authorName, authorEmail: it.authorEmail, orderId: o.id, hours: Math.round(hours), count: 0 };
+          let isLate = false;
+          let delayType = '';
+          if ((it.status === 'Pending Verification' || it.status === 'Pending') && hours > 24) {
+             isLate = true;
+             delayType = 'Acceptance (>24h)';
+          } else if (it.status === 'Accepted' && hours > 48) {
+             isLate = true;
+             delayType = 'Dispatch (>48h)';
+          }
+
+          if (isLate && aId && !ignoreForLate) {
+            const key = `${aId}-${o.id}`;
+            if (!lateDeliveriesMap[key]) {
+              lateDeliveriesMap[key] = { 
+                 authorId: aId,
+                 authorName: aName, 
+                 authorEmail: aEmail, 
+                 orderId: o.id, 
+                 hours: Math.round(hours), 
+                 count: 0,
+                 customerInfo: { name: o.customerName && o.customerName !== 'N/A' ? o.customerName : 'Guest Customer', phone: o.customerPhone || 'No Phone', email: o.customerEmail || 'No Email' },
+                 delayType,
+                 lateItems: []
+              };
             }
-            lateDeliveriesMap[it.authorId].count++;
-            if (Math.round(hours) > lateDeliveriesMap[it.authorId].hours) {
-              lateDeliveriesMap[it.authorId].hours = Math.round(hours);
+            lateDeliveriesMap[key].count++;
+            lateDeliveriesMap[key].lateItems.push({
+               title: it.book?.title || 'Unknown Book',
+               quantity: it.quantity || 1,
+               price: it.book?.price || it.price || 0,
+               status: it.status
+            });
+
+            if (Math.round(hours) > lateDeliveriesMap[key].hours) {
+              lateDeliveriesMap[key].hours = Math.round(hours);
+              lateDeliveriesMap[key].customerInfo = { name: o.customerName && o.customerName !== 'N/A' ? o.customerName : 'Guest Customer', phone: o.customerPhone || 'No Phone', email: o.customerEmail || 'No Email' };
+              lateDeliveriesMap[key].delayType = delayType;
             }
           }
         }
       });
     });
-    const lateDeliveries = Object.entries(lateDeliveriesMap).map(([authorId, data]) => ({ authorId: Number(authorId), ...data })).sort((a, b) => b.hours - a.hours);
+    const lateDeliveries = Object.values(lateDeliveriesMap).sort((a: any, b: any) => b.hours - a.hours);
 
     // Identify pending fine approvals
     const pendingFineApprovals = authors.filter((a: any) =>
@@ -2200,8 +2249,8 @@ export function OperationsDashboardPage() {
     // Identify authors with fine history
     const historyAuthors = authors.filter((a: any) => a.extraData?.fineHistory && a.extraData.fineHistory.length > 0);
 
-    const handleOpenFineModal = (authorId: number, authorName: string) => {
-      setFineModalAuthor({ id: authorId, name: authorName });
+    const handleOpenFineModal = (authorId: number, authorName: string, ld?: any) => {
+      setFineModalAuthor({ id: authorId, name: authorName, ...ld });
       setFineAmount('500');
     };
 
@@ -2211,7 +2260,13 @@ export function OperationsDashboardPage() {
       if (isNaN(amount) || amount <= 0) return toast.error('Invalid amount');
       setIsSubmittingFine(true);
       try {
-        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${fineModalAuthor.id}/fine`, { amount }, {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${fineModalAuthor.id}/fine`, { 
+            amount, 
+            orderId: fineModalAuthor.orderId, 
+            count: fineModalAuthor.count, 
+            hours: fineModalAuthor.hours,
+            delayType: fineModalAuthor.delayType
+        }, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         toast.success(`Fine of ₹${amount} charged successfully`);
@@ -2380,11 +2435,24 @@ export function OperationsDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {lateDeliveries.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">No late deliveries currently.</td></tr> : lateDeliveries.map((ld, idx) => (
-                    <tr key={idx} className="hover:bg-orange-50 transition-colors">
-                      <td className="px-4 py-3 font-bold text-paa-navy">{ld.orderId}</td>
+                    <React.Fragment key={idx}>
+                    <tr className="hover:bg-orange-50 transition-colors">
+                      <td className="px-4 py-3 font-bold text-paa-navy flex items-center gap-2">
+                        <button onClick={() => setExpandedCustomerRow(expandedCustomerRow === idx ? null : idx)} className="text-gray-400 hover:text-paa-navy transition-colors focus:outline-none">
+                          <ChevronDown size={16} className={`transition-transform duration-300 ${expandedCustomerRow === idx ? 'rotate-180' : ''}`} />
+                        </button>
+                        {ld.orderId}
+                      </td>
                       <td className="px-4 py-3 font-medium text-paa-navy">{ld.authorName}</td>
                       <td className="px-4 py-3 text-center font-bold text-orange-600">{ld.count}</td>
-                      <td className="px-4 py-3 text-center text-xs text-orange-500">{ld.hours} hrs</td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="font-bold text-orange-500 mb-1">{ld.hours} hrs</div>
+                        {ld.delayType === 'Dispatch (>48h)' ? (
+                          <span className="bg-purple-100 text-purple-700 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest shadow-sm inline-block">Dispatch Wait</span>
+                        ) : (
+                          <span className="bg-orange-100 text-orange-700 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest shadow-sm inline-block">Acceptance Wait</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center flex justify-center gap-2">
                         {(() => {
                           const authorInfo = authors.find((a: any) => a.id === ld.authorId);
@@ -2412,8 +2480,8 @@ export function OperationsDashboardPage() {
                             diffDays = (new Date().getTime() - new Date(notifiedDateStr).getTime()) / (1000 * 3600 * 24);
                           }
 
-                          if (diffDays >= 0 && diffDays <= 3) {
-                            const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
+                          if (diffDays >= 0 && diffDays <= 1) {
+                            const daysLeft = Math.max(0, 1 - Math.floor(diffDays));
                             return (
                               <span className="bg-orange-100 text-orange-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
                                 <Check size={12} /> Notified ({daysLeft}d left)
@@ -2424,7 +2492,9 @@ export function OperationsDashboardPage() {
                               <>
                                 <button onClick={async () => {
                                   try {
-                                    await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${ld.authorId}/notify-late`, {}, {
+                                    await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${ld.authorId}/notify-late`, {
+                                        orderId: ld.orderId, count: ld.count, hours: ld.hours, delayType: ld.delayType
+                                    }, {
                                       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                                     });
                                     toast.success(`Notification sent to ${ld.authorName}`);
@@ -2432,10 +2502,10 @@ export function OperationsDashboardPage() {
                                   } catch (err) {
                                     toast.error('Failed to notify author');
                                   }
-                                }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors shadow-sm border border-blue-100" title="Send 3-Day Warning">
+                                }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors shadow-sm border border-blue-100" title="Send 1-Day Warning">
                                   <Bell size={14} />
                                 </button>
-                                <button onClick={() => handleOpenFineModal(ld.authorId, ld.authorName)} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 font-bold text-xs shadow-sm border border-red-100 transition-colors" title="Charge Fine">
+                                <button onClick={() => handleOpenFineModal(ld.authorId, ld.authorName, ld)} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 font-bold text-xs shadow-sm border border-red-100 transition-colors" title="Charge Fine">
                                   ₹
                                 </button>
                               </>
@@ -2444,6 +2514,38 @@ export function OperationsDashboardPage() {
                         })()}
                       </td>
                     </tr>
+                    {expandedCustomerRow === idx && (
+                      <tr className="bg-orange-50/30">
+                        <td colSpan={5} className="px-8 py-4 border-b border-orange-100">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="flex flex-col gap-1 text-sm text-paa-navy">
+                              <div className="font-semibold text-paa-gray-text text-xs uppercase tracking-widest mb-2">Customer Contact for {ld.orderId}</div>
+                              <div className="flex items-center gap-2"><User size={14} className="text-orange-400"/> {ld.customerInfo.name}</div>
+                              <div className="flex items-center gap-2"><Phone size={14} className="text-orange-400"/> {ld.customerInfo.phone}</div>
+                              <div className="flex items-center gap-2"><Mail size={14} className="text-orange-400"/> {ld.customerInfo.email}</div>
+                            </div>
+                            <div className="flex flex-col gap-1 text-sm text-paa-navy">
+                              <div className="font-semibold text-paa-gray-text text-xs uppercase tracking-widest mb-2">Delayed Items in {ld.orderId}</div>
+                              <div className="space-y-1">
+                                {ld.lateItems.map((item: any, i: number) => (
+                                  <div key={i} className="flex justify-between items-center bg-white px-3 py-2 rounded shadow-sm border border-orange-100/50">
+                                    <div className="flex flex-col">
+                                      <span className="font-medium text-paa-navy">{item.title}</span>
+                                      <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{item.status}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-xs text-gray-500">Qty: {item.quantity}</span><br/>
+                                      <span className="font-bold text-orange-600">₹{item.price * item.quantity}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -4156,7 +4258,7 @@ export function OperationsDashboardPage() {
                          </td>
                          <td className="px-4 py-3">
                             <div className="flex flex-col gap-1.5 items-start">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Pending Approval' ? 'bg-orange-100 text-orange-700' : evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
                                    {evt.isLegacy ? 'Legacy Archive' : evt.status}
                                 </span>
                                 <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
@@ -4180,14 +4282,41 @@ export function OperationsDashboardPage() {
                          <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">{revenue}</td>
                          <td className="px-4 py-3 text-right">
                             <div className="flex gap-2 justify-center">
-                                <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
-                                   <Eye className="w-4 h-4" />
-                                   {evt.registrations?.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length > 0 && (
-                                       <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse shadow-sm">
-                                           {evt.registrations.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length}
-                                       </span>
-                                   )}
-                                </button>
+                                {evt.status === 'Pending Approval' ? (
+                                   <>
+                                      <button title="Approve Event" onClick={async () => {
+                                          if(window.confirm('Approve this event?')) {
+                                              try {
+                                                  await axios.put(`${API}/api/admin/events/${evt.id}/status`, { status: 'Upcoming' }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                  toast.success('Event approved');
+                                                  fetchEvents();
+                                              } catch(err) { toast.error('Failed to approve'); }
+                                          }
+                                      }} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors shadow-sm">
+                                         <Check className="w-4 h-4" />
+                                      </button>
+                                      <button title="Reject Event" onClick={async () => {
+                                          if(window.confirm('Reject this event?')) {
+                                              try {
+                                                  await axios.put(`${API}/api/admin/events/${evt.id}/status`, { status: 'Rejected' }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                  toast.success('Event rejected');
+                                                  fetchEvents();
+                                              } catch(err) { toast.error('Failed to reject'); }
+                                          }
+                                      }} className="p-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition-colors shadow-sm">
+                                         <X className="w-4 h-4" />
+                                      </button>
+                                   </>
+                                ) : (
+                                   <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
+                                      <Eye className="w-4 h-4" />
+                                      {evt.registrations?.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length > 0 && (
+                                          <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse shadow-sm">
+                                              {evt.registrations.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length}
+                                          </span>
+                                      )}
+                                   </button>
+                                )}
                                 <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
                                    <Edit2 className="w-4 h-4" />
                                 </button>
@@ -4634,6 +4763,39 @@ export function OperationsDashboardPage() {
 
   const renderGalleryTab = () => {
 
+    const handleCarouselUpload = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (carouselImages.length >= 10) return toast.error('Maximum 10 images allowed for the carousel.');
+      
+      setUploadingCarousel(true);
+      const formData = new FormData();
+      formData.append('image', file);
+      try {
+        await axios.post(`${API}/api/admin/carousel`, formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        toast.success('Carousel image uploaded.');
+        fetchCarouselImages();
+      } catch(err) {
+        toast.error('Failed to upload image.');
+      } finally {
+        setUploadingCarousel(false);
+      }
+    };
+  
+    const handleCarouselDelete = async (filename: string) => {
+      try {
+        await axios.delete(`${API}/api/admin/carousel/${filename}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        toast.success('Carousel image removed.');
+        fetchCarouselImages();
+      } catch(err) {
+        toast.error('Failed to remove image.');
+      }
+    };
+
     const handleUploadGalleryImage = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedGalleryEvent || galleryUploadFiles.length === 0) return;
@@ -4696,13 +4858,60 @@ export function OperationsDashboardPage() {
       {!selectedGalleryEvent ? (
         <div className="dash-panel animate-fade-in-up">
           <div className="dash-panel-header flex justify-between items-center">
-            <h2 className="dash-panel-title">Gallery Management</h2>
-            <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
-              Auto-synced with All Events
-            </span>
+            <div className="flex gap-2">
+              <button onClick={() => setGallerySubTab('events')} className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${gallerySubTab === 'events' ? 'bg-paa-navy text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:text-paa-navy hover:bg-gray-200'}`}>Event Galleries</button>
+              <button onClick={() => setGallerySubTab('carousel')} className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${gallerySubTab === 'carousel' ? 'bg-paa-navy text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:text-paa-navy hover:bg-gray-200'}`}>Buyer Carousel</button>
+            </div>
+            {gallerySubTab === 'events' && (
+              <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
+                Auto-synced with All Events
+              </span>
+            )}
           </div>
 
           <div className="p-6">
+            {gallerySubTab === 'carousel' ? (
+              <div className="animate-fade-in-up">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h3 className="font-bold text-paa-navy text-lg tracking-tight">Buyer Side Carousel Images</h3>
+                    <p className="text-sm text-gray-500">Upload up to 10 high-quality images for the landing page carousel. ({carouselImages.length}/10 uploaded)</p>
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" ref={carouselFileInputRef} onChange={handleCarouselUpload} />
+                  <button 
+                    onClick={() => carouselFileInputRef.current?.click()}
+                    disabled={uploadingCarousel || carouselImages.length >= 10}
+                    className="bg-paa-navy text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg hover:bg-paa-gold transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                  >
+                    {uploadingCarousel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add Image
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {carouselImages.map(img => (
+                    <div key={img.id} className="bg-white rounded-2xl border border-gray-100 shadow-premium overflow-hidden group relative aspect-[4/3]">
+                      <img src={`${API}${img.url}`} alt="Carousel" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button onClick={() => handleCarouselDelete(img.url.split('/').pop()!)} className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg" title="Remove">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {carouselImages.length === 0 && (
+                  <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 border-dashed mt-6">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ImageIcon className="w-8 h-8 text-gray-300" />
+                    </div>
+                    <h3 className="text-lg font-bold text-paa-navy">No Carousel Images</h3>
+                    <p className="text-gray-500 text-sm mt-1">Upload images here to show them in the landing page carousel.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
             <div className="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm">
               <div className="flex-[3] min-w-[300px] relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -4782,7 +4991,9 @@ export function OperationsDashboardPage() {
                   </div>
                 );
               })}
-            </div>
+              </div>
+              </>
+            )}
           </div>
         </div>
       ) : (
@@ -6422,98 +6633,6 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
 };
 
 export default OperationsDashboardPage;
-
-
-
-
-function GalleryReviewTab() {
-  const [pendingImages, setPendingImages] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  const fetchPendingImages = async () => {
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/pending`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setPendingImages(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => { fetchPendingImages(); }, []);
-
-  const handleAction = async (id: number, action: 'approve' | 'reject') => {
-    try {
-      const token = localStorage.getItem('token');
-      if (action === 'approve') {
-        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/images/${id}/approve`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Image approved for public gallery.');
-      } else {
-        await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/images/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Image rejected and deleted.');
-      }
-      fetchPendingImages();
-    } catch (err) {
-      toast.error('Failed to process image action.');
-    }
-  };
-
-  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy" /></div>;
-
-  return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Gallery Review</h2>
-          <p className="text-sm text-gray-500 mt-1">Review event photos uploaded by authors before they appear in the public gallery.</p>
-        </div>
-        <div className="bg-amber-100 text-amber-800 px-4 py-2 rounded-xl text-sm font-bold shadow-sm border border-amber-200 flex items-center gap-2">
-          <ImageIcon className="w-4 h-4" /> {pendingImages.length} Pending
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
-        {pendingImages.map(img => (
-          <div key={img.id} className="bg-white rounded-3xl-2xl border border-gray-100 shadow-premium overflow-hidden hover:-translate-y-1 transition-all">
-            <div className="aspect-square bg-gray-100 relative group">
-              <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} alt="Event" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                <button onClick={() => handleAction(img.id, 'approve')} className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors shadow-lg" title="Approve"><Check size={20} /></button>
-                <button onClick={() => handleAction(img.id, 'reject')} className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg" title="Reject"><X size={20} /></button>
-              </div>
-            </div>
-            <div className="p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 line-clamp-1">{img.galleryEvent?.location || 'Unknown Event'}</p>
-              <p className="text-sm text-gray-600 line-clamp-2">{img.caption || 'No caption provided'}</p>
-              <div className="mt-4 flex gap-2">
-                <button onClick={() => handleAction(img.id, 'approve')} className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 py-2 rounded-xl text-xs font-bold transition-colors text-center border border-green-200">APPROVE</button>
-                <button onClick={() => handleAction(img.id, 'reject')} className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 py-2 rounded-xl text-xs font-bold transition-colors text-center border border-red-200">REJECT</button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {pendingImages.length === 0 && (
-        <div className="text-center py-20 bg-white rounded-3xl-2xl border border-gray-100 border-dashed">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-green-500" />
-          </div>
-          <h3 className="text-lg font-serif text-paa-navy">All caught up!</h3>
-          <p className="text-gray-500 text-sm mt-1">There are no pending gallery images to review.</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 
 
 function AdminReviewsTab() {

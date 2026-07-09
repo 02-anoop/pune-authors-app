@@ -2839,6 +2839,7 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
                 select: {
                   title: true,
                   coverUrl: true,
+                  price: true,
                   author: {
                     select: { id: true, name: true, email: true }
                   }
@@ -3001,8 +3002,12 @@ router.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
       data: { status: 'Accepted', acceptedAt: new Date() },
-      include: { book: { include: { author: true, reviews: { select: { rating: true } } } } }
+      include: { order: true, book: { include: { author: true, reviews: { select: { rating: true } } } } }
     });
+
+    if (orderItem.order && orderItem.order.customerEmail) {
+       await sendNotificationEmail(orderItem.order.customerEmail, 'Order Accepted', `Good news! Your order for the book "${orderItem.book.title}" has been accepted by the author and is being prepared for dispatch.`);
+    }
     // Deduct stock immediately
     if (orderItem) {
        // [PRE-LAUNCH] Halt Deductions
@@ -3076,6 +3081,10 @@ router.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => 
       }
     });
 
+    if (rating && existing.order?.customerEmail) {
+      await sendNotificationEmail(existing.order.customerEmail, 'Thank You for Your Feedback', `Thank you for providing delivery feedback for "${existing.book?.title}". Your feedback helps us improve our services.`);
+    }
+
     if (req.body.bookRating && existing) {
       await prisma.bookReview.create({
         data: {
@@ -3085,6 +3094,9 @@ router.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => 
           bookId: existing.bookId
         }
       });
+      if (existing.order?.customerEmail) {
+        await sendNotificationEmail(existing.order.customerEmail, 'Thank You for Your Review', `Thank you for reviewing "${existing.book?.title}". Your review helps other readers discover great books!`);
+      }
     }
 
     res.json(orderItem);
@@ -3181,7 +3193,9 @@ router.get('/api/gallery', async (req, res) => {
       orderBy: { date: 'desc' },
       include: { images: { where: { status: 'Approved' } } }
     });
-    res.json(events);
+    const now = new Date();
+    const filteredEvents = events.filter(e => new Date(e.date) <= now);
+    res.json(filteredEvents);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch gallery events' });
@@ -4220,10 +4234,19 @@ router.delete('/api/author/gallery/images/:id', verifyToken, async (req, res) =>
 
 router.get('/api/gallery/events', async (req, res) => {
   try {
-    const events = await prisma.galleryEvent.findMany({
+    let events = await prisma.galleryEvent.findMany({
       orderBy: { date: 'desc' },
       include: { images: true, event: true }
     });
+    
+    // Filter out Future (Upcoming), Pending Approval, and Rejected events, as well as any future dates
+    const now = new Date();
+    events = events.filter(e => {
+       if (new Date(e.date) > now) return false;
+       if (!e.event) return true;
+       return !['Upcoming', 'Pending Approval', 'Rejected'].includes(e.event.status);
+    });
+    
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch gallery events' });
@@ -4304,8 +4327,8 @@ router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (r
       const emailContent = `
         <p>Dear ${author.name},</p>
         <p>This is an automated notification from the Pune Authors' Association.</p>
-        <p>You have <strong>${count || 'some'} pending unaccepted item(s)</strong> for order <strong>${orderId || 'recent orders'}</strong> that have been delayed by <strong>${hours || 'more than 24'} hours</strong>.</p>
-        <p>Please log in to your Author Dashboard immediately to review and accept pending orders. Continued delays may result in fines or account suspension.</p>
+        <p>You have <strong>${count || 'some'} pending item(s)</strong> for order <strong>${orderId || 'recent orders'}</strong> that have been delayed by <strong>${hours || 'more than 24'} hours</strong> (${req.body.delayType || 'Delay'}).</p>
+        <p>Please log in to your Author Dashboard immediately to review and process pending orders. Continued delays may result in fines or account suspension.</p>
       `;
       sendNotificationEmail(author.email, "Urgent: Late Delivery Notification", emailWrap("Late Delivery Notice", emailContent));
     }
@@ -4342,8 +4365,8 @@ router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res
     if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
       const emailContent = `
         <p>Dear ${author.name},</p>
-        <p>A fine of <strong>₹${amount}</strong> has been charged to your account due to severe delays in dispatching orders.</p>
-        ${orderId ? `<p>Specifically, you had <strong>${count || 'multiple'} items</strong> pending for order <strong>${orderId}</strong> delayed by <strong>${hours || 'more than 24'} hours</strong>.</p>` : ''}
+        <p>A fine of <strong>₹${amount}</strong> has been charged to your account due to severe delays in fulfilling orders.</p>
+        ${orderId ? `<p>Specifically, you had <strong>${count || 'multiple'} items</strong> pending for order <strong>${orderId}</strong> with a delay of <strong>${hours || 'more than 24'} hours</strong> (${req.body.delayType || 'Delay'}).</p>` : ''}
         <p>Your account will remain suspended for new orders until this fine is cleared. Please log in to your Author Dashboard to complete the payment.</p>
       `;
       sendNotificationEmail(author.email, "Action Required: Fine Imposed for Late Delivery", emailWrap("Fine Charged", emailContent));
@@ -5268,6 +5291,144 @@ router.get('/api/admin/sales-analytics', verifyToken, isAdmin, async (req, res) 
   } catch (err) {
     console.error('[GET sales analytics]', err);
     res.status(500).json({ error: 'Failed to fetch sales analytics' });
+  }
+});
+
+// Author Event Proposal
+router.post('/api/author/propose-event', verifyToken, async (req, res) => {
+  try {
+    const { name, location, date, duration, eventType, description } = req.body;
+    
+    // Fetch author info
+    const author = await prisma.author.findFirst({ where: { userId: req.user.id } });
+    const authorName = author ? author.name : req.user.email;
+    
+    const eventDesc = `[Proposed by Author: ${authorName}]\n${description || ''}`;
+    
+    const event = await prisma.event.create({
+      data: {
+        name,
+        location,
+        date,
+        duration,
+        eventType,
+        description: eventDesc,
+        status: 'Pending Approval',
+        commissionFlat: 0,
+        commissionPercent: 0,
+        registrationFee: 0
+      }
+    });
+    res.json(event);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to propose event' });
+  }
+});
+
+// Admin Event Status Update (Approve/Reject)
+router.put('/api/admin/events/:id/status', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const { status } = req.body;
+    
+    if (!['Upcoming', 'Rejected', 'Past', 'Legacy Archive'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    // Get the event before updating to check if it was Pending Approval
+    const existingEvent = await prisma.event.findUnique({ where: { id: eventId } });
+    
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data: { status }
+    });
+
+    // If the event was a proposal (description contains "[Proposed by Author:"), notify the proposing author
+    if (existingEvent && existingEvent.status === 'Pending Approval' && existingEvent.description) {
+      const proposerMatch = existingEvent.description.match(/\[Proposed by Author: (.*?)\]/);
+      if (proposerMatch) {
+        const proposerName = proposerMatch[1];
+        const isApproved = status === 'Upcoming';
+        const statusLabel = isApproved ? 'Approved ✅' : 'Rejected ❌';
+        const notifMessage = `Your event proposal "${existingEvent.name}" has been ${isApproved ? 'approved' : 'rejected'} by the admin. ${isApproved ? 'It is now listed as an Upcoming event.' : 'Please contact the admin team for further details.'}`;
+
+        // In-app notification to the author
+        await prisma.notification.create({
+          data: { message: notifMessage, target: proposerName }
+        });
+
+        // Find the author's email
+        const author = await prisma.author.findFirst({ where: { name: proposerName } });
+        if (author && author.email) {
+          const emailContent = emailWrap(
+            `Event Proposal ${statusLabel}`,
+            `<p>Hi <strong>${proposerName}</strong>,</p>
+             <p>Your event proposal <strong>"${existingEvent.name}"</strong> has been reviewed by the PAA admin team.</p>
+             <table style="margin:16px 0;border-collapse:collapse;">
+               <tr><td style="padding:6px 12px;font-weight:bold;background:#f0f4f8;">Event</td><td style="padding:6px 12px;">${existingEvent.name}</td></tr>
+               <tr><td style="padding:6px 12px;font-weight:bold;background:#f0f4f8;">Date</td><td style="padding:6px 12px;">${existingEvent.date}</td></tr>
+               <tr><td style="padding:6px 12px;font-weight:bold;background:#f0f4f8;">Location</td><td style="padding:6px 12px;">${existingEvent.location || 'TBA'}</td></tr>
+               <tr><td style="padding:6px 12px;font-weight:bold;background:#f0f4f8;">Decision</td><td style="padding:6px 12px;font-weight:bold;color:${isApproved ? '#16a34a' : '#dc2626'};">${statusLabel}</td></tr>
+             </table>
+             ${isApproved
+               ? `<p style="color:#16a34a;font-weight:bold;">Congratulations! Your event has been approved and is now listed. You will be notified when registration opens.</p>`
+               : `<p style="color:#dc2626;">Unfortunately, this proposal was not approved at this time. Please reach out to the admin team if you have any questions.</p>`
+             }`
+          );
+          await sendNotificationEmail(author.email, `Event Proposal ${statusLabel}: "${existingEvent.name}"`, emailContent).catch(err => {
+            console.error('[Event status email] Failed:', err.message);
+          });
+        }
+      }
+    }
+
+    res.json(updatedEvent);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update event status' });
+  }
+});
+
+
+const carouselDir = path.join(__dirname, '../uploads/carousel');
+if (!fs.existsSync(carouselDir)) fs.mkdirSync(carouselDir, { recursive: true });
+
+// Get all carousel images
+router.get('/api/carousel', (req, res) => {
+  try {
+    const files = fs.readdirSync(carouselDir);
+    const images = files.filter(f => f.match(/\.(jpg|jpeg|png|webp|gif)$/i)).map(f => ({
+      id: f,
+      url: `/uploads/carousel/${f}`
+    }));
+    res.json(images);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch carousel' });
+  }
+});
+
+// Upload carousel image
+router.post('/api/admin/carousel', verifyToken, isAdmin, upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  try {
+    const tempPath = req.file.path;
+    const destPath = path.join(carouselDir, req.file.filename);
+    fs.renameSync(tempPath, destPath);
+    res.json({ success: true, url: `/uploads/carousel/${req.file.filename}` });
+  } catch(err) {
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
+// Delete carousel image
+router.delete('/api/admin/carousel/:filename', verifyToken, isAdmin, (req, res) => {
+  try {
+    const filepath = path.join(carouselDir, req.params.filename);
+    if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+    res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ error: 'Delete failed' });
   }
 });
 

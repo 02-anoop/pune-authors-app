@@ -30,6 +30,7 @@ app.use('/', apiRoutes);
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { sendNotificationEmail, emailWrap } = require('./utils/email');
 
 // Auto-Delivery Background Interval (Runs every hour)
 setInterval(async () => {
@@ -79,6 +80,37 @@ setInterval(async () => {
           where: { id: order.id },
           data: { status: 'Completed' }
         });
+      }
+    }
+
+    // Daily Admin Report for Late Authors (runs at 9 AM)
+    if (now.getHours() === 9 && (!global.lastLateReportSent || global.lastLateReportSent.getDate() !== now.getDate())) {
+      global.lastLateReportSent = now;
+      const lateItems = await prisma.orderItem.findMany({
+        where: {
+          status: { in: ['Pending', 'Pending Verification', 'Accepted'] },
+          createdAt: { lt: new Date(now.getTime() - 24 * 60 * 60 * 1000) }
+        },
+        include: { author: true, order: true, book: true }
+      });
+      
+      const actuallyLate = lateItems.filter(it => {
+        const hours = (now.getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600);
+        if ((it.status === 'Pending Verification' || it.status === 'Pending') && hours > 24) return true;
+        if (it.status === 'Accepted' && hours > 48) return true;
+        return false;
+      });
+
+      if (actuallyLate.length > 0) {
+        let html = `<p>Admin,</p><p>There are ${actuallyLate.length} delayed order items requiring attention.</p><ul>`;
+        actuallyLate.forEach(it => {
+          html += `<li><strong>Order ${it.orderId || (it.order && it.order.id)}</strong> - Author: ${it.authorName || (it.author && it.author.name) || 'Unknown'} - Item: ${it.book ? it.book.title : 'Unknown'} - Status: ${it.status}</li>`;
+        });
+        html += `</ul><p>Please check the Operations Dashboard to issue warnings or fines.</p>`;
+        
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@puneauthors.com';
+        await sendNotificationEmail(adminEmail, 'Daily Late Authors Report', emailWrap('Late Authors Report', html))
+          .catch(e => console.error('Failed to send daily report', e));
       }
     }
   } catch (error) {

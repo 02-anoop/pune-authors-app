@@ -32,10 +32,13 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        let url = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/gallery/events`;
+        const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        let url = `${API}/api/gallery/events`;
         const res = await axios.get(url);
         
         let fetchedEvents = res.data;
+        const now = new Date();
+        fetchedEvents = fetchedEvents.filter((e: any) => new Date(e.date) <= now);
         if (eventId) {
            fetchedEvents = fetchedEvents.filter((e: any) => e.id.toString() === eventId);
         }
@@ -48,11 +51,25 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
         
         setEvents(fetchedEvents);
 
-        // Collect all approved images for carousel
-        const flatImages = fetchedEvents.flatMap((ev: any) => 
-            ev.images.map((img: any) => ({ ...img, galleryEvent: ev }))
-        );
-        setAllImages(flatImages.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        // Fetch dedicated carousel images
+        try {
+          const carouselRes = await axios.get(`${API}/api/carousel`);
+          if (carouselRes.data && carouselRes.data.length > 0) {
+            setAllImages(carouselRes.data);
+          } else {
+             // Fallback to event images if carousel is empty
+             const flatImages = fetchedEvents.flatMap((ev: any) => 
+                 ev.images.map((img: any) => ({ ...img, galleryEvent: ev }))
+             );
+             setAllImages(flatImages.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+          }
+        } catch (e) {
+          console.error('Failed to fetch carousel, using fallback', e);
+          const flatImages = fetchedEvents.flatMap((ev: any) => 
+              ev.images.map((img: any) => ({ ...img, galleryEvent: ev }))
+          );
+          setAllImages(flatImages.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        }
         
       } catch (err) {
         console.error('Failed to fetch gallery', err);
@@ -67,7 +84,7 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
   useEffect(() => {
     if (allImages.length === 0) return;
     const interval = setInterval(() => {
-      setCarouselIndex(prev => (prev + 1) % Math.min(allImages.length, 5));
+      setCarouselIndex(prev => (prev + 1) % Math.min(allImages.length, 10));
     }, 4000);
     return () => clearInterval(interval);
   }, [allImages]);
@@ -115,8 +132,8 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
 
   // Fallback to events if no images are approved
   const carouselImages = allImages.length > 0 
-    ? allImages.slice(0, 5) 
-    : events.slice(0, 5).map((e: any) => ({
+    ? allImages.slice(0, 10) 
+    : events.slice(0, 10).map((e: any) => ({
         id: 'evt-' + e.id,
         url: e.bannerUrl || null,
         caption: e.event?.name || e.type || 'Event',
@@ -124,6 +141,8 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
       }));
 
   const filteredEvents = events.filter(e => {
+    if (!e.images || e.images.length === 0) return false;
+
     const matchSearch = (e.type?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
                         (e.location?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
                         (e.city?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -159,7 +178,7 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
                     <ImageIcon className="w-32 h-32 text-gray-300 opacity-20" />
                  </div>
                )}
-               <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent w-full md:w-1/2 z-10"></div>
+               <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-transparent w-full md:w-2/3 z-10"></div>
                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10"></div>
             </div>
           ))}
@@ -168,30 +187,13 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
           <div className="absolute inset-0 z-20 flex flex-col md:flex-row max-w-[1200px] mx-auto w-full px-6">
              {/* Left side text */}
              <div className="flex-1 flex flex-col justify-center h-full pt-20 md:pt-0 pr-8">
-                <div className="text-[11px] font-bold tracking-[0.1em] text-paa-navy uppercase mb-4">Archive & Memories</div>
-                <h1 className="font-serif text-5xl md:text-7xl text-paa-navy leading-[1.1] tracking-tight mb-6">
-                  Event <span className="italic text-[#b44d28]">Gallery.</span>
+                <div className="text-[11px] font-bold tracking-[0.1em] text-white/70 uppercase mb-4">Archive & Memories</div>
+                <h1 className="font-serif text-5xl md:text-7xl text-white leading-[1.1] tracking-tight mb-6">
+                  Event <span className="italic text-paa-gold">Gallery.</span>
                 </h1>
-                <p className="text-gray-700 text-lg md:text-xl max-w-md font-medium leading-relaxed">
+                <p className="text-white/80 text-lg md:text-xl max-w-md font-medium leading-relaxed">
                   A curated record of every PAA literary event, fair, corporate activation, and airport library initiative since our founding.
                 </p>
-             </div>
-
-             {/* Right side carousel info */}
-             <div className="flex-1 flex flex-col justify-end md:justify-center items-start md:items-end pb-20 md:pb-0 text-left md:text-right h-full">
-                {carouselImages[carouselIndex] && (
-                  <div className="bg-black/40 backdrop-blur-md p-6 rounded-2xl border border-white/10 md:mt-auto md:mb-12 max-w-sm ml-auto shadow-2xl animate-fade-in-up">
-                    <h3 className="text-2xl font-serif font-bold text-white mb-2 leading-tight drop-shadow-md">
-                      {carouselImages[carouselIndex].caption || 'Event Highlights'}
-                    </h3>
-                    {carouselImages[carouselIndex].galleryEvent && (
-                      <p className="text-sm font-bold text-paa-gold uppercase tracking-widest flex items-center md:justify-end gap-2">
-                         <Calendar size={14} /> 
-                         {new Date(carouselImages[carouselIndex].galleryEvent.date).toLocaleDateString()} 
-                      </p>
-                    )}
-                  </div>
-                )}
              </div>
           </div>
           

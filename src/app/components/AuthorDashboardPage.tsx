@@ -21,6 +21,7 @@ export function AuthorDashboardPage() {
   const location = useLocation();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
+
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [hasNewQueries, setHasNewQueries] = useState(false);
   const [showReapply, setShowReapply] = useState(false);
@@ -3636,6 +3637,9 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 function EventsDashboard({ registrations }: any) {
   const [isOptInModalOpen, setIsOptInModalOpen] = useState(false);
   const [selectedInvite, setSelectedInvite] = useState<any>(null);
+  const [showProposeEventModal, setShowProposeEventModal] = useState(false);
+  const [proposeEventForm, setProposeEventForm] = useState({ name: '', location: '', date: '', duration: '', eventType: 'Book Fair', description: '' });
+  const [isProposingEvent, setIsProposingEvent] = useState(false);
   const [optInBooks, setOptInBooks] = useState<any[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | number | null>(null);
@@ -3675,8 +3679,8 @@ function EventsDashboard({ registrations }: any) {
     }
   };
   const [activeTab, setActiveTab] = useState('events');
-  const [bpSort, setBpSort] = useState('revenue_desc');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [bpSort, setBpSort] = useState('date_desc');
+  const [bpSearch, setBpSearch] = useState('');
   const [eventFilter, setEventFilter] = useState('ALL');
   const [invites, setInvites] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
@@ -3798,6 +3802,25 @@ const pe = pastEvents.find(p => p.eventId === eventId);
     return false;
   });
 
+  const handleProposeEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsProposingEvent(true);
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/propose-event`, proposeEventForm, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Event proposed successfully! It is now pending admin approval.');
+      setShowProposeEventModal(false);
+      setProposeEventForm({ name: '', location: '', date: '', duration: '', eventType: 'Book Fair', description: '' });
+      fetchDashboard();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.error || 'Failed to propose event');
+    } finally {
+      setIsProposingEvent(false);
+    }
+  };
+
   const filteredEvents = allEvents.filter((evt: any) => {
     const isLegacy = evt.status === 'Legacy Archive';
     
@@ -3807,9 +3830,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
     if (eventFilter === 'LEGACY ARCHIVE' && !isLegacy) return false;
     if (eventFilter === 'PARTICIPATED' && (evt.registration !== 'Registered' && evt.registration !== 'Approved')) return false;
     
-    if (searchTerm) {
-        return (evt.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-               (evt.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+    if (bpSearch) {
+        return (evt.name || '').toLowerCase().includes(bpSearch.toLowerCase()) ||
+               (evt.location || '').toLowerCase().includes(bpSearch.toLowerCase());
     }
     return true;
   }).sort((a: any, b: any) => {
@@ -3849,7 +3872,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
   );
 
   return (
-    <div className="bg-white rounded-xl">
+    <div className="rounded-xl">
       <div className="flex border-b border-gray-200 mb-6">
         <button onClick={() => setActiveTab('events')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'events' ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:text-paa-navy hover:bg-paa-navy/5 border border-transparent'}`}>Events Overview</button>
         <button onClick={() => setActiveTab('performance')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'performance' ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:text-paa-navy hover:bg-paa-navy/5 border border-transparent'}`}>Book Performance</button>
@@ -3924,7 +3947,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium mt-6 mb-8">
+          <div className="p-6 rounded-2xl border border-paa-navy/5 shadow-premium mt-6 mb-8">
             <h4 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-500" /> Event Profitability (Net Gain/Loss)</h4>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -3965,14 +3988,19 @@ const pe = pastEvents.find(p => p.eventId === eventId);
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-             <div className="flex flex-wrap gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+             <div className="flex flex-wrap gap-2 p-1 bg-white rounded-xl border border-gray-200">
                {['ALL', 'PARTICIPATED', 'UPCOMING', 'PAST', 'INVITES', 'LEGACY ARCHIVE'].map((f) => (
-                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'PARTICIPATED' ? 'Participated' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : 'Invites'))))}</button>
+                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-paa-navy text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'PARTICIPATED' ? 'Participated' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : 'Invites'))))}</button>
                ))}
              </div>
-             <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input type="text" placeholder="Search events..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm" />
+             <div className="flex items-center gap-4 w-full md:w-auto">
+                <button onClick={() => setShowProposeEventModal(true)} className="px-5 py-2.5 bg-paa-navy text-white text-sm font-bold uppercase tracking-widest rounded-xl hover:bg-paa-gold hover:text-paa-navy transition-all shadow-sm shrink-0 whitespace-nowrap">
+                   + Propose Event
+                </button>
+                <div className="relative w-full md:w-64">
+                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                   <input type="text" placeholder="Search events..." value={bpSearch} onChange={e => setBpSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm" />
+                </div>
              </div>
           </div>
           
@@ -3984,16 +4012,26 @@ const pe = pastEvents.find(p => p.eventId === eventId);
              </p>
           </div>
           
-          <div className="flex justify-between items-end mb-4">
+          <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
             <h4 className="font-bold text-paa-navy text-lg flex items-center gap-2"><BarChart3 className="w-5 h-5 text-indigo-500" /> Event Performance Breakdown</h4>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search events..."
+                    value={bpSearch}
+                    onChange={e => setBpSearch(e.target.value)}
+                    className="border border-gray-200 rounded-lg text-sm text-paa-navy p-2 pl-9 outline-none bg-white w-48"
+                  />
+                </div>
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Sort By:</span>
                 <select className="border border-gray-200 rounded-lg text-sm font-bold text-paa-navy p-2 outline-none cursor-pointer bg-white" value={bpSort} onChange={e => setBpSort(e.target.value)}>
+                    <option value="date_desc">Newest Events</option>
+                    <option value="date_asc">Oldest Events</option>
                     <option value="revenue_desc">Highest Revenue</option>
                     <option value="revenue_asc">Lowest Revenue</option>
                     <option value="sold_desc">Most Copies Sold</option>
-                    <option value="date_desc">Newest Events</option>
-                    <option value="date_asc">Oldest Events</option>
                 </select>
             </div>
           </div>
@@ -4342,6 +4380,59 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                     </tbody>
                  </table>
              </div>
+          </div>
+        </div>
+      )}
+
+      {showProposeEventModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in-up">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="text-xl font-bold font-serif text-paa-navy">Propose New Event</h3>
+              <button onClick={() => setShowProposeEventModal(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1 bg-white rounded-full shadow-sm">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleProposeEvent} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <label className="dash-label">Event Name *</label>
+                   <input type="text" required value={proposeEventForm.name} onChange={e => setProposeEventForm({...proposeEventForm, name: e.target.value})} className="dash-input w-full" placeholder="e.g., Spring Book Fair" />
+                 </div>
+                 <div>
+                   <label className="dash-label">Event Type *</label>
+                   <select required value={proposeEventForm.eventType} onChange={e => setProposeEventForm({...proposeEventForm, eventType: e.target.value})} className="dash-input w-full bg-white">
+                      <option value="Book Fair">Book Fair</option>
+                      <option value="Corporate">Corporate</option>
+                      <option value="Society">Society</option>
+                      <option value="School">School</option>
+                      <option value="Custom">Custom</option>
+                   </select>
+                 </div>
+                 <div>
+                   <label className="dash-label">Date *</label>
+                   <input type="date" required value={proposeEventForm.date} onChange={e => setProposeEventForm({...proposeEventForm, date: e.target.value})} className="dash-input w-full" />
+                 </div>
+                 <div>
+                   <label className="dash-label">Duration *</label>
+                   <input type="text" required value={proposeEventForm.duration} onChange={e => setProposeEventForm({...proposeEventForm, duration: e.target.value})} className="dash-input w-full" placeholder="e.g., 3 Days" />
+                 </div>
+                 <div className="md:col-span-2">
+                   <label className="dash-label">Location/City *</label>
+                   <input type="text" required value={proposeEventForm.location} onChange={e => setProposeEventForm({...proposeEventForm, location: e.target.value})} className="dash-input w-full" placeholder="e.g., Phoenix Mall, Pune" />
+                 </div>
+                 <div className="md:col-span-2">
+                   <label className="dash-label">Description / Purpose</label>
+                   <textarea rows={3} value={proposeEventForm.description} onChange={e => setProposeEventForm({...proposeEventForm, description: e.target.value})} className="dash-input w-full" placeholder="Why are you proposing this event? Any specific details?"></textarea>
+                 </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                <button type="button" onClick={() => setShowProposeEventModal(false)} className="px-5 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 bg-gray-100 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" disabled={isProposingEvent} className="px-6 py-2 bg-paa-navy text-white text-sm font-bold uppercase tracking-widest rounded-xl hover:bg-paa-gold hover:text-paa-navy transition-all shadow-sm disabled:opacity-50">
+                  {isProposingEvent ? 'Proposing...' : 'Submit Proposal'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -5480,7 +5571,8 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
   const fetchGalleries = async () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/gallery/events`);
-      setGalleries(res.data);
+      const now = new Date();
+      setGalleries(res.data.filter((e: any) => new Date(e.date) <= now));
     } catch (err) {
       console.error(err);
     } finally {
@@ -5525,8 +5617,10 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
       // Re-fetch galleries and update selectedGalleryEvent from fresh data
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/gallery/events`);
-        setGalleries(res.data);
-        const updatedEvent = res.data.find((ge: any) => ge.id === selectedGalleryEvent.id);
+        const now = new Date();
+        const filteredData = res.data.filter((e: any) => new Date(e.date) <= now);
+        setGalleries(filteredData);
+        const updatedEvent = filteredData.find((ge: any) => ge.id === selectedGalleryEvent.id);
         if (updatedEvent) {
           setSelectedGalleryEvent(updatedEvent);
         }

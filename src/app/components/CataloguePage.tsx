@@ -322,9 +322,12 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
       }).join("");
   
       const container = document.createElement('div');
-      container.style.position = 'absolute';
+      container.style.position = 'fixed';
       container.style.left = '0';
       container.style.top = '0';
+      container.style.width = '802px';
+      container.style.height = '1120px';
+      container.style.overflow = 'hidden';
       container.style.zIndex = '-9999';
       document.body.appendChild(container);
   
@@ -434,8 +437,15 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pages = container.querySelectorAll('.pdf-page');
     
+    // Hide all pages initially to speed up html2canvas DOM parsing and reset Y-coordinates
+    for (let i = 0; i < pages.length; i++) {
+        (pages[i] as HTMLElement).style.display = 'none';
+    }
+    
     for (let i = 0; i < pages.length; i++) {
         const page = pages[i] as HTMLElement;
+        page.style.display = 'flex'; // show only this page during capture
+        
         const canvas = await html2canvas(page, { 
             scale: 1.5, 
             useCORS: true, 
@@ -444,14 +454,14 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
             width: 802,
             height: 1120,
             windowWidth: 802,
-            windowHeight: 1120,
-            x: 0,
-            y: 0
+            windowHeight: 1120
         });
-        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+        const imgData = canvas.toDataURL('image/jpeg', 0.80);
         
         if (i > 0) pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+        
+        page.style.display = 'none'; // hide it again
     }
 
     pdf.save(`PAA_${label.replace(/\s+/g, '_')}_Catalogue.pdf`);

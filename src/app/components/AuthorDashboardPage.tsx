@@ -5978,12 +5978,43 @@ function AuthorReviews({ books, orders }: { books: any[], orders: any[] }) {
                     <div key={r.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
                       <div className="flex justify-between items-start mb-2">
                         <div className="font-bold text-sm text-paa-navy">{r.reviewerName}</div>
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map(star => (
-                            <Star key={star} className={`w-3 h-3 ${star <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
-                          ))}
+                        <div className="flex flex-col gap-1 items-end">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-paa-gray-text uppercase">Overall</span>
+                            <div className="flex">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <Star key={star} className={`w-3 h-3 ${star <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                              ))}
+                            </div>
+                          </div>
+                          {r.writingStyleRating && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-bold text-paa-gray-text uppercase">Writing</span>
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <Star key={star} className={`w-2.5 h-2.5 ${star <= r.writingStyleRating ? 'text-blue-500 fill-blue-500' : 'text-gray-300'}`} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {r.contentQualityRating && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-bold text-paa-gray-text uppercase">Content</span>
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <Star key={star} className={`w-2.5 h-2.5 ${star <= r.contentQualityRating ? 'text-green-500 fill-green-500' : 'text-gray-300'}`} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
+                      {r.enjoyedMost && (
+                        <div className="mb-2">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block">Enjoyed Most:</span>
+                          <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{r.enjoyedMost}</span>
+                        </div>
+                      )}
                       <p className="text-sm text-gray-600 italic">"{r.comment || 'No comment provided'}"</p>
                       <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest">{new Date(r.createdAt).toLocaleDateString()}</div>
                     </div>

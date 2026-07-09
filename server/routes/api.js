@@ -135,7 +135,7 @@ router.get('/api/books/:id/reviews', async (req, res) => {
 // Submit a review for a book
 router.post('/api/books/:id/reviews', async (req, res) => {
   try {
-    const { reviewerName, rating, comment } = req.body;
+    const { reviewerName, rating, comment, writingStyleRating, contentQualityRating, enjoyedMost } = req.body;
     if (!reviewerName || !rating || !comment) {
       return res.status(400).json({ error: 'Name, rating and comment are required' });
     }
@@ -147,7 +147,10 @@ router.post('/api/books/:id/reviews', async (req, res) => {
         bookId: parseInt(req.params.id),
         reviewerName,
         rating: parseInt(rating),
-        comment
+        comment,
+        writingStyleRating: writingStyleRating ? parseInt(writingStyleRating) : null,
+        contentQualityRating: contentQualityRating ? parseInt(contentQualityRating) : null,
+        enjoyedMost: enjoyedMost || null
       }
     });
     res.status(201).json(review);
@@ -2839,7 +2842,7 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
                 select: {
                   title: true,
                   coverUrl: true,
-                  price: true,
+                  mrp: true,
                   author: {
                     select: { id: true, name: true, email: true }
                   }

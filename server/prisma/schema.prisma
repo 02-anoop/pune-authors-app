@@ -278,8 +278,11 @@ model BookReview {
   bookId       Int
   reviewerName String
   rating       Int
-  comment      String
-  createdAt    DateTime @default(now())
+  comment              String
+  writingStyleRating   Int?
+  contentQualityRating Int?
+  enjoyedMost          String?
+  createdAt            DateTime @default(now())
   book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
 }
 

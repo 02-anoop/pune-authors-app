@@ -85,30 +85,20 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
   try {
     setDownloading(true);
 
-    const checkImage = async (url: string) => {
-        if (!url) return true;
+    // Only reject blob:/data: URLs — they can't be rendered cross-origin by html2canvas.
+    // All server-hosted relative/absolute URLs are accepted; broken images are handled
+    // gracefully by the onerror attributes in the HTML template.
+    const isRenderableUrl = (url: string) => {
+        if (!url) return true; // empty = no image, still renderable (shows placeholder)
         if (url.startsWith('blob:') || url.startsWith('data:')) return false;
-        const fullUrl = url.startsWith('http') ? url : (import.meta.env.VITE_API_URL || 'http://localhost:3001').trim() + (url.startsWith('/') ? url : '/' + url);
-        try {
-            const res = await fetch(fullUrl, { method: 'HEAD' });
-            return res.ok;
-        } catch(e) {
-            return false;
-        }
+        return true;
     };
 
-    const validationResults = await Promise.all(books.map(async (b) => {
-        let isValid = true;
-        if (b.authorPhotoUrl) {
-            isValid = await checkImage(b.authorPhotoUrl);
-        }
-        if (isValid && b.id !== 'NO_BOOK' && b.coverUrl) {
-            isValid = await checkImage(b.coverUrl);
-        }
-        return isValid;
-    }));
-    
-    const validBooks = books.filter((_, i) => validationResults[i]);
+    const validBooks = books.filter(b => {
+        if (b.authorPhotoUrl && !isRenderableUrl(b.authorPhotoUrl)) return false;
+        if (b.id !== 'NO_BOOK' && b.coverUrl && !isRenderableUrl(b.coverUrl)) return false;
+        return true;
+    });
 
     const { jsPDF, html2canvas } = await loadPdfLibs();
     
@@ -263,33 +253,33 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
   
         const bookPagesHtml = bookChunks.map((chunk) => {
            const booksHtml = chunk.map((b, bIdx) => `
-           <div style="display: flex; gap: 30px; padding-bottom: ${chunk.length > 1 && bIdx === 0 ? '30px' : '0'}; border-bottom: ${chunk.length > 1 && bIdx === 0 ? '1px solid #cbd5e1' : 'none'}; break-inside: avoid;">
-             <div style="flex-shrink: 0; width: 180px;">
-               ${b.coverUrl ? `<img src="${b.coverUrl.startsWith('http') ? b.coverUrl : (import.meta.env.VITE_API_URL || 'http://localhost:3001').trim() + (b.coverUrl.startsWith('/') ? b.coverUrl : '/' + b.coverUrl)}" crossorigin="anonymous" style="width: 100%; height: 270px; object-fit: cover; border-radius: 4px; box-shadow: 10px 10px 20px rgba(0,0,0,0.1); border: 1px solid #94a3b8;" onerror="this.style.opacity='0';" />` : `<div style="width: 100%; height: 270px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px dashed #94a3b8;"><span style="color:#64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">No Cover</span></div>`}
+           <div style="display: flex; gap: 22px; padding-bottom: ${chunk.length > 1 && bIdx === 0 ? '22px' : '0'}; border-bottom: ${chunk.length > 1 && bIdx === 0 ? '1px solid #cbd5e1' : 'none'}; break-inside: avoid;">
+             <div style="flex-shrink: 0; width: 155px;">
+               ${b.coverUrl ? `<img src="${b.coverUrl.startsWith('http') ? b.coverUrl : (import.meta.env.VITE_API_URL || 'http://localhost:3001').trim() + (b.coverUrl.startsWith('/') ? b.coverUrl : '/' + b.coverUrl)}" crossorigin="anonymous" style="width: 100%; height: 240px; object-fit: cover; border-radius: 4px; box-shadow: 10px 10px 20px rgba(0,0,0,0.1); border: 1px solid #94a3b8;" onerror="this.style.opacity='0';" />` : `<div style="width: 100%; height: 240px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px dashed #94a3b8;"><span style="color:#64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">No Cover</span></div>`}
              </div>
              <div style="flex: 1; display: flex; flex-direction: column;">
-               <div style="margin-bottom: 12px;">
-                 <h3 style="margin: 0 0 5px; color: #0f172a; font-size: 24px; font-family: 'Playfair Display', Georgia, serif; line-height: 1.2;">${b.title}</h3>
-                 <p style="margin: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #0ea5e9; font-weight: 800; font-family: system-ui, sans-serif;">
+               <div style="margin-bottom: 6px;">
+                 <h3 style="margin: 0 0 2px; color: #0f172a; font-size: 18px; font-family: 'Playfair Display', Georgia, serif; line-height: 1.2;">${b.title}</h3>
+                 <p style="margin: 0; padding-top: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #0ea5e9; font-weight: 800; font-family: system-ui, sans-serif;">
                    ${b.genre} ${b.subGenre ? `<span style="color: #94a3b8; margin: 0 5px;">/</span> ${b.subGenre}` : ''}
                  </p>
                </div>
                <div style="flex: 1;">
-                 <p style="margin: 0 0 15px; font-size: 13px; line-height: 1.6; color: #334155; text-align: justify; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;">${b.synopsis}</p>
+                 <p style="margin: 0 0 8px; font-size: 11px; line-height: 1.4; color: #334155; text-align: justify;">${b.synopsis}</p>
                </div>
-               <div style="background: #fff; padding: 15px; border-top: 3px solid #0ea5e9; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                 <table style="width: 100%; font-size: 11px; color: #0f172a; border-collapse: collapse; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
+               <div style="background: #fff; padding: 10px 12px; border-top: 3px solid #0ea5e9; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                 <table style="width: 100%; font-size: 10.5px; color: #0f172a; border-collapse: collapse; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
                    <tr>
-                     <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Price:</strong> <span style="color:#0ea5e9; font-weight: 800; font-size: 14px;">${b.mrp != null ? "₹" + b.mrp : b.mrpRaw || "—"}</span></td>
-                     <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Pages:</strong> ${b.pages || "—"}</td>
+                     <td style="padding: 4px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Price:</strong> <span style="color:#0ea5e9; font-weight: 800; font-size: 13px;">${b.mrp != null ? "₹" + b.mrp : b.mrpRaw || "—"}</span></td>
+                     <td style="padding: 4px 0; border-bottom: 1px solid #e2e8f0; width: 50%;"><strong>Pages:</strong> ${b.pages || "—"}</td>
                    </tr>
                    <tr>
-                     <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0;"><strong>Language:</strong> ${b.language || "—"}</td>
-                     <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0;"><strong>Format:</strong> ${b.format || "—"}</td>
+                     <td style="padding: 4px 0; border-bottom: 1px solid #e2e8f0;"><strong>Language:</strong> ${b.language || "—"}</td>
+                     <td style="padding: 4px 0; border-bottom: 1px solid #e2e8f0;"><strong>Format:</strong> ${b.format || "—"}</td>
                    </tr>
                    <tr>
-                     <td style="padding: 6px 0;"><strong>Publisher:</strong> ${b.publisher || "—"}</td>
-                     <td style="padding: 6px 0;"><strong>ISBN:</strong> <span style="font-family: monospace;">${b.isbn || "—"}</span></td>
+                     <td style="padding: 4px 0;"><strong>Publisher:</strong> ${b.publisher || "—"}</td>
+                     <td style="padding: 4px 0;"><strong>ISBN:</strong> <span style="font-family: monospace;">${b.isbn || "—"}</span></td>
                    </tr>
                  </table>
                </div>
@@ -298,17 +288,17 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
            ` ).join("");
   
            return `
-           <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #f0f9ff; color: #0f172a; box-sizing: border-box; padding: 60px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start;">
+           <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #f0f9ff; color: #0f172a; box-sizing: border-box; padding: 45px 50px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start;">
               <!-- Branding Header -->
-              <div style="position: absolute; top: 40px; right: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px;" />
+              <div style="position: absolute; top: 28px; right: 32px;">
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 48px;" />
               </div>
               
-              <div style="margin-bottom: 40px; border-bottom: 2px solid #0f172a; padding-bottom: 10px; width: calc(100% - 140px);">
-                <h4 style="margin: 0; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 3px; font-size: 14px; font-weight: 800; color: #0f172a;">${author.name} &middot; Literary Portfolio</h4>
+              <div style="margin-bottom: 25px; border-bottom: 2px solid #0f172a; padding-bottom: 8px; width: calc(100% - 110px);">
+                <h4 style="margin: 0; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 3px; font-size: 13px; font-weight: 800; color: #0f172a;">${author.name} &middot; Literary Portfolio</h4>
               </div>
               
-              <div style="display: flex; flex-direction: column; gap: 40px;">
+              <div style="display: flex; flex-direction: column; gap: 25px;">
                  ${booksHtml}
               </div>
   

@@ -2105,13 +2105,15 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', minWidth: 0 }}>
 
         {/* LEFT — Main Table */}
-        <div className="bg-white border rounded-xl shadow-sm overflow-hidden flex-1 min-w-0">
+        <div className="bg-white border border-black/5 rounded-[14px] shadow-sm overflow-hidden flex-1 min-w-0">
           <div className="overflow-x-auto">
-            <table className="dash-table w-full">
-              <thead>
+            <table className="dash-table w-full text-left min-w-[800px]">
+              <thead className="bg-[#f0f4f8]">
                 <tr>
                   {['S.No', 'Title', 'Author', 'MRP', 'QTY Sold (Web)', 'QTY to Airport', 'QTY for Book Fair', 'Current Stock', 'Last Updated', 'Update Stock'].map(h => (
-                    <th key={h} className={h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}>{h}</th>
+                    <th key={h} className={`px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 whitespace-nowrap ${h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}`}>
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -2128,35 +2130,35 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                     <tr
                       key={book.id}
                       onClick={() => handleRowClick(book)}
-                      className={`cursor-pointer transition-colors hover:bg-blue-50/50 ${isSelected ? 'bg-indigo-50/60 outline outline-2 outline-indigo-500/30 -outline-offset-2' : ''}`}
+                      className={`cursor-pointer transition-colors hover:bg-gray-50 border-b border-black/5 ${isSelected ? 'bg-indigo-50/40 ring-2 ring-indigo-200 ring-inset' : 'bg-white'}`}
                     >
                       {/* S.No */}
-                      <td className="text-center text-gray-500 font-bold">{idx + 1}</td>
+                      <td className="px-4 py-3 text-center text-sm font-bold text-gray-500">{idx + 1}</td>
                       {/* Title */}
-                      <td className="max-w-[160px]">
-                        <p className="font-bold text-paa-navy truncate" title={book.title}>{book.title}</p>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{book.genre}</p>
+                      <td className="px-4 py-3 max-w-[160px]">
+                        <p className="font-bold text-paa-navy m-0 truncate" title={book.title}>{book.title}</p>
+                        <p className="text-[10px] text-gray-400 m-0 uppercase tracking-widest mt-1">{book.genre}</p>
                       </td>
                       {/* Author */}
-                      <td className="font-medium text-gray-700 whitespace-nowrap">{book.authorName}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">{book.authorName}</td>
                       {/* MRP */}
-                      <td className="text-center font-bold text-paa-navy">₹{book.mrp}</td>
+                      <td className="px-4 py-3 text-center text-sm font-bold text-paa-navy">₹{book.mrp}</td>
                       {/* QTY Web */}
-                      <td className="text-center">
-                        <span className="font-bold text-green-600 text-[15px]">{book.webSold}</span>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-green-600 text-sm">{book.webSold}</span>
                       </td>
                       {/* QTY Airport */}
-                      <td className="text-center">
-                        <span className="font-bold text-blue-600 text-[15px]">{book.airportQty}</span>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-sky-600 text-sm">{book.airportQty}</span>
                       </td>
                       {/* QTY Book Fair */}
-                      <td className="text-center">
-                        <span className="font-bold text-purple-600 text-[15px]">{book.eventQty}</span>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-purple-600 text-sm">{book.eventQty}</span>
                       </td>
                       {/* Current Stock */}
-                      <td className="text-center">
+                      <td className="px-4 py-3 text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <span className={`font-black text-lg leading-none ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>
+                          <span className={`font-bold text-sm ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>
                             {book.currentStock}
                           </span>
                           {book.isLowStock && (
@@ -2167,7 +2169,7 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                         </div>
                       </td>
                       {/* Last Updated */}
-                      <td className="text-center text-gray-500 text-xs relative" onClick={e => e.stopPropagation()}>
+                      <td className="px-4 py-3 text-center text-gray-500 text-xs relative" onClick={e => e.stopPropagation()}>
                         <div className="flex flex-col items-center gap-1.5">
                           <span>
                             {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
@@ -2207,7 +2209,7 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                         </div>
                       </td>
                       {/* Update Stock */}
-                      <td onClick={e => e.stopPropagation()}>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
                           <input
                             id={`stock-input-${book.id}`}

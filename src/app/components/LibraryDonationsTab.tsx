@@ -1669,8 +1669,7 @@ export function LibraryDonationsTab() {
                   <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-paa-navy"></div> Books Donated</div>
                 </div>
               </div>
-            </div>
-            
+
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

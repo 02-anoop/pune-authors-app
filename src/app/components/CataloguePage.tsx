@@ -70,11 +70,37 @@ const loadHtml2Pdf = (): Promise<any> => {
 export async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDownloading: (val: boolean) => void) {
   try {
     setDownloading(true);
+
+    const checkImage = async (url: string) => {
+        if (!url) return true;
+        if (url.startsWith('blob:') || url.startsWith('data:')) return false;
+        const fullUrl = url.startsWith('http') ? url : (import.meta.env.VITE_API_URL || 'http://localhost:3001').trim() + (url.startsWith('/') ? url : '/' + url);
+        try {
+            const res = await fetch(fullUrl, { method: 'HEAD' });
+            return res.ok;
+        } catch(e) {
+            return false;
+        }
+    };
+
+    const validationResults = await Promise.all(books.map(async (b) => {
+        let isValid = true;
+        if (b.authorPhotoUrl) {
+            isValid = await checkImage(b.authorPhotoUrl);
+        }
+        if (isValid && b.id !== 'NO_BOOK' && b.coverUrl) {
+            isValid = await checkImage(b.coverUrl);
+        }
+        return isValid;
+    }));
+    
+    const validBooks = books.filter((_, i) => validationResults[i]);
+
     const html2pdf = await loadHtml2Pdf();
     
     // Group books by author
     const byAuthor: Record<string, { name: string; bio: string; photoUrl: string; instagram: string; facebook: string; whatsapp: string; qualification?: string; age?: string; experience?: string; skills?: string; hobbies?: string; books: CatalogueBook[] }> = {};
-    books.forEach(b => {
+    validBooks.forEach(b => {
       let safePhoto = b.authorPhotoUrl || "";
       if (safePhoto.startsWith('blob:') || safePhoto.startsWith('data:')) safePhoto = "";
 
@@ -300,7 +326,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
             <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop" crossorigin="anonymous" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: grayscale(100%);" />
             <div style="position: relative; z-index: 10; padding: 80px; width: 80%; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box;">
               <div style="margin-bottom: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 250px; filter: brightness(0) invert(1);" />
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 250px; filter: brightness(0) invert(1); display: block; margin: 0 auto;" />
               </div>
               <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 6px; color: #b44d28; margin-bottom: 30px; font-weight: 800; font-family: system-ui, sans-serif;">Exclusive Collection</div>
               <h1 style="color: #fff; font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 900; line-height: 1.1; margin: 0 0 20px; letter-spacing: -1px;">Pune Authors' Association</h1>

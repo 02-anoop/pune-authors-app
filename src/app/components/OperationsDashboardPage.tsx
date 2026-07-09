@@ -8,7 +8,7 @@ import {
   LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, ChevronLeft, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send, User, Phone
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line, LabelList
 } from 'recharts';
 import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
@@ -221,7 +221,7 @@ export function OperationsDashboardPage() {
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
   const [showBooksSold, setShowBooksSold] = useState(true);
   const [eventGraphFilter, setEventGraphFilter] = useState('All');
-  const [eventTimeFilter, setEventTimeFilter] = useState('Last 15');
+  const [eventTimeFilter, setEventTimeFilter] = useState('All');
   const [viewingRegistrationsEventId, setViewingRegistrationsEventId] = useState<number | null>(null);
   const [eventRegistrations, setEventRegistrations] = useState<any[]>([]);
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
@@ -1191,7 +1191,7 @@ export function OperationsDashboardPage() {
                         <XAxis dataKey="date" fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
                         <YAxis fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
                         <RechartsTooltip cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '3 3' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
-                        <Line type="linear" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 4 }} name="Revenue (₹)" />
+                        <Line type="linear" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={(props: any) => { const { cx, cy, index } = props; const total = revenueTrendData.length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={3} fill="#fff" stroke="#10b981" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }} name="Revenue (₹)" />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
@@ -1612,16 +1612,16 @@ export function OperationsDashboardPage() {
             {/* Row 1: KPI Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative">
 
-              <div className="dash-kpi-card emerald flex flex-col justify-between">
+              <div className="dash-kpi-card green flex flex-col justify-between">
                 <div>
                   <div className="flex items-start justify-between mb-4">
-                    <div className="dash-kpi-icon emerald"><DollarSign className="w-5 h-5" /></div>
+                    <div className="dash-kpi-icon green"><DollarSign className="w-5 h-5" /></div>
                   </div>
                   <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Revenue</p>
                   <h3 className="text-3xl font-black text-paa-navy tracking-tight">₹{(salesData?.kpis?.totalRevenue || 0).toLocaleString()}</h3>
                 </div>
                 {salesData?.kpis?.splits && (
-                  <div className="mt-4 pt-3 border-t border-emerald-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-emerald-800">
+                  <div className="mt-4 pt-3 border-t border-green-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-green-800">
                     <span>Web: ₹{(salesData.kpis.splits.web?.revenue || 0).toLocaleString()}</span>
                     <span>Events: ₹{(salesData.kpis.splits.events?.revenue || 0).toLocaleString()}</span>
                     <span>Fairs: ₹{(salesData.kpis.splits.bookFairs?.revenue || 0).toLocaleString()}</span>
@@ -1681,7 +1681,16 @@ export function OperationsDashboardPage() {
                         labelStyle={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
                         formatter={(value: number) => [`₹${value}`, 'Revenue']}
                       />
-                      <Line type="linear" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                      <Line type="linear" dataKey="revenue" stroke="#06b6d4" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; const total = (salesData?.chartData || []).length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#06b6d4" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }}>
+                        <LabelList dataKey="revenue" position="top" content={(props: any) => {
+                          const { x, y, value, index } = props;
+                          const total = (salesData?.chartData || []).length;
+                          if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) {
+                            return <text x={x} y={y - 10} fill="#06b6d4" fontSize="10px" fontWeight="bold" textAnchor="middle">₹{value}</text>;
+                          }
+                          return null;
+                        }} />
+                      </Line>
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -1737,15 +1746,15 @@ export function OperationsDashboardPage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="dash-table w-full text-left table-fixed">
-                  <thead className="bg-white">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
-                      <th className="w-[12%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Date</th>
-                      <th className="w-[15%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Order ID</th>
-                      <th className="w-[12%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Channel</th>
-                      <th className="w-[20%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Author</th>
-                      <th className="w-[25%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Book Title</th>
-                      <th className="w-[8%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right">Qty</th>
-                      <th className="w-[10%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right">Rev (₹)</th>
+                      <th className="w-[12%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Date</th>
+                      <th className="w-[15%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Order ID</th>
+                      <th className="w-[12%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Channel</th>
+                      <th className="w-[20%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Author</th>
+                      <th className="w-[25%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Book Title</th>
+                      <th className="w-[8%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100 text-right">Qty</th>
+                      <th className="w-[10%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100 text-right">Rev (₹)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 bg-white">
@@ -1757,7 +1766,7 @@ export function OperationsDashboardPage() {
                         <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
                         <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
                         <td className="px-5 py-3 text-xs">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-50 text-blue-700 border border-blue-100' : row.channel === 'Events' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-100 text-blue-800 border-transparent shadow-sm' : row.channel === 'Events' ? 'bg-amber-100 text-amber-800 border-transparent shadow-sm' : 'bg-green-100 text-green-800 border-transparent shadow-sm'}`}>
                             {row.channel === 'Web Orders' ? 'Web' : row.channel === 'Events' ? 'Events' : 'Fairs'}
                           </span>
                         </td>
@@ -1841,23 +1850,23 @@ export function OperationsDashboardPage() {
 
     const getAggregateStatus = (ord: any) => {
       const { status: ordStatus, items } = ord;
-      if (ordStatus === 'Cancelled') return { text: 'Cancelled', style: 'bg-red-50 text-red-700 border-red-200' };
-      if (ordStatus === 'Payment Not Received') return { text: 'Payment Failed', style: 'bg-red-50 text-red-700 border-red-200' };
-      if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') return { text: 'Pending Verification', style: 'bg-yellow-50 text-yellow-800 border-yellow-200' };
+      if (ordStatus === 'Cancelled') return { text: 'Cancelled', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
+      if (ordStatus === 'Payment Not Received') return { text: 'Payment Failed', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
+      if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') return { text: 'Pending Verification', style: 'bg-amber-100 text-amber-800 border-transparent shadow-sm' };
 
-      if (!items || items.length === 0) return { text: ordStatus, style: 'bg-gray-100 text-gray-700 border-gray-200' };
+      if (!items || items.length === 0) return { text: ordStatus, style: 'bg-gray-100 text-gray-700 border-transparent shadow-sm' };
 
       const allCompleted = items.every((it: any) => it.status === 'Completed' || it.status === 'Delivered');
       const anyDispatched = items.some((it: any) => it.status === 'Dispatched' || it.status === 'Completed' || it.status === 'Delivered');
       const anyAccepted = items.some((it: any) => it.status === 'Accepted');
       const anyRejected = items.some((it: any) => it.status === 'Rejected');
 
-      if (allCompleted) return { text: 'Delivered', style: 'bg-[#43a047] text-white border-[#4cae4c]' };
-      if (anyDispatched) return { text: 'Dispatched', style: 'bg-blue-50 text-blue-800 border-blue-200' };
-      if (anyAccepted) return { text: 'Accepted', style: 'bg-gray-50 text-paa-navy border-gray-200' };
-      if (anyRejected) return { text: 'Rejected', style: 'bg-red-50 text-red-700 border-red-200' };
+      if (allCompleted) return { text: 'Delivered', style: 'bg-emerald-100 text-emerald-800 border-transparent shadow-sm' };
+      if (anyDispatched) return { text: 'Dispatched', style: 'bg-blue-100 text-blue-800 border-transparent shadow-sm' };
+      if (anyAccepted) return { text: 'Accepted', style: 'bg-purple-100 text-purple-800 border-transparent shadow-sm' };
+      if (anyRejected) return { text: 'Rejected', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
 
-      return { text: 'Pending', style: 'bg-yellow-50 text-yellow-800 border-yellow-200' };
+      return { text: 'Pending', style: 'bg-amber-100 text-amber-800 border-transparent shadow-sm' };
     };
 
     // State Distribution Extraction
@@ -1897,18 +1906,18 @@ export function OperationsDashboardPage() {
             </h3>
             <div className="grid grid-cols-2 gap-4 h-[calc(100%-2rem)]">
               {[
-                { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'text-green-600 bg-green-100', bgClass: 'border-green-100' },
-                { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'text-orange-600 bg-orange-100', bgClass: 'border-orange-100' },
-                { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'text-blue-600 bg-blue-100', bgClass: 'border-blue-100' },
-                { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'text-purple-600 bg-purple-100', bgClass: 'border-purple-100' },
+                { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'green' },
+                { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'amber' },
+                { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'blue' },
+                { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'red' },
               ].map((kpi, i) => (
-                <div key={i} className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col justify-center items-start gap-3 hover:-translate-y-1 hover:shadow-md transition-all`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kpi.colorClass}`}>
-                    <kpi.icon size={18} />
+                <div key={i} className={`dash-kpi-card ${kpi.colorClass} flex flex-col justify-center items-start gap-2`}>
+                  <div className={`dash-kpi-icon ${kpi.colorClass}`}>
+                    <kpi.icon size={20} />
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
-                    <h3 className="text-2xl font-bold text-paa-navy">{kpi.value}</h3>
+                  <div className="mt-2">
+                    <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+                    <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{kpi.value}</h3>
                   </div>
                 </div>
               ))}
@@ -1988,13 +1997,13 @@ export function OperationsDashboardPage() {
           <div className="hidden md:block w-full overflow-hidden">
             <table className="dash-table w-full table-fixed">
               <thead>
-                <tr>
-                  <th className="w-1/6">Order ID & Date</th>
-                  <th className="w-1/5">Customer</th>
-                  <th className="w-1/3">Items / Books</th>
-                  <th className="w-[10%]" style={{ textAlign: 'center' }}>Amount</th>
-                  <th className="w-[12%]" style={{ textAlign: 'center' }}>Status</th>
-                  <th className="w-[12%]" style={{ textAlign: 'center' }}>Actions</th>
+                <tr className="bg-indigo-50 border-b-2 border-indigo-100">
+                  <th className="w-1/6 !text-indigo-800 !bg-transparent !text-[14px]">Order ID & Date</th>
+                  <th className="w-1/5 !text-indigo-800 !bg-transparent !text-[14px]">Customer</th>
+                  <th className="w-1/3 !text-indigo-800 !bg-transparent !text-[14px]">Items / Books</th>
+                  <th className="w-[10%] !text-indigo-800 !bg-transparent !text-[14px]" style={{ textAlign: 'center' }}>Amount</th>
+                  <th className="w-[12%] !text-indigo-800 !bg-transparent !text-[14px]" style={{ textAlign: 'center' }}>Status</th>
+                  <th className="w-[12%] !text-indigo-800 !bg-transparent !text-[14px]" style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -2352,11 +2361,11 @@ export function OperationsDashboardPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#f0fdf4] text-green-700 uppercase tracking-widest text-xs border-b border-green-100">
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th className="px-4 py-3 font-bold">Author Name</th>
-                    <th className="px-4 py-3 font-bold">Screenshot</th>
-                    <th className="px-4 py-3 font-bold text-center">Action</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Screenshot</th>
+                    <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -2394,11 +2403,11 @@ export function OperationsDashboardPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#fef2f2] text-red-700 uppercase tracking-widest text-xs border-b border-red-100">
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th className="px-4 py-3 font-bold">Author Name</th>
-                    <th className="px-4 py-3 font-bold">Fine Amount</th>
-                    <th className="px-4 py-3 font-bold">Date Charged</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Fine Amount</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Date Charged</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -2425,13 +2434,13 @@ export function OperationsDashboardPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#fffbeb] text-orange-700 uppercase tracking-widest text-xs border-b border-orange-100">
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th className="px-4 py-3 font-bold">Latest Order ID</th>
-                    <th className="px-4 py-3 font-bold">Author Name</th>
-                    <th className="px-4 py-3 font-bold text-center">Unaccepted Items</th>
-                    <th className="px-4 py-3 font-bold text-center">Delay</th>
-                    <th className="px-4 py-3 font-bold text-center">Action</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Latest Order ID</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Unaccepted Items</th>
+                    <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Delay</th>
+                    <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -2564,12 +2573,12 @@ export function OperationsDashboardPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#eef2ff] text-indigo-700 uppercase tracking-widest text-xs border-b border-indigo-100">
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th className="px-4 py-3 font-bold">Author Name</th>
-                    <th className="px-4 py-3 font-bold">Fine Amount</th>
-                    <th className="px-4 py-3 font-bold">Payment Date</th>
-                    <th className="px-4 py-3 font-bold">Approved Date</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Fine Amount</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Payment Date</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Approved Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -2791,36 +2800,36 @@ export function OperationsDashboardPage() {
 
     return (
       <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-        <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
+        <div className="p-4 border-b border-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-t-xl">
           <div className="flex items-center gap-3">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Authors Directory</h3>
-            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">{authors.length} Total</span>
+            <h3 className="text-2xl font-serif font-semibold text-white tracking-tight">Authors Directory</h3>
+            <span className="bg-white/20 text-white border-transparent py-1 px-3 text-xs font-bold shadow-sm rounded-full transition-all duration-300 ease-out">{authors.length} Total</span>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handleDownloadCatalogue} disabled={selectedAuthorIds.length === 0 || isDownloadingPdf} className="dash-btn dash-btn-ghost flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button onClick={handleDownloadCatalogue} disabled={selectedAuthorIds.length === 0 || isDownloadingPdf} className="dash-btn dash-btn-ghost flex items-center gap-2 border-white/30 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed">
               {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {isDownloadingPdf ? 'Generating PDF...' : 'Download Catalogue'}
             </button>
-            <button onClick={handleExportAuthorsCSV} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
+            <button onClick={handleExportAuthorsCSV} className="dash-btn dash-btn-ghost flex items-center gap-2 border-white/30 text-white hover:bg-white/10">
               <Download className="w-4 h-4" /> Export CSV
             </button>
             <div className="flex items-center gap-2">
-              <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
+              <div className="flex bg-black/20 rounded-3xl-2xl p-1 backdrop-blur-sm">
                 {['All', 'Reapplied', 'Pending', 'Edited', 'Active', 'Rejected'].map(status => (
                   <button
                     key={status}
                     onClick={() => setAuthorStatusFilter(status)}
-                    className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
+                    className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-indigo-900 shadow-premium' : 'text-white/70 hover:text-white'}`}
                   >
                     {status === 'Reapplied' ? '🔄 Reapplied' : status}
                   </button>
                 ))}
               </div>
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/50" />
                 <input
                   type="text"
-                  placeholder="SEARCH AUTHOrs..."
-                  className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64"
+                  placeholder="SEARCH AUTHORS..."
+                  className="pl-9 pr-4 py-2 bg-white/10 border border-white/20 text-white text-xs font-bold tracking-widest uppercase outline-none focus:border-white transition-colors w-64 placeholder-white/50 rounded-lg"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -2831,9 +2840,9 @@ export function OperationsDashboardPage() {
 
         <div className="overflow-x-auto">
           <table className="dash-table">
-            <thead>
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="w-10 text-center">
+                <th className="w-10 text-center !bg-transparent">
                   <input
                     type="checkbox"
                     checked={authors.length > 0 && selectedAuthorIds.length === authors.length}
@@ -2847,12 +2856,12 @@ export function OperationsDashboardPage() {
                     className="w-4 h-4 rounded border-gray-300 text-paa-navy focus:ring-paa-navy cursor-pointer"
                   />
                 </th>
-                <th>Author Details</th>
-                <th>Contact</th>
-                <th>Payment Info</th>
-                <th style={{ textAlign: 'center' }}>Status</th>
-                <th style={{ textAlign: 'center' }}>Books</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author Details</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Contact</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Payment Info</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Books</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -2936,7 +2945,7 @@ export function OperationsDashboardPage() {
                       const ed = typeof author.extraData === 'string' ? (() => { try { return JSON.parse(author.extraData); } catch (e) { return {}; } })() : (author.extraData || {});
                       const isReapplied = ed?.isReapplied === true && author.status === 'Pending';
                       return isReapplied ? (
-                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>🔄 Reapplied</span>
+                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid transparent' }}>🔄 Reapplied</span>
                       ) : (
                         <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
                           {author.status}
@@ -3094,15 +3103,15 @@ export function OperationsDashboardPage() {
 
         <div className="overflow-x-auto">
           <table className="dash-table">
-            <thead>
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th>Book Info</th>
-                <th>Author</th>
-                <th style={{ textAlign: 'center' }}>Status</th>
-                <th style={{ textAlign: 'center' }}>Price</th>
-                <th style={{ textAlign: 'center' }}>Stock</th>
-                <th style={{ textAlign: 'center' }}>Sales</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Book Info</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Price</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Stock</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Sales</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -3897,18 +3906,18 @@ export function OperationsDashboardPage() {
               </div>
               <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                 <table className="dash-table w-full">
-                  <thead>
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
-                      <th>Author Name</th>
-                      <th>Books Listed</th>
-                      <th>Quantities</th>
-                      <th>Books Sold</th>
-                      <th>Revenue</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author Name</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Books Listed</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Quantities</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Books Sold</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Revenue</th>
                       {!selectedEventBreakdown.isLegacy && (
-                        <th style={{ textAlign: 'center' }}>Payment</th>
+                        <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Payment</th>
                       )}
-                      <th>Status</th>
-                      <th style={{ textAlign: 'center' }}>Actions</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
+                      <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -4161,6 +4170,30 @@ export function OperationsDashboardPage() {
       }
     }
 
+    let filteredTableEvents = allCombinedEvents.filter((e: any) => {
+      if (eventGraphFilter === 'All') return true;
+      if (eventGraphFilter === 'Literary Event') return e.eventType?.toLowerCase().includes('literary');
+      if (eventGraphFilter === 'Book Fair') return e.eventType?.toLowerCase().includes('fair');
+      if (eventGraphFilter === 'Meet the Authors / Other') return !e.eventType?.toLowerCase().includes('literary') && !e.eventType?.toLowerCase().includes('fair');
+      return true;
+    });
+
+    if (eventTimeFilter === 'Last 15') {
+      filteredTableEvents = filteredTableEvents.slice(0, 15);
+    } else if (eventTimeFilter === 'Last Quarter') {
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(now.getMonth() - 3);
+      filteredTableEvents = filteredTableEvents.filter((e: any) => new Date(e.date || e.startDate) >= threeMonthsAgo);
+    } else if (!isNaN(parseInt(eventTimeFilter))) {
+      const targetYear = parseInt(eventTimeFilter);
+      const startOfYear = new Date(targetYear, 0, 1);
+      const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59);
+      filteredTableEvents = filteredTableEvents.filter((e: any) => {
+        const d = new Date(e.date || e.startDate);
+        return d >= startOfYear && d <= endOfYear;
+      });
+    }
+
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
@@ -4177,21 +4210,21 @@ export function OperationsDashboardPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Events Organized</p>
-            <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.length}</div>
+          <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 border-none text-white rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1">Total Events Organized</p>
+            <div className="text-2xl font-serif">{allCombinedEvents.length}</div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Books Sold</p>
-            <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggSold : evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0)) || 0), 0)}</div>
+          <div className="bg-gradient-to-br from-rose-500 to-rose-600 border-none text-white rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-bold text-rose-100 uppercase tracking-wider mb-1">Total Books Sold</p>
+            <div className="text-2xl font-serif">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggSold : evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0)) || 0), 0)}</div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Authors Participated</p>
-            <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggAuthors : evt._count?.eventAuthors) || 0), 0)}</div>
+          <div className="bg-gradient-to-br from-amber-500 to-orange-500 border-none text-white rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-bold text-orange-100 uppercase tracking-wider mb-1">Authors Participated</p>
+            <div className="text-2xl font-serif">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggAuthors : evt._count?.eventAuthors) || 0), 0)}</div>
           </div>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
-            <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Gross Revenue</p>
-            <div className="text-2xl font-serif text-emerald-800 font-bold">₹{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? (evt.aggRevenue || ((evt.aggSold || 0) * 200) || 0) : evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0)) || 0), 0).toLocaleString()}</div>
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-500 border-none text-white rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-bold text-emerald-100 uppercase tracking-wider mb-1">Total Gross Revenue</p>
+            <div className="text-2xl font-serif font-bold">₹{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? (evt.aggRevenue || ((evt.aggSold || 0) * 200) || 0) : evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0)) || 0), 0).toLocaleString()}</div>
           </div>
         </div>
 
@@ -4240,7 +4273,11 @@ export function OperationsDashboardPage() {
                   cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '3 3' }}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                 />
-                {showBooksSold && <Line type="linear" dataKey="booksSold" name="Books Sold" stroke="var(--color-paa-navy, #1e3a8a)" strokeWidth={3} dot={{ r: 4, fill: '#1e3a8a', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />}
+                {showBooksSold && (
+                  <Line type="linear" dataKey="booksSold" name="Books Sold" stroke="#ec4899" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; const total = chartData.length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={4} fill="#ec4899" stroke="#fff" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }}>
+                    <LabelList dataKey="booksSold" position="top" style={{ fontSize: '10px', fill: '#ec4899', fontWeight: 'bold' }} />
+                  </Line>
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -4256,25 +4293,25 @@ export function OperationsDashboardPage() {
           />
         </div>
         <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm animate-in fade-in duration-500">
-          <div className="overflow-x-auto">
-            <table className="dash-table w-full text-left min-w-[600px]">
-              <thead className="bg-[#f0f4f8]">
+          <div className="w-full">
+            <table className="dash-table w-full text-left table-fixed">
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
-                  <th className="w-12 pl-6 pr-2 py-3 border-b border-paa-navy/5"></th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Event Name</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Date</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Event Type</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Registration Fee</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Status</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-center">POS</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Authors</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Books</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Revenue</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Actions</th>
+                  <th className="w-10 px-1 py-3 text-center !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5"></th>
+                  <th className="px-2 py-3 w-[20%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Name</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Date</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Type</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Reg Fee</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Status</th>
+                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-center">POS</th>
+                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Authors</th>
+                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Books</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Revenue</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-paa-navy/5 bg-white">
-                {allCombinedEvents.filter(evt => evt.name.toLowerCase().includes(eventSearch.toLowerCase())).map((evt: any, i: number) => {
+              <tbody className="divide-y divide-paa-navy/5 bg-white text-[11px]">
+                {filteredTableEvents.filter((evt: any) => evt.name.toLowerCase().includes(eventSearch.toLowerCase())).map((evt: any, i: number) => {
                   const isPastOrArchive = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
                   const authors = isPastOrArchive ? (evt.aggAuthors != null ? evt.aggAuthors : 'NA') : (evt._count?.eventAuthors || 0);
                   const books = isPastOrArchive ? (evt.aggSold != null ? evt.aggSold : 'NA') : (evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0) || 0);
@@ -4401,7 +4438,7 @@ export function OperationsDashboardPage() {
                     </React.Fragment>
                   );
                 })}
-                {allCombinedEvents.length === 0 && <tr><td colSpan={11} className="text-center py-6 text-sm text-paa-gray-text italic">No events found.</td></tr>}
+                {filteredTableEvents.length === 0 && <tr><td colSpan={11} className="text-center py-6 text-sm text-paa-gray-text italic">No events found.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -4673,12 +4710,12 @@ export function OperationsDashboardPage() {
           <div className="border border-paa-navy/5 rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out overflow-hidden">
             <div className="overflow-x-auto">
               <table className="dash-table">
-                <thead>
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th>Author Name</th>
-                    <th>Email</th>
+                    <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="!text-[14px] !text-indigo-800 !bg-transparent">Email</th>
                     {dynamicKeys.filter(k => selectedColumns.includes(k)).map(key => (
-                      <th key={key} className="text-paa-gold">{key}</th>
+                      <th key={key} className="text-paa-gold !text-[14px] !text-indigo-800 !bg-transparent">{key}</th>
                     ))}
                   </tr>
                 </thead>
@@ -4742,11 +4779,11 @@ export function OperationsDashboardPage() {
           </div>
           <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <table className="dash-table">
-              <thead>
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
-                  <th>Author</th>
-                  <th>Date</th>
-                  <th>Answers</th>
+                  <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author</th>
+                  <th className="!text-[14px] !text-indigo-800 !bg-transparent">Date</th>
+                  <th className="!text-[14px] !text-indigo-800 !bg-transparent">Answers</th>
                 </tr>
               </thead>
               <tbody>
@@ -5193,7 +5230,7 @@ export function OperationsDashboardPage() {
           <button onClick={() => setSidebarOpen(false)} className="md:hidden p-2 text-paa-navy"><X size={20} /></button>
         </div>
 
-        <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 py-5 px-4 space-y-1.5 overflow-y-auto">
           {[
             { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
             { id: 'web_orders', label: 'Web Orders', icon: ShoppingCart, hasAlert: pendingAlerts.orders },
@@ -5202,12 +5239,12 @@ export function OperationsDashboardPage() {
             { id: 'books', label: 'Books Catalog', icon: BookOpen, hasAlert: pendingAlerts.books },
             { id: 'inventory', label: 'Inventory / Distribution', icon: BookOpen },
             { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
+            { id: 'library_donations', label: 'Library Donations', icon: BookOpen },
             { id: 'reviews', label: 'Reviews & Feedback', icon: MessageSquare },
             { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
             { id: 'late_authors', label: 'Late Authors System', icon: AlertCircle },
             { id: 'helpdesk', label: 'Helpdesk / Queries', icon: Users, hasAlert: pendingAlerts.queries },
             { id: 'settings', label: 'System Settings', icon: Settings },
-            { id: 'library_donations', label: 'Library Donations', icon: BookOpen },
           ].map((item) => (
             <button
               key={item.id}
@@ -5216,7 +5253,7 @@ export function OperationsDashboardPage() {
                 localStorage.setItem('adminActiveTab', item.id);
                 setSidebarOpen(false);
               }}
-              className={`w-full flex items-center justify-start text-left gap-3 px-4 py-3 text-xs font-bold tracking-widest uppercase transition-all duration-300 rounded-xl border ${activeTab === item.id
+              className={`w-full flex items-center justify-start text-left gap-3 px-4 py-2.5 text-xs font-bold tracking-widest uppercase transition-all duration-300 rounded-xl border ${activeTab === item.id
                 ? 'bg-paa-navy text-paa-cream border-paa-navy shadow-premium'
                 : 'text-paa-navy border-[transparent] hover:bg-black/5 hover:border-black/5'
                 }`}
@@ -5652,13 +5689,13 @@ export function OperationsDashboardPage() {
                             </div>
                           </div>
                           <table className="w-full text-left text-xs whitespace-nowrap bg-white">
-                            <thead className="bg-gray-50 text-gray-500 uppercase tracking-widest">
+                            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                               <tr>
-                                <th className="px-3 py-2">Book Title</th>
-                                <th className="px-3 py-2 text-center">Listed</th>
-                                <th className="px-3 py-2 text-center">Sold</th>
-                                <th className="px-3 py-2 text-center">Available</th>
-                                <th className="px-3 py-2 text-right">Revenue</th>
+                                <th className="px-3 py-2 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                                <th className="px-3 py-2 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Listed</th>
+                                <th className="px-3 py-2 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Sold</th>
+                                <th className="px-3 py-2 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Available</th>
+                                <th className="px-3 py-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -5687,14 +5724,14 @@ export function OperationsDashboardPage() {
                 <p className="text-center text-gray-500 italic">No books were listed for this event.</p>
               ) : Array.isArray(eventReportData) && eventReportData.length > 0 ? (
                 <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
-                      <th className="px-4 py-3 font-bold">Author</th>
-                      <th className="px-4 py-3 font-bold">Book Title</th>
-                      <th className="px-4 py-3 font-bold text-center">Listed</th>
-                      <th className="px-4 py-3 font-bold text-center">Sold</th>
-                      <th className="px-4 py-3 font-bold text-center">Returned</th>
-                      <th className="px-4 py-3 font-bold text-right">Revenue</th>
+                      <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author</th>
+                      <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                      <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Listed</th>
+                      <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Sold</th>
+                      <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Returned</th>
+                      <th className="px-4 py-3 font-bold text-right !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">

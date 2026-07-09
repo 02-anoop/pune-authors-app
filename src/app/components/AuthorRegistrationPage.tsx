@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import axios from "axios";
 import localforage from "localforage";
 import qrCode from "./data/qr_code.jpeg";
+import charterPdf from "./data/Group Activities and Charter.pdf";
 import pastEvents from "./data/past_events.json";
 import { bookCategories } from "../data/categories";
 import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon, ArrowLeft, Info, CalendarDays, Briefcase, MapPin, Clock, LogOut } from "lucide-react";
@@ -1629,12 +1630,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 cursor-pointer group" onClick={() => { if (!form.agreedToInfoDoc) setShowInfoDoc(true); else update("agreedToInfoDoc", false); }}>
+                    <div className="flex items-start gap-3 cursor-pointer group" onClick={() => { if (!form.agreedToInfoDoc) { window.open(charterPdf, '_blank'); update("agreedToInfoDoc", true); } else update("agreedToInfoDoc", false); }}>
                       <div className="mt-0.5">
                         <input type="checkbox" checked={form.agreedToInfoDoc} readOnly className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 pointer-events-none" />
                       </div>
                       <div className="text-sm text-paa-navy font-medium">
-                        I have read the <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowInfoDoc(true); }} className="text-emerald-600 hover:text-emerald-700 underline underline-offset-2">Group Information Document</button> *
+                        I have read the <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(charterPdf, '_blank'); update("agreedToInfoDoc", true); }} className="text-emerald-600 hover:text-emerald-700 underline underline-offset-2">Group Information Document</button> *
                       </div>
                     </div>
                   </div>

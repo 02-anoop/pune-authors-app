@@ -63,12 +63,12 @@ export const AdminReviewsTab = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-paa-navy/5 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-xs uppercase font-bold text-paa-gray-text tracking-widest border-b border-paa-navy/5">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="px-6 py-4">Reviewer</th>
-                <th className="px-6 py-4">Book</th>
-                <th className="px-6 py-4 text-center">Ratings</th>
-                <th className="px-6 py-4">Feedback</th>
+                <th className="px-6 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Reviewer</th>
+                <th className="px-6 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book</th>
+                <th className="px-6 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Ratings</th>
+                <th className="px-6 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Feedback</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-paa-navy/5">

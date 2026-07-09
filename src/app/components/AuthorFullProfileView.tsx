@@ -193,12 +193,12 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
             return (
               <div className="overflow-x-auto">
                 <table className="dash-table w-full">
-                   <thead>
+                   <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                      <tr>
-                       <th>Title</th>
-                       <th style={{textAlign: 'center'}}>MRP</th>
-                       <th style={{textAlign: 'center'}}>Stock</th>
-                       <th style={{textAlign: 'center'}}>Status</th>
+                       <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Title</th>
+                       <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">MRP</th>
+                       <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Stock</th>
+                       <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Status</th>
                      </tr>
                    </thead>
                    <tbody>
@@ -227,14 +227,14 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
           <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Web Orders</h3>
           <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <table className="dash-table">
-               <thead>
+               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                  <tr>
-                   <th>Order ID</th>
-                   <th>Customer</th>
-                   <th>Book</th>
-                   <th style={{textAlign: 'center'}}>Qty / Amt</th>
-                   <th style={{textAlign: 'center'}}>Status</th>
-                   <th style={{textAlign: 'center'}}>Payment</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Order ID</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Customer</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty / Amt</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Status</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Payment</th>
                  </tr>
                </thead>
                <tbody>
@@ -265,12 +265,12 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
           <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Event Participations</h3>
           <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <table className="dash-table">
-               <thead>
+               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                  <tr>
-                   <th>Event Name</th>
-                   <th>City</th>
-                   <th style={{textAlign: 'center'}}>Amount Paid</th>
-                   <th style={{textAlign: 'center'}}>Date</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event Name</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">City</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Amount Paid</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date</th>
                  </tr>
                </thead>
                <tbody>
@@ -293,13 +293,13 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
           <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Books Distribution Record</h3>
           <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <table className="dash-table">
-               <thead>
+               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                  <tr>
-                   <th>Title</th>
-                   <th style={{textAlign: 'center'}}>Qty Sold</th>
-                   <th style={{textAlign: 'center'}}>Airport Stock</th>
-                   <th style={{textAlign: 'center'}}>Fair Stock</th>
-                   <th style={{textAlign: 'center'}}>In Stock</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Title</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty Sold</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Airport Stock</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Fair Stock</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">In Stock</th>
                  </tr>
                </thead>
                <tbody>

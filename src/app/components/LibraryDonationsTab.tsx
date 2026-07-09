@@ -888,13 +888,13 @@ export function LibraryDonationsTab() {
 
         <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
           <table className="w-full text-left bg-white whitespace-nowrap min-w-max">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Author Name</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Donating</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Payment</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Donation Pipeline & Status</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase text-right">Actions</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Author Name</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Books Donating</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Payment</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Donation Pipeline & Status</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -1398,15 +1398,15 @@ export function LibraryDonationsTab() {
 
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
                 <table className="w-full text-left min-w-max">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Book Title</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-blue-50/50">Committed</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-amber-50/50">Collected</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-indigo-50/50">Dispatched</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-emerald-50/50">Received</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Library Conf.</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Remarks</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Book Title</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Committed</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Collected</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Dispatched</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Received</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Library Conf.</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Remarks</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1567,67 +1567,67 @@ export function LibraryDonationsTab() {
 
       {/* Dashboard Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Drives Organized</div>
+        <div className={`bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-indigo-300 ring-offset-1" : "border-none"}`}>
+          <div className="text-[10px] font-bold text-indigo-100 uppercase tracking-wider mb-1">Total Drives Organized</div>
           {isEditingStats ? (
             <input
               type="text"
               autoFocus
-              className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0"
+              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
               value={overrideDrives}
               placeholder="NA"
               onChange={e => setOverrideDrives(e.target.value)}
             />
           ) : (
-            <div className="text-xl font-serif text-paa-navy font-bold">
+            <div className="text-xl font-serif text-white font-bold">
               {statsOverrides.drivesOverride !== null ? statsOverrides.drivesOverride : drives.length}
             </div>
           )}
         </div>
-        <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
-          <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Books Donated</div>
+        <div className={`bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-rose-300 ring-offset-1" : "border-none"}`}>
+          <div className="text-[10px] font-bold text-rose-100 uppercase tracking-wider mb-1">Total Books Donated</div>
           {isEditingStats ? (
             <input
               type="text"
-              className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0"
+              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
               value={overrideBooks}
               placeholder="NA"
               onChange={e => setOverrideBooks(e.target.value)}
             />
           ) : (
-            <div className="text-xl font-serif text-blue-800 font-bold">
+            <div className="text-xl font-serif text-white font-bold">
               {statsOverrides.booksOverride !== null ? statsOverrides.booksOverride : calculatedBooks}
             </div>
           )}
         </div>
-        <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
-          <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Authors Participated</div>
+        <div className={`bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-orange-300 ring-offset-1" : "border-none"}`}>
+          <div className="text-[10px] font-bold text-orange-100 uppercase tracking-wider mb-1">Authors Participated</div>
           {isEditingStats ? (
             <input
               type="text"
-              className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0"
+              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
               value={overrideAuthors}
               placeholder="NA"
               onChange={e => setOverrideAuthors(e.target.value)}
             />
           ) : (
-            <div className="text-xl font-serif text-indigo-800 font-bold">
+            <div className="text-xl font-serif text-white font-bold">
               {statsOverrides.authorsOverride !== null ? statsOverrides.authorsOverride : calculatedAuthors}
             </div>
           )}
         </div>
-        <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
-          <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Active Libraries</div>
+        <div className={`bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-emerald-300 ring-offset-1" : "border-none"}`}>
+          <div className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider mb-1">Active Libraries</div>
           {isEditingStats ? (
             <input
               type="text"
-              className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0"
+              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
               value={overrideLibraries}
               placeholder="NA"
               onChange={e => setOverrideLibraries(e.target.value)}
             />
           ) : (
-            <div className="text-xl font-serif text-emerald-800 font-bold">
+            <div className="text-xl font-serif text-white font-bold">
               {statsOverrides.librariesOverride !== null ? statsOverrides.librariesOverride : libraries.length}
             </div>
           )}
@@ -1664,49 +1664,9 @@ export function LibraryDonationsTab() {
                 <p className="text-xs text-gray-500 font-medium mt-1">Comparing total books donated and author participation across campaigns.</p>
               </div>
               
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Switcher Buttons */}
-                <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 shadow-sm text-xs font-bold">
-                  <button 
-                    onClick={() => setGraphFilter('both')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      graphFilter === 'both' 
-                        ? 'bg-white text-paa-navy shadow-sm' 
-                        : 'text-gray-500 hover:text-paa-navy'
-                    }`}
-                  >
-                    Both
-                  </button>
-                  <button 
-                    onClick={() => setGraphFilter('books')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      graphFilter === 'books' 
-                        ? 'bg-white text-paa-navy shadow-sm' 
-                        : 'text-gray-500 hover:text-paa-navy'
-                    }`}
-                  >
-                    Books Only
-                  </button>
-                  <button 
-                    onClick={() => setGraphFilter('authors')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      graphFilter === 'authors' 
-                        ? 'bg-white text-paa-navy shadow-sm' 
-                        : 'text-gray-500 hover:text-paa-navy'
-                    }`}
-                  >
-                    Authors Only
-                  </button>
-                </div>
-
                 {/* Legends */}
                 <div className="flex items-center gap-4 text-xs font-bold">
-                  {(graphFilter === 'both' || graphFilter === 'books') && (
-                    <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-paa-navy"></div> Books Donated</div>
-                  )}
-                  {(graphFilter === 'both' || graphFilter === 'authors') && (
-                    <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-indigo-400"></div> Authors Participated</div>
-                  )}
+                  <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-paa-navy"></div> Books Donated</div>
                 </div>
               </div>
             </div>
@@ -1721,7 +1681,6 @@ export function LibraryDonationsTab() {
                     cursor={{ stroke: '#E5E7EB', strokeWidth: 1 }}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                   />
-                  {(graphFilter === 'both' || graphFilter === 'books') && (
                     <Line 
                       type="linear" 
                       dataKey="booksDonated" 
@@ -1729,20 +1688,8 @@ export function LibraryDonationsTab() {
                       stroke="var(--color-paa-navy, #1e3a8a)" 
                       strokeWidth={3} 
                       activeDot={{ r: 6 }} 
-                      dot={{ r: 3 }}
+                      dot={(props: any) => { const { cx, cy, index } = props; const total = chartData.length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={3} fill="#fff" stroke="var(--color-paa-navy, #1e3a8a)" strokeWidth={2} key={`dot-books-${index}`} />; } return null; }}
                     />
-                  )}
-                  {(graphFilter === 'both' || graphFilter === 'authors') && (
-                    <Line 
-                      type="linear" 
-                      dataKey="authorsCount" 
-                      name="Authors" 
-                      stroke="#818CF8" 
-                      strokeWidth={3} 
-                      activeDot={{ r: 6 }} 
-                      dot={{ r: 3 }}
-                    />
-                  )}
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -1764,15 +1711,15 @@ export function LibraryDonationsTab() {
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
         <table className="w-full text-left min-w-max">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-indigo-50 border-b-2 border-indigo-100">
             <tr>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Drive Name</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Deadline</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Location</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Authors</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Books</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Drive Name</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Deadline</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Location</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Status</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Authors</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Books</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -1927,12 +1874,12 @@ export function LibraryDonationsTab() {
               {/* Libraries Table */}
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
-                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Library</th>
-                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Location</th>
-                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Contact</th>
-                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Library</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Location</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Contact</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">

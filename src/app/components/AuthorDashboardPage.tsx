@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
 import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send, ChevronLeft, ChevronRight, RefreshCw, Users } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell , AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell , AreaChart, Area, LabelList } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { bookCategories } from '../data/categories';
@@ -1520,9 +1520,9 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
         </div>
         <div className="overflow-x-auto">
           <table className="dash-table">
-            <thead><tr>
-              <th>#</th><th>Cover</th><th>Title</th><th>Status</th>
-              <th>Genre</th><th>MRP</th><th>Current Stock</th><th>Sold Details</th><th>Listing Date</th><th className="text-center">Actions</th>
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100"><tr>
+              <th className="!text-[14px] !text-indigo-800 !bg-transparent">#</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Cover</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Title</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
+              <th className="!text-[14px] !text-indigo-800 !bg-transparent">Genre</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">MRP</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Current Stock</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Sold Details</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Listing Date</th><th className="text-center !text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
             </tr></thead>
             <tbody>
               {filteredTitles.length === 0 ? (
@@ -2109,10 +2109,10 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
         <div className="bg-white border border-black/5 rounded-[14px] shadow-sm overflow-hidden flex-1 min-w-0">
           <div className="overflow-x-auto">
             <table className="dash-table w-full text-left min-w-[800px]">
-              <thead className="bg-[#f0f4f8]">
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
                   {['S.No', 'Title', 'Author', 'MRP', 'QTY Sold (Web)', 'QTY to Airport', 'QTY for Book Fair', 'Current Stock', 'Last Updated', 'Update Stock'].map(h => (
-                    <th key={h} className={`px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 whitespace-nowrap ${h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}`}>
+                    <th key={h} className={`px-4 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 whitespace-nowrap ${h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}`}>
                       {h}
                     </th>
                   ))}
@@ -2496,16 +2496,16 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#8faadc] text-paa-navy">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="p-3 border-r border-white/20 text-center">S.No</th>
-                <th className="p-3 border-r border-white/20">ACTIVITY</th>
-                <th className="p-3 border-r border-white/20">TYPE</th>
-                <th className="p-3 border-r border-white/20">DATE</th>
-                <th className="p-3 border-r border-white/20 text-center">STATUS</th>
-                <th className="p-3 border-r border-white/20">CITY</th>
-                <th className="p-3 border-r border-white/20 text-center">CHARGES</th>
-                <th className="p-3 border-r border-white/20 text-center">ACTION</th>
+                <th className="p-3 border-r border-indigo-100/20 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">S.No</th>
+                <th className="p-3 border-r border-indigo-100/20 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">ACTIVITY</th>
+                <th className="p-3 border-r border-indigo-100/20 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">TYPE</th>
+                <th className="p-3 border-r border-indigo-100/20 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">DATE</th>
+                <th className="p-3 border-r border-indigo-100/20 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">STATUS</th>
+                <th className="p-3 border-r border-indigo-100/20 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">CITY</th>
+                <th className="p-3 border-r border-indigo-100/20 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">CHARGES</th>
+                <th className="p-3 border-r border-indigo-100/20 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">ACTION</th>
               </tr>
             </thead>
             <tbody>
@@ -3289,16 +3289,16 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
       <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden mb-12">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs whitespace-nowrap">
-            <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-[10px] border-b border-paa-navy/5">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="px-5 py-4 font-bold">Order Details</th>
-                <th className="px-5 py-4 font-bold">Buyer Information</th>
-                <th className="px-5 py-4 font-bold">Book Title</th>
-                <th className="px-5 py-4 font-bold text-center">Qty</th>
-                <th className="px-5 py-4 font-bold text-center">Amount</th>
-                <th className="px-5 py-4 font-bold text-center">Payment</th>
-                <th className="px-5 py-4 font-bold text-center w-32">Status</th>
-                <th className="px-5 py-4 font-bold text-center w-32">Action</th>
+                <th className="px-5 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Order Details</th>
+                <th className="px-5 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Buyer Information</th>
+                <th className="px-5 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                <th className="px-5 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty</th>
+                <th className="px-5 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Amount</th>
+                <th className="px-5 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Payment</th>
+                <th className="px-5 py-4 text-center w-32 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Status</th>
+                <th className="px-5 py-4 text-center w-32 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -3882,14 +3882,14 @@ const pe = pastEvents.find(p => p.eventId === eventId);
       {activeTab === 'events' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-indigo-500" /> Total Events</div>
-              <div className="text-3xl font-serif font-bold text-paa-navy">{validParticipations.length}</div>
-              <div className="text-xs text-gray-500 mt-2 font-mono font-medium">Fairs: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) === 'Book Fair').length} • Events: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) !== 'Book Fair').length}</div>
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-6 rounded-2xl border-none shadow-sm flex flex-col justify-center text-white">
+              <div className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest mb-2 flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-indigo-200" /> Total Events</div>
+              <div className="text-3xl font-serif font-bold text-white">{validParticipations.length}</div>
+              <div className="text-xs text-indigo-100 mt-2 font-mono font-medium">Fairs: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) === 'Book Fair').length} • Events: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) !== 'Book Fair').length}</div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-500" /> Total Books Sold</div>
-             <div className="text-3xl font-serif font-bold text-emerald-700">
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-2xl border-none shadow-sm flex flex-col justify-center text-white">
+              <div className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-2 flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-200" /> Total Books Sold</div>
+             <div className="text-3xl font-serif font-bold text-white">
                  {validParticipations.reduce((acc: number, evt: any) => {
                     let sold = 0;
                     if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
@@ -3903,9 +3903,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                  }, 0)}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><DollarSign className="w-4 h-4 text-blue-500" /> Total Revenue</div>
-              <div className="text-3xl font-serif font-bold text-blue-700">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl border-none shadow-sm flex flex-col justify-center text-white">
+              <div className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mb-2 flex items-center gap-2"><DollarSign className="w-4 h-4 text-blue-200" /> Total Revenue</div>
+              <div className="text-3xl font-serif font-bold text-white">
                  ₹{validParticipations.reduce((acc: number, evt: any) => {
                     let rev = 0;
                     if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
@@ -3919,14 +3919,14 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                  }, 0).toLocaleString()}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center cursor-pointer hover:border-orange-200 transition-all group" onClick={() => setActiveTab('payments')}>
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-orange-500 transition-colors"><CheckCircle2 className="w-4 h-4 text-orange-500" /> Total Payments Done</div>
-              <div className="text-3xl font-serif font-bold text-orange-700">₹{validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0).toLocaleString()}</div>
-              <div className="text-[10px] text-orange-400 mt-2 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to view details &rarr;</div>
+            <div className="bg-gradient-to-br from-orange-400 to-orange-500 p-6 rounded-2xl border-none shadow-premium flex flex-col justify-center cursor-pointer hover:shadow-md transition-all group text-white" onClick={() => setActiveTab('payments')}>
+              <div className="text-[10px] font-bold text-orange-100 uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-white transition-colors"><CheckCircle2 className="w-4 h-4 text-orange-200" /> Total Payments Done</div>
+              <div className="text-3xl font-serif font-bold text-white">₹{validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0).toLocaleString()}</div>
+              <div className="text-[10px] text-orange-100 mt-2 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to view details &rarr;</div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-500" /> Net Gain/Loss</div>
-              <div className="text-3xl font-serif font-bold text-indigo-700">
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl border-none shadow-sm flex flex-col justify-center text-white">
+              <div className="text-[10px] font-bold text-purple-100 uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-purple-200" /> Net Gain/Loss</div>
+              <div className="text-3xl font-serif font-bold text-white">
                  {(() => {
                     const totalRev = validParticipations.reduce((acc: number, evt: any) => {
                        let rev = 0;
@@ -3941,7 +3941,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                     }, 0);
                     const totalPaid = validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0);
                     const net = totalRev - totalPaid;
-                    return <span className={net >= 0 ? "text-emerald-700" : "text-red-600"}>{net >= 0 ? '+' : '-'}₹{Math.abs(net).toLocaleString()}</span>;
+                    return <span className={net >= 0 ? "text-white" : "text-red-100"}>{net >= 0 ? '+' : '-'}₹{Math.abs(net).toLocaleString()}</span>;
                  })()}
               </div>
             </div>
@@ -4037,23 +4037,23 @@ const pe = pastEvents.find(p => p.eventId === eventId);
           </div>
           <div className="bg-white rounded-xl shadow-premium border border-paa-navy/5 overflow-hidden mb-8">
             <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
-                  <th className="px-6 py-4 w-12 text-center"></th>
-                  <th className="px-4 py-4 w-1/4">Event Name</th>
-                  <th className="px-4 py-4 w-32">Date</th>
-                  <th className="px-4 py-4">Type</th>
-                  <th className="px-4 py-4 text-right">Books Sold</th>
-                  <th className="px-4 py-4 text-right">Revenue</th>
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                <tr>
+                  <th className="px-6 py-4 w-12 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent"></th>
+                  <th className="px-4 py-4 w-1/4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event Name</th>
+                  <th className="px-4 py-4 w-32 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date</th>
+                  <th className="px-4 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Type</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Books Sold</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                   {eventFilter === 'LEGACY ARCHIVE' ? (
-                    <th className="px-4 py-4 text-center">Authors</th>
+                    <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Authors</th>
                   ) : (
                     <>
-                      <th className="px-4 py-4 text-right">Payment</th>
-                      <th className="px-4 py-4 text-right">Gain/Loss</th>
+                      <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Payment</th>
+                      <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Gain/Loss</th>
                     </>
                   )}
-                  <th className="px-4 py-4 text-center">Status</th>
+                  <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -4337,13 +4337,13 @@ const pe = pastEvents.find(p => p.eventId === eventId);
              </div>
              <div className="overflow-x-auto">
                  <table className="w-full text-left border-collapse whitespace-nowrap">
-                    <thead>
-                      <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
-                        <th className="px-6 py-4 w-1/4">Event Name</th>
-                        <th className="px-4 py-4 w-48">Date & Location</th>
-                        <th className="px-4 py-4">Transaction ID</th>
-                        <th className="px-4 py-4 text-right">Amount Paid</th>
-                        <th className="px-4 py-4 text-center">Receipt</th>
+                    <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                      <tr>
+                        <th className="px-6 py-4 w-1/4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event Name</th>
+                        <th className="px-4 py-4 w-48 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date & Location</th>
+                        <th className="px-4 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Transaction ID</th>
+                        <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Amount Paid</th>
+                        <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Receipt</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -4631,13 +4631,13 @@ const pe = pastEvents.find(p => p.eventId === eventId);
           </div>
           <div className="bg-white rounded-xl shadow-premium border border-paa-navy/5 overflow-hidden mb-8">
             <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
-                  <th className="px-6 py-4 w-1/3">Book Title</th>
-                  <th className="px-4 py-4 text-right">Copies Sent</th>
-                  <th className="px-4 py-4 text-right">Copies Sold</th>
-                  <th className="px-4 py-4 text-right">Sell-Through Rate</th>
-                  <th className="px-4 py-4 text-right">Revenue</th>
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                <tr>
+                  <th className="px-6 py-4 w-1/3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Copies Sent</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Copies Sold</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Sell-Through Rate</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -4678,13 +4678,13 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                         <BookOpen className="w-3 h-3" /> Event Breakdown for {bs.title}
                                     </div>
                                     <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-200">
-                                                <th className="pb-2 font-bold w-1/2">Event Name</th>
-                                                <th className="pb-2 font-bold text-right">Date</th>
-                                                <th className="pb-2 font-bold text-right">Sent</th>
-                                                <th className="pb-2 font-bold text-right">Sold</th>
-                                                <th className="pb-2 font-bold text-right">Revenue</th>
+                                        <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                                            <tr>
+                                                <th className="pb-2 w-1/2 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event Name</th>
+                                                <th className="pb-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date</th>
+                                                <th className="pb-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Sent</th>
+                                                <th className="pb-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Sold</th>
+                                                <th className="pb-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -5129,7 +5129,16 @@ function AuthorSalesReport({ data }: { data: any }) {
                     labelStyle={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
                     formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
                   />
-                  <Area type="linear" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorReportRev)" />
+                  <Area type="linear" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorReportRev)" dot={(props: any) => { const { cx, cy, index } = props; const total = chartData.length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#4f46e5" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }}>
+                    <LabelList dataKey="revenue" position="top" content={(props: any) => {
+                      const { x, y, value, index } = props;
+                      const total = chartData.length;
+                      if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) {
+                        return <text x={x} y={y - 10} fill="#4f46e5" fontSize="10px" fontWeight="bold" textAnchor="middle">₹{value}</text>;
+                      }
+                      return null;
+                    }} />
+                  </Area>
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -5204,14 +5213,14 @@ function AuthorSalesReport({ data }: { data: any }) {
         </div>
         <div className="overflow-x-auto">
           <table className="dash-table w-full text-left table-fixed">
-            <thead className="bg-white">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="w-[15%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Date</th>
-                <th className="w-[18%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Order ID</th>
-                <th className="w-[15%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Channel</th>
-                <th className="w-[30%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Book Title</th>
-                <th className="w-[10%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right">Qty</th>
-                <th className="w-[12%] px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right">Rev (₹)</th>
+                <th className="w-[15%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date</th>
+                <th className="w-[18%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Order ID</th>
+                <th className="w-[15%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Channel</th>
+                <th className="w-[30%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                <th className="w-[10%] px-5 py-3 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty</th>
+                <th className="w-[12%] px-5 py-3 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Rev (₹)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 bg-white">

@@ -1777,7 +1777,7 @@ export function OperationsDashboardPage() {
                       <tr><td colSpan={7} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period for the selected filter.</td></tr>
                     )}
                     {(salesData?.tableData?.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter) || []).map((row: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                      <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
                         <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
                         <td className="px-5 py-3 text-xs">
@@ -2022,9 +2022,9 @@ export function OperationsDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((ord: any) => (
+                {filteredOrders.map((ord: any, idx: number) => (
                   <React.Fragment key={ord.dbId}>
-                    <tr onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)} className={`cursor-pointer transition-colors ${expandedOrderId === ord.dbId ? 'bg-indigo-50/30' : 'hover:bg-gray-50'}`}>
+                    <tr onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)} className={`cursor-pointer transition-colors ${expandedOrderId === ord.dbId ? 'bg-indigo-50/30' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-100')} hover:bg-slate-200/60`}>
                       <td className="truncate">
                         <p className="font-bold text-paa-navy mb-1 truncate">{ord.id}</p>
                         <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium truncate"><CalendarIcon className="w-3 h-3 shrink-0" /> {ord.date}</p>
@@ -2385,7 +2385,7 @@ export function OperationsDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {pendingFineApprovals.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No pending payments.</td></tr> : pendingFineApprovals.map((a: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-green-50 transition-colors">
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                       <td className="px-4 py-3">
                         <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${a.extraData.finePaymentScreenshot}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
@@ -2427,7 +2427,7 @@ export function OperationsDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {activeFines.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No currently fined authors.</td></tr> : activeFines.map((a: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-red-50 transition-colors">
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                       <td className="px-4 py-3 font-bold text-red-600">₹{a.extraData.lateFines}</td>
                       <td className="px-4 py-3 text-gray-600">{a.extraData.fineDate ? new Date(a.extraData.fineDate).toLocaleDateString() : 'N/A'}</td>
@@ -2461,7 +2461,7 @@ export function OperationsDashboardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {lateDeliveries.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">No late deliveries currently.</td></tr> : lateDeliveries.map((ld, idx) => (
                     <React.Fragment key={idx}>
-                      <tr className="hover:bg-orange-50 transition-colors">
+                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-4 py-3 font-bold text-paa-navy flex items-center gap-2">
                           <button onClick={() => setExpandedCustomerRow(expandedCustomerRow === idx ? null : idx)} className="text-gray-400 hover:text-paa-navy transition-colors focus:outline-none">
                             <ChevronDown size={16} className={`transition-transform duration-300 ${expandedCustomerRow === idx ? 'rotate-180' : ''}`} />
@@ -2599,7 +2599,7 @@ export function OperationsDashboardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {historyAuthors.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500 italic">No fine history available.</td></tr> : historyAuthors.flatMap((a: any) =>
                     a.extraData.fineHistory.map((h: any, idx: number) => (
-                      <tr key={`${a.id}-${idx}`} className="hover:bg-indigo-50 transition-colors">
+                      <tr key={`${a.id}-${idx}`} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                         <td className="px-4 py-3 font-bold text-indigo-600">₹{h.amount}</td>
                         <td className="px-4 py-3 text-gray-600">{h.paidAt ? new Date(h.paidAt).toLocaleDateString() : 'N/A'}</td>
@@ -2898,8 +2898,8 @@ export function OperationsDashboardPage() {
                 if (a.status === 'Pending' && b.status !== 'Pending') return -1;
                 if (a.status !== 'Pending' && b.status === 'Pending') return 1;
                 return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
-              }).map((author) => (
-                <tr key={author.id} className={selectedAuthorIds.includes(author.id) ? 'bg-indigo-50/30' : ''}>
+              }).map((author, idx) => (
+                <tr key={author.id} className={`${selectedAuthorIds.includes(author.id) ? 'bg-indigo-50/30' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-100')} hover:bg-slate-200/60 transition-colors`}>
                   <td className="text-center">
                     <input
                       type="checkbox"
@@ -3132,8 +3132,8 @@ export function OperationsDashboardPage() {
             <tbody>
               {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter))
                 .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }))
-                .map((book) => (
-                <tr key={book.id}>
+                .map((book, idx) => (
+                <tr key={book.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="flex gap-1.5 flex-shrink-0">

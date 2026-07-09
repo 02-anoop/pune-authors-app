@@ -330,15 +330,15 @@ export function LandingPage() {
               {/* Stats Row */}
               <div style={{ display: "flex", gap: "1.2rem", marginBottom: "1.2rem", flexWrap: "wrap" }}>
                 {[
-                  { icon: <Book size={14}/>, count: stats.books, label: "Books" },
-                  { icon: <User size={14}/>, count: stats.authors, label: "Authors" },
-                  { icon: <Calendar size={14}/>, count: stats.events, label: "Events" },
-                  { icon: <Users size={14}/>, count: stats.categories, label: "Categories" }
+                  { icon: <Book size={24}/>, count: stats.books, label: "Books" },
+                  { icon: <User size={24}/>, count: stats.authors, label: "Authors" },
+                  { icon: <Calendar size={24}/>, count: stats.events, label: "Events" },
+                  { icon: <Users size={24}/>, count: stats.categories, label: "Categories" }
                 ].map((s, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#334155" }}>
-                    <div style={{ color: "#0f172a" }}>{s.icon}</div>
+                    <div style={{ color: "#0f172a", display: "flex", alignItems: "center" }}>{s.icon}</div>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", lineHeight: 1 }}><CountUp end={s.count} suffix="+" /></div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", lineHeight: 1 }}><CountUp end={s.count} suffix="+" /></div>
                       <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.02em", color: "#64748b", marginTop: "0.1rem" }}>{s.label}</div>
                     </div>
                   </div>

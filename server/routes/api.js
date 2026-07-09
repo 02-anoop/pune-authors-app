@@ -268,7 +268,7 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
       finalHashedPassword = existingUser.password;
       await prisma.user.update({
         where: { email },
-        data: { name, address, role: 'AUTHOR' }
+        data: { name, address, role: existingUser.role === 'ADMIN' ? 'ADMIN' : 'AUTHOR' }
       });
     }
 

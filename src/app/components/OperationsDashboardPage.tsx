@@ -4202,7 +4202,7 @@ export function OperationsDashboardPage() {
                             cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '3 3' }}
                             contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                         />
-                        {showBooksSold && <Line type="monotone" dataKey="booksSold" name="Books Sold" stroke="var(--color-paa-navy, #1e3a8a)" strokeWidth={3} dot={{ r: 4, fill: '#1e3a8a', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />}
+                        {showBooksSold && <Line type="linear" dataKey="booksSold" name="Books Sold" stroke="var(--color-paa-navy, #1e3a8a)" strokeWidth={3} dot={{ r: 4, fill: '#1e3a8a', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />}
                     </LineChart>
                 </ResponsiveContainer>
             </div>

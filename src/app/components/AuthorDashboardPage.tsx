@@ -5129,7 +5129,7 @@ function AuthorSalesReport({ data }: { data: any }) {
                     labelStyle={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
                     formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
                   />
-                  <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorReportRev)" />
+                  <Area type="linear" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorReportRev)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (

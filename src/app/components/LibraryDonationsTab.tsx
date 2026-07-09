@@ -1723,7 +1723,7 @@ export function LibraryDonationsTab() {
                   />
                   {(graphFilter === 'both' || graphFilter === 'books') && (
                     <Line 
-                      type="monotone" 
+                      type="linear" 
                       dataKey="booksDonated" 
                       name="Books Donated" 
                       stroke="var(--color-paa-navy, #1e3a8a)" 
@@ -1734,7 +1734,7 @@ export function LibraryDonationsTab() {
                   )}
                   {(graphFilter === 'both' || graphFilter === 'authors') && (
                     <Line 
-                      type="monotone" 
+                      type="linear" 
                       dataKey="authorsCount" 
                       name="Authors" 
                       stroke="#818CF8" 

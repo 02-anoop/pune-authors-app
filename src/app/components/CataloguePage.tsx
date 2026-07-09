@@ -76,6 +76,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     const byAuthor: Record<string, { name: string; bio: string; photoUrl: string; instagram: string; facebook: string; whatsapp: string; qualification?: string; age?: string; experience?: string; skills?: string; hobbies?: string; books: CatalogueBook[] }> = {};
     books.forEach(b => {
       let safePhoto = b.authorPhotoUrl || "";
+      if (safePhoto.startsWith('blob:') || safePhoto.startsWith('data:')) safePhoto = "";
 
       if (!byAuthor[b.authorName]) {
         byAuthor[b.authorName] = {
@@ -95,11 +96,15 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
       }
       // ignore NO_BOOK stubs
       if (b.id !== 'NO_BOOK') {
-        byAuthor[b.authorName].books.push(b);
+        let bClone = { ...b };
+        if (bClone.coverUrl && (bClone.coverUrl.startsWith('blob:') || bClone.coverUrl.startsWith('data:'))) {
+          bClone.coverUrl = "";
+        }
+        byAuthor[bClone.authorName].books.push(bClone);
       }
     });
     
-      let currentPage = 2; // Cover is page 1
+      let currentPage = 3; // Cover is page 1, Intro is page 2
       
       const contentHtml = Object.values(byAuthor).map((author, index) => {
         // Calculate age if it's a DOB
@@ -118,7 +123,13 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
            try {
               const parsed = JSON.parse(author.qualification);
               if (Array.isArray(parsed) && parsed.length > 0) {
-                 qualStr = parsed.map((q: any) => q.qualification).filter(Boolean).join(', ');
+                 qualStr = parsed.map((q: any) => {
+                    let str = q.qualification || '';
+                    if (q.subject) str += ` in ${q.subject}`;
+                    if (q.institution) str += ` from ${q.institution}`;
+                    if (q.mode) str += ` (${q.mode})`;
+                    return str;
+                 }).filter(Boolean).join('; ');
               } else {
                  qualStr = author.qualification;
               }
@@ -155,7 +166,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
   
         // Social links block
         const socials = [];
-        if (author.whatsapp && author.whatsapp !== 'NA') socials.push(`<a href="https://wa.me/${author.whatsapp.replace(/\\D/g,'')}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+        if (author.whatsapp && author.whatsapp !== 'NA') socials.push(`<a href="https://wa.me/${author.whatsapp.replace(/\D/g,'')}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
           &#128222; ${author.whatsapp}
         </a>`);
         if (author.instagram && author.instagram !== 'NA') socials.push(`<a href="${author.instagram.startsWith('http') ? author.instagram : 'https://instagram.com/'+author.instagram}" style="background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; color: #cbd5e1; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
@@ -170,7 +181,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
         const authorPageHtml = `
            <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #0f172a; color: #fff; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 60px;">
              <div style="position: absolute; top: 40px; right: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 40px; filter: brightness(0) invert(1);" />
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
              </div>
              
              <div style="position: absolute; right: -50px; top: -50px; font-size: 400px; color: rgba(255,255,255,0.03); font-family: 'Playfair Display', serif; font-weight: 900; line-height: 1; pointer-events: none;">${author.name.charAt(0)}</div>
@@ -244,13 +255,13 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
                </div>
              </div>
            </div>
-           `).join("");
+           ` ).join("");
   
            return `
            <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #f0f9ff; color: #0f172a; box-sizing: border-box; padding: 60px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start;">
               <!-- Branding Header -->
               <div style="position: absolute; top: 40px; right: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 30px;" />
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px;" />
               </div>
               
               <div style="margin-bottom: 40px; border-bottom: 2px solid #0f172a; padding-bottom: 10px; width: calc(100% - 140px);">
@@ -283,12 +294,13 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&display=swap');
           </style>
+          
           <!-- Magazine Cover Page -->
           <div style="position: relative; width: 802px; height: 1120px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a; box-sizing: border-box;">
             <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop" crossorigin="anonymous" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: grayscale(100%);" />
             <div style="position: relative; z-index: 10; padding: 80px; width: 80%; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box;">
               <div style="margin-bottom: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 250px; filter: brightness(0) invert(1);" />
               </div>
               <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 6px; color: #b44d28; margin-bottom: 30px; font-weight: 800; font-family: system-ui, sans-serif;">Exclusive Collection</div>
               <h1 style="color: #fff; font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 900; line-height: 1.1; margin: 0 0 20px; letter-spacing: -1px;">Pune Authors' Association</h1>
@@ -301,6 +313,55 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
             <!-- Page Number -->
             <div style="position: absolute; bottom: 40px; right: 40px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: system-ui, sans-serif; z-index: 10;">Page 1</div>
           </div>
+
+          <!-- Introduction Page -->
+          <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #0f172a; color: #e2e8f0; box-sizing: border-box; padding: 60px 80px; display: flex; flex-direction: column;">
+            <div style="position: absolute; top: 40px; right: 40px;">
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
+            </div>
+            <h2 style="margin: 40px 0 30px; font-size: 40px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">Introduction & Vision</h2>
+            
+            <div style="font-size: 14px; line-height: 1.7; font-family: system-ui, sans-serif; text-align: justify; display: flex; flex-direction: column; gap: 15px;">
+              <p style="margin: 0;"><strong style="color: #b44d28;">Introduction :-</strong> Pune Authors’ Association, a group of authors from Pune was formed in Jan 2025 by Cdr Shiv Mathur, a veteran of the Indian Navy and an author of four books. He realized that there is a need to work in a collaborative way to revive book reading, promote indie authors and sell books through some innovative ways. The group begin with a modest number of about 25 authors and it has been evolving constantly since its inception. Many authors joined and left and many have stayed put. The process will continue as the group evolves further and stablises with a stronger presence and outcomes. As on 17 May 26, we have 53 authors in the group.</p>
+              
+              <p style="margin: 0;"><strong style="color: #b44d28;">Goals :</strong> Following are the main goals of the group</p>
+              <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 5px;">
+                <li>a) Collective efforts through collaboration.</li>
+                <li>b) Participation and passion are a must for the authors in this group</li>
+                <li>c) Promote indie authors</li>
+                <li>d) Help authors with all publishing services at a minimal cost. We have authors who can format the manuscripts, edit, proof read, as well as design book covers.</li>
+                <li>e) We have a few printers who print as low as 50 copies and at a very cost-effective rate.</li>
+                <li>f) Organise literary events in housing societies and educational institutions as well as corporate offices.</li>
+                <li>g) Donate book to key libraries like airport libraries as an avenue for promotion.</li>
+                <li>h) Focus on organizing literary festivals in schools and colleges, where the actual book reading can be revived.</li>
+                <li>i) Help authors to understand the exploitation by the publishers and how to escape that.</li>
+              </ul>
+              
+              <p style="margin: 0;"><strong style="color: #b44d28;">Achievements :</strong> Following has been achieved since Jan 25 till 17 May 26.</p>
+              <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 5px;">
+                <li>a) Organised seven events in housing societies, colleges and corporate offices.</li>
+                <li>b) Participated in three major book fairs organized by the National Book Trust of India in Pune, Goa and Dehradun.</li>
+                <li>c) More events and book fairs are lined up till Jul 26.</li>
+                <li>d) Donated and setup libraries at six major airports in India. Donated almost 1400 books for this initiative. Kolkata, Chennai, Pune, Thiruvananthapuram, Mangaluru, and Bhubaneshwar.</li>
+                <li>e) Maintaining a catalogue of fiction and non-fiction books.</li>
+                <li>f) All efforts are on cost sharing basis, so the whole initiative remains a low-cost affair and affordable to the authors who participate in literary events and book fairs. Participation in literary events remain free.</li>
+                <li>g) Created a Linkedin page that currently works as a landing page and also promotes the group amongst professionals.</li>
+              </ul>
+              
+              <p style="margin: 0;"><strong style="color: #b44d28;">Way Ahead :</strong></p>
+              <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 5px;">
+                <li>a) Build a web-site for automating the operations and create a system that will become independent of any manual intervention. The rules will be implemented and all activities, transactions, database, tracking, supply chain, all will get rolled up into the web-site. All sales will happen through the website.</li>
+                <li>b) Marketing of the group through the website and Linkedin page.</li>
+                <li>c) Start a book shop, cum library cum café in Goa, that will be the authors book shop, café-library and it will be managed by the authors of this group.</li>
+                <li>d) Engage more with schools and colleges to engage them in literary activities and revival of book reading. Thereby, freeing them for mobile phones, scrolling and social media.</li>
+                <li>e) Form a foundation for promoting book reading and helping indie authors with publishing services.</li>
+                <li>f) Welcome authors from across the globe to join this group and take it to great heights.</li>
+              </ul>
+            </div>
+            
+            <div style="position: absolute; bottom: 40px; right: 40px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: system-ui, sans-serif;">Page 2</div>
+          </div>
+          
           ${contentHtml}
         </div>
       `;
@@ -309,9 +370,9 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     const opt = {
       margin:       0,
       filename:     `PAA_${label.replace(/\s+/g, '_')}_Catalogue.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
+      image:        { type: 'jpeg', quality: 0.8 },
       html2canvas:  { 
-        scale: 2, 
+        scale: 1.5, 
         useCORS: true, 
         logging: false,
         scrollY: 0,

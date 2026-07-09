@@ -452,8 +452,13 @@ router.put('/api/author/edit-profile-full', verifyToken, upload.any(), async (re
     const finalQualificationString = JSON.stringify(qualificationsArray);
 
     if (extraData) {
-        let incomingExtra = JSON.parse(extraData);
-        currentExtraData = { ...currentExtraData, ...incomingExtra, hasPendingEdits: true, originalProfileData: currentExtraData.originalProfileData };
+        let incomingExtra = typeof extraData === 'string' ? JSON.parse(extraData) : extraData;
+        if (typeof incomingExtra === 'string') {
+            try { incomingExtra = JSON.parse(incomingExtra); } catch(e) {}
+        }
+        if (incomingExtra && typeof incomingExtra === 'object' && !Array.isArray(incomingExtra)) {
+            currentExtraData = { ...currentExtraData, ...incomingExtra, hasPendingEdits: true, originalProfileData: currentExtraData.originalProfileData };
+        }
     }
     
     if (linkedin) currentExtraData.linkedin = linkedin;

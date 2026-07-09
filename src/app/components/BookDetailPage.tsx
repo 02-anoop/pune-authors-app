@@ -384,12 +384,42 @@ export function BookDetailPage() {
                            try { ed = JSON.parse(ed); } catch(e) { ed = {}; }
                         }
                         if (!ed || typeof ed !== 'object') return null;
-                        return Object.entries(ed).filter(([k, v]) => typeof v !== 'object' && v !== null && v !== '' && !['bundleRules', 'bundleRule', 'lowStockAlerts', 'lateFines', 'isPublishedByPublisher', 'whyJoining', 'conflictOfInterestSignature', 'agreedToGuidelines', 'agreedToInfoDoc'].includes(k)).map(([k, v]) => (
-                          <div key={k}>
-                            <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{k}</span>
-                            <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{String(v)}</span>
-                          </div>
-                        ));
+
+                        const excludedKeys = [
+                          'bundleRules', 'bundleRule', 'lowStockAlerts', 'lateFines', 
+                          'isPublishedByPublisher', 'whyJoining', 'conflictOfInterestSignature', 
+                          'agreedToGuidelines', 'agreedToInfoDoc', 'isReapplied', 'hasPendingEdits', 
+                          'editedProfileFields', 'fineHistory', 'lateNotificationDate', 'fineDate', 
+                          'fineStatus', 'finePaymentScreenshot', 'finePaymentDate', 'lastFinePaidAt'
+                        ];
+
+                        return Object.entries(ed)
+                          .filter(([k, v]) => typeof v !== 'object' && v !== null && v !== '' && !excludedKeys.includes(k))
+                          .map(([k, v]) => {
+                            const valStr = String(v);
+                            const isUrl = valStr.startsWith('http://') || valStr.startsWith('https://');
+                            const isLongField = isUrl || valStr.length > 30 || ['youtube', 'linkedin', 'instagram', 'facebook', 'website', 'social'].includes(k.toLowerCase());
+
+                            return (
+                              <div key={k} style={{ gridColumn: isLongField ? '1 / -1' : 'auto' }}>
+                                <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{k}</span>
+                                {isUrl ? (
+                                  <a 
+                                    href={valStr} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    style={{ display: 'block', fontSize: 13, color: '#059669', fontWeight: 500, textDecoration: 'underline', wordBreak: 'break-all' }}
+                                  >
+                                    {valStr}
+                                  </a>
+                                ) : (
+                                  <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500, wordBreak: 'break-word' }}>
+                                    {valStr}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          });
                       })()}
                     </div>
                   </div>

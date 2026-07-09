@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import axios from "axios";
 import localforage from "localforage";
 import qrCode from "./data/qr_code.jpeg";
-import charterPdf from "./data/Group Activities and Charter.pdf";
+// import charterPdf from "./data/Group Activities and Charter.pdf";
+const charterPdf = "#";
 import pastEvents from "./data/past_events.json";
 import { bookCategories } from "../data/categories";
 import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon, ArrowLeft, Info, CalendarDays, Briefcase, MapPin, Clock, LogOut } from "lucide-react";
@@ -399,7 +400,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
        }));
 
        if (initialData.extraData) {
-          setExtraDataState(initialData.extraData);
+          setExtraDataState(extra);
        }
        if (initialData.photoUrl) setAuthorPhotoUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.photoUrl}`);
        if (initialData.paymentScreenshot) setPaymentScreenshotUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.paymentScreenshot}`);

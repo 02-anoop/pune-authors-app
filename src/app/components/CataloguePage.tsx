@@ -67,6 +67,20 @@ const loadHtml2Pdf = (): Promise<any> => {
   });
 };
 
+
+export async function loadPdfLibs() {
+  const loadScript = (src: string) => new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+  if (!(window as any).jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+  if (!(window as any).html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+  return { jsPDF: (window as any).jspdf.jsPDF, html2canvas: (window as any).html2canvas };
+}
+
 export async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDownloading: (val: boolean) => void) {
   try {
     setDownloading(true);
@@ -96,7 +110,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     
     const validBooks = books.filter((_, i) => validationResults[i]);
 
-    const html2pdf = await loadHtml2Pdf();
+    const { jsPDF, html2canvas } = await loadPdfLibs();
     
     // Group books by author
     const byAuthor: Record<string, { name: string; bio: string; photoUrl: string; instagram: string; facebook: string; whatsapp: string; qualification?: string; age?: string; experience?: string; skills?: string; hobbies?: string; books: CatalogueBook[] }> = {};
@@ -130,7 +144,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
       }
     });
     
-      let currentPage = 3; // Cover is page 1, Intro is page 2
+      let currentPage = 4; // Cover is page 1, Intro is page 2, Progress is page 3
       
       const contentHtml = Object.values(byAuthor).map((author, index) => {
         // Calculate age if it's a DOB
@@ -308,10 +322,9 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
       }).join("");
   
       const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-2px';
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
       container.style.top = '0';
-      container.style.opacity = '0';
       container.style.zIndex = '-9999';
       document.body.appendChild(container);
   
@@ -322,7 +335,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
           </style>
           
           <!-- Magazine Cover Page -->
-          <div style="position: relative; width: 802px; height: 1120px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a; box-sizing: border-box;">
+          <div class="pdf-page" style="position: relative; width: 802px; height: 1120px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a; box-sizing: border-box;">
             <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop" crossorigin="anonymous" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: grayscale(100%);" />
             <div style="position: relative; z-index: 10; padding: 80px; width: 80%; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box;">
               <div style="margin-bottom: 40px;">
@@ -333,82 +346,109 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
               <div style="width: 80px; height: 3px; background: #b44d28; margin: 30px auto;"></div>
               <h2 style="color: #e2e8f0; margin: 0 0 40px; font-size: 32px; font-weight: 400; font-style: italic; font-family: 'Playfair Display', serif;">The ${label} Portfolio</h2>
               <p style="color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 4px; font-family: system-ui, sans-serif;">
-                Volume &middot; ${new Date().toLocaleDateString("en-US", { month: 'long', year: 'numeric' })} &nbsp;|&nbsp; ${books.length} Curated Title(s)
+                Volume &middot; ${new Date().toLocaleDateString("en-US", { month: 'long', year: 'numeric' })} &nbsp;|&nbsp; ${validBooks.length} Curated Title(s)
               </p>
             </div>
             <!-- Page Number -->
             <div style="position: absolute; bottom: 40px; right: 40px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: system-ui, sans-serif; z-index: 10;">Page 1</div>
           </div>
 
-          <!-- Introduction Page -->
+          <!-- Introduction Page 1 -->
           <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #0f172a; color: #e2e8f0; box-sizing: border-box; padding: 60px 80px; display: flex; flex-direction: column;">
             <div style="position: absolute; top: 40px; right: 40px;">
                 <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
             </div>
             <h2 style="margin: 40px 0 30px; font-size: 40px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">Introduction & Vision</h2>
             
-            <div style="font-size: 14px; line-height: 1.7; font-family: system-ui, sans-serif; text-align: justify; display: flex; flex-direction: column; gap: 15px;">
-              <p style="margin: 0;"><strong style="color: #b44d28;">Introduction :-</strong> Pune Authors’ Association, a group of authors from Pune was formed in Jan 2025 by Cdr Shiv Mathur, a veteran of the Indian Navy and an author of four books. He realized that there is a need to work in a collaborative way to revive book reading, promote indie authors and sell books through some innovative ways. The group begin with a modest number of about 25 authors and it has been evolving constantly since its inception. Many authors joined and left and many have stayed put. The process will continue as the group evolves further and stablises with a stronger presence and outcomes. As on 17 May 26, we have 53 authors in the group.</p>
+            <div style="font-size: 15px; line-height: 1.8; font-family: system-ui, sans-serif; text-align: justify; display: flex; flex-direction: column; gap: 20px;">
+              <div>
+                <h3 style="margin: 0 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Introduction</h3>
+                <p style="margin: 0;">Pune Authors’ Association, a group of authors from Pune was formed in Jan 2025 by Cdr Shiv Mathur, a veteran of the Indian Navy and an author of four books. He realized that there is a need to work in a collaborative way to revive book reading, promote indie authors and sell books through some innovative ways. The group begin with a modest number of about 25 authors and it has been evolving constantly since its inception. Many authors joined and left and many have stayed put. The process will continue as the group evolves further and stablises with a stronger presence and outcomes. As on 17 May 26, we have 53 authors in the group.</p>
+              </div>
               
-              <p style="margin: 0;"><strong style="color: #b44d28;">Goals :</strong> Following are the main goals of the group</p>
-              <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 5px;">
-                <li>a) Collective efforts through collaboration.</li>
-                <li>b) Participation and passion are a must for the authors in this group</li>
-                <li>c) Promote indie authors</li>
-                <li>d) Help authors with all publishing services at a minimal cost. We have authors who can format the manuscripts, edit, proof read, as well as design book covers.</li>
-                <li>e) We have a few printers who print as low as 50 copies and at a very cost-effective rate.</li>
-                <li>f) Organise literary events in housing societies and educational institutions as well as corporate offices.</li>
-                <li>g) Donate book to key libraries like airport libraries as an avenue for promotion.</li>
-                <li>h) Focus on organizing literary festivals in schools and colleges, where the actual book reading can be revived.</li>
-                <li>i) Help authors to understand the exploitation by the publishers and how to escape that.</li>
-              </ul>
-              
-              <p style="margin: 0;"><strong style="color: #b44d28;">Achievements :</strong> Following has been achieved since Jan 25 till 17 May 26.</p>
-              <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 5px;">
-                <li>a) Organised seven events in housing societies, colleges and corporate offices.</li>
-                <li>b) Participated in three major book fairs organized by the National Book Trust of India in Pune, Goa and Dehradun.</li>
-                <li>c) More events and book fairs are lined up till Jul 26.</li>
-                <li>d) Donated and setup libraries at six major airports in India. Donated almost 1400 books for this initiative. Kolkata, Chennai, Pune, Thiruvananthapuram, Mangaluru, and Bhubaneshwar.</li>
-                <li>e) Maintaining a catalogue of fiction and non-fiction books.</li>
-                <li>f) All efforts are on cost sharing basis, so the whole initiative remains a low-cost affair and affordable to the authors who participate in literary events and book fairs. Participation in literary events remain free.</li>
-                <li>g) Created a Linkedin page that currently works as a landing page and also promotes the group amongst professionals.</li>
-              </ul>
-              
-              <p style="margin: 0;"><strong style="color: #b44d28;">Way Ahead :</strong></p>
-              <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 5px;">
-                <li>a) Build a web-site for automating the operations and create a system that will become independent of any manual intervention. The rules will be implemented and all activities, transactions, database, tracking, supply chain, all will get rolled up into the web-site. All sales will happen through the website.</li>
-                <li>b) Marketing of the group through the website and Linkedin page.</li>
-                <li>c) Start a book shop, cum library cum café in Goa, that will be the authors book shop, café-library and it will be managed by the authors of this group.</li>
-                <li>d) Engage more with schools and colleges to engage them in literary activities and revival of book reading. Thereby, freeing them for mobile phones, scrolling and social media.</li>
-                <li>e) Form a foundation for promoting book reading and helping indie authors with publishing services.</li>
-                <li>f) Welcome authors from across the globe to join this group and take it to great heights.</li>
-              </ul>
+              <div>
+                <h3 style="margin: 20px 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Goals</h3>
+                <p style="margin: 0 0 10px 0;">Following are the main goals of the group:</p>
+                <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+                  <li>a) Collective efforts through collaboration.</li>
+                  <li>b) Participation and passion are a must for the authors in this group</li>
+                  <li>c) Promote indie authors</li>
+                  <li>d) Help authors with all publishing services at a minimal cost. We have authors who can format the manuscripts, edit, proof read, as well as design book covers.</li>
+                  <li>e) We have a few printers who print as low as 50 copies and at a very cost-effective rate.</li>
+                  <li>f) Organise literary events in housing societies and educational institutions as well as corporate offices.</li>
+                  <li>g) Donate book to key libraries like airport libraries as an avenue for promotion.</li>
+                  <li>h) Focus on organizing literary festivals in schools and colleges, where the actual book reading can be revived.</li>
+                  <li>i) Help authors to understand the exploitation by the publishers and how to escape that.</li>
+                </ul>
+              </div>
             </div>
             
             <div style="position: absolute; bottom: 40px; right: 40px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: system-ui, sans-serif;">Page 2</div>
+          </div>
+
+          <!-- Introduction Page 2 -->
+          <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #0f172a; color: #e2e8f0; box-sizing: border-box; padding: 60px 80px; display: flex; flex-direction: column;">
+            <div style="position: absolute; top: 40px; right: 40px;">
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
+            </div>
+            <h2 style="margin: 40px 0 30px; font-size: 40px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">Progress & Future</h2>
+            
+            <div style="font-size: 15px; line-height: 1.8; font-family: system-ui, sans-serif; text-align: justify; display: flex; flex-direction: column; gap: 20px;">
+              <div>
+                <h3 style="margin: 0 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Achievements</h3>
+                <p style="margin: 0 0 10px 0;">Following has been achieved since Jan 25 till 17 May 26.</p>
+                <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+                  <li>a) Organised seven events in housing societies, colleges and corporate offices.</li>
+                  <li>b) Participated in three major book fairs organized by the National Book Trust of India in Pune, Goa and Dehradun.</li>
+                  <li>c) More events and book fairs are lined up till Jul 26.</li>
+                  <li>d) Donated and setup libraries at six major airports in India. Donated almost 1400 books for this initiative. Kolkata, Chennai, Pune, Thiruvananthapuram, Mangaluru, and Bhubaneshwar.</li>
+                  <li>e) Maintaining a catalogue of fiction and non-fiction books.</li>
+                  <li>f) All efforts are on cost sharing basis, so the whole initiative remains a low-cost affair and affordable to the authors who participate in literary events and book fairs. Participation in literary events remain free.</li>
+                  <li>g) Created a Linkedin page that currently works as a landing page and also promotes the group amongst professionals.</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 style="margin: 20px 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Way Ahead</h3>
+                <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+                  <li>a) Build a web-site for automating the operations and create a system that will become independent of any manual intervention. The rules will be implemented and all activities, transactions, database, tracking, supply chain, all will get rolled up into the web-site. All sales will happen through the website.</li>
+                  <li>b) Marketing of the group through the website and Linkedin page.</li>
+                  <li>c) Start a book shop, cum library cum café in Goa, that will be the authors book shop, café-library and it will be managed by the authors of this group.</li>
+                  <li>d) Engage more with schools and colleges to engage them in literary activities and revival of book reading. Thereby, freeing them for mobile phones, scrolling and social media.</li>
+                  <li>e) Form a foundation for promoting book reading and helping indie authors with publishing services.</li>
+                  <li>f) Welcome authors from across the globe to join this group and take it to great heights.</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div style="position: absolute; bottom: 40px; right: 40px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: system-ui, sans-serif;">Page 3</div>
           </div>
           
           ${contentHtml}
         </div>
       `;
 
+    // Wait a brief moment to ensure browser has rendered DOM
+    await new Promise(r => setTimeout(r, 500));
 
-    const opt = {
-      margin:       0,
-      filename:     `PAA_${label.replace(/\s+/g, '_')}_Catalogue.pdf`,
-      image:        { type: 'jpeg', quality: 0.8 },
-      html2canvas:  { 
-        scale: 1.5, 
-        useCORS: true, 
-        logging: false,
-        scrollY: 0,
-        scrollX: 0
-      },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak:    { mode: 'css', before: '.pdf-page' }
-    };
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pages = container.querySelectorAll('.pdf-page');
+    
+    for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+        const canvas = await html2canvas(page, { 
+            scale: 1.5, 
+            useCORS: true, 
+            logging: false,
+            backgroundColor: '#0f172a'
+        });
+        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+        
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+    }
 
-    await html2pdf().set(opt).from(container.firstElementChild).save();
+    pdf.save(`PAA_${label.replace(/\s+/g, '_')}_Catalogue.pdf`);
     
     document.body.removeChild(container);
     setDownloading(false);

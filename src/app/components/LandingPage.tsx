@@ -157,6 +157,7 @@ export function LandingPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [languageDrilldown, setLanguageDrilldown] = useState<"Others" | "Foreign" | null>(null);
 
   useEffect(() => {
     axios
@@ -268,8 +269,8 @@ export function LandingPage() {
           HERO — LIGHT BLUE SPLIT LAYOUT
       ════════════════════════════════════════════ */}
       <section
+        className="hero-section-bg"
         style={{
-          background: `url(/bridge_bg.png) no-repeat 10% center / 60% auto, linear-gradient(to right, #e3f1f8, #eef7fc)`,
           position: "relative",
           overflow: "hidden",
           borderTop: "3px solid #f16522"
@@ -279,9 +280,6 @@ export function LandingPage() {
           style={{
             maxWidth: 1400,
             margin: "0 auto",
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            minHeight: 320,
           }}
           className="hero-grid"
         >
@@ -289,6 +287,7 @@ export function LandingPage() {
           <div style={{ padding: "1.5rem 2rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <FadeIn>
               <h1
+                className="hero-title"
                 style={{
                   fontFamily: "var(--font-display)",
                   fontSize: "clamp(2.2rem, 3.5vw, 3.2rem)",
@@ -328,14 +327,14 @@ export function LandingPage() {
               </div>
 
               {/* Stats Row */}
-              <div style={{ display: "flex", gap: "1.2rem", marginBottom: "1.2rem", flexWrap: "wrap" }}>
+              <div className="hero-stats-row" style={{ display: "flex", gap: "1.2rem", marginBottom: "1.2rem", flexWrap: "wrap" }}>
                 {[
                   { icon: <Book size={24}/>, count: stats.books, label: "Books" },
                   { icon: <User size={24}/>, count: stats.authors, label: "Authors" },
                   { icon: <Calendar size={24}/>, count: stats.events, label: "Events" },
                   { icon: <Users size={24}/>, count: stats.categories, label: "Categories" }
                 ].map((s, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#334155" }}>
+                  <div key={i} className="hero-stats-item" style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#334155" }}>
                     <div style={{ color: "#0f172a", display: "flex", alignItems: "center" }}>{s.icon}</div>
                     <div>
                       <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", lineHeight: 1 }}><CountUp end={s.count} suffix="+" /></div>
@@ -368,7 +367,7 @@ export function LandingPage() {
                   onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
                   onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
                 >
-                  Explore Books
+                  Browse Books
                 </Link>
                 <Link
                   to="/gallery"
@@ -398,7 +397,7 @@ export function LandingPage() {
           </div>
 
           {/* RIGHT SIDE - SLIDER */}
-          <div style={{ position: "relative", background: "#f4f9fc", borderTopLeftRadius: "15rem", borderBottomLeftRadius: "15rem", overflow: "hidden", display: "flex", flexDirection: "column", transform: "translateZ(0)", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}>
+          <div className="hero-slider-container">
             
             {/* Carousel Container */}
             <div style={{ flex: 1, position: "relative" }}>
@@ -421,10 +420,10 @@ export function LandingPage() {
                 </div>
 
                 {/* SLIDE 2: Top Books */}
-                <div style={{ width: "25%", height: "100%", background: "rgba(255, 255, 255, 0.5)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                   <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Top Selling <span style={{color: "#f16522"}}>Books</span></h3>
+                <div className="hero-slide-content" style={{ width: "25%", height: "100%", background: "rgba(255, 255, 255, 0.5)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                   <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Trending <span style={{color: "#f16522"}}>Books</span></h3>
                    <div style={{ display: "flex", gap: "1rem" }}>
-                     {galleryItems.slice(0, 3).map((book, i) => (
+                     {galleryItems.filter(b => b.coverUrl && b.coverUrl.trim() !== "").slice(0, 3).map((book, i) => (
                        <Link key={i} to={`/catalogue?q=${book.title}`} style={{ flex: 1, textDecoration: "none" }}>
                          <div style={{ width: "100%", paddingTop: "140%", position: "relative", borderRadius: 6, overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.15)", background: "#e2e8f0" }}>
                            {book.coverUrl ? (
@@ -439,7 +438,7 @@ export function LandingPage() {
                 </div>
 
                 {/* SLIDE 3: Pillars */}
-                <div style={{ width: "25%", height: "100%", background: "transparent", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <div className="hero-slide-content" style={{ width: "25%", height: "100%", background: "transparent", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                     {[
                       { icon: <PenTool size={24} />, label: "We Publish", color: "#f16522" },
@@ -452,13 +451,14 @@ export function LandingPage() {
                           {p.icon}
                         </div>
                         <h4 style={{ color: "#1e293b", fontSize: "1.1rem", fontWeight: 700 }}>{p.label}</h4>
+                        <h4 className="hero-pillar-label">{p.label}</h4>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* SLIDE 4: Categories */}
-                <div style={{ width: "25%", height: "100%", background: "rgba(255,255,255,0.3)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <div className="hero-slide-content" style={{ width: "25%", height: "100%", background: "rgba(255,255,255,0.3)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                    <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Featured <span style={{color: "#f16522"}}>Categories</span></h3>
                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
                      {availableGenres.slice(0, 8).map((g, i) => (
@@ -782,23 +782,66 @@ export function LandingPage() {
           <FadeIn delay={200}>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-                <h3 style={{ fontSize: "1.4rem", fontWeight: 700, color: C.dark }}>Books by Language</h3>
-                <Link to="/catalogue" style={{ fontSize: 13, fontWeight: 600, color: C.amber, textDecoration: "none", display: "flex", alignItems: "center", gap: "0.2rem" }}>
-                  View all <ArrowRight size={14} />
-                </Link>
+                <h3 style={{ fontSize: "1.4rem", fontWeight: 700, color: C.dark }}>
+                  {languageDrilldown === "Others" ? "Other Regional Languages" : languageDrilldown === "Foreign" ? "Foreign Languages" : "Books by Language"}
+                </h3>
+                {languageDrilldown ? (
+                  <button onClick={() => setLanguageDrilldown(null)} style={{ fontSize: 13, fontWeight: 600, color: C.amber, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <ArrowLeft size={14} /> Back
+                  </button>
+                ) : (
+                  <Link to="/catalogue" style={{ fontSize: 13, fontWeight: 600, color: C.amber, textDecoration: "none", display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                    View all <ArrowRight size={14} />
+                  </Link>
+                )}
               </div>
               <div className="horizontal-scroll" style={{ display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "1rem", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-                {availableLanguages.map((l, i) => (
-                  <Link key={i} to={`/catalogue?search=${l.searchParam}`} style={{ flex: "0 0 220px", width: 220, display: "flex", alignItems: "center", gap: "1rem", background: l.bg, padding: "1rem 1.2rem", borderRadius: 12, textDecoration: "none", transition: "transform 0.2s" }} className="hover-scale">
-                    <div style={{ width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 600, color: l.color }}>
-                      {l.letter}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: "0.2rem" }}>{l.name}</div>
-                      <div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 500 }}>Explore Books</div>
-                    </div>
-                  </Link>
-                ))}
+                {(() => {
+                  const indianLangs = ["Hindi", "English", "Marathi", "Sanskrit", "Tamil", "Telugu", "Kannada", "Malayalam", "Gujarati", "Bengali", "Punjabi", "Urdu", "Odia", "Assamese", "Maithili", "Bhojpuri"];
+                  const otherRegional = availableLanguages.filter(l => l.searchParam.toLowerCase() !== "english" && l.searchParam.toLowerCase() !== "hindi" && indianLangs.some(ind => ind.toLowerCase() === l.searchParam.toLowerCase()));
+                  const foreign = availableLanguages.filter(l => l.searchParam.toLowerCase() !== "english" && l.searchParam.toLowerCase() !== "hindi" && !indianLangs.some(ind => ind.toLowerCase() === l.searchParam.toLowerCase()) && l.name !== "Others");
+
+                  if (languageDrilldown === "Others") {
+                    return otherRegional.length > 0 ? otherRegional.map((l, i) => (
+                      <Link key={i} to={`/catalogue?search=${l.searchParam}`} style={{ flex: "0 0 220px", width: 220, display: "flex", alignItems: "center", gap: "1rem", background: l.bg, padding: "1rem 1.2rem", borderRadius: 12, textDecoration: "none", transition: "transform 0.2s" }} className="hover-scale">
+                        <div style={{ width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 600, color: l.color }}>{l.letter}</div>
+                        <div><div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: "0.2rem" }}>{l.name}</div><div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 500 }}>Explore Books</div></div>
+                      </Link>
+                    )) : <p style={{ fontSize: 14, color: "#64748b" }}>No other regional books available.</p>;
+                  }
+
+                  if (languageDrilldown === "Foreign") {
+                    return foreign.length > 0 ? foreign.map((l, i) => (
+                      <Link key={i} to={`/catalogue?search=${l.searchParam}`} style={{ flex: "0 0 220px", width: 220, display: "flex", alignItems: "center", gap: "1rem", background: l.bg, padding: "1rem 1.2rem", borderRadius: 12, textDecoration: "none", transition: "transform 0.2s" }} className="hover-scale">
+                        <div style={{ width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 600, color: l.color }}>{l.letter}</div>
+                        <div><div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: "0.2rem" }}>{l.name}</div><div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 500 }}>Explore Books</div></div>
+                      </Link>
+                    )) : <p style={{ fontSize: 14, color: "#64748b" }}>No foreign books available.</p>;
+                  }
+
+                  return (
+                    <>
+                      <Link to="/catalogue?search=English" style={{ flex: "0 0 220px", width: 220, display: "flex", alignItems: "center", gap: "1rem", background: "#fef9c3", padding: "1rem 1.2rem", borderRadius: 12, textDecoration: "none", transition: "transform 0.2s" }} className="hover-scale">
+                        <div style={{ width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 600, color: "#eab308" }}>E</div>
+                        <div><div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: "0.2rem" }}>English</div><div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 500 }}>Explore Books</div></div>
+                      </Link>
+                      <Link to="/catalogue?search=Hindi" style={{ flex: "0 0 220px", width: 220, display: "flex", alignItems: "center", gap: "1rem", background: "#dcfce7", padding: "1rem 1.2rem", borderRadius: 12, textDecoration: "none", transition: "transform 0.2s" }} className="hover-scale">
+                        <div style={{ width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 600, color: "#22c55e" }}>H</div>
+                        <div><div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: "0.2rem" }}>Hindi</div><div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 500 }}>Explore Books</div></div>
+                      </Link>
+                      <button onClick={() => setLanguageDrilldown("Others")} style={{ flex: "0 0 220px", width: 220, display: "flex", alignItems: "center", gap: "1rem", background: "#e0f2fe", padding: "1rem 1.2rem", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left", transition: "transform 0.2s" }} className="hover-scale">
+                        <div style={{ width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 600, color: "#0ea5e9" }}>O</div>
+                        <div><div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: "0.2rem" }}>Others</div><div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 500 }}>Regional Languages</div></div>
+                      </button>
+                      {foreign.length > 0 && (
+                        <button onClick={() => setLanguageDrilldown("Foreign")} style={{ flex: "0 0 220px", width: 220, display: "flex", alignItems: "center", gap: "1rem", background: "#f3e8ff", padding: "1rem 1.2rem", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left", transition: "transform 0.2s" }} className="hover-scale">
+                          <div style={{ width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 600, color: "#a855f7" }}>F</div>
+                          <div><div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: "0.2rem" }}>Foreign</div><div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)", fontWeight: 500 }}>International Languages</div></div>
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </FadeIn>

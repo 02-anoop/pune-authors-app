@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import axios from "axios";
-import { ArrowRight, Book, BookOpen, Megaphone, Store, Mic, Sparkles, Users, Plane, Library, PenTool, Palette, Printer, FileText, Mail, Phone, MapPin, Download, ExternalLink, Heart, Search, Landmark, Rocket, Feather, ChevronLeft, ChevronRight, Calendar, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Book, BookOpen, Megaphone, Store, Mic, Sparkles, Users, Plane, Library, PenTool, Palette, Printer, FileText, Mail, Phone, MapPin, Download, ExternalLink, Heart, Search, Landmark, Rocket, Feather, ChevronLeft, ChevronRight, Calendar, User } from "lucide-react";
 import { toast } from "sonner";
 
 // --- ANIMATED COUNTER ---

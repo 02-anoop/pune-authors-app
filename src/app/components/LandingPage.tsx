@@ -147,7 +147,7 @@ export function LandingPage() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 4);
+      setCurrentSlide((prev) => (prev + 1) % 3);
     }, 6000);
     return () => clearInterval(timer);
   }, []);
@@ -405,23 +405,14 @@ export function LandingPage() {
               <div 
                 style={{ 
                   display: "flex", 
-                  width: "400%", 
+                  width: "300%", 
                   height: "100%", 
-                  transform: `translateX(-${currentSlide * 25}%)`, 
+                  transform: `translateX(-${currentSlide * 33.333}%)`, 
                   transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)" 
                 }}
               >
-                {/* SLIDE 1: Founder */}
-                <div style={{ width: "25%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
-                  <div style={{ width: 160, height: 160, borderRadius: "50%", overflow: "hidden", border: "4px solid #ffffff", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", marginBottom: "1.5rem" }}>
-                    <img src="/founder_shiv.png" alt="Cdr Shiv Mathur" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </div>
-                  <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 800, marginBottom: "0.2rem", textAlign: "center" }}>Cdr Shiv Mathur</h3>
-                  <p style={{ color: "#f16522", fontSize: "1rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", textAlign: "center" }}>Founder & Visionary</p>
-                </div>
-
-                {/* SLIDE 2: Top Books */}
-                <div className="hero-slide-content" style={{ width: "25%", height: "100%", background: "rgba(255, 255, 255, 0.5)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                {/* SLIDE 1: Top Books */}
+                <div className="hero-slide-content" style={{ width: "33.333%", height: "100%", background: "rgba(255, 255, 255, 0.5)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                    <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Trending <span style={{color: "#f16522"}}>Books</span></h3>
                    <div style={{ display: "flex", gap: "1rem" }}>
                      {galleryItems.filter(b => b.coverUrl && b.coverUrl.trim() !== "").slice(0, 3).map((book, i) => (
@@ -448,8 +439,8 @@ export function LandingPage() {
                    </div>
                 </div>
 
-                {/* SLIDE 3: Pillars */}
-                <div className="hero-slide-content" style={{ width: "25%", height: "100%", background: "transparent", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                {/* SLIDE 2: Pillars */}
+                <div className="hero-slide-content" style={{ width: "33.333%", height: "100%", background: "transparent", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                     {[
                       { icon: <PenTool size={24} />, label: "We Publish", color: "#f16522" },
@@ -468,8 +459,8 @@ export function LandingPage() {
                   </div>
                 </div>
 
-                {/* SLIDE 4: Categories */}
-                <div className="hero-slide-content" style={{ width: "25%", height: "100%", background: "rgba(255,255,255,0.3)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                {/* SLIDE 3: Categories */}
+                <div className="hero-slide-content" style={{ width: "33.333%", height: "100%", background: "rgba(255,255,255,0.3)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                    <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Featured <span style={{color: "#f16522"}}>Categories</span></h3>
                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
                      {availableGenres.slice(0, 8).map((g, i) => (
@@ -486,14 +477,14 @@ export function LandingPage() {
             {/* Slider Controls Area */}
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "4rem", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", gap: "2rem", zIndex: 10 }}>
               <button 
-                onClick={() => setCurrentSlide(p => (p - 1 + 4) % 4)}
+                onClick={() => setCurrentSlide(p => (p - 1 + 3) % 3)}
                 style={{ background: "transparent", border: "none", color: "#1e293b", cursor: "pointer", display: "flex", alignItems: "center", padding: "0.5rem" }}
               >
                 <ChevronLeft size={20} />
               </button>
               
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                {[0, 1, 2, 3].map(idx => (
+                {[0, 1, 2].map(idx => (
                   <button 
                     key={idx}
                     onClick={() => setCurrentSlide(idx)}
@@ -512,7 +503,7 @@ export function LandingPage() {
               </div>
 
               <button 
-                onClick={() => setCurrentSlide(p => (p + 1) % 4)}
+                onClick={() => setCurrentSlide(p => (p + 1) % 3)}
                 style={{ background: "transparent", border: "none", color: "#1e293b", cursor: "pointer", display: "flex", alignItems: "center", padding: "0.5rem" }}
               >
                 <ChevronRight size={20} />
@@ -549,52 +540,7 @@ export function LandingPage() {
           </div>
         ) : (
           <>
-        {/* New Releases Row */}
-        {galleryItems.length > 0 && (
-          <FadeIn delay={50}>
-            <div style={{ marginBottom: "1.5rem" }}>
-              <div style={{ marginBottom: "1rem" }}>
-                <h3 style={{ fontSize: "1.4rem", fontWeight: 700, color: C.dark }}>New Releases</h3>
-              </div>
-              
-              <div className="horizontal-scroll" style={{ display: "flex", gap: "1.2rem", overflowX: "auto", paddingBottom: "1.5rem", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", alignItems: "flex-start" }}>
-                 {[...galleryItems].reverse().slice(0, 8).map((book, i) => (
-                    <div key={`new-${book.id || i}`} className="book-card group" style={{ flex: "0 0 160px", width: 160, display: "flex", flexDirection: "column" }}>
-                      <Link to={`/book/${book.id}`} style={{ textDecoration: "none", display: "flex", flexDirection: "column", width: "100%" }}>
-                        <div style={{ width: "100%", paddingTop: "133.33%", borderRadius: 12, overflow: "hidden", marginBottom: "0.6rem", background: C.goldBg, position: "relative" }}>
-                          <img src={book.coverUrl ? (book.coverUrl.startsWith("http") ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=450&fit=crop"} alt={book.title} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", color: "transparent" }} />
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                          <h4 style={{ fontSize: 14, fontWeight: 600, color: C.dark, margin: "0 0 0.1rem 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h4>
-                          <span style={{ fontSize: 13, color: C.muted, marginBottom: "0.3rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.authorName}</span>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>{book.mrp != null ? `₹${book.mrp}` : book.mrpRaw || "Price TBD"}</div>
-                        </div>
-                      </Link>
-                    </div>
-                 ))}
-                 {galleryItems.length > 8 && (
-                    <div className="book-card group" style={{ flex: "0 0 160px", width: 160, display: "flex", flexDirection: "column" }}>
-                      <Link to={`/catalogue?category=All`} style={{ textDecoration: "none", display: "flex", flexDirection: "column", width: "100%" }}>
-                        <div style={{ width: "100%", paddingTop: "133.33%", borderRadius: 12, overflow: "hidden", marginBottom: "0.6rem", background: C.cream, border: `2px solid ${C.border}`, position: "relative" }}>
-                           <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.8rem" }}>
-                              <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.white, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                                <ArrowRight size={20} color={C.amber} />
-                              </div>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>View all</span>
-                           </div>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                          <h4 style={{ fontSize: 14, fontWeight: 600, color: "transparent", margin: "0 0 0.1rem 0", userSelect: "none" }}>_</h4>
-                          <span style={{ fontSize: 13, color: "transparent", marginBottom: "0.3rem", userSelect: "none" }}>_</span>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "transparent", userSelect: "none" }}>_</div>
-                        </div>
-                      </Link>
-                    </div>
-                 )}
-              </div>
-            </div>
-          </FadeIn>
-        )}
+
 
              {/* Fiction Row */}
         {galleryItems.filter(b => b.genre === "F").length > 0 && (
@@ -736,6 +682,67 @@ export function LandingPage() {
             </div>
           </FadeIn>
         )}
+
+        {/* New Releases Row */}
+        {galleryItems.length > 0 && (
+          <FadeIn delay={400}>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <div style={{ marginBottom: "1rem" }}>
+                <h3 style={{ fontSize: "1.4rem", fontWeight: 700, color: C.dark }}>New Releases</h3>
+              </div>
+              
+              <div className="horizontal-scroll" style={{ display: "flex", gap: "1.2rem", overflowX: "auto", paddingBottom: "1.5rem", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", alignItems: "flex-start" }}>
+                 {[...galleryItems].reverse().slice(0, 8).map((book, i) => (
+                    <div key={`new-${book.id || i}`} className="book-card group" style={{ flex: "0 0 160px", width: 160, display: "flex", flexDirection: "column" }}>
+                      <Link to={`/book/${book.id}`} style={{ textDecoration: "none", display: "flex", flexDirection: "column", width: "100%" }}>
+                        <div style={{ width: "100%", paddingTop: "133.33%", borderRadius: 12, overflow: "hidden", marginBottom: "0.6rem", background: C.goldBg, position: "relative" }}>
+                           <img 
+                             src={book.coverUrl ? (book.coverUrl.startsWith("http") ? book.coverUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${book.coverUrl}`) : "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=450&fit=crop"} 
+                             onError={(e) => { 
+                               e.currentTarget.style.display = 'none'; 
+                               if (e.currentTarget.nextElementSibling) {
+                                 (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex'; 
+                               }
+                             }} 
+                             alt={book.title} 
+                             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }} 
+                           />
+                           <div style={{ display: "none", position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "#1e293b", color: "white", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "1rem", textAlign: "center", zIndex: 0 }}>
+                             <span style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: "0.5rem", lineHeight: 1.2 }}>{book.title}</span>
+                             <span style={{ fontSize: "0.85rem", opacity: 0.9, color: "#f16522" }}>{book.authorName}</span>
+                           </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <h4 style={{ fontSize: 14, fontWeight: 600, color: C.dark, margin: "0 0 0.1rem 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.title}</h4>
+                          <span style={{ fontSize: 13, color: C.muted, marginBottom: "0.3rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{book.authorName}</span>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>{book.mrp != null ? `₹${book.mrp}` : book.mrpRaw || "Price TBD"}</div>
+                        </div>
+                      </Link>
+                    </div>
+                 ))}
+                 {galleryItems.length > 8 && (
+                    <div className="book-card group" style={{ flex: "0 0 160px", width: 160, display: "flex", flexDirection: "column" }}>
+                      <Link to={`/catalogue`} style={{ textDecoration: "none", display: "flex", flexDirection: "column", width: "100%" }}>
+                        <div style={{ width: "100%", paddingTop: "133.33%", borderRadius: 12, overflow: "hidden", marginBottom: "0.6rem", background: C.cream, border: `2px solid ${C.border}`, position: "relative" }}>
+                           <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.8rem" }}>
+                              <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.white, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+                                <ArrowRight size={20} color={C.amber} />
+                              </div>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>View all</span>
+                           </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <h4 style={{ fontSize: 14, fontWeight: 600, color: "transparent", margin: "0 0 0.1rem 0", userSelect: "none" }}>_</h4>
+                          <span style={{ fontSize: 13, color: "transparent", marginBottom: "0.3rem", userSelect: "none" }}>_</span>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: "transparent", userSelect: "none" }}>_</div>
+                        </div>
+                      </Link>
+                    </div>
+                 )}
+              </div>
+            </div>
+          </FadeIn>
+        )}
           </>
         )}
         </div>
@@ -763,7 +770,7 @@ export function LandingPage() {
              </div>
           ) : (
              <>
-          {availableGenres.length > 0 && (
+          {/* {availableGenres.length > 0 && (
           <FadeIn delay={100}>
             <div style={{ marginBottom: "3rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
@@ -787,7 +794,7 @@ export function LandingPage() {
               </div>
             </div>
           </FadeIn>
-          )}
+          )} */}
 
           {availableLanguages.length > 0 && (
           <FadeIn delay={200}>

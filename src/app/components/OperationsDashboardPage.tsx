@@ -1866,8 +1866,37 @@ export function OperationsDashboardPage() {
     const [isSubmittingFine, setIsSubmittingFine] = useState(false);
     const [expandedOrderId, setExpandedOrderId] = useState(null);
     const [localSearchTerm, setLocalSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+
+    const getAggregateStatus = (ord: any) => {
+      const { status: ordStatus, items } = ord;
+      if (ordStatus === 'Cancelled') return { text: 'Cancelled', style: 'bg-red-500 text-white border-transparent shadow-md' };
+      if (ordStatus === 'Payment Not Received') return { text: 'Payment Failed', style: 'bg-red-500 text-white border-transparent shadow-md' };
+      if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') return { text: 'Pending Verification', style: 'bg-yellow-400 text-black border-transparent shadow-md' };
+
+      if (!items || items.length === 0) return { text: ordStatus, style: 'bg-gray-500 text-white border-transparent shadow-md' };
+
+      const allCompleted = items.every((it: any) => it.status === 'Completed' || it.status === 'Delivered');
+      const anyDispatched = items.some((it: any) => it.status === 'Dispatched' || it.status === 'Completed' || it.status === 'Delivered');
+      const anyAccepted = items.some((it: any) => it.status === 'Accepted');
+      const anyRejected = items.some((it: any) => it.status === 'Rejected');
+
+      if (allCompleted) return { text: 'Delivered', style: 'bg-green-500 text-white border-transparent shadow-md' };
+      if (anyDispatched) return { text: 'Dispatched', style: 'bg-blue-500 text-white border-transparent shadow-md' };
+      if (anyAccepted) return { text: 'Accepted', style: 'bg-purple-500 text-white border-transparent shadow-md' };
+      if (anyRejected) return { text: 'Rejected', style: 'bg-red-500 text-white border-transparent shadow-md' };
+
+      return { text: 'Pending', style: 'bg-yellow-400 text-black border-transparent shadow-md' };
+    };
 
     const filteredOrders = orders.filter((ord: any) => {
+      if (statusFilter !== 'All') {
+        const statusText = getAggregateStatus(ord).text;
+        if (statusFilter === 'Pending' && !['Pending Verification', 'Pending', 'Accepted'].includes(statusText)) return false;
+        if (statusFilter === 'Dispatched' && statusText !== 'Dispatched') return false;
+        if (statusFilter === 'Completed' && statusText !== 'Delivered') return false;
+        if (statusFilter === 'Cancelled' && !['Cancelled', 'Rejected', 'Payment Failed'].includes(statusText)) return false;
+      }
       if (!localSearchTerm) return true;
       const term = localSearchTerm.toLowerCase();
       return (
@@ -1922,26 +1951,7 @@ export function OperationsDashboardPage() {
       }
     };
 
-    const getAggregateStatus = (ord: any) => {
-      const { status: ordStatus, items } = ord;
-      if (ordStatus === 'Cancelled') return { text: 'Cancelled', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
-      if (ordStatus === 'Payment Not Received') return { text: 'Payment Failed', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
-      if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') return { text: 'Pending Verification', style: 'bg-amber-100 text-amber-800 border-transparent shadow-sm' };
 
-      if (!items || items.length === 0) return { text: ordStatus, style: 'bg-gray-100 text-gray-700 border-transparent shadow-sm' };
-
-      const allCompleted = items.every((it: any) => it.status === 'Completed' || it.status === 'Delivered');
-      const anyDispatched = items.some((it: any) => it.status === 'Dispatched' || it.status === 'Completed' || it.status === 'Delivered');
-      const anyAccepted = items.some((it: any) => it.status === 'Accepted');
-      const anyRejected = items.some((it: any) => it.status === 'Rejected');
-
-      if (allCompleted) return { text: 'Delivered', style: 'bg-emerald-100 text-emerald-800 border-transparent shadow-sm' };
-      if (anyDispatched) return { text: 'Dispatched', style: 'bg-blue-100 text-blue-800 border-transparent shadow-sm' };
-      if (anyAccepted) return { text: 'Accepted', style: 'bg-purple-100 text-purple-800 border-transparent shadow-sm' };
-      if (anyRejected) return { text: 'Rejected', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
-
-      return { text: 'Pending', style: 'bg-amber-100 text-amber-800 border-transparent shadow-sm' };
-    };
 
     // State Distribution Extraction
     const stateCounts: Record<string, number> = {};
@@ -2052,6 +2062,17 @@ export function OperationsDashboardPage() {
               <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Web Orders</h3>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex bg-white rounded-lg p-1 border border-paa-navy/10 shadow-sm hidden sm:flex">
+                {['All', 'Pending', 'Dispatched', 'Completed'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st)}
+                    className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all ${statusFilter === st ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-50'}`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
                 <input
@@ -2059,7 +2080,7 @@ export function OperationsDashboardPage() {
                   placeholder="SEARCH ORDErs..."
                   value={localSearchTerm}
                   onChange={(e) => setLocalSearchTerm(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64"
+                  className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64 rounded-full"
                 />
               </div>
               <button onClick={handleExportCSV} className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium rounded-full">
@@ -2083,7 +2104,7 @@ export function OperationsDashboardPage() {
               <tbody>
                 {filteredOrders.map((ord: any, idx: number) => (
                   <React.Fragment key={ord.dbId}>
-                    <tr onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)} className={`cursor-pointer transition-colors ${expandedOrderId === ord.dbId ? 'bg-indigo-50/30' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-100')} hover:bg-slate-200/60`}>
+                    <tr onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)} className={`cursor-pointer transition-colors ${expandedOrderId === ord.dbId ? 'bg-[#E8DCC8]' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#F2ECE4]')} hover:bg-[#E8DCC8]`}>
                       <td className="truncate">
                         <p className="font-bold text-paa-navy mb-1 truncate">{ord.id}</p>
                         <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium truncate"><CalendarIcon className="w-3 h-3 shrink-0" /> {ord.date}</p>
@@ -2987,6 +3008,10 @@ export function OperationsDashboardPage() {
                             if (typeof ed === 'string') {
                               try { ed = JSON.parse(ed); } catch (e) { }
                             }
+                            const pendingBooksCount = books.filter(b => b.authorId === author.id && b.status === 'Pending').length;
+                            if (pendingBooksCount > 0) {
+                              return null; // The main status badge handles this now.
+                            }
                             return ed?.hasPendingEdits && (
                               <span className="ml-2 px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[9px] uppercase tracking-wider font-bold rounded-full">Edited</span>
                             );
@@ -3019,9 +3044,17 @@ export function OperationsDashboardPage() {
                     {(() => {
                       const ed = typeof author.extraData === 'string' ? (() => { try { return JSON.parse(author.extraData); } catch (e) { return {}; } })() : (author.extraData || {});
                       const isReapplied = ed?.isReapplied === true && author.status === 'Pending';
-                      return isReapplied ? (
-                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid transparent' }}>🔄 Reapplied</span>
-                      ) : (
+                      const pendingBooksCount = books.filter(b => b.authorId === author.id && b.status === 'Pending').length;
+                      
+                      if (isReapplied) {
+                        return <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid transparent' }}>🔄 Reapplied</span>;
+                      }
+                      
+                      if ((author.status === 'Edited' || author.status === 'Active') && pendingBooksCount > 0) {
+                        return <span className="dash-badge" style={{ background: '#dbeafe', color: '#1e40af', border: '1px solid transparent' }}>+ {pendingBooksCount} Book{pendingBooksCount > 1 ? 's' : ''}</span>;
+                      }
+
+                      return (
                         <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
                           {author.status}
                         </span>
@@ -3037,7 +3070,8 @@ export function OperationsDashboardPage() {
                         const ed = typeof author.extraData === 'string' ? (() => { try { return JSON.parse(author.extraData); } catch (e) { return {}; } })() : (author.extraData || {});
                         const isReapplied = ed?.isReapplied === true;
                         const hasPending = ed?.hasPendingEdits === true;
-                        const needsApproval = author.status === 'Pending' || author.status === 'Edited' || isReapplied || hasPending;
+                        const pendingBooksCount = books.filter(b => b.authorId === author.id && b.status === 'Pending').length;
+                        const needsApproval = author.status === 'Pending' || author.status === 'Edited' || isReapplied || hasPending || pendingBooksCount > 0;
 
                         if (needsApproval) {
                           return (
@@ -3102,55 +3136,14 @@ export function OperationsDashboardPage() {
   };
 
   const BooksTab = () => {
-    if (selectedBookDetails) {
-      return (
-        <div className="bg-white border border-paa-navy/5 p-8 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-          <button onClick={() => setSelectedBookDetails(null)} className="mb-6 p-2 bg-white border border-paa-navy/20 hover:bg-gray-50 rounded-full active:scale-95 transition-all duration-300 shadow-sm">
-            <ArrowLeft className="w-5 h-5 text-paa-navy" />
-          </button>
-
-          <div className="space-y-6">
-            <div className="flex gap-6">
-              {selectedBookDetails.coverUrl && (
-                <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-40 h-56 object-cover border border-paa-navy/20 shadow-md" />
-              )}
-              <div className="flex-1">
-                <h3 className="text-3xl font-serif font-bold text-paa-navy mb-1">{selectedBookDetails.title}</h3>
-                {selectedBookDetails.subtitle && <p className="text-lg font-medium text-paa-gray-text mb-2">{selectedBookDetails.subtitle}</p>}
-                <p className="text-base font-medium mb-2">Author: <span className="font-bold text-paa-navy">{selectedBookDetails.authorName}</span></p>
-                <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mt-2 bg-[#eef2f6] inline-block px-3 py-1">{selectedBookDetails.genre} {selectedBookDetails.subGenre && `> ${selectedBookDetails.subGenre}`}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 border-t border-paa-navy/5 pt-6 mt-6">
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">MRP</span><span className="text-lg font-black text-green-700">₹{selectedBookDetails.mrp}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Language</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Print Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.printFormat || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pages</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.pages || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Publisher</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Edition</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.edition || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pub Date</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">ISBN</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Purpose of Writing</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.purpose || '-'}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Current Stock</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.stock}</span></div>
-              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Total Sales</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.sales}</span></div>
-            </div>
-
-            <div className="border-t border-paa-navy/5 pt-6 mt-6">
-              <span className="text-sm font-bold uppercase tracking-widest text-paa-navy block mb-3">Synopsis</span>
-              <p className="text-sm text-paa-gray-text leading-relaxed whitespace-pre-wrap">{selectedBookDetails.synopsis || 'No synopsis provided.'}</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    const [bookSearchTerm, setBookSearchTerm] = useState('');
+    const [expandedBookId, setExpandedBookId] = useState<number | null>(null);
 
     return (
       <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
         <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e6f2eb]">
           <div className="flex items-center gap-2">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Inventory Management</h3>
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Book Catalogue</h3>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -3167,7 +3160,7 @@ export function OperationsDashboardPage() {
               </div>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                <input type="text" placeholder="SEARCH BOOKS..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
+                <input type="text" placeholder="SEARCH BOOKS/AUTHORS..." value={bookSearchTerm} onChange={(e) => setBookSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
               </div>
             </div>
             {/* <button onClick={() => setIsBookModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
@@ -3184,16 +3177,20 @@ export function OperationsDashboardPage() {
                 <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author</th>
                 <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
                 <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Price</th>
-                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Stock</th>
-                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Sales</th>
-                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Details</th>
               </tr>
             </thead>
             <tbody>
               {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter))
+                .filter(b => {
+                  if (!bookSearchTerm) return true;
+                  const term = bookSearchTerm.toLowerCase();
+                  return (b.title && b.title.toLowerCase().includes(term)) || (b.authorName && b.authorName.toLowerCase().includes(term));
+                })
                 .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }))
                 .map((book, idx) => (
-                <tr key={book.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                <React.Fragment key={book.id}>
+                <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors cursor-pointer`} onClick={() => setExpandedBookId(expandedBookId === book.id ? null : book.id)}>
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="flex gap-1.5 flex-shrink-0">
@@ -3250,41 +3247,51 @@ export function OperationsDashboardPage() {
                     ₹{book.mrp}
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    {book.stock >= 10 ? (
-                      <span className="dash-badge active">OK: {book.stock}</span>
-                    ) : book.stock > 0 ? (
-                      <span className="dash-badge pending"><AlertCircle className="w-3 h-3" /> {book.stock} LEFT</span>
-                    ) : (
-                      <span className="dash-badge rejected"><AlertCircle className="w-3 h-3" /> OUT OF STOCK</span>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'center' }} className="font-bold text-paa-navy">
-                    {book.sales}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div className="flex items-center justify-center gap-2">
-                      {book.status === 'Pending' && (
-                        <button onClick={() => handleApproveBook(book.id)} className="dash-btn dash-btn-success dash-btn-icon" title="Approve">
-                          <Check className="w-4 h-4" />
-                        </button>
-                      )}
-                      {book.status !== 'Rejected' && (
-                        <button onClick={() => handleRejectBook(book.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Reject">
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button onClick={() => setSelectedBookDetails(book)} className="dash-btn dash-btn-ghost dash-btn-icon" title="View Details">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleEditBookClick(book)} className="dash-btn dash-btn-ghost dash-btn-icon" title="Edit Details">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleDeleteBook(book.id)} className="dash-btn dash-btn-danger dash-btn-icon" title="Delete">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <button className="p-1.5 rounded-full hover:bg-gray-100 text-paa-navy transition-colors mx-auto flex items-center justify-center" title="Toggle Details">
+                      <ChevronDown size={16} className={`transition-transform duration-300 ${expandedBookId === book.id ? 'rotate-180' : ''}`} />
+                    </button>
                   </td>
                 </tr>
+                {expandedBookId === book.id && (
+                  <tr className="bg-indigo-50/10 border-b border-indigo-100/50 shadow-inner cursor-default" onClick={(e) => e.stopPropagation()}>
+                    <td colSpan={5} className="p-0">
+                      <div className="p-6 md:p-8 animate-fade-in-up">
+                        <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+                          {book.coverUrl && (
+                            <img src={book.coverUrl.startsWith('http') ? book.coverUrl : `${API}${book.coverUrl}`} alt="Cover" className="w-40 h-56 object-cover border border-paa-navy/20 shadow-md rounded" />
+                          )}
+                          <div className="flex-1">
+                            <h3 className="text-3xl font-serif font-bold text-paa-navy mb-1">{book.title}</h3>
+                            {book.subtitle && <p className="text-lg font-medium text-paa-gray-text mb-2">{book.subtitle}</p>}
+                            <p className="text-base font-medium mb-2">Author: <span className="font-bold text-paa-navy">{book.authorName}</span></p>
+                            <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mt-2 bg-[#eef2f6] inline-block px-3 py-1">{book.genre} {book.subGenre && `> ${book.subGenre}`}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 border-t border-paa-navy/5 pt-6 mt-6">
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">MRP</span><span className="text-lg font-black text-green-700">₹{book.mrp}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Language</span><span className="text-base font-bold text-paa-navy">{book.language || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Format</span><span className="text-base font-bold text-paa-navy">{book.format || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Print Format</span><span className="text-base font-bold text-paa-navy">{book.printFormat || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pages</span><span className="text-base font-bold text-paa-navy">{book.pages || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Publisher</span><span className="text-base font-bold text-paa-navy">{book.publisher || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Edition</span><span className="text-base font-bold text-paa-navy">{book.edition || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pub Date</span><span className="text-base font-bold text-paa-navy">{book.publicationDate || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">ISBN</span><span className="text-base font-bold text-paa-navy">{book.isbn || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Purpose of Writing</span><span className="text-base font-bold text-paa-navy">{book.purpose || '-'}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Current Stock</span><span className="text-lg font-black text-paa-navy">{book.stock}</span></div>
+                          <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Total Sales</span><span className="text-lg font-black text-paa-navy">{book.sales || 0}</span></div>
+                        </div>
+
+                        <div className="border-t border-paa-navy/5 pt-6 mt-6">
+                          <span className="text-sm font-bold uppercase tracking-widest text-paa-navy block mb-3">Synopsis</span>
+                          <p className="text-sm text-paa-gray-text leading-relaxed whitespace-pre-wrap">{book.synopsis || 'No synopsis provided.'}</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
               ))}
               {books.length === 0 && (
                 <tr>

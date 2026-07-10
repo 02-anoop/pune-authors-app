@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
 import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send, ChevronLeft, ChevronRight, RefreshCw, Users } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell , AreaChart, Area, LabelList } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell , AreaChart, Area, LabelList } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { bookCategories } from '../data/categories';
@@ -1684,16 +1684,16 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           <div className="p-6">
             <div className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={participationsData} layout="vertical" margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
-                  <YAxis dataKey="name" type="category" width={90} fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                <LineChart data={participationsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
                   <Tooltip 
-                    cursor={{ fill: 'rgba(192,160,98,0.03)' }} 
+                    cursor={{ stroke: '#C0A062', strokeWidth: 1, strokeDasharray: '3 3' }} 
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} 
                   />
-                  <Bar dataKey="count" name="Participations" fill="#C0A062" radius={[0, 6, 6, 0]} />
-                </BarChart>
+                  <Line type="linear" dataKey="count" name="Participations" stroke="#C0A062" strokeWidth={3} dot={{ r: 4, fill: "#fff", stroke: "#C0A062", strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -3974,17 +3974,34 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                    if (profitData.length === 0) return <div className="flex items-center justify-center h-full text-sm text-gray-400 italic">No profitability data available.</div>;
                    
                    return (
-                     <BarChart data={profitData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                     <LineChart data={profitData} margin={{ top: 25, right: 10, left: -20, bottom: 20 }}>
                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
+                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} angle={-90} textAnchor="end" dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                        <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(value: number) => `₹${value.toLocaleString()}`} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
-                       <Bar dataKey="profit" name="Net Profit/Loss" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                         {profitData.map((entry: any, index: number) => (
-                           <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#059669' : '#dc2626'} />
-                         ))}
-                       </Bar>
-                     </BarChart>
+                       <Line type="linear" dataKey="profit" name="Net Profit/Loss" stroke="#059669" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; return <circle cx={cx} cy={cy} r={4} fill="#059669" stroke="#fff" strokeWidth={2} key={`dot-${index}`} />; }} activeDot={{ r: 6 }}>
+                         <LabelList dataKey="profit" position="top" content={(props: any) => {
+                           const { x, y, value, index } = props;
+                           const prev = profitData[index - 1]?.profit;
+                           const next = profitData[index + 1]?.profit;
+                           
+                           let yPos = y - 12;
+                           
+                           if (prev !== undefined && next !== undefined && value <= prev && value <= next) {
+                             yPos = y + 20;
+                           } else if (prev !== undefined && value < prev && next === undefined) {
+                             yPos = y + 20;
+                           }
+
+                           return (
+                             <g>
+                               <text x={x} y={yPos} fill="none" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                               <text x={x} y={yPos} fill="#059669" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                             </g>
+                           );
+                         }} />
+                       </Line>
+                     </LineChart>
                    );
                 })()}
               </ResponsiveContainer>
@@ -4605,15 +4622,40 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                     const colors = ['#1e3a8a', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#c026d3', '#ea580c', '#65a30d', '#4f46e5'];
                     
                     return (
-                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <LineChart data={chartData} margin={{ top: 25, right: 10, left: -20, bottom: 20 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} angle={-90} textAnchor="end" dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                           <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }} />
-                          {bookTitles.map((title, idx) => (
-                             <Bar key={idx} dataKey={title} name={title} fill={colors[idx % colors.length]} radius={[4, 4, 0, 0]} maxBarSize={30} />
-                          ))}
-                        </BarChart>
+                          {bookTitles.map((title, idx) => {
+                            const color = colors[idx % colors.length];
+                            return (
+                              <Line key={idx} type="linear" dataKey={title} name={title} stroke={color} strokeWidth={3} dot={(props: any) => { const { cx, cy, index, payload } = props; if (payload[title] === undefined) return null; return <circle cx={cx} cy={cy} r={4} fill={color} stroke="#fff" strokeWidth={2} key={`dot-${title}-${index}`} />; }} activeDot={{ r: 6 }}>
+                                <LabelList dataKey={title} position="top" content={(props: any) => {
+                                  const { x, y, value, index } = props;
+                                  if (value === undefined || value === null) return null;
+                                  
+                                  const prev = chartData[index - 1]?.[title];
+                                  const next = chartData[index + 1]?.[title];
+                                  let yPos = y - 12;
+                                  
+                                  if (prev !== undefined && next !== undefined && value <= prev && value <= next) {
+                                    yPos = y + 20;
+                                  } else if (prev !== undefined && value < prev && next === undefined) {
+                                    yPos = y + 20;
+                                  }
+                                  
+                                  return (
+                                    <g>
+                                      <text x={x} y={yPos} fill="none" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                                      <text x={x} y={yPos} fill={color} fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                                    </g>
+                                  );
+                                }} />
+                              </Line>
+                            );
+                          })}
+                        </LineChart>
                     );
                 })()}
               </ResponsiveContainer>

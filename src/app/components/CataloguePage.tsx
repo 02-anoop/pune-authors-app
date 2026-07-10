@@ -685,7 +685,7 @@ export function CataloguePage() {
 
           {/* Top-level category tabs */}
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
-            {(["All", ...Object.keys(bookCategories)]).map((cat) => {
+            {(["All", ...Object.keys(bookCategories).filter(cat => allBooks.some(b => b.genre === cat))]).map((cat) => {
               const meta = getCategoryColor(cat);
               const isActive = activeCategory === cat;
               return (
@@ -715,7 +715,7 @@ export function CataloguePage() {
           {/* Subcategory chips */}
           {activeCategory !== "All" && Object.keys(bookCategories[activeCategory as keyof typeof bookCategories] || {}).length > 0 && (
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
-              {["All", ...Object.keys(bookCategories[activeCategory as keyof typeof bookCategories] || {})].map((sc) => {
+              {["All", ...Object.keys(bookCategories[activeCategory as keyof typeof bookCategories] || {}).filter(sc => allBooks.some(b => b.genre === activeCategory && b.subGenre && b.subGenre.split(" > ")[0].trim() === sc))].map((sc) => {
                 const isActive = activeSubcategory === sc;
                 return (
                   <button
@@ -745,7 +745,7 @@ export function CataloguePage() {
           {/* Sub-Subcategory chips */}
           {activeCategory !== "All" && activeSubcategory !== "All" && ((bookCategories[activeCategory as keyof typeof bookCategories] as any)[activeSubcategory] || []).length > 0 && (
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
-              {["All", ...((bookCategories[activeCategory as keyof typeof bookCategories] as any)[activeSubcategory] || [])].map((ssc: string) => {
+              {["All", ...((bookCategories[activeCategory as keyof typeof bookCategories] as any)[activeSubcategory] || []).filter((ssc: string) => allBooks.some(b => b.genre === activeCategory && b.subGenre && b.subGenre.split(" > ")[0].trim() === activeSubcategory && b.subGenre.split(" > ")[1]?.trim() === ssc))].map((ssc: string) => {
                 const isActive = activeSubSubcategory === ssc;
                 const meta = getCategoryColor(activeCategory);
                 return (

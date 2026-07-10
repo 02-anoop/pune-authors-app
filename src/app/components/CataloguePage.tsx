@@ -537,7 +537,7 @@ export function CataloguePage() {
           synopsis: b.synopsis || "",
           mrp: b.mrp,
           mrpRaw: b.mrp?.toString(),
-          coverUrl: b.coverUrl || "",
+          coverUrl: b.coverUrl?.startsWith("/uploads") ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${b.coverUrl}` : (b.coverUrl || ""),
           authorName: b.author?.name || "Unknown",
           authorBio: b.author?.bio || "",
           authorPhotoUrl: b.author?.photoUrl || "",

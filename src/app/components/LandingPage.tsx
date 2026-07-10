@@ -169,6 +169,7 @@ export function LandingPage() {
           authorName: b.author?.name || "Unknown",
           genre: b.genre?.includes("Children") ? "C" : b.genre?.includes("Non-Fiction") || b.genre === "NF" ? "NF" : "F",
           description: b.synopsis,
+          coverUrl: b.coverUrl?.startsWith("/uploads") ? `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${b.coverUrl}` : b.coverUrl,
         }));
         setGalleryItems(mapped);
       })

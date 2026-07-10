@@ -882,7 +882,7 @@ export function LandingPage() {
               <p style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: "2rem", maxWidth: 450 }}>
                 A curated literary haven where readers can discover, browse, and enjoy books alongside artisanal refreshments in a warm, inviting atmosphere.
               </p>
-              <Link
+              {/* <Link
                 to="/book-cafe"
                 style={{
                   display: "inline-flex",
@@ -901,7 +901,7 @@ export function LandingPage() {
                 }}
               >
                 Explore <ArrowRight size={14} />
-              </Link>
+              </Link> */}
             </div>
           </FadeIn>
           <FadeIn delay={200}>

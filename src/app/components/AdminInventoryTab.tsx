@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
   Search, Download, Bell, BellRing, Loader2, ChevronDown, ChevronUp, ChevronRight, CheckCircle2,
-  BookOpen, Users, AlertTriangle, AlertCircle, RefreshCw, Package
+  BookOpen, Users, AlertTriangle, AlertCircle, RefreshCw, Package, Check, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -114,6 +114,19 @@ export function AdminInventoryTab() {
     }
   };
 
+  const approveStock = async (historyId: number, action: 'approve' | 'reject') => {
+    try {
+      await axios.put(`${API}/api/admin/inventory/approve/${historyId}`, { action }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`Inventory update ${action}d`);
+      fetchInventory();
+    } catch (err) {
+      console.error(err);
+      toast.error(`Failed to ${action} update`);
+    }
+  };
+
   const totalPages = Math.ceil(totalRecords / limit);
 
   return (
@@ -206,16 +219,16 @@ export function AdminInventoryTab() {
         <table className="dash-table w-full text-left table-fixed text-[11px]">
           <thead className="bg-indigo-50 border-b-2 border-indigo-100">
             <tr>
-              <th className="px-1 py-3 w-[5%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">S.No</th>
-              <th className="px-1 py-3 w-[22%] text-[9px] font-bold uppercase tracking-wider text-indigo-800">Title</th>
-              <th className="px-1 py-3 w-[15%] text-[9px] font-bold uppercase tracking-wider text-indigo-800">Author</th>
-              <th className="px-1 py-3 w-[8%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Master Stock</th>
-              <th className="px-1 py-3 w-[7%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Qty Web</th>
-              <th className="px-1 py-3 w-[7%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Qty Airport</th>
-              <th className="px-1 py-3 w-[7%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Qty Fairs</th>
-              <th className="px-1 py-3 w-[9%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Current Stock</th>
-              <th className="px-1 py-3 w-[10%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Last Activity</th>
-              <th className="px-1 py-3 w-[10%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Actions</th>
+              <th className="px-2 py-3 w-[4%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">S.No</th>
+              <th className="px-2 py-3 w-[17%] text-[9px] font-bold uppercase tracking-wider text-indigo-800">Title</th>
+              <th className="px-2 py-3 w-[11%] text-[9px] font-bold uppercase tracking-wider text-indigo-800">Author</th>
+              <th className="px-2 py-3 w-[9%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Master Stock</th>
+              <th className="px-2 py-3 w-[7%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Qty Web</th>
+              <th className="px-2 py-3 w-[8%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Qty Airport</th>
+              <th className="px-2 py-3 w-[7%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Qty Fairs</th>
+              <th className="px-2 py-3 w-[9%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Current Stock</th>
+              <th className="px-2 py-3 w-[9%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Last Activity</th>
+              <th className="px-2 py-3 w-[19%] text-center text-[9px] font-bold uppercase tracking-wider text-indigo-800">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -255,16 +268,26 @@ export function AdminInventoryTab() {
                 const sNo = (page - 1) * limit + idx + 1;
                 const isExpanded = expandedRow === book.id;
                 const hasDistribution = book.distributionBreakdown && book.distributionBreakdown.length > 0;
+                const hasHistory = book.stockHistory && book.stockHistory.length > 0;
+                const canExpand = hasDistribution || hasHistory;
                 const isPinged = pinged[book.id];
                 const isPinging = pinging[book.id];
+                const pendingLogs = book.stockHistory ? book.stockHistory.filter((h: any) => h.status === 'Pending') : [];
+
+                const alternatingBg = idx % 2 === 0 ? 'bg-white' : 'bg-sky-50/70';
+                const stockBorder = book.currentStock < 10 
+                  ? 'border-l-4 border-l-red-500' 
+                  : book.currentStock < 30 
+                    ? 'border-l-4 border-l-yellow-400' 
+                    : 'border-l-4 border-l-green-500';
 
                 return (
                   <React.Fragment key={book.id}>
-                    <tr className={isExpanded ? 'bg-gray-50' : ''}>
-                      <td className="text-gray-500 text-center px-1 py-2">{sNo}</td>
+                    <tr className={isExpanded ? 'bg-indigo-50' : alternatingBg}>
+                      <td className={`text-gray-500 text-center px-1 py-2 ${stockBorder}`}>{sNo}</td>
                       <td className="px-1 py-2">
                         <div className="flex items-center gap-3">
-                          {hasDistribution ? (
+                          {canExpand ? (
                             <button
                               onClick={() => setExpandedRow(isExpanded ? null : book.id)}
                               className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/5 text-paa-navy"
@@ -277,21 +300,26 @@ export function AdminInventoryTab() {
                           {book.coverUrl && (
                             <img src={book.coverUrl} alt="Cover" className="w-8 h-10 object-cover rounded shadow-sm border border-black/5" />
                           )}
-                          <div className="font-bold text-paa-navy truncate" title={book.title}>
-                            {book.title}
+                          <div className="font-bold text-paa-navy flex-1 min-w-0 flex flex-col gap-1 items-start justify-center">
+                            <span className="line-clamp-2 leading-tight" title={book.title}>{book.title}</span>
+                            {book.hasPending && (
+                              <span className="shrink-0 bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0.5 rounded border border-amber-200">Pending</span>
+                            )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-1 py-2 font-medium text-gray-700 truncate" title={book.authorName}>{book.authorName}</td>
+                      <td className="px-1 py-2 font-medium text-gray-700">
+                        <div className="line-clamp-2" title={book.authorName}>{book.authorName}</div>
+                      </td>
                       <td className="px-1 py-2 text-center">{book.masterStock}</td>
                       <td className="px-1 py-2 text-center">{book.webSold}</td>
                       <td className="px-1 py-2 text-center">{book.airportQty}</td>
                       <td className="px-1 py-2 text-center">{book.eventQty}</td>
                       <td className="px-1 py-2 text-center">
                         <div className="flex flex-col items-center justify-center gap-1">
-                          <span className="font-bold text-paa-navy">{book.currentStock}</span>
+                          <span className={`font-bold ${book.isLowStock ? 'text-red-600 text-lg' : 'text-paa-navy'}`}>{book.currentStock}</span>
                           {book.isLowStock && (
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 animate-pulse mt-0.5">
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-white bg-red-600 rounded px-1.5 py-0.5 mt-0.5 shadow-sm">
                               LOW STOCK
                             </span>
                           )}
@@ -300,19 +328,33 @@ export function AdminInventoryTab() {
                       <td className="px-1 py-2 text-center text-gray-500 text-[10px]">
                         {new Date(book.lastActivity).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
-                      <td className="px-1 py-2 text-center">
-                        {book.isLowStock ? (
+                      <td className="px-1 py-2 text-center align-middle">
+                        {pendingLogs.length > 0 ? (
+                          <div className="flex flex-col gap-1.5 w-full max-w-[150px] mx-auto">
+                            {pendingLogs.map((log: any) => (
+                              <div key={log.id} className="flex items-center gap-3 py-1">
+                                <span className="text-[11px] font-bold text-amber-800 leading-tight whitespace-nowrap">
+                                  {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty} copies
+                                </span>
+                                <div className="flex gap-2 ml-auto">
+                                  <button onClick={() => approveStock(log.id, 'Approved')} className="flex items-center justify-center p-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors shadow-sm" title="Accept"><Check size={16} strokeWidth={2.5} /></button>
+                                  <button onClick={() => approveStock(log.id, 'Rejected')} className="flex items-center justify-center p-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors shadow-sm" title="Reject"><X size={16} strokeWidth={2.5} /></button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : book.isLowStock ? (
                           <button
                             onClick={() => pingAuthor(book.id, book.authorId)}
                             disabled={isPinged || isPinging}
-                            className={`flex items-center justify-center gap-1.5 w-full py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all ${isPinged
-                                ? 'bg-green-100 text-green-700 border border-green-200'
-                                : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                            className={`flex items-center justify-center gap-1.5 mx-auto bg-transparent transition-all font-bold text-[11px] ${isPinged
+                                ? 'text-green-600'
+                                : 'text-red-600 hover:text-red-700'
                               }`}
                           >
-                            {isPinging ? <Loader2 size={12} className="animate-spin" /> :
-                              isPinged ? <CheckCircle2 size={12} /> : <BellRing size={12} />}
-                            {isPinged ? 'Pinged' : 'Restock'}
+                            {isPinging ? <Loader2 size={16} className="animate-spin" /> :
+                              isPinged ? <CheckCircle2 size={16} /> : <BellRing size={16} />}
+                            {isPinged ? 'Notified' : 'Notify to Restock'}
                           </button>
                         ) : (
                           <span className="text-gray-300 text-[10px]">-</span>
@@ -321,11 +363,63 @@ export function AdminInventoryTab() {
                     </tr>
                     {/* EXPANDED ROW */}
                     {isExpanded && (
-                      <tr className="bg-gray-50/80 border-b border-black/5">
-                        <td colSpan={7} className="p-0">
-                          <div className="pl-20 pr-4 py-4">
+                      <tr className="bg-gray-50/80 border-b border-black/5 shadow-inner">
+                        <td colSpan={10} className="p-0">
+                          <div className="pl-14 pr-4 py-4 space-y-6">
+                            
+                            {/* Inventory Update Log */}
+                            {hasHistory && (
+                              <div>
+                                <h4 className="text-xs font-bold text-paa-gray-text uppercase tracking-wider mb-3">Inventory Update Log</h4>
+                                <div className="space-y-2">
+                                  {book.stockHistory.map((hist: any) => (
+                                    <div key={hist.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-black/5 shadow-sm max-w-2xl">
+                                      <div className="flex items-center gap-4">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${hist.changeQty > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                          <Package size={16} />
+                                        </div>
+                                        <div>
+                                          <p className="text-sm font-bold text-paa-navy">
+                                            {hist.changeQty > 0 ? 'Added' : 'Removed'} {Math.abs(hist.changeQty)} copies
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            {new Date(hist.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <div className="text-right mr-4">
+                                          <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Status</p>
+                                          <p className={`text-xs font-bold ${hist.status === 'Pending' ? 'text-amber-600' : hist.status === 'Approved' ? 'text-green-600' : 'text-red-600'}`}>
+                                            {hist.status}
+                                          </p>
+                                        </div>
+                                        {hist.status === 'Pending' && (
+                                          <div className="flex items-center gap-2">
+                                            <button 
+                                              onClick={() => approveStock(hist.id, 'approve')}
+                                              className="px-3 py-1 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 rounded text-xs font-bold transition-colors"
+                                            >
+                                              Approve
+                                            </button>
+                                            <button 
+                                              onClick={() => approveStock(hist.id, 'reject')}
+                                              className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded text-xs font-bold transition-colors"
+                                            >
+                                              Reject
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Detailed Location Breakdown */}
                             {hasDistribution && (
-                              <>
+                              <div>
                                 <h4 className="text-xs font-bold text-paa-gray-text uppercase tracking-wider mb-3">Detailed Location Breakdown</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                   {book.distributionBreakdown.map((item: any, i: number) => (
@@ -348,7 +442,7 @@ export function AdminInventoryTab() {
                                     </div>
                                   ))}
                                 </div>
-                              </>
+                              </div>
                             )}
                           </div>
                         </td>

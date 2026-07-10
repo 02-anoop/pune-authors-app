@@ -1893,11 +1893,15 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
     if (!addQty || isNaN(addQty)) return toast.error('Please enter a non-zero value (+/- quantity)');
     setUpdatingId(bookId);
     try {
-      await axios.put(`${API}/api/author/books/${bookId}/stock`,
+      const response = await axios.put(`${API}/api/author/books/${bookId}/stock`,
         { addQty },
         { headers: { Authorization: `Bearer ${token()}` } }
       );
-      toast.success(addQty > 0 ? `Added ${addQty} copies to inventory` : `Removed ${Math.abs(addQty)} copies from inventory`);
+      if (response.data?.pending) {
+        toast.success(`Update of ${addQty > 0 ? '+' : ''}${addQty} copies submitted for admin approval`);
+      } else {
+        toast.success(addQty > 0 ? `Added ${addQty} copies to inventory` : `Removed ${Math.abs(addQty)} copies from inventory`);
+      }
       setNewStocks(prev => ({ ...prev, [bookId]: '' }));
       await fetchInventory();
       onRefresh();
@@ -2197,8 +2201,8 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                                           </span>
                                         </div>
                                         <div className="flex justify-between text-gray-600">
-                                          <span>Last: {log.lastStock}</span>
-                                          <span>Current: {log.currentStock}</span>
+                                          <span>Status: <span className={`font-bold ${log.status === 'Pending' ? 'text-amber-600' : log.status === 'Approved' ? 'text-green-600' : 'text-red-600'}`}>{log.status || 'Approved'}</span></span>
+                                          {log.status !== 'Pending' && <span>New Total: {log.currentStock}</span>}
                                         </div>
                                       </div>
                                     ))}

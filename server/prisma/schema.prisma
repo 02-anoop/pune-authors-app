@@ -504,5 +504,7 @@ model StockHistory {
   changeQty    Int
   lastStock    Int
   currentStock Int
+  status       String   @default("Approved")
   updatedAt    DateTime @default(now())
 }
+

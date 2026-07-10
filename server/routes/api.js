@@ -4866,6 +4866,7 @@ async function computeBookInventory(books) {
     const masterStock = book.stock; 
     // Dynamically deduct upcoming data (web, airport, events)
     const currentStock = masterStock - webSold - airportQty - eventQty;
+    const hasPending = stockHistory.some(h => h.status === 'Pending');
 
     const distributionBreakdown = [
       ...(donationBreakdownMap[book.id] || []),
@@ -4897,7 +4898,8 @@ async function computeBookInventory(books) {
       distributionBreakdown,
       genre: book.genre,
       coverUrl: book.coverImage,
-      stockHistory
+      stockHistory,
+      hasPending
     };
   });
 }
@@ -4952,33 +4954,18 @@ router.put('/api/author/books/:id/stock', verifyToken, async (req, res) => {
       });
     }
 
-    const updated = await prisma.book.update({
-      where: { id: bookId },
-      data: { stock: newStock }
-    });
-
-    await prisma.stockHistory.create({
+    const history = await prisma.stockHistory.create({
       data: {
         bookId: bookId,
         changeQty: qty,
         lastStock: book.stock,
-        currentStock: newStock
+        currentStock: newStock,
+        status: 'Pending'
       }
     });
 
-    if (qty < 0 && newStock < 10 && book.stock >= 10) {
-      // Negative adjustment crossed the low-stock threshold — fire alert (non-blocking)
-      fireStockAlert(bookId, book.title, author).catch(() => {});
-    } else if (newStock >= 10) {
-      // Stock healthy — housekeep stale ADMIN low-stock notifications
-      const tag = `[LOW_STOCK:${bookId}]`;
-      await prisma.notification.deleteMany({
-        where: { message: { contains: tag }, target: 'ADMIN' }
-      }).catch(() => {});
-    }
-
     invalidateCache(`author:dashboard:${req.user.email}`);
-    res.json({ id: updated.id, title: updated.title, currentStock: updated.stock, adjustment: qty });
+    res.json({ id: book.id, title: book.title, currentStock: book.stock, adjustment: qty, pending: true });
   } catch (err) {
     console.error('[PUT /api/author/books/:id/stock]', err);
     res.status(500).json({ error: 'Failed to update stock' });
@@ -5057,6 +5044,54 @@ router.post('/api/admin/inventory/ping-author', verifyToken, isAdmin, async (req
   }
 });
 
+// PUT /api/admin/inventory/approve/:historyId
+router.put('/api/admin/inventory/approve/:historyId', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const historyId = parseInt(req.params.historyId);
+    const { action } = req.body;
+    
+    const history = await prisma.stockHistory.findUnique({ where: { id: historyId }, include: { book: { include: { author: true } } } });
+    if (!history) return res.status(404).json({ error: 'Not found' });
+    if (history.status !== 'Pending') return res.status(400).json({ error: 'Already processed' });
+
+    if (action === 'reject') {
+      await prisma.stockHistory.update({
+        where: { id: historyId },
+        data: { status: 'Rejected' }
+      });
+      return res.json({ success: true, status: 'Rejected' });
+    }
+
+    const newStock = history.book.stock + history.changeQty;
+    
+    await prisma.$transaction([
+      prisma.book.update({
+        where: { id: history.bookId },
+        data: { stock: newStock }
+      }),
+      prisma.stockHistory.update({
+        where: { id: historyId },
+        data: { status: 'Approved', currentStock: newStock, lastStock: history.book.stock }
+      })
+    ]);
+
+    if (history.changeQty < 0 && newStock < 10 && history.book.stock >= 10) {
+      fireStockAlert(history.bookId, history.book.title, history.book.author).catch(() => {});
+    } else if (newStock >= 10) {
+      const tag = `[LOW_STOCK:${history.bookId}]`;
+      await prisma.notification.deleteMany({
+        where: { message: { contains: tag }, target: 'ADMIN' }
+      }).catch(() => {});
+    }
+
+    invalidateCache(`author:dashboard:${history.book.author.email}`);
+    res.json({ success: true, status: 'Approved' });
+  } catch (err) {
+    console.error('[PUT /api/admin/inventory/approve]', err);
+    res.status(500).json({ error: 'Failed to approve inventory' });
+  }
+});
+
 // GET /api/admin/inventory
 router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
   try {
@@ -5099,27 +5134,45 @@ router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
       return res.status(200).send(csv);
     }
     
-    const [books, total] = await Promise.all([
-      prisma.book.findMany({
-        where: whereClause,
-        include: { author: { select: { name: true } } },
-        orderBy: [{ stock: 'asc' }, { title: 'asc' }], // Sorting low stock first implicitly handled in DB if not dynamic frontend sort
-        skip,
-        take: Number(limit)
-      }),
-      prisma.book.count({ where: whereClause })
-    ]);
-    
-    const enrichedBooks = await computeBookInventory(books);
-    
-    // Global stats across ALL platform
-    const globalTotalTitles = await prisma.book.count({ where: {} });
-    
     // We need to fetch all books to compute accurate global KPIs based on dynamic inventory logic
     const allBooks = await prisma.book.findMany({
       include: { author: { select: { name: true } } }
     });
     const enrichedGlobalBooks = await computeBookInventory(allBooks);
+    
+    // In-memory filter & sort to properly float pending to the top
+    let filtered = enrichedGlobalBooks;
+    if (search) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter(b => 
+        b.title.toLowerCase().includes(s) || 
+        b.authorName.toLowerCase().includes(s)
+      );
+    }
+    if (lowStock === 'true') {
+      filtered = filtered.filter(b => b.currentStock < 10);
+    }
+
+    // Sort: Pending first, then Low Stock, then A-Z
+    filtered.sort((a, b) => {
+      if (a.hasPending && !b.hasPending) return -1;
+      if (!a.hasPending && b.hasPending) return 1;
+      
+      const aLow = a.currentStock < 10;
+      const bLow = b.currentStock < 10;
+      if (aLow && !bLow) return -1;
+      if (!aLow && bLow) return 1;
+
+      return a.title.localeCompare(b.title);
+    });
+
+    const total = filtered.length;
+    const enrichedBooks = filtered.slice(skip, skip + Number(limit));
+    
+    // Global stats across ALL platform
+    const globalTotalTitles = await prisma.book.count({ where: {} });
+    
+    // Removed duplicate declaration of allBooks and enrichedGlobalBooks
     
     const globalLowStock = enrichedGlobalBooks.filter(b => b.currentStock < 10).length;
 

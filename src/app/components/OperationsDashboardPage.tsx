@@ -139,6 +139,7 @@ export function OperationsDashboardPage() {
     const cached = sessionStorage.getItem('adminOrders');
     return cached ? JSON.parse(cached) : [];
   });
+  const [libraries, setLibraries] = useState<any[]>([]);
   const [ordersMeta, setOrdersMeta] = useState<any>({});
   const [ordersPage, setOrdersPage] = useState(1);
   const [authorsMeta, setAuthorsMeta] = useState<any>({});
@@ -207,6 +208,8 @@ export function OperationsDashboardPage() {
   const [galleryUploadFiles, setGalleryUploadFiles] = useState<File[]>([]);
   const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [bannerUploadFile, setBannerUploadFile] = useState<File | null>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [gallerySubTab, setGallerySubTab] = useState<'events' | 'carousel'>('events');
   const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const [uploadingCarousel, setUploadingCarousel] = useState(false);
@@ -349,7 +352,12 @@ export function OperationsDashboardPage() {
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
-
+  const fetchLibraries = async (isBackground = false) => {
+    try {
+      const res = await axios.get(`${API}/api/admin/libraries`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setLibraries(res.data);
+    } catch (err) { }
+  };
 
   const handleNotifySettlement = async () => {
     try {
@@ -579,6 +587,8 @@ export function OperationsDashboardPage() {
         } else if (activeTab === 'gallery') {
           promises.push(fetchGallery(isBackground));
           promises.push(fetchCarouselImages());
+          promises.push(fetchEvents(isBackground));
+          promises.push(fetchLibraries(isBackground));
         } else if (activeTab === 'helpdesk') {
           promises.push(fetchQueriesAlert(true));
         }
@@ -4891,6 +4901,7 @@ export function OperationsDashboardPage() {
     const handleUploadGalleryImage = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedGalleryEvent || galleryUploadFiles.length === 0) return;
+      
       setIsUploadingGallery(true);
       try {
         const token = localStorage.getItem('token');
@@ -4898,6 +4909,7 @@ export function OperationsDashboardPage() {
           const formData = new FormData();
           formData.append('photo', file);
           if (galleryUploadCaption) formData.append('caption', galleryUploadCaption);
+          formData.append('itemType', selectedGalleryEvent.itemType || 'Event');
           // Pass the raw event.id, the backend automatically resolves/creates the galleryEvent
           return axios.post(`${API}/api/admin/gallery/${selectedGalleryEvent.id}/images`, formData, {
             headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
@@ -4927,7 +4939,68 @@ export function OperationsDashboardPage() {
       }
     };
 
-    const filteredEvents = events.filter((e: any) => {
+    const handleUploadBannerImage = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedGalleryEvent || !bannerUploadFile) return;
+      setIsUploadingBanner(true);
+      try {
+        const token = localStorage.getItem('token');
+        const fd = new FormData();
+        fd.append('banner', bannerUploadFile);
+        
+        const isLib = selectedGalleryEvent.itemType === 'Library';
+        
+        if (!isLib) {
+          fd.append('name', selectedGalleryEvent.name);
+          fd.append('location', selectedGalleryEvent.location);
+          fd.append('date', selectedGalleryEvent.date);
+          fd.append('duration', selectedGalleryEvent.duration);
+          fd.append('status', selectedGalleryEvent.status);
+          fd.append('eventType', selectedGalleryEvent.eventType);
+        }
+
+        const endpoint = isLib
+          ? `${API}/api/admin/libraries/${selectedGalleryEvent.id}/banner`
+          : `${API}/api/admin/events/${selectedGalleryEvent.id}`;
+
+        const res = await axios.put(endpoint, fd, {
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+        });
+
+        toast.success('Banner uploaded successfully!');
+        setBannerUploadFile(null);
+
+        // Update the current view without closing it
+        setSelectedGalleryEvent((prev: any) => ({
+          ...prev,
+          bannerUrl: res.data.bannerUrl
+        }));
+        
+        if (isLib) {
+          fetchLibraries(true);
+        } else {
+          fetchEvents(true);
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to upload banner.');
+      } finally {
+        setIsUploadingBanner(false);
+      }
+    };
+
+    const combinedGalleryItems = [
+      ...events.map((e: any) => ({ ...e, itemType: 'Event' })),
+      ...libraries.filter(l => l.type === 'Airport Library').map((l: any) => ({
+        ...l,
+        itemType: 'Library',
+        eventType: l.type,
+        date: l.createdAt,
+        location: l.city,
+      }))
+    ];
+
+    const filteredEvents = combinedGalleryItems.filter((e: any) => {
       const matchSearch = (e.name?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase()) || (e.location?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase());
       const matchType = galleryTabFilterType ? e.eventType === galleryTabFilterType : true;
       const matchDate = galleryTabFilterDate ? new Date(e.date).toISOString().startsWith(galleryTabFilterDate) : true;
@@ -5013,6 +5086,7 @@ export function OperationsDashboardPage() {
                       <option value="">All Event Types</option>
                       <option value="Book Fair">Book Fair</option>
                       <option value="Literary Event">Literary Event</option>
+                      <option value="Airport Library">Flybraries</option>
                     </select>
                     <input type="date" value={galleryTabFilterDate} onChange={e => setGalleryTabFilterDate(e.target.value)} className="dash-input md:w-40" />
                     <select value={galleryTabSortBy} onChange={e => setGalleryTabSortBy(e.target.value)} className="dash-input md:w-48">
@@ -5101,8 +5175,9 @@ export function OperationsDashboardPage() {
             </div>
 
             <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 bg-gray-50/30">
-              {/* Upload Section */}
-              <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm h-fit">
+              <div className="lg:col-span-1 flex flex-col gap-6">
+                {/* Upload Section */}
+                <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm h-fit">
                 <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Upload New Photos</h4>
                 <form onSubmit={handleUploadGalleryImage} className="flex flex-col gap-4">
                   <div>
@@ -5136,6 +5211,40 @@ export function OperationsDashboardPage() {
                   </div>
                 </form>
               </div>
+              
+              {/* Upload Banner Section */}
+              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm h-fit">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Upload Banner Image</h4>
+                <form onSubmit={handleUploadBannerImage} className="flex flex-col gap-4">
+                  <div>
+                    <label className="dash-label">Banner Photo *</label>
+                    <input type="file" accept="image/*" className="dash-input text-xs w-full" onChange={e => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        setBannerUploadFile(e.target.files[0]);
+                      }
+                    }} />
+                  </div>
+                  {bannerUploadFile && (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm mt-2">
+                      <img src={URL.createObjectURL(bannerUploadFile)} className="w-full h-full object-cover" alt="Banner Preview" />
+                      <button type="button" onClick={() => setBannerUploadFile(null)} className="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white flex items-center justify-center rounded-full hover:bg-red-500 transition-all">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {selectedGalleryEvent.bannerUrl && !bannerUploadFile && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500 mb-1">Current Banner:</p>
+                      <img src={`${API}${selectedGalleryEvent.bannerUrl}`} className="w-full aspect-video object-cover rounded-lg border border-gray-200" alt="Current Banner" />
+                    </div>
+                  )}
+                  <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-gray-100">
+                    <button type="button" onClick={() => setBannerUploadFile(null)} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Clear</button>
+                    <button type="submit" disabled={isUploadingBanner || !bannerUploadFile} className="dash-btn dash-btn-primary disabled:opacity-50">{isUploadingBanner ? 'Uploading...' : 'Upload Banner'}</button>
+                  </div>
+                </form>
+              </div>
+            </div>
 
               {/* Existing Images Section */}
               <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
@@ -5527,6 +5636,7 @@ export function OperationsDashboardPage() {
                 <select name="eventType" className="dash-input" value={editingEvent.eventType} onChange={e => setEditingEvent({ ...editingEvent, eventType: e.target.value })}>
                   <option value="Book Fair">Book Fair</option>
                   <option value="Literary Event">Literary Event</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
             </div>

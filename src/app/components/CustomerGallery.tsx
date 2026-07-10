@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, ChevronLeft, ChevronRight, ImageIcon, Search, Calendar, Filter, User } from 'lucide-react';
 
+let globalGalleryCache: { events: any[], allImages: any[], timestamp: number } | null = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export function CustomerGallery({ eventId }: { eventId?: string }) {
-  const [events, setEvents] = useState<any[]>([]);
-  const [allImages, setAllImages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hasValidCache = !eventId && globalGalleryCache && Date.now() - globalGalleryCache.timestamp < CACHE_TTL;
+  const [events, setEvents] = useState<any[]>(hasValidCache ? globalGalleryCache!.events : []);
+  const [allImages, setAllImages] = useState<any[]>(hasValidCache ? globalGalleryCache!.allImages : []);
+  const [loading, setLoading] = useState(!hasValidCache);
   
   // Lightbox
   const [lightboxImages, setLightboxImages] = useState<any[]>([]);
@@ -31,6 +35,12 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!eventId && globalGalleryCache && Date.now() - globalGalleryCache.timestamp < CACHE_TTL) {
+        setEvents(globalGalleryCache.events);
+        setAllImages(globalGalleryCache.allImages);
+        setLoading(false);
+        return;
+      }
       try {
         const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         let url = `${API}/api/gallery/events`;
@@ -44,10 +54,31 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
         }
         
         // Filter approved images for each event
-        fetchedEvents = fetchedEvents.map((ev: any) => ({
-           ...ev,
-           images: (ev.images || []).filter((img: any) => img.status === 'Approved')
-        }));
+        fetchedEvents = fetchedEvents.map((ev: any) => {
+           const images = (ev.images || []).filter((img: any) => img.status === 'Approved');
+           const bannerUrl = ev.event?.bannerUrl || ev.library?.bannerUrl || ev.photoUrl;
+           
+           // Automatically include banner as a gallery image if it exists
+           if (bannerUrl) {
+             const hasBanner = images.some((img: any) => img.url === bannerUrl);
+             if (!hasBanner) {
+               images.unshift({
+                 id: `banner-${ev.id}`,
+                 url: bannerUrl,
+                 caption: `${ev.location || 'Event'} Banner`,
+                 dateTaken: ev.date,
+                 status: 'Approved',
+                 createdAt: ev.date
+               });
+             }
+           }
+
+           return {
+             ...ev,
+             type: ev.event?.eventType || ev.library?.type || ev.type || 'Event',
+             images
+           };
+        });
         
         setEvents(fetchedEvents);
 
@@ -69,6 +100,17 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
               ev.images.map((img: any) => ({ ...img, galleryEvent: ev }))
           );
           setAllImages(flatImages.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        }
+        
+        if (!eventId) {
+          setAllImages(prevImages => {
+             globalGalleryCache = {
+               events: fetchedEvents,
+               allImages: prevImages,
+               timestamp: Date.now()
+             };
+             return prevImages;
+          });
         }
         
       } catch (err) {
@@ -115,7 +157,41 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
   };
 
   if (loading) {
-    return <div className="py-20 text-center text-gray-500">Loading gallery...</div>;
+    return (
+      <div className="w-full">
+        {!eventId && (
+          <div className="w-full h-[600px] md:h-[700px] bg-white flex gap-4 p-4 overflow-hidden">
+             <div className="flex-1 flex flex-col gap-4 hidden md:flex">
+                <div className="flex-[3] bg-gray-100 rounded-xl animate-pulse"></div>
+                <div className="flex-[2] bg-gray-100 rounded-xl animate-pulse"></div>
+             </div>
+             <div className="flex-[3] bg-gray-100 rounded-xl animate-pulse"></div>
+             <div className="flex-1 flex flex-col gap-4 hidden md:flex">
+                <div className="flex-[2] bg-gray-100 rounded-xl animate-pulse"></div>
+                <div className="flex-[3] bg-gray-100 rounded-xl animate-pulse"></div>
+             </div>
+          </div>
+        )}
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-12 space-y-16">
+          <div className="flex gap-4">
+             <div className="h-10 bg-gray-100 rounded-lg w-[300px] animate-pulse" />
+             <div className="h-10 bg-gray-100 rounded-lg w-[150px] animate-pulse hidden sm:block" />
+          </div>
+          {[1, 2].map((i) => (
+             <div key={i} className="space-y-6">
+                <div className="border-b border-gray-100 pb-3 flex flex-col gap-2">
+                   <div className="h-8 bg-gray-100 rounded w-64 animate-pulse" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div key={j} className="h-48 md:h-64 bg-gray-100 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+             </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (events.length === 0) {
@@ -256,7 +332,7 @@ export function CustomerGallery({ eventId }: { eventId?: string }) {
           <div key={ev.id} className="space-y-6">
              <div className="border-b border-paa-navy/10 pb-3 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-serif font-bold text-paa-navy">{ev.event?.name || ev.type} @ {ev.location}</h2>
+                  <h2 className="text-2xl md:text-3xl font-serif font-bold text-paa-navy">{ev.event?.name || ev.library?.name || ev.type} @ {ev.location}</h2>
                   <p className="text-sm font-bold tracking-widest uppercase text-paa-gray-text mt-1 flex items-center gap-2">
                      <Calendar size={14} className="text-paa-gold" /> {new Date(ev.date).toLocaleDateString()}
                   </p>

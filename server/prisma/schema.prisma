@@ -213,6 +213,8 @@ model GalleryEvent {
   photoUrl    String
   createdAt   DateTime       @default(now())
   eventId     Int?           @unique
+  libraryId   Int?           @unique
+  library     Library?       @relation(fields: [libraryId], references: [id], onDelete: Cascade)
   event       Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   images      GalleryImage[]
 }
@@ -394,10 +396,12 @@ model Library {
   email            String?
   shippingAddress  String
   status           String   @default("Active") // Active / Inactive
+  bannerUrl        String?
   createdAt        DateTime @default(now())
   
   announcements    DonationAnnouncement[]
   logs             DonationLog[]
+  galleryEvent     GalleryEvent?
 }
 
 model DonationAnnouncement {

@@ -12,12 +12,26 @@ const { upload } = require('../config/upload');
 router.get('/api/admin/libraries', verifyToken, isAdmin, async (req, res) => {
   try {
     const libraries = await prisma.library.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: { galleryEvent: { include: { images: true } } }
     });
     res.json(libraries);
   } catch (err) {
     console.error('Failed to fetch libraries error:', err);
     res.status(500).json({ error: 'Failed to fetch libraries', detail: err.message });
+  }
+});
+
+// Get public libraries (for Flybraries on buyer side)
+router.get('/api/public/libraries', async (req, res) => {
+  try {
+    const libraries = await prisma.library.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(libraries);
+  } catch (err) {
+    console.error('Failed to fetch public libraries error:', err);
+    res.status(500).json({ error: 'Failed to fetch public libraries' });
   }
 });
 
@@ -73,6 +87,21 @@ router.put('/api/admin/libraries/:id', verifyToken, isAdmin, async (req, res) =>
   } catch (err) {
     console.error('Update library error:', err);
     res.status(500).json({ error: 'Failed to update library', detail: err.message });
+  }
+});
+
+// Update library banner
+router.put('/api/admin/libraries/:id/banner', verifyToken, isAdmin, upload.single('banner'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No banner file provided' });
+    const library = await prisma.library.update({
+      where: { id: parseInt(req.params.id) },
+      data: { bannerUrl: `/uploads/${req.file.filename}` }
+    });
+    res.json(library);
+  } catch (err) {
+    console.error('Update library banner error:', err);
+    res.status(500).json({ error: 'Failed to update library banner' });
   }
 });
 

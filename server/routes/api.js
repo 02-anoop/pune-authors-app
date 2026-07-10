@@ -3275,29 +3275,55 @@ router.delete('/api/admin/gallery/:id', verifyToken, isAdmin, async (req, res) =
 router.post('/api/admin/gallery/:id/images', verifyToken, isAdmin, upload.single('photo'), async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
-    const { caption, dateTaken } = req.body;
+    const { caption, dateTaken, itemType } = req.body;
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
     
-    let galleryEvent = await prisma.galleryEvent.findUnique({ where: { eventId } });
-    if (!galleryEvent) {
-      const evt = await prisma.event.findUnique({ where: { id: eventId } });
-      if (!evt) return res.status(404).json({ error: 'Event not found' });
-      
-      galleryEvent = await prisma.galleryEvent.create({
-        data: {
-          eventId,
-          location: evt.name,
-          place: evt.location,
-          city: '',
-          date: evt.date ? new Date(evt.date) : new Date(),
-          duration: evt.duration || '1 Day',
-          authors: 0,
-          booksSold: 0,
-          type: evt.eventType || 'Literary Event',
-          description: evt.description || evt.name,
-          photoUrl: evt.bannerUrl || ''
-        }
-      });
+    let galleryEvent;
+    
+    if (itemType === 'Library') {
+      galleryEvent = await prisma.galleryEvent.findUnique({ where: { libraryId: eventId } });
+      if (!galleryEvent) {
+        const lib = await prisma.library.findUnique({ where: { id: eventId } });
+        if (!lib) return res.status(404).json({ error: 'Library not found' });
+        
+        galleryEvent = await prisma.galleryEvent.create({
+          data: {
+            libraryId: eventId,
+            location: lib.name,
+            place: lib.airportName || lib.name,
+            city: lib.city,
+            date: new Date(lib.createdAt),
+            duration: 'Ongoing',
+            authors: 0,
+            booksSold: 0,
+            type: lib.type,
+            description: `Donation Drive for ${lib.name}`,
+            photoUrl: lib.bannerUrl || ''
+          }
+        });
+      }
+    } else {
+      galleryEvent = await prisma.galleryEvent.findUnique({ where: { eventId } });
+      if (!galleryEvent) {
+        const evt = await prisma.event.findUnique({ where: { id: eventId } });
+        if (!evt) return res.status(404).json({ error: 'Event not found' });
+        
+        galleryEvent = await prisma.galleryEvent.create({
+          data: {
+            eventId,
+            location: evt.name,
+            place: evt.location,
+            city: '',
+            date: evt.date ? new Date(evt.date) : new Date(),
+            duration: evt.duration || '1 Day',
+            authors: 0,
+            booksSold: 0,
+            type: evt.eventType || 'Literary Event',
+            description: evt.description || evt.name,
+            photoUrl: evt.bannerUrl || ''
+          }
+        });
+      }
     }
 
     const image = await prisma.galleryImage.create({
@@ -3711,7 +3737,7 @@ router.get('/api/public/events', async (req, res) => {
     });
     res.json(events);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch public events' });
+    res.status(500).json({ error: 'Failed to fetch public events', detail: error.message, stack: error.stack });
   }
 });
 
@@ -4237,17 +4263,64 @@ router.get('/api/gallery/events', async (req, res) => {
   try {
     let events = await prisma.galleryEvent.findMany({
       orderBy: { date: 'desc' },
-      include: { images: true, event: true }
+      include: { images: true, event: true, library: true }
     });
     
     // Filter out Future (Upcoming), Pending Approval, and Rejected events, as well as any future dates
     const now = new Date();
     events = events.filter(e => {
        if (new Date(e.date) > now) return false;
+       if (e.library) return true;
        if (!e.event) return true;
        return !['Upcoming', 'Pending Approval', 'Rejected'].includes(e.event.status);
     });
     
+    const existingEventIds = events.map(e => e.eventId).filter(Boolean);
+    const existingLibraryIds = events.map(e => e.libraryId).filter(Boolean);
+
+    const extraEvents = await prisma.event.findMany({
+       where: { 
+         id: { notIn: existingEventIds },
+         bannerUrl: { not: null, not: "" },
+         status: { notIn: ['Upcoming', 'Pending Approval', 'Rejected'] }
+       }
+    });
+
+    const extraLibraries = await prisma.library.findMany({
+       where: {
+         id: { notIn: existingLibraryIds },
+         bannerUrl: { not: null, not: "" }
+       }
+    });
+
+    const virtualEvents = extraEvents.map(e => {
+       const d = new Date(e.date);
+       return {
+         id: `virtual-evt-${e.id}`,
+         eventId: e.id,
+         date: e.date,
+         location: e.location,
+         type: e.eventType,
+         photoUrl: e.bannerUrl,
+         event: e,
+         images: []
+       };
+    }).filter(e => new Date(e.date) <= now);
+
+    const virtualLibraries = extraLibraries.map(l => ({
+       id: `virtual-lib-${l.id}`,
+       libraryId: l.id,
+       date: l.createdAt,
+       location: `${l.airportName || ''}, ${l.city}`.trim().replace(/^,/, '').trim(),
+       type: l.type || 'Airport Library',
+       photoUrl: l.bannerUrl,
+       library: l,
+       images: []
+    })).filter(l => new Date(l.date) <= now);
+
+    events = [...events, ...virtualEvents, ...virtualLibraries];
+    events.sort((a, b) => new Date(b.date) - new Date(a.date));
+
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch gallery events' });

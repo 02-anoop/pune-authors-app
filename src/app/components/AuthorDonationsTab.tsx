@@ -288,25 +288,25 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
 
       {/* 3-4 Beautiful Statistical Counters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white rounded-2xl border-l-4 border-l-blue-600 border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Campaigns Joined</div>
-          <div className="text-3xl font-bold font-serif text-blue-600">{statsCampaigns}</div>
-          <p className="text-[10px] text-gray-400 mt-2">Active & legacy campaign involvements</p>
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl border-none p-5 shadow-sm hover:shadow-md transition-shadow text-white">
+          <div className="text-xs font-bold text-blue-100 uppercase tracking-widest mb-1">Campaigns Joined</div>
+          <div className="text-3xl font-bold font-serif">{statsCampaigns}</div>
+          <p className="text-[10px] text-blue-100 mt-2">Active & legacy campaign involvements</p>
         </div>
-        <div className="bg-white rounded-2xl border-l-4 border-l-purple-600 border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Books Donated</div>
-          <div className="text-3xl font-bold font-serif text-purple-600">{statsBooksPledged}</div>
-          <p className="text-[10px] text-gray-400 mt-2">Total copies committed to collections</p>
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl border-none p-5 shadow-sm hover:shadow-md transition-shadow text-white">
+          <div className="text-xs font-bold text-purple-100 uppercase tracking-widest mb-1">Total Books Donated</div>
+          <div className="text-3xl font-bold font-serif">{statsBooksPledged}</div>
+          <p className="text-[10px] text-purple-100 mt-2">Total copies committed to collections</p>
         </div>
-        <div className="bg-white rounded-2xl border-l-4 border-l-emerald-600 border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Donation Value (MRP)</div>
-          <div className="text-3xl font-bold font-serif text-emerald-600">₹{statsValue.toLocaleString('en-IN')}</div>
-          <p className="text-[10px] text-gray-400 mt-2">Total value contributed at MRP</p>
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl border-none p-5 shadow-sm hover:shadow-md transition-shadow text-white">
+          <div className="text-xs font-bold text-emerald-100 uppercase tracking-widest mb-1">Donation Value (MRP)</div>
+          <div className="text-3xl font-bold font-serif">₹{statsValue.toLocaleString('en-IN')}</div>
+          <p className="text-[10px] text-emerald-100 mt-2">Total value contributed at MRP</p>
         </div>
-        <div className="bg-white rounded-2xl border-l-4 border-l-amber-500 border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Awaiting Review</div>
-          <div className="text-3xl font-bold font-serif text-amber-500">{statsPending}</div>
-          <p className="text-[10px] text-gray-400 mt-2">Pending payment or status verifications</p>
+        <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl border-none p-5 shadow-sm hover:shadow-md transition-shadow text-white">
+          <div className="text-xs font-bold text-orange-100 uppercase tracking-widest mb-1">Awaiting Review</div>
+          <div className="text-3xl font-bold font-serif">{statsPending}</div>
+          <p className="text-[10px] text-orange-100 mt-2">Pending payment or status verifications</p>
         </div>
       </div>
 
@@ -581,14 +581,14 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
         
         <div className="overflow-x-auto">
           <table className="w-full text-left whitespace-nowrap min-w-max">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Campaign / Library</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Book Details</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Qty</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Donation Status & Tracking</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                <th className="p-4 !text-[14px] font-bold uppercase tracking-wider !text-indigo-800 !bg-transparent">Date</th>
+                <th className="p-4 !text-[14px] font-bold uppercase tracking-wider !text-indigo-800 !bg-transparent">Campaign / Library</th>
+                <th className="p-4 !text-[14px] font-bold uppercase tracking-wider !text-indigo-800 !bg-transparent">Book Details</th>
+                <th className="p-4 text-center !text-[14px] font-bold uppercase tracking-wider !text-indigo-800 !bg-transparent">Qty</th>
+                <th className="p-4 !text-[14px] font-bold uppercase tracking-wider !text-indigo-800 !bg-transparent">Donation Status & Tracking</th>
+                <th className="p-4 text-right !text-[14px] font-bold uppercase tracking-wider !text-indigo-800 !bg-transparent">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

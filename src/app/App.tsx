@@ -20,6 +20,7 @@ import { EventLogPage } from "./components/EventLogPage";
 import { ContactPage } from "./components/ContactPage";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { BookDetailPage } from "./components/BookDetailPage";
+import { FlybrariesPage } from "./components/FlybrariesPage";
 
 {/* MARKER-MAKE-KIT-INVOKED */}
 
@@ -47,6 +48,7 @@ function AppContent() {
           <Route path="/profile" element={<CustomerProfilePage />} />
           <Route path="/book-cafe" element={<GoaCafePage />} />
           <Route path="/events" element={<EventsPage />} />
+          <Route path="/flybraries" element={<FlybrariesPage />} />
           <Route path="/events/:eventId/catalogue" element={<EventCataloguePage />} />
           <Route path="/gallery" element={<EventLogPage />} />
           <Route path="/contact" element={<ContactPage />} />

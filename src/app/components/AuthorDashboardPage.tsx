@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router';
-import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send, ChevronLeft, ChevronRight } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Home, Check, AlertCircle, Upload, Download, Loader2, LogOut, User, Bell, Search, ShoppingCart, BookOpen, CalendarIcon, BarChart3, Package, TrendingUp, TrendingDown, X, MapPin, Menu, ChevronDown, ChevronUp, DollarSign, CheckCircle2, FileText, Image as ImageIcon, Star, Plus, Minus, Eye, Edit2, Mail, Phone, Clock, Trash2, MessageSquare, ExternalLink, Send, ChevronLeft, ChevronRight, RefreshCw, Users } from 'lucide-react';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell , AreaChart, Area, LabelList } from 'recharts';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { bookCategories } from '../data/categories';
@@ -21,6 +21,7 @@ export function AuthorDashboardPage() {
   const location = useLocation();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
+
   const [extraDataState, setExtraDataState] = useState<any>({});
   const [hasNewQueries, setHasNewQueries] = useState(false);
   const [showReapply, setShowReapply] = useState(false);
@@ -49,6 +50,17 @@ export function AuthorDashboardPage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [dismissedToastId, setDismissedToastId] = useState<string | null>(() => localStorage.getItem('paa_dismissed_toast'));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
   const [fineScreenshot, setFineScreenshot] = useState<File | null>(null);
   const [isSubmittingFine, setIsSubmittingFine] = useState(false);
   const [showFineModal, setShowFineModal] = useState(false);
@@ -408,7 +420,7 @@ export function AuthorDashboardPage() {
             <div className="hidden w-8 h-8 rounded-full bg-[#b44d28] flex items-center justify-center text-white text-sm font-bold">P</div>
             <span className="font-serif font-bold text-lg tracking-tight text-paa-navy ml-1">Author Portal</span>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 text-paa-navy"><X size={20} /></button>
+
         </div>
 
         <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
@@ -437,8 +449,8 @@ export function AuthorDashboardPage() {
         {/* Top Header — breadcrumb */}
         <header className="dash-header h-[68px] flex items-center justify-between px-6 md:px-8 shrink-0 relative z-50">
           <div className="flex items-center gap-2">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
-              <Menu className="w-5 h-5" />
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <div className="flex items-center gap-2 text-xs font-medium">
               <span className="text-paa-gray-text">Author Portal</span>
@@ -580,7 +592,7 @@ export function AuthorDashboardPage() {
             <Route path="/inventory" element={<InventoryPage onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/events" element={<EventsDashboard registrations={dashboardData.authorProfile.eventRegistrations} />} />
             <Route path="/donations" element={<AuthorDonationsTab dashboardData={dashboardData} onRefresh={() => fetchDashboardData(true)} />} />
-            <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} />} />
+            <Route path="/reviews" element={<AuthorReviews books={dashboardData.authorProfile.books} orders={dashboardData.authorOrders || []} />} />
             <Route path="/gallery" element={<AuthorGallery dashboardData={dashboardData} />} />
             <Route path="/profile" element={<AuthorProfile data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
             <Route path="/pos/:eventId" element={<LivePosDashboard />} />
@@ -661,13 +673,35 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
 
   const filteredTitles = filter === 'all' ? titlesData : titlesData.filter((t: any) => t.genre === filter);
 
-  const chartData = titlesData.map((t: any) => ({ name: t.title.substring(0, 15) + '...', sold: t.sold.total }));
-  const webOrdersPieData = titlesData.filter((t: any) => t.sold.web > 0).map((t: any) => ({ name: t.title.substring(0, 15) + '...', value: t.sold.web }));
+  const chartData = titlesData.map((t: any) => ({
+    name: t.title.length > 12 ? t.title.substring(0, 12) + '…' : t.title,
+    fullTitle: t.title,
+    sold: t.sold.total
+  }));
 
-  const activityData = [
-    { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Registered').length || 0 },
-    { name: 'Total Web Orders', count: authorOrders.length || 0 },
-    { name: 'Completed Orders', count: authorOrders.filter((o: any) => o.status === 'Completed').length || 0 },
+  const webOrdersPieData = titlesData
+    .filter((t: any) => t.sold.web > 0)
+    .map((t: any) => ({
+      name: t.title.length > 12 ? t.title.substring(0, 12) + '…' : t.title,
+      fullTitle: t.title,
+      value: t.sold.web
+    }));
+
+  const distributionActivityData = titlesData.map((t: any) => {
+    const bk = authorBooks.find((b: any) => b.id === t.id) || {};
+    return {
+      name: t.title.length > 12 ? t.title.substring(0, 12) + '…' : t.title,
+      fullTitle: t.title,
+      'Web Sold': t.sold.web || 0,
+      'Airport Qty': bk.airportQty || 0,
+      'Book Fair Qty': bk.eventQty || 0
+    };
+  });
+
+  const participationsData = [
+    { name: 'Events Part.', count: data.eventInvites?.filter((inv: any) => inv.optInStatus === 'Registered' || inv.optInStatus === 'Approved').length || 0 },
+    { name: 'Donation Drives', count: data.authorProfile?.donationRegistrations?.length || 0 },
+    { name: 'Support Queries', count: data.queries?.length || 0 }
   ];
 
   const completedOrders = authorOrders.filter((o: any) => o.paymentVerified);
@@ -1052,15 +1086,10 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         {[
           { label: 'Total Titles', value: authorBooks.length, colorClass: 'blue' },
-          { label: 'Total Stock', value: authorBooks.reduce((a: number, b: any) => a + b.stock, 0), colorClass: 'green' },
           { label: 'Gross Sales', value: '\u20b9' + grossSales.toFixed(0), colorClass: 'amber' },
           { label: 'Total Fees Paid', value: '\u20b9' + totalFeesPaid, colorClass: 'red' },
           { label: 'Web Sales', value: '\u20b9' + webSalesAmount.toFixed(0), colorClass: 'blue' },
           { label: 'POS/Event Sales', value: '\u20b9' + posSalesAmount.toFixed(0), colorClass: 'amber' },
-          { label: 'Avg Order Value', value: '\u20b9' + avgOrderValue, colorClass: 'blue' },
-          { label: 'Avg Delivery', value: Number(avgDeliveryDays) > 0 ? `${avgDeliveryDays} Days` : 'N/A', colorClass: 'teal' },
-          { label: 'Pending Web Orders', value: toApproveOrders, colorClass: 'amber' },
-          { label: 'Low Stock Titles', value: lowStockCount, colorClass: 'red' },
         ].map((kpi, i) => (
           <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
             <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
@@ -1502,9 +1531,9 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
         </div>
         <div className="overflow-x-auto">
           <table className="dash-table">
-            <thead><tr>
-              <th>#</th><th>Cover</th><th>Title</th><th>Status</th>
-              <th>Genre</th><th>MRP</th><th>Current Stock</th><th>Sold Details</th><th>Listing Date</th><th className="text-center">Actions</th>
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100"><tr>
+              <th className="!text-[14px] !text-indigo-800 !bg-transparent">#</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Cover</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Title</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
+              <th className="!text-[14px] !text-indigo-800 !bg-transparent">Genre</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">MRP</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Current Stock</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Sold Details</th><th className="!text-[14px] !text-indigo-800 !bg-transparent">Listing Date</th><th className="text-center !text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
             </tr></thead>
             <tbody>
               {filteredTitles.length === 0 ? (
@@ -1516,7 +1545,31 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
                     ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-9 h-12 object-cover rounded-lg shadow-sm" />
                     : <div className="w-9 h-12 bg-gray-100 rounded-lg border flex items-center justify-center text-[9px] text-gray-400">No cover</div>}
                   </td>
-                  <td className="font-semibold text-paa-navy">{row.title}</td>
+                  <td className="font-semibold text-paa-navy">
+                    {row.title}
+                    {(() => {
+                      const bk = authorBooks.find((b: any) => b.id === row.id);
+                      const avgRating = bk?.reviews?.length ? (bk.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / bk.reviews.length) : null;
+                      if (avgRating) {
+                        const roundedRating = Math.round(avgRating);
+                        return (
+                          <div className="flex items-center gap-0.5 mt-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={12}
+                                className={star <= roundedRating ? "text-amber-500 fill-amber-500" : "text-gray-300"}
+                              />
+                            ))}
+                            <span className="text-[10px] text-amber-600 font-bold ml-1">
+                              ({avgRating.toFixed(1)})
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </td>
                   <td><span className={`dash-badge ${row.status === 'Approved' ? 'approved' : row.status === 'Rejected' ? 'rejected' : 'pending'}`}>{row.status}</span>
                     {row.status === 'Rejected' && row.rejectionReason && <div className="mt-1 text-[10px] text-red-600">{row.rejectionReason}</div>}
                   </td>
@@ -1543,58 +1596,120 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           </table>
         </div>
       </div>
-
-      {/* ── Charts ── */}
-      <div className="grid lg:grid-cols-3 gap-5 mb-6">
-        <div className="dash-panel">
-          <div className="dash-panel-header"><h3 className="dash-panel-title">Books Sold per Title</h3></div>
-          <div className="h-[250px] p-5">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" fontSize={10} tick={{ fill: '#71717A' }} />
-                <YAxis fontSize={10} tick={{ fill: '#71717A' }} />
-                <Tooltip cursor={{ fill: 'rgba(24,24,27,0.03)' }} contentStyle={{ borderRadius: 10, border: '1px solid rgba(24,24,27,0.08)', fontSize: 12 }} />
-                <Bar dataKey="sold" fill="#18181B" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* ── Charts Grid (2x2 Grid) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fade-in-up">
+        
+        {/* Chart 1: Books (Books Sold per Title) */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Books Sold per Title</h3>
+          </div>
+          <div className="p-6">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorBooks" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.2}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{ fill: 'rgba(99,102,241,0.03)' }} 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} 
+                    formatter={(value: any, name: any, props: any) => [`${value} copies`, props.payload?.fullTitle || props.name]}
+                  />
+                  <Bar dataKey="sold" fill="url(#colorBooks)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
-        <div className="dash-panel">
-          <div className="dash-panel-header"><h3 className="dash-panel-title">Web Orders Distribution</h3></div>
-          <div className="h-[250px] p-5">
-            <ResponsiveContainer width="100%" height="100%">
-              {webOrdersPieData.length > 0 ? (
-                <PieChart>
-                  <Pie data={webOrdersPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
-                    {webOrdersPieData.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][index % 5]} />
-                    ))}
-                  </Pie>
-                  <Tooltip wrapperClassName="shadow-premium border-none rounded-lg" />
-                </PieChart>
-              ) : (
-                <div className="h-full flex items-center justify-center text-xs text-gray-400">No web orders yet.</div>
-              )}
-            </ResponsiveContainer>
+        {/* Chart 2: Title Web Orders (Web Orders Distribution) */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Title Web Orders Distribution</h3>
+          </div>
+          <div className="p-6">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                {webOrdersPieData.length > 0 ? (
+                  <PieChart>
+                    <Pie 
+                      data={webOrdersPieData} 
+                      cx="50%" cy="50%" 
+                      innerRadius={55} outerRadius={80} 
+                      paddingAngle={3} dataKey="value"
+                    >
+                      {webOrdersPieData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'][index % 6]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value: any, name: any, props: any) => [`${value} web orders`, props.payload?.fullTitle || props.name]}
+                    />
+                  </PieChart>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm text-gray-400 italic">No web orders yet.</div>
+                )}
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
-        <div className="dash-panel">
-          <div className="dash-panel-header"><h3 className="dash-panel-title">Activity Participation</h3></div>
-          <div className="h-[250px] p-5">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" fontSize={10} tick={{ fill: '#71717A' }} />
-                <YAxis dataKey="name" type="category" width={90} fontSize={10} tick={{ fill: '#71717A' }} />
-                <Tooltip cursor={{ fill: 'rgba(24,24,27,0.03)' }} contentStyle={{ borderRadius: 10, border: '1px solid rgba(24,24,27,0.08)', fontSize: 12 }} />
-                <Bar dataKey="count" fill="#C0A062" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        {/* Chart 3: Distribution Activity */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Distribution Activity Breakdown</h3>
+          </div>
+          <div className="p-6">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={distributionActivityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} 
+                    formatter={(value: any, name: any, props: any) => [`${value} copies`, `${name} (${props.payload?.fullTitle || props.name})`]}
+                  />
+                  <Bar dataKey="Web Sold" stackId="dist" fill="#16a34a" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Airport Qty" stackId="dist" fill="#0284c7" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Book Fair Qty" stackId="dist" fill="#9333ea" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
+
+        {/* Chart 4: Participations */}
+        <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h3 className="text-sm font-bold text-paa-navy uppercase tracking-widest">Ecosystem Activity Participation</h3>
+          </div>
+          <div className="p-6">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={participationsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={10} tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{ stroke: '#C0A062', strokeWidth: 1, strokeDasharray: '3 3' }} 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} 
+                  />
+                  <Line type="linear" dataKey="count" name="Participations" stroke="#C0A062" strokeWidth={3} dot={{ r: 4, fill: "#fff", stroke: "#C0A062", strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* ── Edit Book Modal (Reapply) ── */}
@@ -1744,6 +1859,8 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
   const [newStocks, setNewStocks] = useState<{ [key: number]: string }>({});
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [activeHistoryId, setActiveHistoryId] = useState<number | null>(null);
+  const [showStockHistory, setShowStockHistory] = useState(false);
 
   const fetchInventory = async () => {
     try {
@@ -1787,11 +1904,15 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
     if (!addQty || isNaN(addQty)) return toast.error('Please enter a non-zero value (+/- quantity)');
     setUpdatingId(bookId);
     try {
-      await axios.put(`${API}/api/author/books/${bookId}/stock`,
+      const response = await axios.put(`${API}/api/author/books/${bookId}/stock`,
         { addQty },
         { headers: { Authorization: `Bearer ${token()}` } }
       );
-      toast.success(addQty > 0 ? `Added ${addQty} copies to inventory` : `Removed ${Math.abs(addQty)} copies from inventory`);
+      if (response.data?.pending) {
+        toast.success(`Update of ${addQty > 0 ? '+' : ''}${addQty} copies submitted for admin approval`);
+      } else {
+        toast.success(addQty > 0 ? `Added ${addQty} copies to inventory` : `Removed ${Math.abs(addQty)} copies from inventory`);
+      }
       setNewStocks(prev => ({ ...prev, [bookId]: '' }));
       await fetchInventory();
       onRefresh();
@@ -1864,69 +1985,127 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
         </div>
       </div>
 
-      {/* Global Summary: Stat Cards + Inventory Pie Chart side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
-
-        {/* Stat Cards (2x2 grid) */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Total Titles', value: inventory.length, icon: <BookOpen size={18} />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-            { label: 'QTY Sold (Web)', value: totalWebSold, icon: <ShoppingCart size={18} />, color: 'text-green-600', bg: 'bg-green-50' },
-            { label: 'QTY to Airport', value: totalAirport, icon: <MapPin size={18} />, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'QTY to Book Fairs', value: totalEvent, icon: <CalendarIcon size={18} />, color: 'text-purple-600', bg: 'bg-purple-50' },
-          ].map(({ label, value, icon, color, bg }) => (
-            <div key={label} className="bg-white border rounded-xl p-4 flex items-center gap-3 shadow-sm">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${bg} ${color}`}>
-                {icon}
-              </div>
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
-                <p className="text-2xl font-black text-paa-navy leading-none m-0">{value}</p>
-              </div>
+      {/* Stat Cards Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total Titles', value: inventory.length, icon: <BookOpen size={18} />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'QTY Sold (Web)', value: totalWebSold, icon: <ShoppingCart size={18} />, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'QTY to Airport', value: totalAirport, icon: <MapPin size={18} />, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'QTY to Book Fairs', value: totalEvent, icon: <CalendarIcon size={18} />, color: 'text-purple-600', bg: 'bg-purple-50' },
+        ].map(({ label, value, icon, color, bg }) => (
+          <div key={label} className="bg-white border rounded-xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${bg} ${color}`}>
+              {icon}
             </div>
-          ))}
-        </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
+              <p className="text-2xl font-black text-paa-navy leading-none m-0">{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        {/* Inventory Pie Chart — current stock per book */}
-        {inventory.length > 0 && (
-          <div className="bg-white border rounded-xl shadow-sm p-4 w-full lg:w-[280px] shrink-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Current Stock Split</p>
-            <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={inventory.map(b => ({ name: b.title.length > 14 ? b.title.substring(0, 14) + '…' : b.title, value: b.currentStock, fullTitle: b.title }))}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={48}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {inventory.map((_: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][index % 8]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any, _: any, props: any) => [`${value} copies`, props.payload?.fullTitle || props.name]}
-                    contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid rgba(26,26,46,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+      {/* Charts Row */}
+      {inventory.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          
+          {/* Chart 1: Current Stock Split */}
+          <div className="bg-white border rounded-xl shadow-sm p-5 flex flex-col justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Current Stock Split</p>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={inventory.map(b => ({ name: b.title.length > 14 ? b.title.substring(0, 14) + '…' : b.title, value: b.currentStock, fullTitle: b.title }))}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={48}
+                      outerRadius={72}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {inventory.map((_: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][index % 8]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: any, _: any, props: any) => [`${value} copies`, props.payload?.fullTitle || props.name]}
+                      contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid rgba(26,26,46,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
             {/* Legend */}
-            <div className="flex flex-col gap-1 mt-2">
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 border-t pt-3 max-h-[80px] overflow-y-auto">
               {inventory.map((b: any, i: number) => (
-                <div key={b.id} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: ['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][i % 8] }} />
-                  <span className="text-[10px] text-gray-500 truncate max-w-[160px]" title={b.title}>{b.title}</span>
-                  <span className="text-[10px] font-bold text-paa-navy ml-auto shrink-0">{b.currentStock}</span>
+                <div key={b.id} className="flex items-center gap-2 text-[10px]">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][i % 8] }} />
+                  <span className="text-gray-500 truncate max-w-[120px]" title={b.title}>{b.title}</span>
+                  <span className="font-bold text-paa-navy ml-1">{b.currentStock}</span>
                 </div>
               ))}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Chart 2: Distribution Split */}
+          <div className="bg-white border rounded-xl shadow-sm p-5 flex flex-col justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Distribution Channel Split</p>
+              <div className="h-[200px]">
+                {totalAirport === 0 && totalEvent === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-xs italic">
+                    No airport or book fair distribution records yet.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Airport Library', value: totalAirport },
+                          { name: 'Book Fairs', value: totalEvent }
+                        ].filter(item => item.value > 0)}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={48}
+                        outerRadius={72}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {[
+                          { name: 'Airport Library', color: '#0284c7' },
+                          { name: 'Book Fairs', color: '#9333ea' }
+                        ].filter(item => (item.name === 'Airport Library' ? totalAirport : totalEvent) > 0).map((item, index) => (
+                          <Cell key={`cell-${index}`} fill={item.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any) => [`${value} copies`]}
+                        contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid rgba(26,26,46,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+            {/* Legend */}
+            <div className="flex justify-center gap-6 mt-3 border-t pt-3">
+              {[
+                { name: 'Airport Library', value: totalAirport, color: '#0284c7' },
+                { name: 'Book Fairs', value: totalEvent, color: '#9333ea' }
+              ].map(item => (
+                <div key={item.name} className="flex items-center gap-2 text-[10px]">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
+                  <span className="text-gray-500">{item.name}</span>
+                  <span className="font-bold text-paa-navy ml-1">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
 
       {/* Low Stock Warning Banner */}
       {lowStockCount > 0 && (
@@ -1942,13 +2121,15 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', minWidth: 0 }}>
 
         {/* LEFT — Main Table */}
-        <div className="bg-white border rounded-xl shadow-sm overflow-hidden flex-1 min-w-0">
+        <div className="bg-white border border-black/5 rounded-[14px] shadow-sm overflow-hidden flex-1 min-w-0">
           <div className="overflow-x-auto">
-            <table className="dash-table w-full">
-              <thead>
+            <table className="dash-table w-full text-left min-w-[800px]">
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
                   {['S.No', 'Title', 'Author', 'MRP', 'QTY Sold (Web)', 'QTY to Airport', 'QTY for Book Fair', 'Current Stock', 'Last Updated', 'Update Stock'].map(h => (
-                    <th key={h} className={h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}>{h}</th>
+                    <th key={h} className={`px-4 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 whitespace-nowrap ${h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}`}>
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -1965,35 +2146,35 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                     <tr
                       key={book.id}
                       onClick={() => handleRowClick(book)}
-                      className={`cursor-pointer transition-colors hover:bg-blue-50/50 ${isSelected ? 'bg-indigo-50/60 outline outline-2 outline-indigo-500/30 -outline-offset-2' : ''}`}
+                      className={`cursor-pointer transition-colors hover:bg-gray-50 border-b border-black/5 ${isSelected ? 'bg-indigo-50/40 ring-2 ring-indigo-200 ring-inset' : 'bg-white'}`}
                     >
                       {/* S.No */}
-                      <td className="text-center text-gray-500 font-bold">{idx + 1}</td>
+                      <td className="px-4 py-3 text-center text-sm font-bold text-gray-500">{idx + 1}</td>
                       {/* Title */}
-                      <td className="max-w-[160px]">
-                        <p className="font-bold text-paa-navy truncate" title={book.title}>{book.title}</p>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{book.genre}</p>
+                      <td className="px-4 py-3 max-w-[160px]">
+                        <p className="font-bold text-paa-navy m-0 truncate" title={book.title}>{book.title}</p>
+                        <p className="text-[10px] text-gray-400 m-0 uppercase tracking-widest mt-1">{book.genre}</p>
                       </td>
                       {/* Author */}
-                      <td className="font-medium text-gray-700 whitespace-nowrap">{book.authorName}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">{book.authorName}</td>
                       {/* MRP */}
-                      <td className="text-center font-bold text-paa-navy">₹{book.mrp}</td>
+                      <td className="px-4 py-3 text-center text-sm font-bold text-paa-navy">₹{book.mrp}</td>
                       {/* QTY Web */}
-                      <td className="text-center">
-                        <span className="font-bold text-green-600 text-[15px]">{book.webSold}</span>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-green-600 text-sm">{book.webSold}</span>
                       </td>
                       {/* QTY Airport */}
-                      <td className="text-center">
-                        <span className="font-bold text-blue-600 text-[15px]">{book.airportQty}</span>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-sky-600 text-sm">{book.airportQty}</span>
                       </td>
                       {/* QTY Book Fair */}
-                      <td className="text-center">
-                        <span className="font-bold text-purple-600 text-[15px]">{book.eventQty}</span>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-purple-600 text-sm">{book.eventQty}</span>
                       </td>
                       {/* Current Stock */}
-                      <td className="text-center">
+                      <td className="px-4 py-3 text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <span className={`font-black text-lg leading-none ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>
+                          <span className={`font-bold text-sm ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>
                             {book.currentStock}
                           </span>
                           {book.isLowStock && (
@@ -2004,11 +2185,47 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                         </div>
                       </td>
                       {/* Last Updated */}
-                      <td className="text-center text-gray-500 text-xs">
-                        {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                      <td className="px-4 py-3 text-center text-gray-500 text-xs relative" onClick={e => e.stopPropagation()}>
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span>
+                            {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                          </span>
+                          {book.stockHistory && book.stockHistory.length > 0 && (
+                            <div className="relative">
+                              <button
+                                onClick={() => setActiveHistoryId(activeHistoryId === book.id ? null : book.id)}
+                                className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-paa-navy hover:text-paa-gold border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded transition-colors shadow-sm cursor-pointer"
+                              >
+                                View Logs <ChevronDown size={10} className={`transform transition-transform duration-300 ${activeHistoryId === book.id ? 'rotate-180' : ''}`} />
+                              </button>
+                              
+                              {activeHistoryId === book.id && (
+                                <div className="absolute top-full mt-1.5 right-1/2 translate-x-1/2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-50 text-left max-h-56 overflow-y-auto">
+                                  <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2 border-b pb-1">Stock Changes</p>
+                                  <div className="space-y-2">
+                                    {book.stockHistory.map((log: any) => (
+                                      <div key={log.id} className="border-b border-gray-100 last:border-0 pb-1.5 last:pb-0 text-[10px]">
+                                        <div className="flex justify-between items-center text-gray-400 font-semibold mb-0.5">
+                                          <span>{new Date(log.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                          <span className={`font-bold ${log.changeQty > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600">
+                                          <span>Status: <span className={`font-bold ${log.status === 'Pending' ? 'text-amber-600' : log.status === 'Approved' ? 'text-green-600' : 'text-red-600'}`}>{log.status || 'Approved'}</span></span>
+                                          {log.status !== 'Pending' && <span>New Total: {log.currentStock}</span>}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       {/* Update Stock */}
-                      <td onClick={e => e.stopPropagation()}>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
                           <input
                             id={`stock-input-${book.id}`}
@@ -2039,100 +2256,128 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
         </div>
 
         {/* RIGHT — Distribution Breakdown Sidebar */}
-        <div className={`shrink-0 w-[320px] min-w-0 bg-white border rounded-xl shadow-sm overflow-hidden transition-opacity duration-200 ${selectedBook ? 'opacity-100' : 'opacity-50'}`}>
-          {/* Sidebar Header */}
-          <div className="px-5 py-4 border-b bg-gray-50 flex justify-between items-center">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 mb-0.5">Distribution Breakdown</p>
-              <p className="text-sm font-bold text-paa-navy m-0">
-                {selectedBook ? selectedBook.title : 'Select a book row'}
-              </p>
-            </div>
-            {selectedBook && (
+        {selectedBook && (
+          <div className="shrink-0 w-[320px] min-w-0 bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden animate-fade-in-right">
+            {/* Sidebar Header */}
+            <div className="px-5 py-4 border-b bg-gray-50 flex justify-between items-center">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 mb-0.5">Distribution Breakdown</p>
+                <p className="text-sm font-bold text-paa-navy m-0 truncate max-w-[220px]" title={selectedBook.title}>
+                  {selectedBook.title}
+                </p>
+              </div>
               <button onClick={() => { setSelectedBook(null); setSidebarVisible(false); }} className="bg-transparent border-none cursor-pointer text-gray-400 p-1 hover:text-gray-600 transition-colors">
                 <X size={16} />
               </button>
-            )}
-          </div>
+            </div>
 
-          {/* Sidebar Body */}
-          <div className="p-5">
-            {!selectedBook ? (
-              <div className="text-center py-12 text-gray-300">
-                <Package size={40} className="mx-auto mb-3 opacity-50" />
-                <p className="text-sm m-0 italic text-gray-400">Select a book row to view distribution details.</p>
-              </div>
-            ) : (
-              <>
-                {/* Book meta */}
-                <div className="bg-indigo-50/30 rounded-xl p-3.5 mb-4 border border-indigo-100">
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {[
-                      { label: 'Current Stock', value: selectedBook.currentStock, color: selectedBook.isLowStock ? 'text-red-600' : 'text-green-600' },
-                      { label: 'Web Sold', value: selectedBook.webSold, color: 'text-green-600' },
-                      { label: 'Airport Donated', value: selectedBook.airportQty, color: 'text-blue-600' },
-                      { label: 'Book Fairs', value: selectedBook.eventQty, color: 'text-purple-600' },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} className="text-center">
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
-                        <p className={`text-xl font-black m-0 leading-none ${color}`}>{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {selectedBook.isLowStock && (
-                    <div className="mt-2.5 border-t border-red-200/50 pt-2 flex items-center gap-1.5">
-                      <AlertCircle size={13} className="text-red-600 shrink-0" />
-                      <p className="text-[11px] text-red-600 font-semibold m-0">Low stock — replenish immediately</p>
+            {/* Sidebar Body */}
+            <div className="p-5">
+              {/* Book meta */}
+              <div className="bg-indigo-50/30 rounded-xl p-3.5 mb-4 border border-indigo-100">
+                <div className="grid grid-cols-2 gap-2.5">
+                  {[
+                    { label: 'Current Stock', value: selectedBook.currentStock, color: selectedBook.isLowStock ? 'text-red-600' : 'text-green-600' },
+                    { label: 'Web Sold', value: selectedBook.webSold, color: 'text-green-600' },
+                    { label: 'Airport Donated', value: selectedBook.airportQty, color: 'text-blue-600' },
+                    { label: 'Book Fairs', value: selectedBook.eventQty, color: 'text-purple-600' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
+                      <p className={`text-xl font-black m-0 leading-none ${color}`}>{value}</p>
                     </div>
-                  )}
+                  ))}
                 </div>
-
-                {/* Distribution items */}
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">Location Detail</p>
-                {selectedBook.distributionBreakdown.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic m-0">No active distribution records for this title.</p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {selectedBook.distributionBreakdown.map((item: any, i: number) => (
-                      <div key={i} className={`flex justify-between items-center p-3 rounded-xl border ${item.type === 'airport' ? 'bg-blue-50/50 border-blue-100' : 'bg-purple-50/50 border-purple-100'}`}>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className={`text-[9px] font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${item.type === 'airport' ? 'text-blue-600 bg-blue-100' : 'text-purple-600 bg-purple-100'}`}>
-                              {item.type === 'airport' ? '✈ Airport' : '📚 Book Fair'}
-                            </span>
-                          </div>
-                          <p className="text-xs font-semibold text-paa-navy m-0 truncate" title={item.label}>
-                            {item.label}
-                          </p>
-                          {item.location && (
-                            <p className="text-[10px] text-gray-400 mt-0.5 mb-0">{item.location}</p>
-                          )}
-                          {item.type === 'event' && item.sold !== undefined && (
-                            <p className="text-[10px] text-gray-500 mt-0.5 mb-0">Sold: {item.sold} / Listed: {item.quantity}</p>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0 ml-3">
-                          <span className={`text-lg font-black leading-none ${item.type === 'airport' ? 'text-blue-600' : 'text-purple-600'}`}>
-                            {item.quantity}
-                          </span>
-                          <p className="text-[9px] text-gray-400 mt-0.5 mb-0 uppercase">copies</p>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Cumulative Total */}
-                    <div className="border-t-2 border-gray-100 pt-2.5 mt-1 flex justify-between items-center">
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-paa-navy">Total Distributed</span>
-                      <span className="text-xl font-black text-paa-navy">
-                        {selectedBook.distributionBreakdown.reduce((s: number, i: any) => s + i.quantity, 0)}
-                      </span>
-                    </div>
+                {selectedBook.isLowStock && (
+                  <div className="mt-2.5 border-t border-red-200/50 pt-2 flex items-center gap-1.5">
+                    <AlertCircle size={13} className="text-red-600 shrink-0" />
+                    <p className="text-[11px] text-red-600 font-semibold m-0">Low stock — replenish immediately</p>
                   </div>
                 )}
-              </>
-            )}
+              </div>
+
+              {/* Distribution items */}
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">Location Detail</p>
+              {selectedBook.distributionBreakdown.length === 0 ? (
+                <p className="text-sm text-gray-400 italic m-0">No active distribution records for this title.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {selectedBook.distributionBreakdown.map((item: any, i: number) => (
+                    <div key={i} className={`flex justify-between items-center p-3 rounded-xl border ${item.type === 'airport' ? 'bg-blue-50/50 border-blue-100' : 'bg-purple-50/50 border-purple-100'}`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className={`text-[9px] font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${item.type === 'airport' ? 'text-blue-600 bg-blue-100' : 'text-purple-600 bg-purple-100'}`}>
+                            {item.type === 'airport' ? '✈ Airport' : '📚 Book Fair'}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-paa-navy m-0 truncate" title={item.label}>
+                          {item.label}
+                        </p>
+                        {item.location && (
+                          <p className="text-[10px] text-gray-400 mt-0.5 mb-0">{item.location}</p>
+                        )}
+                        {item.type === 'event' && item.sold !== undefined && (
+                          <p className="text-[10px] text-gray-500 mt-0.5 mb-0">Sold: {item.sold} / Listed: {item.quantity}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <span className={`text-lg font-black leading-none ${item.type === 'airport' ? 'text-blue-600' : 'text-purple-600'}`}>
+                          {item.quantity}
+                        </span>
+                        <p className="text-[9px] text-gray-400 mt-0.5 mb-0 uppercase">copies</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Cumulative Total */}
+                  <div className="border-t-2 border-gray-100 pt-2.5 mt-1 flex justify-between items-center">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-paa-navy">Total Distributed</span>
+                    <span className="text-xl font-black text-paa-navy">
+                      {selectedBook.distributionBreakdown.reduce((s: number, i: any) => s + i.quantity, 0)}
+                    </span>
+                  </div>
+
+                  {/* Collapsible Stock Update Logs */}
+                  <div className="mt-4 border-t pt-4">
+                    <button
+                      onClick={() => setShowStockHistory(!showStockHistory)}
+                      className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-paa-navy transition-colors outline-none cursor-pointer"
+                    >
+                      <span>Stock Update History ({selectedBook.stockHistory?.length || 0})</span>
+                      <ChevronDown
+                        size={14}
+                        className={`transform transition-transform duration-300 ${showStockHistory ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                    
+                    {showStockHistory && (
+                      <div className="mt-2.5 space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                        {!selectedBook.stockHistory || selectedBook.stockHistory.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic m-0">No stock update history recorded yet.</p>
+                        ) : (
+                          selectedBook.stockHistory.map((log: any) => (
+                            <div key={log.id} className="bg-gray-50 border border-gray-100 p-2.5 rounded-lg text-[11px]">
+                              <div className="flex justify-between items-center mb-1 text-gray-400 font-bold uppercase tracking-widest text-[9px]">
+                                <span>{new Date(log.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className={log.changeQty > 0 ? 'text-green-600' : 'text-red-600'}>
+                                  {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-gray-500">
+                                <span>Last Stock: <strong className="text-paa-navy">{log.lastStock}</strong></span>
+                                <span>Current: <strong className="text-paa-navy">{log.currentStock}</strong></span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -2266,16 +2511,16 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#8faadc] text-paa-navy">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="p-3 border-r border-white/20 text-center">S.No</th>
-                <th className="p-3 border-r border-white/20">ACTIVITY</th>
-                <th className="p-3 border-r border-white/20">TYPE</th>
-                <th className="p-3 border-r border-white/20">DATE</th>
-                <th className="p-3 border-r border-white/20 text-center">STATUS</th>
-                <th className="p-3 border-r border-white/20">CITY</th>
-                <th className="p-3 border-r border-white/20 text-center">CHARGES</th>
-                <th className="p-3 border-r border-white/20 text-center">ACTION</th>
+                <th className="p-3 border-r border-indigo-100/20 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">S.No</th>
+                <th className="p-3 border-r border-indigo-100/20 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">ACTIVITY</th>
+                <th className="p-3 border-r border-indigo-100/20 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">TYPE</th>
+                <th className="p-3 border-r border-indigo-100/20 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">DATE</th>
+                <th className="p-3 border-r border-indigo-100/20 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">STATUS</th>
+                <th className="p-3 border-r border-indigo-100/20 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">CITY</th>
+                <th className="p-3 border-r border-indigo-100/20 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">CHARGES</th>
+                <th className="p-3 border-r border-indigo-100/20 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">ACTION</th>
               </tr>
             </thead>
             <tbody>
@@ -2682,7 +2927,13 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
       groupedOrdersObj[o.orderId].totalAmount += o.amount;
     }
   });
-  const groupedOrdersList = Object.values(groupedOrdersObj).sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+  const groupedOrdersList = Object.values(groupedOrdersObj).sort((a: any, b: any) => {
+     const aPending = a.status === 'Pending Verification' || a.status === 'Pending' || a.status === 'Processing';
+     const bPending = b.status === 'Pending Verification' || b.status === 'Pending' || b.status === 'Processing';
+     if (aPending && !bPending) return -1;
+     if (!aPending && bPending) return 1;
+     return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
+  });
 
   if (viewBuyerInfoOrder !== null) {
     return (
@@ -2755,11 +3006,15 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Delivery Rating</span>
-                    <span className="font-medium text-yellow-500 text-lg">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i}>{i < (viewBuyerInfoOrder.feedbackRating || 0) ? '★' : '☆'}</span>
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          size={14}
+                          className={star <= (viewBuyerInfoOrder.feedbackRating || 0) ? "text-amber-500 fill-amber-500" : "text-gray-300"}
+                        />
                       ))}
-                    </span>
+                    </div>
                   </div>
                   {viewBuyerInfoOrder.feedbackComments && (
                     <div className="text-sm italic text-gray-600 border-t border-gray-200 mt-4 pt-4">
@@ -2936,62 +3191,89 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
         </button>
       </div>
 
-      {/* ── Order Tracking KPIs ── */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-        <div className="dash-kpi-card green" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-            <Check size={20} />
+      {/* ── Web Orders Layout (KPIs + Pie) ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 mb-8">
+        
+        {/* KPI Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 h-max">
+          <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-4 flex items-center gap-4 hover:border-green-500/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+              <Check size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">Successful Orders</p>
+              <h3 className="text-xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Completed' || o.status === 'Delivered').length}</h3>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Successful Orders</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Completed' || o.status === 'Delivered').length}</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-4 flex items-center gap-4 hover:border-yellow-500/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center shrink-0">
+              <AlertCircle size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">To Be Approved</p>
+              <h3 className="text-xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length}</h3>
+            </div>
           </div>
-        </div>
-        <div className="dash-kpi-card amber" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
-            <AlertCircle size={20} />
+          <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-4 flex items-center gap-4 hover:border-indigo-500/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Package size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">To Be Dispatched</p>
+              <h3 className="text-xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Accepted').length}</h3>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Approved</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length}</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-4 flex items-center gap-4 hover:border-blue-500/30 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <MapPin size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">Under Delivery</p>
+              <h3 className="text-xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Dispatched').length}</h3>
+            </div>
           </div>
-        </div>
-        <div className="dash-kpi-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-            <Package size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">To Be Dispatched</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Accepted').length}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card blue" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <MapPin size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Under Delivery</p>
-            <h3 className="text-2xl font-bold text-paa-navy">{orders.filter((o: any) => o.status === 'Dispatched').length}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card border border-red-500/20" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#fef2f2' }}>
-          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-            <AlertCircle size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-red-500 mb-1">Late Deliveries</p>
-            <h3 className="text-2xl font-bold text-red-600">{orders.filter((o: any) => o.dispatchedAt && (new Date(o.dispatchedAt).getTime() - new Date(o.createdAt).getTime() > 24 * 60 * 60 * 1000)).length}</h3>
-          </div>
-        </div>
-        <div className="dash-kpi-card border border-red-500/20" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#fef2f2' }}>
-          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-            <TrendingDown size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-red-500 mb-1">Late Fines</p>
-            <h3 className="text-2xl font-bold text-red-600">₹{dashboardData?.authorProfile?.extraData?.lateFines || 0}</h3>
+          <div className="bg-red-50 rounded-xl shadow-sm border border-red-200 p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-white text-red-600 flex items-center justify-center shrink-0 shadow-sm border border-red-100">
+              <TrendingDown size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-red-500 mb-0.5">Late Fines</p>
+              <h3 className="text-xl font-bold text-red-600">₹{dashboardData?.authorProfile?.extraData?.lateFines || 0}</h3>
+            </div>
           </div>
         </div>
+
+        {/* Orders by Status Chart */}
+        <div className="bg-white rounded-xl shadow-sm border border-paa-navy/5 p-5">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-2 border-b pb-2">Orders by Status</p>
+          <div className="h-[200px]">
+            {(() => {
+              const statusCounts: Record<string, number> = {};
+              orders.forEach((o: any) => {
+                const st = o.status || 'Pending';
+                statusCounts[st] = (statusCounts[st] || 0) + 1;
+              });
+              const statusPieData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+              const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#94a3b8'];
+
+              return statusPieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value" label={({name, value}) => `${name} (${value})`}>
+                      {statusPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-paa-gray-text text-sm italic">No data</div>
+              );
+            })()}
+          </div>
+        </div>
+
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -3022,16 +3304,16 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
       <div className="bg-white border border-paa-navy/5 rounded-xl shadow-sm overflow-hidden mb-12">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs whitespace-nowrap">
-            <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-[10px] border-b border-paa-navy/5">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="px-5 py-4 font-bold">Order Details</th>
-                <th className="px-5 py-4 font-bold">Buyer Information</th>
-                <th className="px-5 py-4 font-bold">Book Title</th>
-                <th className="px-5 py-4 font-bold text-center">Qty</th>
-                <th className="px-5 py-4 font-bold text-center">Amount</th>
-                <th className="px-5 py-4 font-bold text-center">Payment</th>
-                <th className="px-5 py-4 font-bold text-center w-32">Status</th>
-                <th className="px-5 py-4 font-bold text-center w-32">Action</th>
+                <th className="px-5 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Order Details</th>
+                <th className="px-5 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Buyer Information</th>
+                <th className="px-5 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                <th className="px-5 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty</th>
+                <th className="px-5 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Amount</th>
+                <th className="px-5 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Payment</th>
+                <th className="px-5 py-4 text-center w-32 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Status</th>
+                <th className="px-5 py-4 text-center w-32 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -3056,12 +3338,23 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-col gap-2 max-w-[200px]">
-                        {ord.books.map((b: any, i: number) => (
-                          <div key={i} className="border-b border-gray-100 last:border-0 pb-1 last:pb-0">
-                            <p className="font-medium text-paa-navy text-xs truncate" title={b.title}>{b.title}</p>
-                            <p className="text-[9px] text-gray-500 uppercase tracking-widest mt-0.5">Qty: {b.quantity} &nbsp;&middot;&nbsp; ₹{b.amount}</p>
-                          </div>
-                        ))}
+                        {ord.books.map((b: any, i: number) => {
+                          const bookData = dashboardData?.authorProfile?.books?.find((bk: any) => bk.id === b.bookId || bk.title === b.title);
+                          const avgRating = bookData?.reviews?.length ? (bookData.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / bookData.reviews.length).toFixed(1) : null;
+                          return (
+                            <div key={i} className="border-b border-gray-100 last:border-0 pb-2 last:pb-0">
+                              <p className="font-medium text-paa-navy text-xs truncate" title={b.title}>{b.title}</p>
+                              <div className="flex justify-between items-center mt-1">
+                                <p className="text-[9px] text-gray-500 uppercase tracking-widest">Qty: {b.quantity} &nbsp;&middot;&nbsp; ₹{b.amount}</p>
+                                {avgRating && (
+                                  <div className="flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                    {avgRating} <Star size={8} className="fill-amber-500 text-amber-500" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                         {ord.order?.totalDiscount > 0 && <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded inline-block w-max mt-1">Discount Applied</span>}
                       </div>
                     </td>
@@ -3144,6 +3437,26 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                         {ord.status === 'Rejected' && ord.rejectionReason && (
                           <div className="mt-0.5 text-[9px] text-red-600 truncate w-full text-center" title={ord.rejectionReason}>
                             Reason: {ord.rejectionReason}
+                          </div>
+                        )}
+                        
+                        {/* Delivery Feedback */}
+                        {ord.feedbackRating && (
+                          <div className="mt-1 flex flex-col items-center justify-center gap-1 p-1 bg-gray-50 border border-gray-200 rounded w-full">
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  size={10}
+                                  className={star <= ord.feedbackRating ? "text-amber-500 fill-amber-500" : "text-gray-300"}
+                                />
+                              ))}
+                            </div>
+                            {ord.feedbackCondition && (
+                              <span className={`text-[8px] font-bold uppercase tracking-widest ${ord.feedbackCondition === 'Damaged' ? 'text-red-600' : 'text-green-600'}`}>
+                                {ord.feedbackCondition}
+                              </span>
+                            )}
                           </div>
                         )}
 
@@ -3339,6 +3652,9 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 function EventsDashboard({ registrations }: any) {
   const [isOptInModalOpen, setIsOptInModalOpen] = useState(false);
   const [selectedInvite, setSelectedInvite] = useState<any>(null);
+  const [showProposeEventModal, setShowProposeEventModal] = useState(false);
+  const [proposeEventForm, setProposeEventForm] = useState({ name: '', location: '', date: '', duration: '', eventType: 'Book Fair', description: '' });
+  const [isProposingEvent, setIsProposingEvent] = useState(false);
   const [optInBooks, setOptInBooks] = useState<any[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | number | null>(null);
@@ -3378,8 +3694,8 @@ function EventsDashboard({ registrations }: any) {
     }
   };
   const [activeTab, setActiveTab] = useState('events');
-  const [bpSort, setBpSort] = useState('revenue_desc');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [bpSort, setBpSort] = useState('date_desc');
+  const [bpSearch, setBpSearch] = useState('');
   const [eventFilter, setEventFilter] = useState('ALL');
   const [invites, setInvites] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
@@ -3501,6 +3817,25 @@ const pe = pastEvents.find(p => p.eventId === eventId);
     return false;
   });
 
+  const handleProposeEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsProposingEvent(true);
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/propose-event`, proposeEventForm, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast.success('Event proposed successfully! It is now pending admin approval.');
+      setShowProposeEventModal(false);
+      setProposeEventForm({ name: '', location: '', date: '', duration: '', eventType: 'Book Fair', description: '' });
+      fetchDashboard();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.error || 'Failed to propose event');
+    } finally {
+      setIsProposingEvent(false);
+    }
+  };
+
   const filteredEvents = allEvents.filter((evt: any) => {
     const isLegacy = evt.status === 'Legacy Archive';
     
@@ -3510,9 +3845,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
     if (eventFilter === 'LEGACY ARCHIVE' && !isLegacy) return false;
     if (eventFilter === 'PARTICIPATED' && (evt.registration !== 'Registered' && evt.registration !== 'Approved')) return false;
     
-    if (searchTerm) {
-        return (evt.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-               (evt.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+    if (bpSearch) {
+        return (evt.name || '').toLowerCase().includes(bpSearch.toLowerCase()) ||
+               (evt.location || '').toLowerCase().includes(bpSearch.toLowerCase());
     }
     return true;
   }).sort((a: any, b: any) => {
@@ -3552,7 +3887,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
   );
 
   return (
-    <div className="bg-white rounded-xl">
+    <div className="rounded-xl">
       <div className="flex border-b border-gray-200 mb-6">
         <button onClick={() => setActiveTab('events')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'events' ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:text-paa-navy hover:bg-paa-navy/5 border border-transparent'}`}>Events Overview</button>
         <button onClick={() => setActiveTab('performance')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'performance' ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:text-paa-navy hover:bg-paa-navy/5 border border-transparent'}`}>Book Performance</button>
@@ -3562,14 +3897,14 @@ const pe = pastEvents.find(p => p.eventId === eventId);
       {activeTab === 'events' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-indigo-500" /> Total Events</div>
-              <div className="text-3xl font-serif font-bold text-paa-navy">{validParticipations.length}</div>
-              <div className="text-xs text-gray-500 mt-2 font-mono font-medium">Fairs: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) === 'Book Fair').length} • Events: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) !== 'Book Fair').length}</div>
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-6 rounded-2xl border-none shadow-sm flex flex-col justify-center text-white">
+              <div className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest mb-2 flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-indigo-200" /> Total Events</div>
+              <div className="text-3xl font-serif font-bold text-white">{validParticipations.length}</div>
+              <div className="text-xs text-indigo-100 mt-2 font-mono font-medium">Fairs: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) === 'Book Fair').length} • Events: {validParticipations.filter((evt: any) => (evt.type || evt.eventType) !== 'Book Fair').length}</div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-500" /> Total Books Sold</div>
-             <div className="text-3xl font-serif font-bold text-emerald-700">
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-2xl border-none shadow-sm flex flex-col justify-center text-white">
+              <div className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-2 flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-200" /> Total Books Sold</div>
+             <div className="text-3xl font-serif font-bold text-white">
                  {validParticipations.reduce((acc: number, evt: any) => {
                     let sold = 0;
                     if (evt.manualTotalSold !== null && evt.manualTotalSold !== undefined) {
@@ -3583,9 +3918,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                  }, 0)}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><DollarSign className="w-4 h-4 text-blue-500" /> Total Revenue</div>
-              <div className="text-3xl font-serif font-bold text-blue-700">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl border-none shadow-sm flex flex-col justify-center text-white">
+              <div className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mb-2 flex items-center gap-2"><DollarSign className="w-4 h-4 text-blue-200" /> Total Revenue</div>
+              <div className="text-3xl font-serif font-bold text-white">
                  ₹{validParticipations.reduce((acc: number, evt: any) => {
                     let rev = 0;
                     if (evt.manualTotalRevenue !== null && evt.manualTotalRevenue !== undefined) {
@@ -3599,14 +3934,14 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                  }, 0).toLocaleString()}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium flex flex-col justify-center cursor-pointer hover:border-orange-200 transition-all group" onClick={() => setActiveTab('payments')}>
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-orange-500 transition-colors"><CheckCircle2 className="w-4 h-4 text-orange-500" /> Total Payments Done</div>
-              <div className="text-3xl font-serif font-bold text-orange-700">₹{validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0).toLocaleString()}</div>
-              <div className="text-[10px] text-orange-400 mt-2 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to view details &rarr;</div>
+            <div className="bg-gradient-to-br from-orange-400 to-orange-500 p-6 rounded-2xl border-none shadow-premium flex flex-col justify-center cursor-pointer hover:shadow-md transition-all group text-white" onClick={() => setActiveTab('payments')}>
+              <div className="text-[10px] font-bold text-orange-100 uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-white transition-colors"><CheckCircle2 className="w-4 h-4 text-orange-200" /> Total Payments Done</div>
+              <div className="text-3xl font-serif font-bold text-white">₹{validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0).toLocaleString()}</div>
+              <div className="text-[10px] text-orange-100 mt-2 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to view details &rarr;</div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-500" /> Net Gain/Loss</div>
-              <div className="text-3xl font-serif font-bold text-indigo-700">
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl border-none shadow-sm flex flex-col justify-center text-white">
+              <div className="text-[10px] font-bold text-purple-100 uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-purple-200" /> Net Gain/Loss</div>
+              <div className="text-3xl font-serif font-bold text-white">
                  {(() => {
                     const totalRev = validParticipations.reduce((acc: number, evt: any) => {
                        let rev = 0;
@@ -3621,13 +3956,13 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                     }, 0);
                     const totalPaid = validParticipations.reduce((sum: number, evt: any) => sum + (evt.amountPaid || 0), 0);
                     const net = totalRev - totalPaid;
-                    return <span className={net >= 0 ? "text-emerald-700" : "text-red-600"}>{net >= 0 ? '+' : '-'}₹{Math.abs(net).toLocaleString()}</span>;
+                    return <span className={net >= 0 ? "text-white" : "text-red-100"}>{net >= 0 ? '+' : '-'}₹{Math.abs(net).toLocaleString()}</span>;
                  })()}
               </div>
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-premium mt-6 mb-8">
+          <div className="p-6 rounded-2xl border border-paa-navy/5 shadow-premium mt-6 mb-8">
             <h4 className="text-sm font-serif font-semibold text-paa-navy mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-indigo-500" /> Event Profitability (Net Gain/Loss)</h4>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -3650,17 +3985,34 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                    if (profitData.length === 0) return <div className="flex items-center justify-center h-full text-sm text-gray-400 italic">No profitability data available.</div>;
                    
                    return (
-                     <BarChart data={profitData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                     <LineChart data={profitData} margin={{ top: 25, right: 10, left: -20, bottom: 20 }}>
                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
+                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} angle={-90} textAnchor="end" dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                        <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(value: number) => `₹${value.toLocaleString()}`} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
-                       <Bar dataKey="profit" name="Net Profit/Loss" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                         {profitData.map((entry: any, index: number) => (
-                           <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#059669' : '#dc2626'} />
-                         ))}
-                       </Bar>
-                     </BarChart>
+                       <Line type="linear" dataKey="profit" name="Net Profit/Loss" stroke="#059669" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; return <circle cx={cx} cy={cy} r={4} fill="#059669" stroke="#fff" strokeWidth={2} key={`dot-${index}`} />; }} activeDot={{ r: 6 }}>
+                         <LabelList dataKey="profit" position="top" content={(props: any) => {
+                           const { x, y, value, index } = props;
+                           const prev = profitData[index - 1]?.profit;
+                           const next = profitData[index + 1]?.profit;
+                           
+                           let yPos = y - 12;
+                           
+                           if (prev !== undefined && next !== undefined && value <= prev && value <= next) {
+                             yPos = y + 20;
+                           } else if (prev !== undefined && value < prev && next === undefined) {
+                             yPos = y + 20;
+                           }
+
+                           return (
+                             <g>
+                               <text x={x} y={yPos} fill="none" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                               <text x={x} y={yPos} fill="#059669" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                             </g>
+                           );
+                         }} />
+                       </Line>
+                     </LineChart>
                    );
                 })()}
               </ResponsiveContainer>
@@ -3668,14 +4020,19 @@ const pe = pastEvents.find(p => p.eventId === eventId);
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-             <div className="flex flex-wrap gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+             <div className="flex flex-wrap gap-2 p-1 bg-white rounded-xl border border-gray-200">
                {['ALL', 'PARTICIPATED', 'UPCOMING', 'PAST', 'INVITES', 'LEGACY ARCHIVE'].map((f) => (
-                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-white text-paa-navy shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'PARTICIPATED' ? 'Participated' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : 'Invites'))))}</button>
+                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-paa-navy text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'PARTICIPATED' ? 'Participated' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : 'Invites'))))}</button>
                ))}
              </div>
-             <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input type="text" placeholder="Search events..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm" />
+             <div className="flex items-center gap-4 w-full md:w-auto">
+                <button onClick={() => setShowProposeEventModal(true)} className="px-5 py-2.5 bg-paa-navy text-white text-sm font-bold uppercase tracking-widest rounded-xl hover:bg-paa-gold hover:text-paa-navy transition-all shadow-sm shrink-0 whitespace-nowrap">
+                   + Propose Event
+                </button>
+                <div className="relative w-full md:w-64">
+                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                   <input type="text" placeholder="Search events..." value={bpSearch} onChange={e => setBpSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm" />
+                </div>
              </div>
           </div>
           
@@ -3687,38 +4044,48 @@ const pe = pastEvents.find(p => p.eventId === eventId);
              </p>
           </div>
           
-          <div className="flex justify-between items-end mb-4">
+          <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
             <h4 className="font-bold text-paa-navy text-lg flex items-center gap-2"><BarChart3 className="w-5 h-5 text-indigo-500" /> Event Performance Breakdown</h4>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search events..."
+                    value={bpSearch}
+                    onChange={e => setBpSearch(e.target.value)}
+                    className="border border-gray-200 rounded-lg text-sm text-paa-navy p-2 pl-9 outline-none bg-white w-48"
+                  />
+                </div>
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Sort By:</span>
                 <select className="border border-gray-200 rounded-lg text-sm font-bold text-paa-navy p-2 outline-none cursor-pointer bg-white" value={bpSort} onChange={e => setBpSort(e.target.value)}>
+                    <option value="date_desc">Newest Events</option>
+                    <option value="date_asc">Oldest Events</option>
                     <option value="revenue_desc">Highest Revenue</option>
                     <option value="revenue_asc">Lowest Revenue</option>
                     <option value="sold_desc">Most Copies Sold</option>
-                    <option value="date_desc">Newest Events</option>
-                    <option value="date_asc">Oldest Events</option>
                 </select>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-premium border border-paa-navy/5 overflow-hidden mb-8">
             <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
-                  <th className="px-6 py-4 w-12 text-center"></th>
-                  <th className="px-4 py-4 w-1/4">Event Name</th>
-                  <th className="px-4 py-4 w-32">Date</th>
-                  <th className="px-4 py-4">Type</th>
-                  <th className="px-4 py-4 text-right">Books Sold</th>
-                  <th className="px-4 py-4 text-right">Revenue</th>
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                <tr>
+                  <th className="px-6 py-4 w-12 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent"></th>
+                  <th className="px-4 py-4 w-1/4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event Name</th>
+                  <th className="px-4 py-4 w-32 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date</th>
+                  <th className="px-4 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Type</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Books Sold</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                   {eventFilter === 'LEGACY ARCHIVE' ? (
-                    <th className="px-4 py-4 text-center">Authors</th>
+                    <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Authors</th>
                   ) : (
                     <>
-                      <th className="px-4 py-4 text-right">Payment</th>
-                      <th className="px-4 py-4 text-right">Gain/Loss</th>
+                      <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Payment</th>
+                      <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Gain/Loss</th>
                     </>
                   )}
-                  <th className="px-4 py-4 text-center">Status</th>
+                  <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -4002,13 +4369,13 @@ const pe = pastEvents.find(p => p.eventId === eventId);
              </div>
              <div className="overflow-x-auto">
                  <table className="w-full text-left border-collapse whitespace-nowrap">
-                    <thead>
-                      <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
-                        <th className="px-6 py-4 w-1/4">Event Name</th>
-                        <th className="px-4 py-4 w-48">Date & Location</th>
-                        <th className="px-4 py-4">Transaction ID</th>
-                        <th className="px-4 py-4 text-right">Amount Paid</th>
-                        <th className="px-4 py-4 text-center">Receipt</th>
+                    <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                      <tr>
+                        <th className="px-6 py-4 w-1/4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event Name</th>
+                        <th className="px-4 py-4 w-48 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date & Location</th>
+                        <th className="px-4 py-4 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Transaction ID</th>
+                        <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Amount Paid</th>
+                        <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Receipt</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -4045,6 +4412,59 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                     </tbody>
                  </table>
              </div>
+          </div>
+        </div>
+      )}
+
+      {showProposeEventModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in-up">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="text-xl font-bold font-serif text-paa-navy">Propose New Event</h3>
+              <button onClick={() => setShowProposeEventModal(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1 bg-white rounded-full shadow-sm">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleProposeEvent} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <label className="dash-label">Event Name *</label>
+                   <input type="text" required value={proposeEventForm.name} onChange={e => setProposeEventForm({...proposeEventForm, name: e.target.value})} className="dash-input w-full" placeholder="e.g., Spring Book Fair" />
+                 </div>
+                 <div>
+                   <label className="dash-label">Event Type *</label>
+                   <select required value={proposeEventForm.eventType} onChange={e => setProposeEventForm({...proposeEventForm, eventType: e.target.value})} className="dash-input w-full bg-white">
+                      <option value="Book Fair">Book Fair</option>
+                      <option value="Corporate">Corporate</option>
+                      <option value="Society">Society</option>
+                      <option value="School">School</option>
+                      <option value="Custom">Custom</option>
+                   </select>
+                 </div>
+                 <div>
+                   <label className="dash-label">Date *</label>
+                   <input type="date" required value={proposeEventForm.date} onChange={e => setProposeEventForm({...proposeEventForm, date: e.target.value})} className="dash-input w-full" />
+                 </div>
+                 <div>
+                   <label className="dash-label">Duration *</label>
+                   <input type="text" required value={proposeEventForm.duration} onChange={e => setProposeEventForm({...proposeEventForm, duration: e.target.value})} className="dash-input w-full" placeholder="e.g., 3 Days" />
+                 </div>
+                 <div className="md:col-span-2">
+                   <label className="dash-label">Location/City *</label>
+                   <input type="text" required value={proposeEventForm.location} onChange={e => setProposeEventForm({...proposeEventForm, location: e.target.value})} className="dash-input w-full" placeholder="e.g., Phoenix Mall, Pune" />
+                 </div>
+                 <div className="md:col-span-2">
+                   <label className="dash-label">Description / Purpose</label>
+                   <textarea rows={3} value={proposeEventForm.description} onChange={e => setProposeEventForm({...proposeEventForm, description: e.target.value})} className="dash-input w-full" placeholder="Why are you proposing this event? Any specific details?"></textarea>
+                 </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                <button type="button" onClick={() => setShowProposeEventModal(false)} className="px-5 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 bg-gray-100 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" disabled={isProposingEvent} className="px-6 py-2 bg-paa-navy text-white text-sm font-bold uppercase tracking-widest rounded-xl hover:bg-paa-gold hover:text-paa-navy transition-all shadow-sm disabled:opacity-50">
+                  {isProposingEvent ? 'Proposing...' : 'Submit Proposal'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -4213,15 +4633,40 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                     const colors = ['#1e3a8a', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#c026d3', '#ea580c', '#65a30d', '#4f46e5'];
                     
                     return (
-                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <LineChart data={chartData} margin={{ top: 25, right: 10, left: -20, bottom: 20 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} angle={-90} textAnchor="end" dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                           <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }} />
-                          {bookTitles.map((title, idx) => (
-                             <Bar key={idx} dataKey={title} name={title} fill={colors[idx % colors.length]} radius={[4, 4, 0, 0]} maxBarSize={30} />
-                          ))}
-                        </BarChart>
+                          {bookTitles.map((title, idx) => {
+                            const color = colors[idx % colors.length];
+                            return (
+                              <Line key={idx} type="linear" dataKey={title} name={title} stroke={color} strokeWidth={3} dot={(props: any) => { const { cx, cy, index, payload } = props; if (payload[title] === undefined) return null; return <circle cx={cx} cy={cy} r={4} fill={color} stroke="#fff" strokeWidth={2} key={`dot-${title}-${index}`} />; }} activeDot={{ r: 6 }}>
+                                <LabelList dataKey={title} position="top" content={(props: any) => {
+                                  const { x, y, value, index } = props;
+                                  if (value === undefined || value === null) return null;
+                                  
+                                  const prev = chartData[index - 1]?.[title];
+                                  const next = chartData[index + 1]?.[title];
+                                  let yPos = y - 12;
+                                  
+                                  if (prev !== undefined && next !== undefined && value <= prev && value <= next) {
+                                    yPos = y + 20;
+                                  } else if (prev !== undefined && value < prev && next === undefined) {
+                                    yPos = y + 20;
+                                  }
+                                  
+                                  return (
+                                    <g>
+                                      <text x={x} y={yPos} fill="none" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                                      <text x={x} y={yPos} fill={color} fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                                    </g>
+                                  );
+                                }} />
+                              </Line>
+                            );
+                          })}
+                        </LineChart>
                     );
                 })()}
               </ResponsiveContainer>
@@ -4243,13 +4688,13 @@ const pe = pastEvents.find(p => p.eventId === eventId);
           </div>
           <div className="bg-white rounded-xl shadow-premium border border-paa-navy/5 overflow-hidden mb-8">
             <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr className="bg-[#f0f4f8] text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200">
-                  <th className="px-6 py-4 w-1/3">Book Title</th>
-                  <th className="px-4 py-4 text-right">Copies Sent</th>
-                  <th className="px-4 py-4 text-right">Copies Sold</th>
-                  <th className="px-4 py-4 text-right">Sell-Through Rate</th>
-                  <th className="px-4 py-4 text-right">Revenue</th>
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                <tr>
+                  <th className="px-6 py-4 w-1/3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Copies Sent</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Copies Sold</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Sell-Through Rate</th>
+                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -4290,13 +4735,13 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                         <BookOpen className="w-3 h-3" /> Event Breakdown for {bs.title}
                                     </div>
                                     <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-200">
-                                                <th className="pb-2 font-bold w-1/2">Event Name</th>
-                                                <th className="pb-2 font-bold text-right">Date</th>
-                                                <th className="pb-2 font-bold text-right">Sent</th>
-                                                <th className="pb-2 font-bold text-right">Sold</th>
-                                                <th className="pb-2 font-bold text-right">Revenue</th>
+                                        <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                                            <tr>
+                                                <th className="pb-2 w-1/2 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event Name</th>
+                                                <th className="pb-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date</th>
+                                                <th className="pb-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Sent</th>
+                                                <th className="pb-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Sold</th>
+                                                <th className="pb-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -4408,11 +4853,11 @@ const pe = pastEvents.find(p => p.eventId === eventId);
 }
 
 function AuthorSalesReport({ data }: { data: any }) {
-  const [reportPeriod, setReportPeriod] = useState('today');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-  const [customMonth, setCustomMonth] = useState(new Date().getMonth().toString());
-  const [customYear, setCustomYear] = useState(new Date().getFullYear().toString());
+  const [filterType, setFilterType] = useState('monthly'); // today, weekly, monthly, this_month, ytd, select_month, lifetime, custom
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedMonthValue, setSelectedMonthValue] = useState(new Date().toISOString().slice(0, 7));
+  const [tableChannelFilter, setTableChannelFilter] = useState('All');
 
   const getStartOfWeek = (d: Date) => {
     const date = new Date(d);
@@ -4423,94 +4868,149 @@ function AuthorSalesReport({ data }: { data: any }) {
     return date;
   };
 
-  const filterByDate = (date: Date) => {
-    const now = new Date();
-    if (reportPeriod === 'today') return date.toDateString() === now.toDateString();
-    if (reportPeriod === 'week') {
-      const startOfWeek = getStartOfWeek(now);
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-      return date >= startOfWeek && date <= endOfWeek;
+  useEffect(() => {
+    if (filterType === 'custom') return;
+    const today = new Date();
+    let end = new Date(today);
+    let start = new Date(today);
+
+    if (filterType === 'today') {
+      start.setHours(0,0,0,0);
+    } else if (filterType === 'weekly') {
+      start.setDate(today.getDate() - 7);
+    } else if (filterType === 'monthly') {
+      start.setDate(today.getDate() - 30);
+    } else if (filterType === 'this_month') {
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+    } else if (filterType === 'ytd') {
+      start = new Date(today.getFullYear(), 0, 1);
+    } else if (filterType === 'select_month') {
+      if (selectedMonthValue) {
+        const [yyyy, mm] = selectedMonthValue.split('-');
+        start = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+        end = new Date(parseInt(yyyy), parseInt(mm), 0);
+      } else {
+        return;
+      }
+    } else if (filterType === 'lifetime') {
+      start = new Date('2000-01-01');
     }
-    if (reportPeriod === 'month') {
-      return date.getMonth() === parseInt(customMonth) && date.getFullYear() === parseInt(customYear);
-    }
-    if (reportPeriod === 'custom') {
-      if (!customStartDate || !customEndDate) return true;
-      const s = new Date(customStartDate);
-      s.setHours(0, 0, 0, 0);
-      const e = new Date(customEndDate);
-      e.setHours(23, 59, 59, 999);
-      return date >= s && date <= e;
-    }
-    return true; // lifetime
+
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  }, [filterType, selectedMonthValue]);
+
+  const startLimit = startDate ? new Date(startDate) : new Date('2000-01-01');
+  startLimit.setHours(0, 0, 0, 0);
+  const endLimit = endDate ? new Date(endDate) : new Date();
+  endLimit.setHours(23, 59, 59, 999);
+
+  const webOrders = (data.authorOrders || []).filter((o: any) => {
+    const orderDate = new Date(o.createdAt || o.date);
+    return o.paymentVerified && orderDate >= startLimit && orderDate <= endLimit;
+  });
+
+  const posOrders = (data.posOrders || []).filter((o: any) => {
+    const orderDate = new Date(o.createdAt);
+    return o.paymentStatus === 'CONFIRMED' && orderDate >= startLimit && orderDate <= endLimit;
+  });
+
+  let totalRevenue = 0;
+  let totalBooksSold = 0;
+  
+  const chartDataMap: Record<string, { date: string, revenue: number, books: number }> = {};
+  const channelDataMap = { Web: 0, Events: 0, 'Book Fairs': 0 };
+  const tableData: any[] = [];
+  
+  const kpiSplits = {
+    web: { revenue: 0, books: 0, orders: webOrders.length },
+    events: { revenue: 0, books: 0, orders: 0 },
+    bookFairs: { revenue: 0, books: 0, orders: 0 }
   };
 
-  const webOrders = (data.authorOrders || []).filter((o: any) => o.paymentVerified && filterByDate(new Date(o.createdAt)));
-  const posOrders = (data.posOrders || []).filter((o: any) => o.paymentStatus === 'CONFIRMED' && filterByDate(new Date(o.createdAt)));
+  const processItem = (date: Date, channel: string, eventName: string, title: string, qty: number, price: number, orderId: string, status: string, details: any) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const rev = qty * price;
+    
+    totalRevenue += rev;
+    totalBooksSold += qty;
 
-  // Daily Aggregation
-  const salesByDate: Record<string, { date: string, webSales: number, posSales: number, totalRevenue: number, totalBooks: number }> = {};
+    if (!chartDataMap[dateStr]) chartDataMap[dateStr] = { date: dateStr, revenue: 0, books: 0 };
+    chartDataMap[dateStr].revenue += rev;
+    chartDataMap[dateStr].books += qty;
 
-  const now = new Date();
-  let rangeStart: Date | null = null;
-  let rangeEnd: Date | null = null;
-
-  if (reportPeriod === 'today') {
-    rangeStart = new Date(now);
-    rangeEnd = new Date(now);
-  } else if (reportPeriod === 'week') {
-    rangeStart = getStartOfWeek(now);
-    rangeEnd = new Date(rangeStart);
-    rangeEnd.setDate(rangeStart.getDate() + 6);
-  } else if (reportPeriod === 'month') {
-    rangeStart = new Date(parseInt(customYear), parseInt(customMonth), 1);
-    rangeEnd = new Date(parseInt(customYear), parseInt(customMonth) + 1, 0);
-  } else if (reportPeriod === 'custom' && customStartDate && customEndDate) {
-    rangeStart = new Date(customStartDate);
-    rangeEnd = new Date(customEndDate);
-  }
-
-  if (rangeStart && rangeEnd) {
-    const curr = new Date(rangeStart);
-    curr.setHours(0, 0, 0, 0);
-    const end = new Date(rangeEnd);
-    end.setHours(23, 59, 59, 999);
-    while (curr <= end) {
-      const d = curr.toLocaleDateString('en-GB');
-      salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
-      curr.setDate(curr.getDate() + 1);
-    }
-  }
+    tableData.push({
+      date: dateStr,
+      orderId,
+      channel,
+      event: eventName,
+      title,
+      qty,
+      revenue: rev,
+      status,
+      customer: details.customer,
+      items: details.items
+    });
+  };
 
   webOrders.forEach((o: any) => {
-    const d = new Date(o.createdAt).toLocaleDateString('en-GB');
-    if (!salesByDate[d]) salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
-    salesByDate[d].webSales += o.amount;
-    salesByDate[d].totalRevenue += o.amount;
-    salesByDate[d].totalBooks += o.quantity;
+    const qty = o.quantity || 1;
+    const price = o.mrp || 0;
+    const rev = qty * price;
+    
+    processItem(
+      new Date(o.createdAt || o.date),
+      'Web Orders',
+      '-',
+      o.bookTitle || o.title || 'Unknown Title',
+      qty,
+      price,
+      `WEB-${o.orderId}`,
+      o.status || 'Paid',
+      {
+        customer: o.customerName || 'N/A',
+        items: `${o.bookTitle || o.title || 'Unknown'} (x${qty})`
+      }
+    );
+    
+    channelDataMap.Web += rev;
+    kpiSplits.web.revenue += rev;
+    kpiSplits.web.books += qty;
   });
 
-  posOrders.forEach((o: any) => {
-    const d = new Date(o.createdAt).toLocaleDateString('en-GB');
-    if (!salesByDate[d]) salesByDate[d] = { date: d, webSales: 0, posSales: 0, totalRevenue: 0, totalBooks: 0 };
-    salesByDate[d].posSales += o.totalAmount;
-    salesByDate[d].totalRevenue += o.totalAmount;
-
-    const qty = o.items.reduce((acc: number, item: any) => acc + item.quantity, 0);
-    salesByDate[d].totalBooks += qty;
-  }); const chartData = Object.values(salesByDate).sort((a, b) => {
-    const [d1, m1, y1] = a.date.split('/');
-    const [d2, m2, y2] = b.date.split('/');
-    return new Date(`${y1}-${m1}-${d1}`).getTime() - new Date(`${y2}-${m2}-${d2}`).getTime();
+  posOrders.forEach((po: any) => {
+    const isBookFair = po.event?.eventType === 'Book Fair' || po.event?.name?.toLowerCase().includes('fair');
+    const channelName = isBookFair ? 'Book Fairs' : 'Events';
+    const kpiKey = isBookFair ? 'bookFairs' : 'events';
+    kpiSplits[kpiKey].orders += 1;
+    
+    po.items.forEach((i: any) => {
+      const qty = i.quantity || 0;
+      const price = i.price || 0;
+      const rev = qty * price;
+      
+      processItem(
+        new Date(po.createdAt),
+        channelName,
+        po.event?.name || 'POS Order',
+        i.book?.title || 'Unknown Title',
+        qty,
+        price,
+        po.event?.name || `POS-${po.id}`,
+        po.paymentMethod || 'Paid',
+        {
+          customer: 'Walk-in',
+          items: `${i.book?.title || 'Unknown'} (x${qty})`
+        }
+      );
+      
+      channelDataMap[channelName] += rev;
+      kpiSplits[kpiKey].revenue += rev;
+      kpiSplits[kpiKey].books += qty;
+    });
   });
 
-  const totalWebRevenue = webOrders.reduce((acc: number, o: any) => acc + o.amount, 0);
-  const totalPosRevenue = posOrders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
-  const totalBooksSold = chartData.reduce((acc, curr) => acc + curr.totalBooks, 0);
-  const totalRevenue = totalWebRevenue + totalPosRevenue;
-  const eventsParticipated = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered' || inv.optInStatus === 'Approved').length;
+  const chartData = Object.values(chartDataMap).sort((a, b) => a.date.localeCompare(b.date));
 
   const totalEventFees = (data.eventInvites || []).filter((inv: any) => inv.optInStatus === 'Registered').reduce((acc: number, inv: any) => {
     const evt = inv.event;
@@ -4526,179 +5026,276 @@ function AuthorSalesReport({ data }: { data: any }) {
   const platformFeePaid = 1000;
   const totalFeesPaid = platformFeePaid + totalEventFees;
 
-  const allTransactions = [
-    ...webOrders.map((o: any) => ({
-      rawDate: new Date(o.createdAt).getTime(),
-      type: 'Web',
-      date: new Date(o.createdAt).toLocaleString('en-GB'),
-      id: `WEB-${o.orderId}`,
-      customer: o.customerName || 'N/A',
-      email: o.customerEmail || 'N/A',
-      phone: o.customerPhone || 'N/A',
-      address: (o.address || 'N/A').replace(/,/g, ' '),
-      items: `${o.bookTitle} (x${o.quantity})`,
-      quantity: o.quantity,
-      amount: o.amount,
-      status: o.status
-    })),
-    ...posOrders.map((o: any) => ({
-      rawDate: new Date(o.createdAt).getTime(),
-      type: 'POS',
-      date: new Date(o.createdAt).toLocaleString('en-GB'),
-      id: `POS-${o.id}`,
-      customer: 'Walk-in',
-      email: 'N/A',
-      phone: 'N/A',
-      address: 'N/A',
-      items: o.items.map((i: any) => `${i.book.title} (x${i.quantity})`).join('; '),
-      quantity: o.items.reduce((acc: number, i: any) => acc + i.quantity, 0),
-      amount: o.totalAmount,
-      status: o.paymentMethod
-    }))
-  ].sort((a, b) => b.rawDate - a.rawDate);
-
   const exportCSV = () => {
-    let csv = 'Transaction Date,Order Type,Order ID,Customer Name,Email,Phone,Delivery Address,Books Included,Total Quantity,Total Amount,Status/Payment Method\n';
-    allTransactions.forEach(tx => {
-      csv += `"${tx.date}","${tx.type}","${tx.id}","${tx.customer}","${tx.email}","${tx.phone}","${tx.address}","${tx.items}","${tx.quantity}","₹${tx.amount}","${tx.status}"\n`;
+    let csv = 'Transaction Date,Order Type,Order ID,Customer Name,Books Included,Total Quantity,Total Amount,Status/Payment Method\n';
+    tableData.forEach(tx => {
+      csv += `"${tx.date}","${tx.channel}","${tx.orderId}","${tx.customer}","${tx.items}",${tx.qty},"₹${tx.revenue}","${tx.status}"\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `detailed_sales_report_${reportPeriod}.csv`;
+    a.download = `detailed_sales_report_${filterType}_${startDate}_to_${endDate}.csv`;
     a.click();
   };
 
   return (
-    <div className="animate-fade-in-up">
-      <div className="flex justify-between items-center mb-6">
+    <div className="animate-fade-in-up pb-20">
+      
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
         <div>
-          <h2 className="text-2xl font-serif text-paa-navy font-bold tracking-tight">Sales & Revenue Report</h2>
-          <p className="text-xs text-paa-gray-text font-bold uppercase tracking-widest mt-1">Track your earnings across platforms</p>
+          <h2 className="text-3xl font-serif text-paa-navy font-bold tracking-tight mb-2">Sales Intelligence</h2>
+          <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Real-time revenue tracking across all channels</p>
         </div>
-        <button onClick={exportCSV} className="dash-btn dash-btn-primary flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
-          Export CSV
-        </button>
-      </div>
-
-      <div className="flex items-center gap-3 mb-6 bg-gray-50 p-2 rounded-xl border border-gray-200 inline-flex flex-wrap">
-        {['today', 'week', 'month', 'lifetime', 'custom'].map(p => (
-          <button key={p} onClick={() => setReportPeriod(p)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${reportPeriod === p ? 'bg-white shadow-sm text-paa-navy border border-gray-200' : 'text-gray-500 hover:text-paa-navy'}`}>
-            {p === 'today' ? 'Today' : p === 'week' ? 'Week' : p === 'month' ? 'Month' : p === 'lifetime' ? 'Lifetime' : 'Custom'}
-          </button>
-        ))}
-
-        {reportPeriod === 'custom' && (
-          <div className="flex items-center gap-2 px-2 border-l border-gray-300 ml-2">
-            <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
-            <span className="text-gray-400">to</span>
-            <input type="date" className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} />
-          </div>
-        )}
-
-        {reportPeriod === 'month' && (
-          <div className="flex items-center gap-2 px-2 border-l border-gray-300 ml-2">
-            <select className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customMonth} onChange={e => setCustomMonth(e.target.value)}>
-              <option value="0">January</option>
-              <option value="1">February</option>
-              <option value="2">March</option>
-              <option value="3">April</option>
-              <option value="4">May</option>
-              <option value="5">June</option>
-              <option value="6">July</option>
-              <option value="7">August</option>
-              <option value="8">September</option>
-              <option value="9">October</option>
-              <option value="10">November</option>
-              <option value="11">December</option>
-            </select>
-            <select className="border-none bg-white px-3 py-1.5 rounded text-xs shadow-sm" value={customYear} onChange={e => setCustomYear(e.target.value)}>
-              <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-              <option value={new Date().getFullYear() - 1}>{new Date().getFullYear() - 1}</option>
-              <option value={new Date().getFullYear() - 2}>{new Date().getFullYear() - 2}</option>
-            </select>
-          </div>
-        )}</div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Revenue</p>
-          <div className="text-2xl font-bold text-paa-navy">₹{totalRevenue}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col justify-between relative group">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Total Fees Paid</p>
-          <div className="text-2xl font-bold text-red-600">₹{totalFeesPaid}</div>
-          <div className="hidden group-hover:block absolute bottom-full left-0 mb-2 w-max bg-gray-900 text-white text-xs p-2 rounded shadow-lg z-50">
-            Platform Fee: ₹{platformFeePaid}<br />
-            Event Fees: ₹{totalEventFees}
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Web Sales</p>
-          <div className="text-2xl font-bold text-blue-600">₹{totalWebRevenue}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">POS Sales</p>
-          <div className="text-2xl font-bold text-purple-600">₹{totalPosRevenue}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Books Sold</p>
-          <div className="text-2xl font-bold text-paa-navy">{totalBooksSold}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1">Events Attended</p>
-          <div className="text-2xl font-bold text-emerald-600">{eventsParticipated}</div>
-        </div>
-      </div>
-
-      <div className="bg-white border rounded-xl shadow-sm p-6 mb-8">
-        <h3 className="font-serif font-bold text-lg mb-6">Revenue Trend</h3>
-        <div className="h-[300px] w-full">
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
-                <Tooltip cursor={{ fill: '#f8f9fa' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                <Bar dataKey="webSales" name="Web Sales" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="posSales" name="POS Sales" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex items-center justify-center text-gray-400 text-sm">No sales data for this period.</div>
+        
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <select 
+            value={filterType} 
+            onChange={(e) => setFilterType(e.target.value)}
+            className="text-xs font-bold tracking-widest uppercase py-2.5 px-4 rounded-xl border border-gray-200 bg-gray-50 text-paa-navy outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-full sm:w-auto cursor-pointer"
+          >
+            <option value="today">Today</option>
+            <option value="weekly">Weekly (Last 7 Days)</option>
+            <option value="monthly">Monthly (Last 30 Days)</option>
+            <option value="this_month">This Month</option>
+            <option value="ytd">Year to Date (YTD)</option>
+            <option value="select_month">Specific Month</option>
+            <option value="lifetime">Lifetime (All Time)</option>
+            <option value="custom">Custom Date Range</option>
+          </select>
+          
+          {filterType === 'select_month' && (
+            <div className="flex items-center gap-2 animate-fade-in w-full sm:w-auto">
+              <input 
+                type="month" 
+                value={selectedMonthValue}
+                onChange={(e) => setSelectedMonthValue(e.target.value)}
+                className="text-xs font-bold tracking-widest uppercase py-2.5 px-4 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500 transition-all cursor-pointer w-full sm:w-auto"
+              />
+            </div>
           )}
+          
+          {filterType === 'custom' && (
+            <div className="flex items-center gap-2 animate-fade-in w-full sm:w-auto">
+              <input 
+                type="date" 
+                value={startDate} 
+                onChange={(e) => setStartDate(e.target.value)}
+                className="text-xs font-bold tracking-widest uppercase py-2 px-3 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500"
+              />
+              <span className="text-gray-400 font-medium text-sm">to</span>
+              <input 
+                type="date" 
+                value={endDate} 
+                onChange={(e) => setEndDate(e.target.value)}
+                className="text-xs font-bold tracking-widest uppercase py-2 px-3 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500"
+              />
+            </div>
+          )}
+
+          <button onClick={exportCSV} className="dash-btn-primary flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-0.5 transition-all w-full sm:w-auto cursor-pointer">
+            <Download size={14} /> Export CSV
+          </button>
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b">
-          <h3 className="font-serif font-bold text-lg">Daily Breakdown</h3>
+      {/* METRICS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        {/* Card 1: Total Revenue */}
+        <div className="dash-kpi-card emerald flex flex-col justify-between p-5 bg-white border border-paa-navy/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div>
+            <div className="flex items-start justify-between mb-4 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <DollarSign className="w-5 h-5" />
+              </div>
+            </div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1 relative z-10">Total Revenue</p>
+            <h3 className="text-3xl font-black text-paa-navy tracking-tight relative z-10">₹{totalRevenue.toLocaleString('en-IN')}</h3>
+          </div>
+          <div className="mt-4 pt-3 border-t border-emerald-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-emerald-800 relative z-10">
+            <span>Web: ₹{kpiSplits.web.revenue.toLocaleString('en-IN')}</span>
+            <span>Events: ₹{kpiSplits.events.revenue.toLocaleString('en-IN')}</span>
+            <span>Fairs: ₹{kpiSplits.bookFairs.revenue.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+
+        {/* Card 2: Books Sold */}
+        <div className="dash-kpi-card blue flex flex-col justify-between p-5 bg-white border border-paa-navy/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div>
+            <div className="flex items-start justify-between mb-4 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <BookOpen className="w-5 h-5" />
+              </div>
+            </div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1 relative z-10">Total Books Sold</p>
+            <h3 className="text-3xl font-black text-paa-navy tracking-tight relative z-10">{totalBooksSold} <span className="text-xs font-medium text-gray-400 lowercase tracking-normal">units</span></h3>
+          </div>
+          <div className="mt-4 pt-3 border-t border-blue-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-blue-800 relative z-10">
+            <span>Web: {kpiSplits.web.books}</span>
+            <span>Events: {kpiSplits.events.books}</span>
+            <span>Fairs: {kpiSplits.bookFairs.books}</span>
+          </div>
+        </div>
+
+        {/* Card 3: Net Earnings */}
+        <div className="dash-kpi-card amber flex flex-col justify-between p-5 bg-white border border-paa-navy/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div>
+            <div className="flex items-start justify-between mb-4 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+            </div>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1 relative z-10">Net Earnings</p>
+            <h3 className={`text-3xl font-black tracking-tight relative z-10 ${(totalRevenue - totalFeesPaid) < 0 ? 'text-red-600' : 'text-paa-navy'}`}>
+              ₹{(totalRevenue - totalFeesPaid).toLocaleString('en-IN')}
+            </h3>
+          </div>
+          <div className="mt-4 pt-3 border-t border-amber-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-amber-800 relative z-10">
+            <span>Gross: ₹{totalRevenue.toLocaleString('en-IN')}</span>
+            <span>Fees: -₹{totalFeesPaid.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Visualizations */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        
+        {/* AreaChart: Revenue Trajectory */}
+        <div className="lg:col-span-2 border border-paa-navy/5 p-5 md:p-6 rounded-2xl bg-white shadow-sm flex flex-col justify-between">
+          <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-6">Revenue Trajectory</h4>
+          <div className="h-[250px] w-full">
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorReportRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="date" fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickMargin={10} minTickGap={20} />
+                  <YAxis fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val) => `₹${val}`} width={60} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                    itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
+                    labelStyle={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
+                    formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
+                  />
+                  <Area type="linear" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorReportRev)" dot={(props: any) => { const { cx, cy, index } = props; const total = chartData.length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#4f46e5" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }}>
+                    <LabelList dataKey="revenue" position="top" content={(props: any) => {
+                      const { x, y, value, index } = props;
+                      const total = chartData.length;
+                      if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) {
+                        return <text x={x} y={y - 10} fill="#4f46e5" fontSize="10px" fontWeight="bold" textAnchor="middle">₹{value}</text>;
+                      }
+                      return null;
+                    }} />
+                  </Area>
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400 text-sm italic">No sales data for this period.</div>
+            )}
+          </div>
+        </div>
+
+        {/* PieChart: Sales by Channel */}
+        <div className="border border-paa-navy/5 p-5 md:p-6 rounded-2xl bg-white shadow-sm flex flex-col justify-between">
+          <div>
+            <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2">Sales by Channel</h4>
+            <p className="text-[10px] text-gray-400 mb-6 font-medium">Split of total revenue earned per channel</p>
+          </div>
+          <div className="h-[200px] w-full">
+            {totalRevenue === 0 ? (
+              <div className="h-full flex items-center justify-center text-gray-400 text-xs italic">No channel data available.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Web Orders', value: channelDataMap.Web },
+                      { name: 'Events', value: channelDataMap.Events },
+                      { name: 'Book Fairs', value: channelDataMap['Book Fairs'] }
+                    ].filter(item => item.value > 0)}
+                    cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value"
+                  >
+                    {[
+                      { name: 'Web Orders', color: '#3b82f6' },
+                      { name: 'Events', color: '#f59e0b' },
+                      { name: 'Book Fairs', color: '#10b981' }
+                    ].filter(c => channelDataMap[c.name === 'Web Orders' ? 'Web' : c.name === 'Events' ? 'Events' : 'Book Fairs'] > 0).map((c, index) => (
+                      <Cell key={`cell-${index}`} fill={c.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="flex justify-center gap-4 mt-4 flex-wrap">
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Web</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Events</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Fairs</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Row 3: Granular Data Table */}
+      <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden relative min-h-[200px]">
+        <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/50">
+          <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest">Raw Sales Data</h4>
+          <div className="flex items-center gap-2 flex-wrap">
+            {['All', 'Web Orders', 'Events', 'Book Fairs'].map(ch => (
+              <button
+                key={ch}
+                onClick={() => setTableChannelFilter(ch)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer ${tableChannelFilter === ch ? 'bg-paa-navy text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}
+              >
+                {ch}
+              </button>
+            ))}
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm ml-2 md:ml-4">
+              {(tableData.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter)).length} Records
+            </span>
+          </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="dash-table">
-            <thead>
+          <table className="dash-table w-full text-left table-fixed">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th>Date</th>
-                <th>Web Sales</th>
-                <th>POS Sales</th>
-                <th>Total Revenue</th>
-                <th>Books Sold</th>
+                <th className="w-[15%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date</th>
+                <th className="w-[18%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Order ID</th>
+                <th className="w-[15%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Channel</th>
+                <th className="w-[30%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                <th className="w-[10%] px-5 py-3 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty</th>
+                <th className="w-[12%] px-5 py-3 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Rev (₹)</th>
               </tr>
             </thead>
-            <tbody>
-              {chartData.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-6 text-gray-400">No data available</td></tr>
+            <tbody className="divide-y divide-gray-50 bg-white">
+              {(tableData.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter)).length === 0 && (
+                <tr><td colSpan={6} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period for the selected filter.</td></tr>
               )}
-              {chartData.reverse().map((row, i) => (
-                <tr key={i}>
-                  <td className="font-semibold">{row.date}</td>
-                  <td className="text-blue-600 font-semibold">₹{row.webSales}</td>
-                  <td className="text-purple-600 font-semibold">₹{row.posSales}</td>
-                  <td className="font-bold text-paa-navy">₹{row.totalRevenue}</td>
-                  <td>{row.totalBooks}</td>
+              {(tableData.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter)).map((row: any, idx: number) => (
+                <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
+                  <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
+                  <td className="px-5 py-3 text-xs">
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-50 text-blue-700 border border-blue-100' : row.channel === 'Events' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                      {row.channel === 'Web Orders' ? 'Web' : row.channel === 'Events' ? 'Events' : 'Fairs'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 pr-2 text-xs text-paa-navy truncate" title={row.title}>{row.title}</td>
+                  <td className="px-5 py-3 text-xs font-bold text-paa-navy text-right">{row.qty}</td>
+                  <td className="px-5 py-3 text-xs font-black text-indigo-600 text-right">₹{row.revenue.toLocaleString('en-IN')}</td>
                 </tr>
               ))}
             </tbody>
@@ -4706,47 +5303,9 @@ function AuthorSalesReport({ data }: { data: any }) {
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b">
-          <h3 className="font-serif font-bold text-lg">Detailed Transactions</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Books Included</th>
-                <th>Amount</th>
-                <th>Status / Mode</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allTransactions.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-6 text-gray-400">No transactions found</td></tr>
-              )}
-              {allTransactions.map((tx, i) => (
-                <tr key={i}>
-                  <td className="text-xs text-gray-500 whitespace-nowrap">{tx.date}</td>
-                  <td><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${tx.type === 'Web' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>{tx.type}</span></td>
-                  <td className="font-mono text-xs">{tx.id}</td>
-                  <td className="font-semibold text-paa-navy">{tx.customer}</td>
-                  <td className="text-sm max-w-xs truncate" title={tx.items}>{tx.items}</td>
-                  <td className="font-bold text-emerald-600 whitespace-nowrap">₹{tx.amount}</td>
-                  <td><span className="text-xs text-gray-500 font-bold uppercase tracking-widest bg-gray-100 px-2 py-1 rounded">{tx.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
-
-
 
 export function AuthorProfile({ data, onRefresh, buttonStates, setButtonStates }: { data: any, onRefresh: () => void, buttonStates: any, setButtonStates: any }) {
   const authorProfile = data.authorProfile;
@@ -5078,7 +5637,8 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
   const fetchGalleries = async () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/gallery/events`);
-      setGalleries(res.data);
+      const now = new Date();
+      setGalleries(res.data.filter((e: any) => new Date(e.date) <= now));
     } catch (err) {
       console.error(err);
     } finally {
@@ -5123,8 +5683,10 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
       // Re-fetch galleries and update selectedGalleryEvent from fresh data
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/gallery/events`);
-        setGalleries(res.data);
-        const updatedEvent = res.data.find((ge: any) => ge.id === selectedGalleryEvent.id);
+        const now = new Date();
+        const filteredData = res.data.filter((e: any) => new Date(e.date) <= now);
+        setGalleries(filteredData);
+        const updatedEvent = filteredData.find((ge: any) => ge.id === selectedGalleryEvent.id);
         if (updatedEvent) {
           setSelectedGalleryEvent(updatedEvent);
         }
@@ -5432,57 +5994,133 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
 
 
 
-function AuthorReviews({ books }: { books: any[] }) {
+function AuthorReviews({ books, orders }: { books: any[], orders: any[] }) {
+  const [view, setView] = useState<'book' | 'delivery'>('book');
   const booksWithReviews = books.filter(b => b.reviews && b.reviews.length > 0);
+  const deliveryReviews = orders.filter(o => o.feedbackRating != null);
 
-  if (booksWithReviews.length === 0) {
+  if (booksWithReviews.length === 0 && deliveryReviews.length === 0) {
     return (
       <div className="text-center py-20 bg-white rounded-3xl-2xl border border-gray-100 border-dashed">
         <Star className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <h3 className="text-lg font-serif text-paa-navy">No reviews yet</h3>
-        <p className="text-gray-500 text-sm mt-1">Your books haven't received any customer reviews yet.</p>
+        <p className="text-gray-500 text-sm mt-1">Your books haven't received any customer reviews or delivery feedback yet.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-8 animate-fade-in-up">
-      <div className="mb-6">
+      <div className="mb-2">
         <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Customer Reviews & Ratings</h2>
-        <p className="text-sm text-gray-500 mt-1">See what readers are saying about your published works.</p>
+        <p className="text-sm text-gray-500 mt-1">See what readers are saying about your published works and delivery experience.</p>
       </div>
 
-      {booksWithReviews.map(book => {
-        const avgRating = book.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / book.reviews.length;
-        return (
-          <div key={book.id} className="bg-white rounded-3xl-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-bold text-paa-navy text-lg">{book.title}</h3>
-              <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span className="font-bold text-paa-navy">{avgRating.toFixed(1)}</span>
-                <span className="text-xs text-gray-500">({book.reviews.length} reviews)</span>
-              </div>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {book.reviews.map((r: any) => (
-                <div key={r.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-bold text-sm text-paa-navy">{r.reviewerName}</div>
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Star key={star} className={`w-3 h-3 ${star <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
-                      ))}
-                    </div>
+      <div className="flex gap-2">
+        <button onClick={() => setView('book')} className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors ${view === 'book' ? 'bg-paa-navy text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Book Reviews ({booksWithReviews.reduce((acc, b) => acc + b.reviews.length, 0)})
+        </button>
+        <button onClick={() => setView('delivery')} className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors ${view === 'delivery' ? 'bg-paa-navy text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Delivery Feedback ({deliveryReviews.length})
+        </button>
+      </div>
+
+      {view === 'book' ? (
+        booksWithReviews.length > 0 ? (
+          booksWithReviews.map(book => {
+            const avgRating = book.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / book.reviews.length;
+            return (
+              <div key={book.id} className="bg-white rounded-3xl-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <h3 className="font-bold text-paa-navy text-lg">{book.title}</h3>
+                  <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    <span className="font-bold text-paa-navy">{avgRating.toFixed(1)}</span>
+                    <span className="text-xs text-gray-500">({book.reviews.length} reviews)</span>
                   </div>
-                  <p className="text-sm text-gray-600 italic">"{r.comment}"</p>
-                  <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest">{new Date(r.createdAt).toLocaleDateString()}</div>
                 </div>
-              ))}
-            </div>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {book.reviews.map((r: any) => (
+                    <div key={r.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="font-bold text-sm text-paa-navy">{r.reviewerName}</div>
+                        <div className="flex flex-col gap-1 items-end">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-paa-gray-text uppercase">Overall</span>
+                            <div className="flex">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <Star key={star} className={`w-3 h-3 ${star <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                              ))}
+                            </div>
+                          </div>
+                          {r.writingStyleRating && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-bold text-paa-gray-text uppercase">Writing</span>
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <Star key={star} className={`w-2.5 h-2.5 ${star <= r.writingStyleRating ? 'text-blue-500 fill-blue-500' : 'text-gray-300'}`} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {r.contentQualityRating && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-bold text-paa-gray-text uppercase">Content</span>
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <Star key={star} className={`w-2.5 h-2.5 ${star <= r.contentQualityRating ? 'text-green-500 fill-green-500' : 'text-gray-300'}`} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {r.enjoyedMost && (
+                        <div className="mb-2">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block">Enjoyed Most:</span>
+                          <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{r.enjoyedMost}</span>
+                        </div>
+                      )}
+                      <p className="text-sm text-gray-600 italic">"{r.comment || 'No comment provided'}"</p>
+                      <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest">{new Date(r.createdAt).toLocaleDateString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="text-center py-10 text-gray-500 bg-white rounded-2xl border border-gray-100">No book reviews found.</div>
+        )
+      ) : (
+        deliveryReviews.length > 0 ? (
+          <div className="bg-white rounded-3xl-2xl border border-gray-100 shadow-sm overflow-hidden p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {deliveryReviews.map((r: any) => (
+              <div key={r.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-bold text-sm text-paa-navy">{r.bookTitle}</div>
+                    <div className="text-xs text-gray-500">Order #PAA-{String(r.orderId).padStart(4, '0')}</div>
+                  </div>
+                  <div className={`flex px-2 py-1 rounded-lg w-fit items-center gap-1 ${r.feedbackRating <= 3 ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+                    <span className="font-bold text-sm">{r.feedbackRating}</span>
+                    <Star className={`w-3 h-3 ${r.feedbackRating <= 3 ? 'fill-red-500 text-red-500' : 'fill-amber-500 text-amber-500'}`} />
+                  </div>
+                </div>
+                <div className="mb-2">
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest ${r.feedbackCondition === 'Damaged' || r.feedbackCondition === 'Average' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    {r.feedbackCondition}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 italic mt-2">"{r.feedbackComments || 'No comment provided'}"</p>
+                <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest">{new Date(r.date).toLocaleDateString()}</div>
+              </div>
+            ))}
           </div>
-        );
-      })}
+        ) : (
+          <div className="text-center py-10 text-gray-500 bg-white rounded-2xl border border-gray-100">No delivery feedback found.</div>
+        )
+      )}
     </div>
   );
 }
@@ -5490,8 +6128,11 @@ function AuthorReviews({ books }: { books: any[] }) {
 function AuthorQueries() {
   const [queries, setQueries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState<'All' | 'Pending' | 'Answered' | 'Resolved'>('All');
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
   const [isReplying, setIsReplying] = useState<{ [key: string]: boolean }>({});
+  const [expandedQueryId, setExpandedQueryId] = useState<number | string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchQueries();
@@ -5502,7 +6143,14 @@ function AuthorQueries() {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/queries`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setQueries(res.data);
+      // Filter out any contact form / system messages if they exist
+      const mappedQueries = res.data
+        .filter((q: any) => !q.subject?.startsWith('Contact Form'))
+        .map((q: any) => ({
+          ...q,
+          itemType: 'Query'
+        }));
+      setQueries(mappedQueries);
     } catch (err) {
       toast.error('Failed to load queries');
     } finally {
@@ -5527,52 +6175,112 @@ function AuthorQueries() {
     }
   };
 
+  const filteredQueries = queries.filter(q => {
+    const matchesFilter = filterType === 'All' || 
+                          (filterType === 'Pending' && q.status === 'Pending') ||
+                          (filterType === 'Answered' && q.status === 'Answered') ||
+                          (filterType === 'Resolved' && q.status === 'Resolved');
+    
+    if (!matchesFilter) return false;
+    
+    if (searchQuery.trim()) {
+      const lowerQ = searchQuery.toLowerCase();
+      return (q.subject?.toLowerCase().includes(lowerQ) || 
+              q.author?.name?.toLowerCase().includes(lowerQ) || 
+              q.user?.name?.toLowerCase().includes(lowerQ) ||
+              q.author?.email?.toLowerCase().includes(lowerQ) ||
+              q.user?.email?.toLowerCase().includes(lowerQ));
+    }
+    
+    return true;
+  });
+
   if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy" /></div>;
 
   return (
-    <div className="dash-panel animate-fade-in-up min-h-full">
-      <div className="dash-panel-header bg-white sticky top-0 z-10 shadow-sm flex items-center justify-between">
+    <div className="space-y-6 w-full dash-panel animate-fade-in-up min-h-full">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b border-paa-navy/5 pb-4 gap-4 p-6">
         <div>
-          <h3 className="dash-panel-title flex items-center gap-2"><MessageSquare className="w-5 h-5" /> Queries & Issues</h3>
-          <p className="dash-panel-subtitle">View issues reported by your buyers</p>
+          <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
+            <Users className="w-5 h-5" /> Queries & Issues
+          </h3>
+          <p className="text-paa-gray-text text-sm">Manage and view queries reported by your buyers.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <input 
+            type="text" 
+            placeholder="Search Subject, Name, Email..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-3xl-2xl outline-none focus:border-paa-navy w-full sm:w-64"
+          />
+          <div className="flex bg-gray-100 rounded-3xl-2xl p-1 overflow-x-auto w-full sm:w-auto">
+            {[
+              { id: 'All', label: 'All', color: 'bg-gray-800 text-white' },
+              { id: 'Pending', label: 'New Unopened Tickets', color: 'bg-orange-100 text-orange-800' },
+              { id: 'Answered', label: 'Opened Tickets', color: 'bg-blue-100 text-blue-800' },
+              { id: 'Resolved', label: 'Closed Tickets', color: 'bg-green-100 text-green-800' }
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setFilterType(t.id as any)}
+                className={`px-3 py-1 text-[10px] font-bold tracking-widest uppercase transition-all rounded-3xl-2xl whitespace-nowrap ${filterType === t.id ? `${t.color} shadow-sm` : 'text-gray-500 hover:text-paa-navy'}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => fetchQueries()} className="shrink-0 p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+            <RefreshCw size={18} />
+          </button>
         </div>
       </div>
-      <div className="p-6">
-        {queries.length === 0 ? (
+
+      <div className="p-6 pt-0 space-y-4">
+        {filteredQueries.length === 0 ? (
           <div className="py-16 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">No queries or issues reported yet.</p>
+            <p className="text-gray-500 font-medium">No queries or issues found.</p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {queries.map(q => (
-              <div key={q.id} className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                        q.status === 'Resolved' ? 'bg-green-100 text-green-800' : 
-                        q.status === 'Answered' ? 'bg-blue-100 text-blue-800' : 
-                        'bg-orange-100 text-orange-800'
-                      }`}>
-                        #TKT-{q.id.toString().padStart(4, '0')}
-                      </span>
-                      <h4 className="font-bold text-paa-navy text-sm">{q.subject}</h4>
-                    </div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(q.createdAt).toLocaleString()}</span>
+        ) : filteredQueries.map(q => (
+          <div key={q.id} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden transition-all duration-200 group">
+            {/* Row Header */}
+            <div 
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+              onClick={() => setExpandedQueryId(expandedQueryId === q.id ? null : q.id)}
+            >
+              <div className="flex items-center gap-4 flex-1">
+                <div className={`w-1 h-10 rounded-full ${q.status === 'Resolved' ? 'bg-green-500' : q.status === 'Pending' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                      Query #TKT-{q.id.toString().padStart(4, '0')}
+                    </span>
+                    <h4 className="font-bold text-paa-navy text-sm line-clamp-1">{q.subject}</h4>
                   </div>
-                  <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${
-                    q.status === 'Resolved' ? 'bg-green-100 text-green-800' : 
-                    q.status === 'Answered' ? 'bg-blue-100 text-blue-800' : 
-                    'bg-orange-100 text-orange-800'
-                  }`}>
-                    {q.status === 'Resolved' ? 'Closed' : q.status === 'Answered' ? 'Opened' : 'New'}
-                  </span>
+                  <p className="text-[10px] text-gray-500">From: <span className="font-bold">{q.author?.name || q.user?.name || 'Unknown'}</span> ({q.author?.email || q.user?.email || 'N/A'})</p>
                 </div>
-                <QueryThreadDisplay query={q} currentUserType="Author" />
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                  {q.status === 'Resolved' ? 'Closed' : q.status === 'Pending' ? 'New' : 'Opened'}
+                </span>
+                <div className="text-gray-400">
+                  <ChevronDown size={20} className={`transform transition-transform duration-300 ${expandedQueryId === q.id ? 'rotate-180' : ''}`} />
+                </div>
+              </div>
+            </div>
+            
+            {/* Expandable Content */}
+            {expandedQueryId === q.id && (
+              <div className="p-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
+                <div className="flex-1">
+                  <QueryThreadDisplay query={q} currentUserType="Author" />
+                </div>
                 
                 {q.status !== 'Resolved' && (
-                  <div className="pt-4 border-t border-gray-100 mt-4">
+                  <div className="shrink-0 pt-4 border-t border-gray-100">
                     <div className="flex items-center gap-2 bg-white rounded-full border border-gray-200 px-4 py-2 shadow-sm focus-within:border-paa-navy focus-within:ring-1 focus-within:ring-paa-navy/20 transition-all">
                       <input
                         type="text"
@@ -5598,9 +6306,9 @@ function AuthorQueries() {
                   </div>
                 )}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

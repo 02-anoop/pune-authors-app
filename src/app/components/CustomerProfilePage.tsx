@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import axios from "axios";
-import { User, LogOut, Package, ArrowRight, MessageSquare, Mail, Phone, Check, BookOpen, Send } from "lucide-react";
+import { User, LogOut, Package, ArrowRight, MessageSquare, Mail, Phone, Check, BookOpen, Send, Star } from "lucide-react";
 import fictionData from "./data/fiction_catalogue.json";
 import nonFictionData from "./data/non_fiction_catalogue.json";
 import { OrderFulfillmentTimeline } from "./OrderFulfillmentTimeline";
@@ -273,7 +273,7 @@ export function CustomerProfilePage() {
 
       {/* Query Modal */}
       {isQueryModalOpen && (
-        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[1100] flex items-center justify-center p-4">
           <div className="bg-white max-w-lg w-full p-6">
             <h2 className="text-xl font-serif text-paa-navy mb-4">Raise a Query</h2>
             
@@ -321,38 +321,42 @@ export function CustomerProfilePage() {
 
       {/* Feedback Modal */}
       {feedbackModalOpen && (
-        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-          <div className="bg-white max-w-lg w-full p-6 shadow-2xl">
-            <h2 className="text-xl font-serif text-paa-navy mb-2">Order Feedback</h2>
-            <p className="text-sm text-gray-600 mb-6">How was your delivery experience for <span className="font-bold">"{feedbackModalOpen.title}"</span>?</p>
+        <div className="fixed inset-0 bg-paa-navy/80 backdrop-blur-sm z-[1100] flex items-center justify-center p-4">
+          <div className="bg-white max-w-lg w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h2 className="text-xl font-serif text-paa-navy mb-2">Delivery Feedback</h2>
+            <p className="text-sm text-gray-600 mb-6">How was your experience for <span className="font-bold">"{feedbackModalOpen.title}"</span>?</p>
             <form onSubmit={handleFeedbackSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Book Condition *</label>
-                <select required value={feedbackCondition} onChange={e => setFeedbackCondition(e.target.value)} className="w-full border p-2 text-sm outline-none">
-                  <option value="Excellent">Excellent - Mint condition</option>
-                  <option value="Good">Good - Minor wear</option>
-                  <option value="Average">Average - Noticeable wear</option>
-                  <option value="Damaged">Damaged - Creased, torn, or wet</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Delivery Speed Rating *</label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button type="button" key={star} onClick={() => setFeedbackRating(star)} className={`text-2xl ${feedbackRating >= star ? 'text-yellow-400' : 'text-gray-200'}`}>
-                      ★
-                    </button>
-                  ))}
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Book Condition *</label>
+                  <select required value={feedbackCondition} onChange={e => setFeedbackCondition(e.target.value)} className="w-full border p-2 text-sm outline-none bg-white">
+                    <option value="Excellent">Excellent - Mint condition</option>
+                    <option value="Good">Good - Minor wear</option>
+                    <option value="Average">Average - Noticeable wear</option>
+                    <option value="Damaged">Damaged - Creased, torn, or wet</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Delivery Speed Rating *</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button type="button" key={star} onClick={() => setFeedbackRating(star)} className={`text-2xl ${feedbackRating >= star ? 'text-yellow-400' : 'text-gray-200'}`}>
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Delivery Comments (Optional)</label>
+                  <textarea rows={3} value={feedbackComments} onChange={e => setFeedbackComments(e.target.value)} className="w-full border p-2 text-sm outline-none resize-y bg-white" placeholder="Tell us about the packaging, delivery time, etc." />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-1">Comments (Optional)</label>
-                <textarea rows={3} value={feedbackComments} onChange={e => setFeedbackComments(e.target.value)} className="w-full border p-2 text-sm outline-none resize-y" placeholder="Tell us about the packaging, delivery time, etc." />
-              </div>
-              <div className="flex gap-2 pt-4">
-                <button type="button" onClick={() => setFeedbackModalOpen(null)} className="flex-1 py-2 bg-gray-200 text-xs font-bold uppercase">Cancel</button>
-                <button type="submit" disabled={acknowledging === feedbackModalOpen.itemId} className="flex-1 py-2 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy">
-                  {acknowledging === feedbackModalOpen.itemId ? 'Submitting...' : 'Submit & Acknowledge'}
+
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setFeedbackModalOpen(null)} className="flex-1 py-3 bg-gray-200 text-xs font-bold uppercase">Cancel</button>
+                <button type="submit" disabled={acknowledging === feedbackModalOpen.itemId} className="flex-1 py-3 bg-paa-navy text-white text-xs font-bold uppercase hover:bg-paa-gold hover:text-paa-navy">
+                  {acknowledging === feedbackModalOpen.itemId ? 'Submitting...' : 'Submit Feedback'}
                 </button>
               </div>
             </form>
@@ -519,6 +523,22 @@ export function CustomerProfilePage() {
                                       {isQueriesExpanded ? 'Hide Query' : 'View Query'}
                                     </button>
                                   )}
+                                  {o.items?.some((i: any) => i.status === 'Dispatched') && (
+                                    <button onClick={() => {
+                                      const item = o.items.find((i: any) => i.status === 'Dispatched');
+                                      setFeedbackModalOpen({ itemId: item.id, title: `Package from ${item.book?.author?.name || 'Author'}` });
+                                    }} style={{ background: "#166534", border: "1px solid #166534", color: "#fff", padding: "0.45rem 0.9rem", fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#14532d"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#166534"; }}>
+                                      <Check size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-top' }} /> I Received This
+                                    </button>
+                                  )}
+                                  {o.items?.some((i: any) => i.status === 'Delivered') && (
+                                    <button onClick={() => {
+                                      const item = o.items.find((i: any) => i.status === 'Delivered');
+                                      window.location.href = `/book/${item.bookId}#reviews`;
+                                    }} style={{ background: "#d97706", border: "1px solid #d97706", color: "#fff", padding: "0.45rem 0.9rem", fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#b45309"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#d97706"; }}>
+                                      <Star size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-top' }} /> Write Review
+                                    </button>
+                                  )}
                                   <button onClick={() => setSelectedOrder(o)} style={{ background: "transparent", border: "1px solid #111", color: "#111", padding: "0.45rem 0.9rem", fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#111"; }}>View Details</button>
                                 </td>
                               </tr>
@@ -606,8 +626,26 @@ export function CustomerProfilePage() {
                           ))}
                         </div>
                         <div className="flex justify-between items-center mt-2 pt-3 border-t border-gray-100">
-                          <div className="text-sm font-bold text-paa-navy">Total: ₹{o.amount}</div>
-                          <button onClick={() => setSelectedOrder(o)} className="bg-transparent border border-paa-navy text-paa-navy px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-paa-navy hover:text-white">View Details</button>
+                          <div className="text-sm font-bold text-paa-navy flex-1">Total: ₹{o.amount}</div>
+                          <div className="flex gap-2">
+                            {o.items?.some((i: any) => i.status === 'Dispatched') && (
+                              <button onClick={() => {
+                                const item = o.items.find((i: any) => i.status === 'Dispatched');
+                                setFeedbackModalOpen({ itemId: item.id, title: `Package from ${item.book?.author?.name || 'Author'}` });
+                              }} className="bg-green-700 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-green-800">
+                                <Check size={12} className="inline mr-1 -mt-0.5" /> Received
+                              </button>
+                            )}
+                            {o.items?.some((i: any) => i.status === 'Delivered') && (
+                              <button onClick={() => {
+                                const item = o.items.find((i: any) => i.status === 'Delivered');
+                                window.location.href = `/book/${item.bookId}#reviews`;
+                              }} className="bg-amber-600 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-amber-700">
+                                <Star size={12} className="inline mr-1 -mt-0.5" /> Review
+                              </button>
+                            )}
+                            <button onClick={() => setSelectedOrder(o)} className="bg-transparent border border-paa-navy text-paa-navy px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors hover:bg-paa-navy hover:text-white">View Details</button>
+                          </div>
                         </div>
                       </div>
                     ))}

@@ -135,7 +135,7 @@ router.get('/api/books/:id/reviews', async (req, res) => {
 // Submit a review for a book
 router.post('/api/books/:id/reviews', async (req, res) => {
   try {
-    const { reviewerName, rating, comment } = req.body;
+    const { reviewerName, rating, comment, writingStyleRating, contentQualityRating, enjoyedMost } = req.body;
     if (!reviewerName || !rating || !comment) {
       return res.status(400).json({ error: 'Name, rating and comment are required' });
     }
@@ -147,7 +147,10 @@ router.post('/api/books/:id/reviews', async (req, res) => {
         bookId: parseInt(req.params.id),
         reviewerName,
         rating: parseInt(rating),
-        comment
+        comment,
+        writingStyleRating: writingStyleRating ? parseInt(writingStyleRating) : null,
+        contentQualityRating: contentQualityRating ? parseInt(contentQualityRating) : null,
+        enjoyedMost: enjoyedMost || null
       }
     });
     res.status(201).json(review);
@@ -268,7 +271,7 @@ router.post('/api/authors/register', upload.any(), async (req, res) => {
       finalHashedPassword = existingUser.password;
       await prisma.user.update({
         where: { email },
-        data: { name, address, role: 'AUTHOR' }
+        data: { name, address, role: existingUser.role === 'ADMIN' ? 'ADMIN' : 'AUTHOR' }
       });
     }
 
@@ -449,8 +452,13 @@ router.put('/api/author/edit-profile-full', verifyToken, upload.any(), async (re
     const finalQualificationString = JSON.stringify(qualificationsArray);
 
     if (extraData) {
-        let incomingExtra = JSON.parse(extraData);
-        currentExtraData = { ...currentExtraData, ...incomingExtra, hasPendingEdits: true, originalProfileData: currentExtraData.originalProfileData };
+        let incomingExtra = typeof extraData === 'string' ? JSON.parse(extraData) : extraData;
+        if (typeof incomingExtra === 'string') {
+            try { incomingExtra = JSON.parse(incomingExtra); } catch(e) {}
+        }
+        if (incomingExtra && typeof incomingExtra === 'object' && !Array.isArray(incomingExtra)) {
+            currentExtraData = { ...currentExtraData, ...incomingExtra, hasPendingEdits: true, originalProfileData: currentExtraData.originalProfileData };
+        }
     }
     
     if (linkedin) currentExtraData.linkedin = linkedin;
@@ -655,20 +663,69 @@ router.get('/api/authors/:email', async (req, res) => {
 // 4. Operations Dashboard - Get all authors
 router.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
   try {
-    const authors = await prisma.author.findMany({
-      include: { books: { include: { reviews: true } }, eventRegistrations: true, eventAuthors: true }
-    });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [authors, total] = await Promise.all([
+      prisma.author.findMany({
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          city: true,
+          state: true,
+          status: true,
+          createdAt: true,
+          _count: {
+            select: { books: true, eventRegistrations: true, eventAuthors: true }
+          },
+          eventAuthors: {
+            select: {
+              eventId: true,
+              optInStatus: true,
+              event: { select: { name: true, date: true } }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.author.count()
+    ]);
+    
+    // Get global totals for dashboard stats (lightweight counts)
+    const [totalActive, totalPending, totalSuspended] = await Promise.all([
+      prisma.author.count({ where: { status: 'Approved' } }),
+      prisma.author.count({ where: { status: 'Pending Verification' } }),
+      prisma.author.count({ where: { status: 'Suspended' } })
+    ]);
+
     const mapped = authors.map(a => ({
       ...a,
       joined: a.createdAt.toISOString().split('T')[0],
-      totalBooks: a.books.length,
-      eventsPart: a.eventRegistrations.length + a.eventAuthors.length,
+      totalBooks: a._count.books,
+      eventsPart: a._count.eventRegistrations + a._count.eventAuthors,
       eventParticipation: a.eventAuthors.map(ea => ({
         ...ea,
         status: ea.optInStatus === 'Awaiting Approval' ? 'Pending' : ea.optInStatus
       }))
     }));
-    res.json(mapped);
+    
+    res.json({
+      data: mapped,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        totalActive,
+        totalPending,
+        totalSuspended
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed' });
   }
@@ -1251,6 +1308,11 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
 router.get('/api/admin/books', verifyToken, isAdmin, async (req, res) => {
   try {
     const books = await prisma.book.findMany({
+      where: {
+        author: {
+          status: 'Active'
+        }
+      },
       include: { author: true, orderItems: { include: { order: true } } }
     });
     const mapped = books.map(b => {
@@ -2359,7 +2421,174 @@ router.put('/api/order-items/:id/author-reject', verifyToken, async (req, res) =
   }
 });
 
-// 7. Operations/Author Dashboard - Get all orders
+// 7. Operations/Dashboard - Dynamic Sales Report
+router.get('/api/admin/sales-report', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate, filterType, selectedMonth, selectedYear } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+
+    let start = new Date(startDate);
+    let end = new Date(endDate);
+    
+    if (filterType === 'select_month' && selectedMonth && selectedYear) {
+      start = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1);
+      end = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0);
+    }
+    
+    end.setHours(23, 59, 59, 999);
+
+    const webOrders = await prisma.order.findMany({
+      where: {
+        status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] },
+        createdAt: { gte: start, lte: end }
+      },
+      include: { items: { include: { book: { include: { author: true } } } } }
+    });
+
+    const posOrders = await prisma.posOrder.findMany({
+      where: {
+        createdAt: { gte: start, lte: end }
+      },
+      include: { event: true, items: { include: { book: { include: { author: true } } } } }
+    });
+
+    let totalRevenue = 0;
+    let totalBooksSold = 0;
+    let totalOrders = webOrders.length + posOrders.length;
+
+    const chartDataMap = {};
+    const channelDataMap = { Web: 0, Events: 0, 'Book Fairs': 0 };
+    const tableData = [];
+    
+    const kpiSplits = {
+      web: { revenue: 0, books: 0, orders: webOrders.length },
+      events: { revenue: 0, books: 0, orders: 0 },
+      bookFairs: { revenue: 0, books: 0, orders: 0 }
+    };
+
+    const processItem = (date, channel, eventName, authorName, title, qty, price, orderId) => {
+      const dateStr = date.toISOString().split('T')[0];
+      const rev = qty * price;
+      
+      totalRevenue += rev;
+      totalBooksSold += qty;
+
+      if (!chartDataMap[dateStr]) chartDataMap[dateStr] = { date: dateStr, revenue: 0, books: 0 };
+      chartDataMap[dateStr].revenue += rev;
+      chartDataMap[dateStr].books += qty;
+
+      tableData.push({
+        date: dateStr,
+        orderId,
+        channel,
+        event: eventName,
+        author: authorName,
+        title,
+        qty,
+        revenue: rev
+      });
+    };
+
+    webOrders.forEach(o => {
+      o.items.forEach(i => {
+        processItem(o.createdAt, 'Web Orders', '-', i.book.author.name, i.book.title, i.quantity, i.book.mrp, `PAA-${String(o.id).padStart(4,'0')}`);
+        const rev = i.quantity * i.book.mrp;
+        channelDataMap.Web += rev;
+        kpiSplits.web.revenue += rev;
+        kpiSplits.web.books += i.quantity;
+      });
+    });
+
+    posOrders.forEach(po => {
+      const isBookFair = po.event?.eventType === 'Book Fair' || po.event?.name?.toLowerCase().includes('fair');
+      const channelName = isBookFair ? 'Book Fairs' : 'Events';
+      const kpiKey = isBookFair ? 'bookFairs' : 'events';
+      kpiSplits[kpiKey].orders += 1;
+      
+      po.items.forEach(i => {
+        processItem(po.createdAt, channelName, po.event?.name || '-', i.book.author.name, i.book.title, i.quantity, i.price, po.event?.name || `POS-${String(po.id).padStart(4,'0')}`);
+        const rev = i.quantity * i.price;
+        channelDataMap[channelName] += rev;
+        kpiSplits[kpiKey].revenue += rev;
+        kpiSplits[kpiKey].books += i.quantity;
+      });
+    });
+
+    const legacyEvents = await prisma.event.findMany({
+      where: {
+        status: 'Legacy Archive'
+      }
+    });
+
+    legacyEvents.forEach(evt => {
+      let evtDate = new Date(evt.date);
+      if (isNaN(evtDate.getTime())) {
+        evtDate = new Date(evt.createdAt);
+      }
+      
+      if (evtDate >= start && evtDate <= end) {
+        const qty = evt.aggSold || 0;
+        const rev = evt.aggRevenue || (qty * 200) || 0;
+        
+        const isBookFair = evt.eventType === 'Book Fair' || evt.name?.toLowerCase().includes('fair');
+        const channelName = isBookFair ? 'Book Fairs' : 'Events';
+        const kpiKey = isBookFair ? 'bookFairs' : 'events';
+        
+        if (qty > 0 || rev > 0) {
+          totalRevenue += rev;
+          totalBooksSold += qty;
+          const dateStr = evtDate.toISOString().split('T')[0];
+          
+          if (!chartDataMap[dateStr]) chartDataMap[dateStr] = { date: dateStr, revenue: 0, books: 0 };
+          chartDataMap[dateStr].revenue += rev;
+          chartDataMap[dateStr].books += qty;
+          
+          channelDataMap[channelName] += rev;
+          kpiSplits[kpiKey].revenue += rev;
+          kpiSplits[kpiKey].books += qty;
+          kpiSplits[kpiKey].orders += 1;
+          totalOrders += 1;
+          
+          tableData.push({
+            date: dateStr,
+            orderId: evt.name || `LEGACY-${evt.id}`,
+            channel: channelName,
+            event: evt.name,
+            author: `${evt.aggAuthors || 0} Authors`,
+            title: '-',
+            qty,
+            revenue: rev
+          });
+        }
+      }
+    });
+
+    const chartData = Object.values(chartDataMap).sort((a, b) => a.date.localeCompare(b.date));
+    const channelData = [
+      { name: 'Web Orders', value: channelDataMap.Web },
+      { name: 'Events', value: channelDataMap.Events },
+      { name: 'Book Fairs', value: channelDataMap['Book Fairs'] }
+    ].filter(c => c.value > 0);
+
+    res.json({
+      kpis: {
+        totalRevenue,
+        totalBooksSold,
+        totalOrders,
+        splits: kpiSplits
+      },
+      chartData,
+      channelData,
+      tableData: tableData.sort((a, b) => b.date.localeCompare(a.date))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to generate sales report' });
+  }
+});
+
 router.get('/api/admin/reports/sales', verifyToken, isAdmin, async (req, res) => {
   try {
     const period = req.query.period || 'daily';
@@ -2566,20 +2795,94 @@ router.get('/api/admin/customers', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// Delete Order
+router.delete('/api/admin/orders/:id', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    await prisma.orderItem.deleteMany({ where: { orderId } });
+    await prisma.order.delete({ where: { id: orderId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete order error:', error);
+    res.status(500).json({ error: 'Failed to delete order' });
+  }
+});
+
 router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
   try {
-    const orders = await prisma.order.findMany({
-      include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } },
-      orderBy: { createdAt: 'desc' }
-    });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          createdAt: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          address: true,
+          subtotal: true,
+          deliveryCharges: true,
+          bundleDiscount: true,
+          amount: true,
+          status: true,
+          paymentScreenshot: true,
+          items: {
+            select: {
+              id: true,
+              quantity: true,
+              status: true,
+              createdAt: true,
+              dispatchedAt: true,
+              deliveredAt: true,
+              trackingNumber: true,
+              feedbackCondition: true,
+              feedbackRating: true,
+              feedbackComments: true,
+              book: {
+                select: {
+                  title: true,
+                  coverUrl: true,
+                  mrp: true,
+                  author: {
+                    select: { id: true, name: true, email: true }
+                  }
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.order.count()
+    ]);
+    
+    const [pendingCount, toApproveOrders, shippedCount, totalRevenueAgg] = await Promise.all([
+      prisma.order.count({ where: { status: 'Pending Verification' } }),
+      prisma.orderItem.count({ where: { status: 'Pending' } }),
+      prisma.orderItem.count({ where: { status: 'Dispatched' } }),
+      prisma.order.aggregate({ _sum: { amount: true }, where: { status: 'Completed' } })
+    ]);
+
     const mapped = orders.map(ord => ({
       id: `ORD-${ord.id.toString().padStart(4, '0')}`,
       dbId: ord.id,
       date: ord.createdAt.toISOString().split('T')[0],
       customer: ord.customerName,
+      customerEmail: ord.customerEmail,
+      customerPhone: ord.customerPhone,
+      address: ord.address,
+      subtotal: ord.subtotal || 0,
+      deliveryCharges: ord.deliveryCharges || 0,
+      bundleDiscount: ord.bundleDiscount || 0,
       items: ord.items.map(i => ({ 
         id: i.id,
         title: i.book.title, 
+        coverUrl: i.book.coverUrl,
         qty: i.quantity, 
         authorName: i.book.author.name,
         authorId: i.book.author.id,
@@ -2591,14 +2894,28 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
         trackingNumber: i.trackingNumber,
         feedbackCondition: i.feedbackCondition,
         feedbackRating: i.feedbackRating,
-        feedbackComments: i.feedbackComments
+        feedbackComments: i.feedbackComments,
+        bookAvgRating: null // Extracted out for speed
       })),
       total: ord.amount,
       status: ord.status === 'Pending Verification' ? 'Pending' : ord.status,
       payment: ord.paymentScreenshot ? 'Paid' : 'Unpaid',
       paymentScreenshot: ord.paymentScreenshot
     }));
-    res.json(mapped);
+    
+    res.json({
+      data: mapped,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        pendingVerificationCount: pendingCount,
+        toApproveOrders: toApproveOrders,
+        shippedCount: shippedCount,
+        totalRevenue: totalRevenueAgg._sum.amount || 0
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch orders' });
@@ -2693,8 +3010,12 @@ router.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
       data: { status: 'Accepted', acceptedAt: new Date() },
-      include: { book: { include: { author: true, reviews: { select: { rating: true } } } } }
+      include: { order: true, book: { include: { author: true, reviews: { select: { rating: true } } } } }
     });
+
+    if (orderItem.order && orderItem.order.customerEmail) {
+       await sendNotificationEmail(orderItem.order.customerEmail, 'Order Accepted', `Good news! Your order for the book "${orderItem.book.title}" has been accepted by the author and is being prepared for dispatch.`);
+    }
     // Deduct stock immediately
     if (orderItem) {
        // [PRE-LAUNCH] Halt Deductions
@@ -2767,6 +3088,24 @@ router.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => 
         feedbackBuyAgain: buyAgain || null
       }
     });
+
+    if (rating && existing.order?.customerEmail) {
+      await sendNotificationEmail(existing.order.customerEmail, 'Thank You for Your Feedback', `Thank you for providing delivery feedback for "${existing.book?.title}". Your feedback helps us improve our services.`);
+    }
+
+    if (req.body.bookRating && existing) {
+      await prisma.bookReview.create({
+        data: {
+          rating: parseInt(req.body.bookRating),
+          comment: req.body.bookReviewComment || '',
+          reviewerName: existing.order?.customerName || 'Anonymous',
+          bookId: existing.bookId
+        }
+      });
+      if (existing.order?.customerEmail) {
+        await sendNotificationEmail(existing.order.customerEmail, 'Thank You for Your Review', `Thank you for reviewing "${existing.book?.title}". Your review helps other readers discover great books!`);
+      }
+    }
 
     res.json(orderItem);
 
@@ -2862,7 +3201,9 @@ router.get('/api/gallery', async (req, res) => {
       orderBy: { date: 'desc' },
       include: { images: { where: { status: 'Approved' } } }
     });
-    res.json(events);
+    const now = new Date();
+    const filteredEvents = events.filter(e => new Date(e.date) <= now);
+    res.json(filteredEvents);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch gallery events' });
@@ -2934,29 +3275,55 @@ router.delete('/api/admin/gallery/:id', verifyToken, isAdmin, async (req, res) =
 router.post('/api/admin/gallery/:id/images', verifyToken, isAdmin, upload.single('photo'), async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
-    const { caption, dateTaken } = req.body;
+    const { caption, dateTaken, itemType } = req.body;
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
     
-    let galleryEvent = await prisma.galleryEvent.findUnique({ where: { eventId } });
-    if (!galleryEvent) {
-      const evt = await prisma.event.findUnique({ where: { id: eventId } });
-      if (!evt) return res.status(404).json({ error: 'Event not found' });
-      
-      galleryEvent = await prisma.galleryEvent.create({
-        data: {
-          eventId,
-          location: evt.name,
-          place: evt.location,
-          city: '',
-          date: evt.date ? new Date(evt.date) : new Date(),
-          duration: evt.duration || '1 Day',
-          authors: 0,
-          booksSold: 0,
-          type: evt.eventType || 'Literary Event',
-          description: evt.description || evt.name,
-          photoUrl: evt.bannerUrl || ''
-        }
-      });
+    let galleryEvent;
+    
+    if (itemType === 'Library') {
+      galleryEvent = await prisma.galleryEvent.findUnique({ where: { libraryId: eventId } });
+      if (!galleryEvent) {
+        const lib = await prisma.library.findUnique({ where: { id: eventId } });
+        if (!lib) return res.status(404).json({ error: 'Library not found' });
+        
+        galleryEvent = await prisma.galleryEvent.create({
+          data: {
+            libraryId: eventId,
+            location: lib.name,
+            place: lib.airportName || lib.name,
+            city: lib.city,
+            date: new Date(lib.createdAt),
+            duration: 'Ongoing',
+            authors: 0,
+            booksSold: 0,
+            type: lib.type,
+            description: `Donation Drive for ${lib.name}`,
+            photoUrl: lib.bannerUrl || ''
+          }
+        });
+      }
+    } else {
+      galleryEvent = await prisma.galleryEvent.findUnique({ where: { eventId } });
+      if (!galleryEvent) {
+        const evt = await prisma.event.findUnique({ where: { id: eventId } });
+        if (!evt) return res.status(404).json({ error: 'Event not found' });
+        
+        galleryEvent = await prisma.galleryEvent.create({
+          data: {
+            eventId,
+            location: evt.name,
+            place: evt.location,
+            city: '',
+            date: evt.date ? new Date(evt.date) : new Date(),
+            duration: evt.duration || '1 Day',
+            authors: 0,
+            booksSold: 0,
+            type: evt.eventType || 'Literary Event',
+            description: evt.description || evt.name,
+            photoUrl: evt.bannerUrl || ''
+          }
+        });
+      }
     }
 
     const image = await prisma.galleryImage.create({
@@ -3357,13 +3724,8 @@ router.post('/api/author/events/:eventId/opt-out', verifyToken, async (req, res)
 router.get('/api/public/events', async (req, res) => {
   try {
     const events = await prisma.event.findMany({
-      where: {
-        OR: [
-          { broadcastStatus: 'CustomersAlso' },
-          { broadcastStatus: 'AuthorsOnly' } // let's show all active events? Or just CustomersAlso? Let's show CustomersAlso
-        ]
-      },
       include: {
+         galleryEvent: { include: { images: true } },
          _count: { 
              select: { 
                 eventBooks: true, 
@@ -3373,11 +3735,9 @@ router.get('/api/public/events', async (req, res) => {
       },
       orderBy: { id: 'desc' }
     });
-    // Actually let's just fetch all events that are CustomersAlso
-    const publicEvents = events.filter(e => e.broadcastStatus === 'CustomersAlso');
-    res.json(publicEvents);
+    res.json(events);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch public events' });
+    res.status(500).json({ error: 'Failed to fetch public events', detail: error.message, stack: error.stack });
   }
 });
 
@@ -3883,7 +4243,7 @@ router.delete('/api/author/gallery/images/:id', verifyToken, async (req, res) =>
     const image = await prisma.galleryImage.findUnique({ where: { id: imageId } });
     if (!image) return res.status(404).json({ error: 'Image not found' });
     
-    if (!image.caption || !image.caption.includes(`(Uploaded by ${author.name})`)) {
+    if (!image.caption || !image.caption.includes(`Uploaded by ${author.name}`)) {
        return res.status(403).json({ error: 'You can only delete your own images' });
     }
 
@@ -3901,10 +4261,66 @@ router.delete('/api/author/gallery/images/:id', verifyToken, async (req, res) =>
 
 router.get('/api/gallery/events', async (req, res) => {
   try {
-    const events = await prisma.galleryEvent.findMany({
+    let events = await prisma.galleryEvent.findMany({
       orderBy: { date: 'desc' },
-      include: { images: true, event: true }
+      include: { images: true, event: true, library: true }
     });
+    
+    // Filter out Future (Upcoming), Pending Approval, and Rejected events, as well as any future dates
+    const now = new Date();
+    events = events.filter(e => {
+       if (new Date(e.date) > now) return false;
+       if (e.library) return true;
+       if (!e.event) return true;
+       return !['Upcoming', 'Pending Approval', 'Rejected'].includes(e.event.status);
+    });
+    
+    const existingEventIds = events.map(e => e.eventId).filter(Boolean);
+    const existingLibraryIds = events.map(e => e.libraryId).filter(Boolean);
+
+    const extraEvents = await prisma.event.findMany({
+       where: { 
+         id: { notIn: existingEventIds },
+         bannerUrl: { not: null, not: "" },
+         status: { notIn: ['Upcoming', 'Pending Approval', 'Rejected'] }
+       }
+    });
+
+    const extraLibraries = await prisma.library.findMany({
+       where: {
+         id: { notIn: existingLibraryIds },
+         bannerUrl: { not: null, not: "" }
+       }
+    });
+
+    const virtualEvents = extraEvents.map(e => {
+       const d = new Date(e.date);
+       return {
+         id: `virtual-evt-${e.id}`,
+         eventId: e.id,
+         date: e.date,
+         location: e.location,
+         type: e.eventType,
+         photoUrl: e.bannerUrl,
+         event: e,
+         images: []
+       };
+    }).filter(e => new Date(e.date) <= now);
+
+    const virtualLibraries = extraLibraries.map(l => ({
+       id: `virtual-lib-${l.id}`,
+       libraryId: l.id,
+       date: l.createdAt,
+       location: `${l.airportName || ''}, ${l.city}`.trim().replace(/^,/, '').trim(),
+       type: l.type || 'Airport Library',
+       photoUrl: l.bannerUrl,
+       library: l,
+       images: []
+    })).filter(l => new Date(l.date) <= now);
+
+    events = [...events, ...virtualEvents, ...virtualLibraries];
+    events.sort((a, b) => new Date(b.date) - new Date(a.date));
+
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch gallery events' });
@@ -3969,6 +4385,7 @@ router.delete('/api/admin/gallery/images/:id', verifyToken, isAdmin, async (req,
 router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (req, res) => {
   try {
     const authorId = parseInt(req.params.id);
+    const { orderId, count, hours } = req.body;
     const author = await prisma.author.findUnique({ where: { id: authorId } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
     
@@ -3979,6 +4396,16 @@ router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (r
       where: { id: authorId },
       data: { extraData }
     });
+
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      const emailContent = `
+        <p>Dear ${author.name},</p>
+        <p>This is an automated notification from the Pune Authors' Association.</p>
+        <p>You have <strong>${count || 'some'} pending item(s)</strong> for order <strong>${orderId || 'recent orders'}</strong> that have been delayed by <strong>${hours || 'more than 24'} hours</strong> (${req.body.delayType || 'Delay'}).</p>
+        <p>Please log in to your Author Dashboard immediately to review and process pending orders. Continued delays may result in fines or account suspension.</p>
+      `;
+      sendNotificationEmail(author.email, "Urgent: Late Delivery Notification", emailWrap("Late Delivery Notice", emailContent));
+    }
 
     // Notifications are handled dynamically via AuthorDashboard banner
 
@@ -3994,7 +4421,7 @@ router.post('/api/admin/authors/:id/notify-late', verifyToken, isAdmin, async (r
 router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res) => {
   try {
     const authorId = parseInt(req.params.id);
-    const { amount } = req.body;
+    const { amount, orderId, count, hours } = req.body;
     const author = await prisma.author.findUnique({ where: { id: authorId } });
     if (!author) return res.status(404).json({ error: 'Author not found' });
     
@@ -4009,6 +4436,16 @@ router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res
       data: { extraData }
     });
     
+    if (typeof sendNotificationEmail === 'function' && typeof emailWrap === 'function') {
+      const emailContent = `
+        <p>Dear ${author.name},</p>
+        <p>A fine of <strong>₹${amount}</strong> has been charged to your account due to severe delays in fulfilling orders.</p>
+        ${orderId ? `<p>Specifically, you had <strong>${count || 'multiple'} items</strong> pending for order <strong>${orderId}</strong> with a delay of <strong>${hours || 'more than 24'} hours</strong> (${req.body.delayType || 'Delay'}).</p>` : ''}
+        <p>Your account will remain suspended for new orders until this fine is cleared. Please log in to your Author Dashboard to complete the payment.</p>
+      `;
+      sendNotificationEmail(author.email, "Action Required: Fine Imposed for Late Delivery", emailWrap("Fine Charged", emailContent));
+    }
+
     invalidateCache('adminAuthors');
     res.json(updatedAuthor);
   } catch (err) {
@@ -4019,12 +4456,18 @@ router.post('/api/admin/authors/:id/fine', verifyToken, isAdmin, async (req, res
 
 router.get('/api/admin/reviews', verifyToken, isAdmin, async (req, res) => {
   try {
-    const reviews = await prisma.bookReview.findMany({
+    const bookReviews = await prisma.bookReview.findMany({
       include: { book: { select: { title: true, author: { select: { name: true } } } } },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(reviews);
+    const deliveryReviews = await prisma.orderItem.findMany({
+      where: { feedbackRating: { not: null } },
+      include: { book: { select: { title: true, author: { select: { name: true } } } }, order: { select: { customerName: true, id: true } } },
+      orderBy: { deliveredAt: 'desc' }
+    });
+    res.json({ bookReviews, deliveryReviews });
   } catch (err) {
+    console.error('Failed to fetch reviews:', err);
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
@@ -4355,21 +4798,27 @@ async function computeBookInventory(books) {
 
   const bookIds = books.map(b => b.id);
 
-  // Aggregate web order quantities per book (only accepted/dispatched/completed)
+  const CUTOFF_DATE = new Date('2026-07-08T00:00:00Z');
+
+  // Aggregate web order quantities per book (upcoming only)
   const orderItemAgg = await prisma.orderItem.groupBy({
     by: ['bookId'],
     where: { 
       bookId: { in: bookIds },
-      status: { in: ['Accepted', 'Dispatched', 'Completed', 'Delivered'] }
+      status: { in: ['Accepted', 'Dispatched', 'Completed', 'Delivered'] },
+      createdAt: { gte: CUTOFF_DATE }
     },
     _sum: { quantity: true },
     _max: { createdAt: true }
   });
 
-  // Aggregate donation quantities per book
+  // Aggregate donation quantities per book (upcoming only)
   const donationAgg = await prisma.donationBook.groupBy({
     by: ['bookId'],
-    where: { bookId: { in: bookIds } },
+    where: { 
+      bookId: { in: bookIds },
+      createdAt: { gte: CUTOFF_DATE }
+    },
     _sum: { quantityDonated: true },
     _max: { createdAt: true }
   });
@@ -4395,9 +4844,18 @@ async function computeBookInventory(books) {
     _max: { createdAt: true }
   });
 
-  // Granular donation breakdown per book (library-level)
-  const donationBooksRaw = await prisma.donationBook.findMany({
+  // Stock history logs
+  const stockHistoryList = await prisma.stockHistory.findMany({
     where: { bookId: { in: bookIds } },
+    orderBy: { updatedAt: 'desc' }
+  });
+
+  // Granular donation breakdown per book (library-level, upcoming only)
+  const donationBooksRaw = await prisma.donationBook.findMany({
+    where: { 
+      bookId: { in: bookIds },
+      createdAt: { gte: CUTOFF_DATE }
+    },
     include: {
       registration: {
         include: {
@@ -4438,8 +4896,8 @@ async function computeBookInventory(books) {
     }
   });
 
-  const eventMap = {}; // bookId -> total listedStock
-  const eventBreakdownMap = {}; // bookId -> [{name, location, listed, sold}]
+  const eventMap = {};
+  const eventBreakdownMap = {}; 
   eventBooksRaw.forEach(eb => {
     eventMap[eb.bookId] = (eventMap[eb.bookId] || 0) + eb.listedStock;
     if (!eventBreakdownMap[eb.bookId]) eventBreakdownMap[eb.bookId] = [];
@@ -4453,7 +4911,7 @@ async function computeBookInventory(books) {
     });
   });
 
-  const donationBreakdownMap = {}; // bookId -> [{library, qty}]
+  const donationBreakdownMap = {};
   donationBooksRaw.forEach(db => {
     const lib = db.registration?.announcement?.library;
     if (!donationBreakdownMap[db.bookId]) donationBreakdownMap[db.bookId] = [];
@@ -4468,7 +4926,13 @@ async function computeBookInventory(books) {
     const webSold = webSoldMap[book.id] || 0;
     const airportQty = airportMap[book.id] || 0;
     const eventQty = eventMap[book.id] || 0;
-    const currentStock = book.stock; // Already reflects all real-time deductions
+    const stockHistory = stockHistoryList.filter(h => h.bookId === book.id);
+    
+    // Initial stock entered by author
+    const masterStock = book.stock; 
+    // Dynamically deduct upcoming data (web, airport, events)
+    const currentStock = masterStock - webSold - airportQty - eventQty;
+    const hasPending = stockHistory.some(h => h.status === 'Pending');
 
     const distributionBreakdown = [
       ...(donationBreakdownMap[book.id] || []),
@@ -4477,23 +4941,31 @@ async function computeBookInventory(books) {
     
     // Last activity fallback to book.createdAt
     const lastActivityDate = lastActivityMap[book.id] || book.createdAt;
+    
+    // Check if stale (no activity in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const isStale = new Date(lastActivityDate) < thirtyDaysAgo;
 
     return {
       id: book.id,
       title: book.title,
-      mrp: book.mrp,
-      genre: book.genre,
-      coverUrl: book.coverUrl,
+      authorName: book.author ? book.author.name : 'Unknown',
       authorId: book.authorId,
-      authorName: book.author?.name || book.authorName || 'Unknown',
-      masterStock: currentStock + webSold + airportQty + eventQty,
+      mrp: book.mrp,
+      masterStock,
       currentStock,
       webSold,
       airportQty,
       eventQty,
-      isLowStock: currentStock < 10,
       lastActivity: lastActivityDate,
-      distributionBreakdown
+      isLowStock: currentStock < 10,
+      isStale,
+      distributionBreakdown,
+      genre: book.genre,
+      coverUrl: book.coverImage,
+      stockHistory,
+      hasPending
     };
   });
 }
@@ -4548,24 +5020,18 @@ router.put('/api/author/books/:id/stock', verifyToken, async (req, res) => {
       });
     }
 
-    const updated = await prisma.book.update({
-      where: { id: bookId },
-      data: { stock: newStock }
+    const history = await prisma.stockHistory.create({
+      data: {
+        bookId: bookId,
+        changeQty: qty,
+        lastStock: book.stock,
+        currentStock: newStock,
+        status: 'Pending'
+      }
     });
 
-    if (qty < 0 && newStock < 10 && book.stock >= 10) {
-      // Negative adjustment crossed the low-stock threshold — fire alert (non-blocking)
-      fireStockAlert(bookId, book.title, author).catch(() => {});
-    } else if (newStock >= 10) {
-      // Stock healthy — housekeep stale ADMIN low-stock notifications
-      const tag = `[LOW_STOCK:${bookId}]`;
-      await prisma.notification.deleteMany({
-        where: { message: { contains: tag }, target: 'ADMIN' }
-      }).catch(() => {});
-    }
-
     invalidateCache(`author:dashboard:${req.user.email}`);
-    res.json({ id: updated.id, title: updated.title, currentStock: updated.stock, adjustment: qty });
+    res.json({ id: book.id, title: book.title, currentStock: book.stock, adjustment: qty, pending: true });
   } catch (err) {
     console.error('[PUT /api/author/books/:id/stock]', err);
     res.status(500).json({ error: 'Failed to update stock' });
@@ -4644,6 +5110,54 @@ router.post('/api/admin/inventory/ping-author', verifyToken, isAdmin, async (req
   }
 });
 
+// PUT /api/admin/inventory/approve/:historyId
+router.put('/api/admin/inventory/approve/:historyId', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const historyId = parseInt(req.params.historyId);
+    const { action } = req.body;
+    
+    const history = await prisma.stockHistory.findUnique({ where: { id: historyId }, include: { book: { include: { author: true } } } });
+    if (!history) return res.status(404).json({ error: 'Not found' });
+    if (history.status !== 'Pending') return res.status(400).json({ error: 'Already processed' });
+
+    if (action === 'reject') {
+      await prisma.stockHistory.update({
+        where: { id: historyId },
+        data: { status: 'Rejected' }
+      });
+      return res.json({ success: true, status: 'Rejected' });
+    }
+
+    const newStock = history.book.stock + history.changeQty;
+    
+    await prisma.$transaction([
+      prisma.book.update({
+        where: { id: history.bookId },
+        data: { stock: newStock }
+      }),
+      prisma.stockHistory.update({
+        where: { id: historyId },
+        data: { status: 'Approved', currentStock: newStock, lastStock: history.book.stock }
+      })
+    ]);
+
+    if (history.changeQty < 0 && newStock < 10 && history.book.stock >= 10) {
+      fireStockAlert(history.bookId, history.book.title, history.book.author).catch(() => {});
+    } else if (newStock >= 10) {
+      const tag = `[LOW_STOCK:${history.bookId}]`;
+      await prisma.notification.deleteMany({
+        where: { message: { contains: tag }, target: 'ADMIN' }
+      }).catch(() => {});
+    }
+
+    invalidateCache(`author:dashboard:${history.book.author.email}`);
+    res.json({ success: true, status: 'Approved' });
+  } catch (err) {
+    console.error('[PUT /api/admin/inventory/approve]', err);
+    res.status(500).json({ error: 'Failed to approve inventory' });
+  }
+});
+
 // GET /api/admin/inventory
 router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
   try {
@@ -4686,31 +5200,64 @@ router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
       return res.status(200).send(csv);
     }
     
-    const [books, total] = await Promise.all([
-      prisma.book.findMany({
-        where: whereClause,
-        include: { author: { select: { name: true } } },
-        orderBy: [{ stock: 'asc' }, { title: 'asc' }], // Sorting low stock first implicitly handled in DB if not dynamic frontend sort
-        skip,
-        take: Number(limit)
-      }),
-      prisma.book.count({ where: whereClause })
-    ]);
+    // We need to fetch all books to compute accurate global KPIs based on dynamic inventory logic
+    const allBooks = await prisma.book.findMany({
+      include: { author: { select: { name: true } } }
+    });
+    const enrichedGlobalBooks = await computeBookInventory(allBooks);
     
-    const enrichedBooks = await computeBookInventory(books);
+    // In-memory filter & sort to properly float pending to the top
+    let filtered = enrichedGlobalBooks;
+    if (search) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter(b => 
+        b.title.toLowerCase().includes(s) || 
+        b.authorName.toLowerCase().includes(s)
+      );
+    }
+    if (lowStock === 'true') {
+      filtered = filtered.filter(b => b.currentStock < 10);
+    }
+
+    // Sort: Pending first, then Low Stock, then A-Z
+    filtered.sort((a, b) => {
+      if (a.hasPending && !b.hasPending) return -1;
+      if (!a.hasPending && b.hasPending) return 1;
+      
+      const aLow = a.currentStock < 10;
+      const bLow = b.currentStock < 10;
+      if (aLow && !bLow) return -1;
+      if (!aLow && bLow) return 1;
+
+      return a.title.localeCompare(b.title);
+    });
+
+    const total = filtered.length;
+    const enrichedBooks = filtered.slice(skip, skip + Number(limit));
     
     // Global stats across ALL platform
     const globalTotalTitles = await prisma.book.count({ where: {} });
-    const globalLowStock = await prisma.book.count({ where: { stock: { lt: 10 } } });
     
-    const stockAgg = await prisma.book.aggregate({
-      _sum: { stock: true }
-    });
-    const totalCirculation = stockAgg._sum.stock || 0;
+    // Removed duplicate declaration of allBooks and enrichedGlobalBooks
+    
+    const globalLowStock = enrichedGlobalBooks.filter(b => b.currentStock < 10).length;
 
-    // If initial load sorting is dynamic on frontend, we can also sort enrichedBooks here to guarantee <10 at top if limit > 1
-    // The requirement says: "On initial page load, the data table must automatically sort dynamically to push all "Low Stock" (<10 copies) items to the very top of the list."
-    // We already ordered by `stock asc` in DB, which correctly puts lowest stock (e.g. 0, 1, 2) at top.
+    // Dead Stock: No activity in last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const staleInventory = enrichedGlobalBooks.filter(b => new Date(b.lastActivity) < thirtyDaysAgo).length;
+
+    // Pending Restocks: Pinged authors in the last 14 days whose books are STILL low stock
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    const recentPings = await prisma.notification.findMany({
+      where: {
+        message: { contains: 'running low' },
+        createdAt: { gte: fourteenDaysAgo }
+      }
+    });
+    const pingedAuthorNames = new Set(recentPings.map(n => n.target));
+    const pendingRestocks = enrichedGlobalBooks.filter(b => b.currentStock < 10 && pingedAuthorNames.has(b.authorName)).length;
 
     res.json({
       data: enrichedBooks,
@@ -4720,7 +5267,8 @@ router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
         limit: Number(limit),
         globalStats: {
           totalTitles: globalTotalTitles,
-          totalCirculation,
+          staleInventory,
+          pendingRestocks,
           globalLowStock
         }
       }
@@ -4729,6 +5277,285 @@ router.get('/api/admin/inventory', verifyToken, isAdmin, async (req, res) => {
   } catch (err) {
     console.error('[GET admin inventory]', err);
     res.status(500).json({ error: 'Failed to fetch admin inventory' });
+  }
+});
+
+// ----------------------------------------------------
+// GLOBAL SALES ANALYTICS
+// ----------------------------------------------------
+router.get('/api/admin/sales-analytics', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    const dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter.gte = new Date(startDate);
+      dateFilter.lte = new Date(endDate);
+    }
+    
+    // 1. Fetch Web Orders
+    const webOrders = await prisma.orderItem.findMany({
+      where: {
+        createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+        order: { paymentVerified: true },
+        status: { notIn: ['Cancelled', 'Rejected'] }
+      },
+      include: {
+        order: { select: { customerName: true, id: true } },
+        book: { select: { title: true, author: { select: { name: true } } } }
+      }
+    });
+
+    // 2. Fetch POS Orders
+    const posOrders = await prisma.posOrderItem.findMany({
+      where: {
+        createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+        posOrder: { status: 'PAID' }
+      },
+      include: {
+        posOrder: { select: { id: true, event: { select: { name: true } } } },
+        book: { select: { title: true, author: { select: { name: true } } } }
+      }
+    });
+
+    // 3. Fetch Event Manual Sales (if they have dates)
+    const manualSales = await prisma.eventRegistration.findMany({
+      where: {
+        manualSoldQty: { gt: 0 },
+        ...(Object.keys(dateFilter).length > 0 ? { updatedAt: dateFilter } : {})
+      },
+      include: {
+        author: { select: { name: true } },
+        event: { select: { name: true } }
+      }
+    });
+
+    const ledger = [];
+    let totalRevenue = 0;
+    let totalUnits = 0;
+    
+    webOrders.forEach(item => {
+      const revenue = item.quantity * item.price;
+      totalRevenue += revenue;
+      totalUnits += item.quantity;
+      ledger.push({
+        date: item.createdAt,
+        channel: 'Web',
+        refId: `ORD-${String(item.order.id).padStart(4, '0')}`,
+        customer: item.order.customerName,
+        title: item.book.title,
+        author: item.book.author.name,
+        qty: item.quantity,
+        revenue: revenue
+      });
+    });
+
+    posOrders.forEach(item => {
+      const revenue = item.quantity * item.price;
+      totalRevenue += revenue;
+      totalUnits += item.quantity;
+      ledger.push({
+        date: item.createdAt,
+        channel: 'POS',
+        refId: `POS-${String(item.posOrder.id).padStart(4, '0')}`,
+        customer: 'Walk-in (POS)',
+        title: item.book.title,
+        author: item.book.author.name,
+        qty: item.quantity,
+        revenue: revenue
+      });
+    });
+
+    manualSales.forEach(item => {
+      totalRevenue += item.manualSoldAmount || 0;
+      totalUnits += item.manualSoldQty || 0;
+      ledger.push({
+        date: item.updatedAt || item.createdAt,
+        channel: 'Manual',
+        refId: `EVT-${item.eventId}`,
+        customer: 'Walk-in (Manual)',
+        title: 'Mixed Books',
+        author: item.author.name,
+        qty: item.manualSoldQty,
+        revenue: item.manualSoldAmount || 0
+      });
+    });
+
+    ledger.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const bookMap = {};
+    const authorMap = {};
+    const channelMap = { Web: 0, POS: 0, Manual: 0 };
+    
+    ledger.forEach(item => {
+      if (channelMap[item.channel] !== undefined) {
+        channelMap[item.channel] += item.revenue;
+      }
+      
+      if (item.channel !== 'Manual') {
+        if (!bookMap[item.title]) bookMap[item.title] = { title: item.title, qty: 0, revenue: 0, author: item.author };
+        bookMap[item.title].qty += item.qty;
+        bookMap[item.title].revenue += item.revenue;
+      }
+      
+      if (!authorMap[item.author]) authorMap[item.author] = { author: item.author, revenue: 0, qty: 0 };
+      authorMap[item.author].revenue += item.revenue;
+      authorMap[item.author].qty += item.qty;
+    });
+
+    const topBooks = Object.values(bookMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
+    const topAuthors = Object.values(authorMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+
+    res.json({
+      totalRevenue,
+      totalUnits,
+      channelBreakdown: channelMap,
+      topBooks,
+      topAuthors,
+      ledger
+    });
+    
+  } catch (err) {
+    console.error('[GET sales analytics]', err);
+    res.status(500).json({ error: 'Failed to fetch sales analytics' });
+  }
+});
+
+// Author Event Proposal
+router.post('/api/author/propose-event', verifyToken, async (req, res) => {
+  try {
+    const { name, location, date, duration, eventType, description } = req.body;
+    
+    // Fetch author info
+    const author = await prisma.author.findFirst({ where: { userId: req.user.id } });
+    const authorName = author ? author.name : req.user.email;
+    
+    const eventDesc = `[Proposed by Author: ${authorName}]\n${description || ''}`;
+    
+    const event = await prisma.event.create({
+      data: {
+        name,
+        location,
+        date,
+        duration,
+        eventType,
+        description: eventDesc,
+        status: 'Pending Approval',
+        commissionFlat: 0,
+        commissionPercent: 0,
+        registrationFee: 0
+      }
+    });
+    res.json(event);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to propose event' });
+  }
+});
+
+// Admin Event Status Update (Approve/Reject)
+router.put('/api/admin/events/:id/status', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const { status } = req.body;
+    
+    if (!['Upcoming', 'Rejected', 'Past', 'Legacy Archive'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    // Get the event before updating to check if it was Pending Approval
+    const existingEvent = await prisma.event.findUnique({ where: { id: eventId } });
+    
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data: { status }
+    });
+
+    // If the event was a proposal (description contains "[Proposed by Author:"), notify the proposing author
+    if (existingEvent && existingEvent.status === 'Pending Approval' && existingEvent.description) {
+      const proposerMatch = existingEvent.description.match(/\[Proposed by Author: (.*?)\]/);
+      if (proposerMatch) {
+        const proposerName = proposerMatch[1];
+        const isApproved = status === 'Upcoming';
+        const statusLabel = isApproved ? 'Approved ✅' : 'Rejected ❌';
+        const notifMessage = `Your event proposal "${existingEvent.name}" has been ${isApproved ? 'approved' : 'rejected'} by the admin. ${isApproved ? 'It is now listed as an Upcoming event.' : 'Please contact the admin team for further details.'}`;
+
+        // In-app notification to the author
+        await prisma.notification.create({
+          data: { message: notifMessage, target: proposerName }
+        });
+
+        // Find the author's email
+        const author = await prisma.author.findFirst({ where: { name: proposerName } });
+        if (author && author.email) {
+          const emailContent = emailWrap(
+            `Event Proposal ${statusLabel}`,
+            `<p>Hi <strong>${proposerName}</strong>,</p>
+             <p>Your event proposal <strong>"${existingEvent.name}"</strong> has been reviewed by the PAA admin team.</p>
+             <table style="margin:16px 0;border-collapse:collapse;">
+               <tr><td style="padding:6px 12px;font-weight:bold;background:#f0f4f8;">Event</td><td style="padding:6px 12px;">${existingEvent.name}</td></tr>
+               <tr><td style="padding:6px 12px;font-weight:bold;background:#f0f4f8;">Date</td><td style="padding:6px 12px;">${existingEvent.date}</td></tr>
+               <tr><td style="padding:6px 12px;font-weight:bold;background:#f0f4f8;">Location</td><td style="padding:6px 12px;">${existingEvent.location || 'TBA'}</td></tr>
+               <tr><td style="padding:6px 12px;font-weight:bold;background:#f0f4f8;">Decision</td><td style="padding:6px 12px;font-weight:bold;color:${isApproved ? '#16a34a' : '#dc2626'};">${statusLabel}</td></tr>
+             </table>
+             ${isApproved
+               ? `<p style="color:#16a34a;font-weight:bold;">Congratulations! Your event has been approved and is now listed. You will be notified when registration opens.</p>`
+               : `<p style="color:#dc2626;">Unfortunately, this proposal was not approved at this time. Please reach out to the admin team if you have any questions.</p>`
+             }`
+          );
+          await sendNotificationEmail(author.email, `Event Proposal ${statusLabel}: "${existingEvent.name}"`, emailContent).catch(err => {
+            console.error('[Event status email] Failed:', err.message);
+          });
+        }
+      }
+    }
+
+    res.json(updatedEvent);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update event status' });
+  }
+});
+
+
+const carouselDir = path.join(__dirname, '../uploads/carousel');
+if (!fs.existsSync(carouselDir)) fs.mkdirSync(carouselDir, { recursive: true });
+
+// Get all carousel images
+router.get('/api/carousel', (req, res) => {
+  try {
+    const files = fs.readdirSync(carouselDir);
+    const images = files.filter(f => f.match(/\.(jpg|jpeg|png|webp|gif)$/i)).map(f => ({
+      id: f,
+      url: `/uploads/carousel/${f}`
+    }));
+    res.json(images);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch carousel' });
+  }
+});
+
+// Upload carousel image
+router.post('/api/admin/carousel', verifyToken, isAdmin, upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  try {
+    const tempPath = req.file.path;
+    const destPath = path.join(carouselDir, req.file.filename);
+    fs.renameSync(tempPath, destPath);
+    res.json({ success: true, url: `/uploads/carousel/${req.file.filename}` });
+  } catch(err) {
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
+// Delete carousel image
+router.delete('/api/admin/carousel/:filename', verifyToken, isAdmin, (req, res) => {
+  try {
+    const filepath = path.join(carouselDir, req.params.filename);
+    if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+    res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ error: 'Delete failed' });
   }
 });
 

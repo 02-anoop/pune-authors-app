@@ -116,9 +116,14 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
 
           
           <div className="bg-white border border-paa-navy/5 p-6 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Submitted Books</h3>
+            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Book Catalogue</h3>
             <div className="space-y-4">
-              {authorProfile.books.length === 0 ? <p className="text-sm text-paa-gray-text">No books found.</p> : authorProfile.books.map((b: any, idx: number) => (
+              {(() => {
+                const catalogueBooks = authorProfile.books.filter((b: any) => new Date(b.createdAt).getTime() > new Date(authorProfile.createdAt).getTime() + 60000);
+                if (catalogueBooks.length === 0) {
+                  return <p className="text-sm text-paa-gray-text font-medium bg-gray-50 p-4 border border-paa-navy/5 rounded">No new book added by the author.</p>;
+                }
+                return catalogueBooks.map((b: any, idx: number) => (
                 <div key={b.id} className="border border-paa-navy/5 p-4 bg-gray-50 flex flex-col md:flex-row gap-4">
                   {b.coverUrl && <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + b.coverUrl : "http://localhost:3001" + b.coverUrl} alt="Cover" className="w-20 h-28 object-cover border border-paa-navy/20" />}
                   <div className="flex-1">
@@ -133,17 +138,21 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">MRP</span><span className="text-sm font-bold text-green-700">₹{b.mrp}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Language</span><span className="text-sm font-bold text-paa-navy">{b.language || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Format</span><span className="text-sm font-bold text-paa-navy">{b.format || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Print Format</span><span className="text-sm font-bold text-paa-navy">{b.printFormat || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Pages</span><span className="text-sm font-bold text-paa-navy">{b.pages || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Publisher</span><span className="text-sm font-bold text-paa-navy">{b.publisher || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Edition</span><span className="text-sm font-bold text-paa-navy">{b.edition || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Pub Date</span><span className="text-sm font-bold text-paa-navy">{b.publicationDate || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">ISBN</span><span className="text-sm font-bold text-paa-navy">{b.isbn || '-'}</span></div>
+                      <div><span className="text-[10px] uppercase text-paa-gray-text block">Purpose of Writing</span><span className="text-sm font-bold text-paa-navy">{b.purpose || '-'}</span></div>
                       <div><span className="text-[10px] uppercase text-paa-gray-text block">Initial Stock</span><span className="text-sm font-bold text-paa-navy">{b.stock}</span></div>
                     </div>
                     
                     <div className="mt-4"><span className="text-[10px] uppercase text-paa-gray-text block mb-1">Synopsis</span><p className="text-sm text-paa-navy font-medium whitespace-pre-wrap leading-relaxed">{b.synopsis}</p></div>
                   </div>
                 </div>
-              ))}
+              ));
+              })()}
             </div>
           </div>
           
@@ -168,32 +177,48 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
         {activeProfileTab === 'inventory' && (
         <div id="inventory">
           <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Books & Inventory</h3>
-          <div className="overflow-x-auto">
-            <table className="dash-table">
-               <thead>
-                 <tr>
-                   <th>Title</th>
-                   <th style={{textAlign: 'center'}}>MRP</th>
-                   <th style={{textAlign: 'center'}}>Stock</th>
-                   <th style={{textAlign: 'center'}}>Status</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {authorProfile.books.length === 0 ? <tr><td colSpan={4} className="text-center py-4 text-paa-gray-text">No books published.</td></tr> : authorProfile.books.map((b: any) => (
-                   <tr key={b.id}>
-                     <td className="font-bold text-paa-navy">{b.title} <span className="text-xs text-gray-500 font-medium block">{b.genre}</span></td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">₹{b.mrp}</td>
-                     <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">{b.stock}</td>
-                     <td style={{textAlign: 'center'}}>
-                        <span className={`dash-badge ${b.status === 'Approved' ? 'approved' : 'pending'}`}>
-                          {b.status}
-                        </span>
-                     </td>
-                   </tr>
-                 ))}
-               </tbody>
-            </table>
-          </div>
+          {(() => {
+            const authorCreatedAt = new Date(authorProfile.createdAt).getTime();
+            // Add a 2-minute buffer to filter out books submitted during initial registration
+            const newBooks = authorProfile.books.filter((b: any) => new Date(b.createdAt).getTime() > authorCreatedAt + 120000);
+            
+            if (newBooks.length === 0) {
+              return (
+                <blockquote className="border-l-4 border-paa-navy pl-4 py-2 italic text-paa-gray-text bg-gray-50">
+                  "No new book added by the author."
+                </blockquote>
+              );
+            }
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="dash-table w-full">
+                   <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                     <tr>
+                       <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Title</th>
+                       <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">MRP</th>
+                       <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Stock</th>
+                       <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Status</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {newBooks.map((b: any) => (
+                       <tr key={b.id}>
+                         <td className="font-bold text-paa-navy">{b.title} <span className="text-xs text-gray-500 font-medium block">{b.genre}</span></td>
+                         <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">₹{b.mrp}</td>
+                         <td style={{textAlign: 'center'}} className="font-bold text-paa-navy">{b.stock}</td>
+                         <td style={{textAlign: 'center'}}>
+                            <span className={`dash-badge ${b.status === 'Approved' ? 'approved' : 'pending'}`}>
+                              {b.status}
+                            </span>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
         )}
 
@@ -202,14 +227,14 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
           <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Web Orders</h3>
           <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <table className="dash-table">
-               <thead>
+               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                  <tr>
-                   <th>Order ID</th>
-                   <th>Customer</th>
-                   <th>Book</th>
-                   <th style={{textAlign: 'center'}}>Qty / Amt</th>
-                   <th style={{textAlign: 'center'}}>Status</th>
-                   <th style={{textAlign: 'center'}}>Payment</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Order ID</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Customer</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty / Amt</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Status</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Payment</th>
                  </tr>
                </thead>
                <tbody>
@@ -240,12 +265,12 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
           <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Event Participations</h3>
           <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <table className="dash-table">
-               <thead>
+               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                  <tr>
-                   <th>Event Name</th>
-                   <th>City</th>
-                   <th style={{textAlign: 'center'}}>Amount Paid</th>
-                   <th style={{textAlign: 'center'}}>Date</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event Name</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">City</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Amount Paid</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Date</th>
                  </tr>
                </thead>
                <tbody>
@@ -268,13 +293,13 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
           <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-4 border-l-4 border-paa-navy pl-2">Books Distribution Record</h3>
           <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <table className="dash-table">
-               <thead>
+               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                  <tr>
-                   <th>Title</th>
-                   <th style={{textAlign: 'center'}}>Qty Sold</th>
-                   <th style={{textAlign: 'center'}}>Airport Stock</th>
-                   <th style={{textAlign: 'center'}}>Fair Stock</th>
-                   <th style={{textAlign: 'center'}}>In Stock</th>
+                   <th className="!text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Title</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty Sold</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Airport Stock</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Fair Stock</th>
+                   <th className="text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">In Stock</th>
                  </tr>
                </thead>
                <tbody>

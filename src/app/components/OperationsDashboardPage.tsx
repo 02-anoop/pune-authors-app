@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import axios from 'axios';
 import {
   RefreshCw, Users, BookOpen, Calendar as CalendarIcon, Settings, Plus, Search,
   Eye, Edit, Edit2, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle,
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
   ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, ChevronUp, Loader2, FileText, AlertCircle,
-  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, ChevronLeft, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send
+  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, ChevronLeft, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send, User, Phone
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line, LabelList
 } from 'recharts';
 import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
@@ -40,10 +40,12 @@ axios.interceptors.response.use(
   }
 );
 
-import { AuthorFullProfileView } from './AuthorFullProfileView';
-import { AuthorRegistrationPage } from './AuthorRegistrationPage';
-import { LibraryDonationsTab } from './LibraryDonationsTab';
-import { AdminInventoryTab } from './AdminInventoryTab';
+const AuthorFullProfileView = lazy(() => import('./AuthorFullProfileView').then(m => ({ default: m.AuthorFullProfileView })));
+const AuthorRegistrationPage = lazy(() => import('./AuthorRegistrationPage').then(m => ({ default: m.AuthorRegistrationPage })));
+const LibraryDonationsTab = lazy(() => import('./LibraryDonationsTab').then(m => ({ default: m.LibraryDonationsTab })));
+const AdminInventoryTab = lazy(() => import('./AdminInventoryTab').then(m => ({ default: m.AdminInventoryTab })));
+const AdminReviewsTab = lazy(() => import('./AdminReviewsTab').then(m => ({ default: m.AdminReviewsTab })));
+import { downloadCataloguePDF } from './CataloguePage';
 
 const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
   if (!isOpen) return null;
@@ -65,6 +67,8 @@ const Modal = ({ isOpen, onClose, title, children, maxWidthClass }: any) => {
 };
 
 export function OperationsDashboardPage() {
+  const [selectedAuthorsForCatalogue, setSelectedAuthorsForCatalogue] = useState<number[]>([]);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [loading, setLoading] = useState(!sessionStorage.getItem('adminAuthors'));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
@@ -72,6 +76,17 @@ export function OperationsDashboardPage() {
     (() => { const t = localStorage.getItem('adminActiveTab'); return t === 'author_data' ? 'overview' : ((t as any) || 'overview'); })()
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
   const [pendingAlerts, setPendingAlerts] = useState({ orders: false, queries: false, authors: false, books: false });
@@ -109,11 +124,23 @@ export function OperationsDashboardPage() {
   });
   const [authors, setAuthors] = useState<any[]>(() => {
     const cached = sessionStorage.getItem('adminAuthors');
-    return cached ? JSON.parse(cached) : [];
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return Array.isArray(parsed) ? parsed.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })) : [];
+      } catch (e) {}
+    }
+    return [];
   });
   const [books, setBooks] = useState<any[]>(() => {
     const cached = sessionStorage.getItem('adminBooks');
-    return cached ? JSON.parse(cached) : [];
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return Array.isArray(parsed) ? parsed.sort((a: any, b: any) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' })) : [];
+      } catch (e) {}
+    }
+    return [];
   });
   const [events, setEvents] = useState<any[]>(() => {
     const cached = sessionStorage.getItem('adminEvents');
@@ -123,6 +150,11 @@ export function OperationsDashboardPage() {
     const cached = sessionStorage.getItem('adminOrders');
     return cached ? JSON.parse(cached) : [];
   });
+  const [libraries, setLibraries] = useState<any[]>([]);
+  const [ordersMeta, setOrdersMeta] = useState<any>({});
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [authorsMeta, setAuthorsMeta] = useState<any>({});
+  const [authorsPage, setAuthorsPage] = useState(1);
 
   // Modals state
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
@@ -138,15 +170,30 @@ export function OperationsDashboardPage() {
   const [reportEventId, setReportEventId] = useState<number | null>(null);
   const [eventReportData, setEventReportData] = useState<any>(null);
   const [pendingReportStatus, setPendingReportStatus] = useState<any>(null);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null);
   const [selectedPendingAuthor, setSelectedPendingAuthor] = useState<any>(null);
-  const handleViewEditAuthor = (author: any) => setSelectedPendingAuthor(author);
+  const handleViewEditAuthor = async (author: any) => {
+    toast.promise(
+      axios.get(`${API}/api/admin/authors/${author.id}/dashboard-data`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => res.data.authorProfile),
+      {
+        loading: 'Loading author details...',
+        success: (fullAuthor) => {
+          setSelectedPendingAuthor(fullAuthor);
+          return 'Details loaded!';
+        },
+        error: 'Failed to load author details'
+      }
+    );
+  };
   const [editingBook, setEditingBook] = useState<any>(null);
   const [isEditBookModalOpen, setIsEditBookModalOpen] = useState(false);
   const [rejectAuthorTarget, setRejectAuthorTarget] = useState<any>(null);
   const [rejectReasons, setRejectReasons] = useState<string[]>([]);
   const [otherReason, setOtherReason] = useState('');
+  const [selectedAuthorIds, setSelectedAuthorIds] = useState<number[]>([]);
   const [editingAuthor, setEditingAuthor] = useState<any>(null);
   const [isEditAuthorModalOpen, setIsEditAuthorModalOpen] = useState(false);
 
@@ -172,6 +219,13 @@ export function OperationsDashboardPage() {
   const [galleryUploadFiles, setGalleryUploadFiles] = useState<File[]>([]);
   const [galleryUploadCaption, setGalleryUploadCaption] = useState('');
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [bannerUploadFile, setBannerUploadFile] = useState<File | null>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [gallerySubTab, setGallerySubTab] = useState<'events' | 'carousel'>('events');
+  const [carouselImages, setCarouselImages] = useState<any[]>([]);
+  const [uploadingCarousel, setUploadingCarousel] = useState(false);
+  const carouselFileInputRef = useRef<HTMLInputElement>(null);
+  const [viewingGalleryImage, setViewingGalleryImage] = useState<string | null>(null);
 
   // Events tab lifted state
   const [selectedEventBreakdown, setSelectedEventBreakdown] = useState<any>(null);
@@ -193,7 +247,7 @@ export function OperationsDashboardPage() {
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
   const [showBooksSold, setShowBooksSold] = useState(true);
   const [eventGraphFilter, setEventGraphFilter] = useState('All');
-  const [eventTimeFilter, setEventTimeFilter] = useState('Last 15');
+  const [eventTimeFilter, setEventTimeFilter] = useState('All');
   const [viewingRegistrationsEventId, setViewingRegistrationsEventId] = useState<number | null>(null);
   const [eventRegistrations, setEventRegistrations] = useState<any[]>([]);
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
@@ -271,18 +325,33 @@ export function OperationsDashboardPage() {
   const fetchAuthors = async (isBackground = false) => {
     if (!isBackground) setIsRefreshing(true);
     try {
-      const res = await axios.get(`${API}/api/admin/authors`);
-      setAuthors(res.data); sessionStorage.setItem('adminAuthors', JSON.stringify(res.data));
-      const c = res.data.filter((a: any) => a.status === 'Pending').length; if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true })); prevCountsRef.current.authors = c;
+      const res = await axios.get(`${API}/api/admin/authors?page=${authorsPage}&limit=50`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      if (res.data.data) {
+        const sortedData = res.data.data.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+        setAuthors(sortedData);
+        setAuthorsMeta(res.data.meta);
+        sessionStorage.setItem('adminAuthors', JSON.stringify(sortedData));
+        const c = res.data.meta.totalPending || 0;
+        if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true }));
+        prevCountsRef.current.authors = c;
+      } else {
+        const sortedData = res.data.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+        setAuthors(sortedData);
+        sessionStorage.setItem('adminAuthors', JSON.stringify(sortedData));
+        const c = res.data.filter((a: any) => a.status === 'Pending').length;
+        if (c > prevCountsRef.current.authors) setPendingAlerts(prev => ({ ...prev, authors: true }));
+        prevCountsRef.current.authors = c;
+      }
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
   const fetchBooks = async (isBackground = false) => {
     if (!isBackground) setIsRefreshing(true);
     try {
-      const res = await axios.get(`${API}/api/admin/books`);
-      setBooks(res.data); sessionStorage.setItem('adminBooks', JSON.stringify(res.data));
-      const c = res.data.filter((b: any) => b.status === 'Pending').length; if (c > prevCountsRef.current.books) setPendingAlerts(prev => ({ ...prev, books: true })); prevCountsRef.current.books = c;
+      const res = await axios.get(`${API}/api/admin/books`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      const sortedData = res.data.sort((a: any, b: any) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+      setBooks(sortedData); sessionStorage.setItem('adminBooks', JSON.stringify(sortedData));
+      const c = sortedData.filter((b: any) => b.status === 'Pending').length; if (c > prevCountsRef.current.books) setPendingAlerts(prev => ({ ...prev, books: true })); prevCountsRef.current.books = c;
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
@@ -294,7 +363,12 @@ export function OperationsDashboardPage() {
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
-
+  const fetchLibraries = async (isBackground = false) => {
+    try {
+      const res = await axios.get(`${API}/api/admin/libraries`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setLibraries(res.data);
+    } catch (err) { }
+  };
 
   const handleNotifySettlement = async () => {
     try {
@@ -410,20 +484,29 @@ export function OperationsDashboardPage() {
       w.__apiCache = w.__apiCache || {};
       if (!background && w.__apiCache.adminOrders) {
         setOrders(w.__apiCache.adminOrders);
+        if (w.__apiCache.adminOrdersMeta) setOrdersMeta(w.__apiCache.adminOrdersMeta);
         prevOrderCountRef.current = w.__apiCache.adminOrders.length;
       }
 
-      const res = await axios.get(`${API}/api/admin/orders`);
-      const newCount = res.data.length;
+      const res = await axios.get(`${API}/api/admin/orders?page=${ordersPage}&limit=50`);
+      const newCount = res.data.meta?.total || res.data.length;
 
       if (background && prevOrderCountRef.current > 0 && newCount > prevOrderCountRef.current && activeTab !== 'orders') {
         setPendingAlerts(prev => ({ ...prev, orders: true }));
       }
       prevOrderCountRef.current = newCount;
-      w.__apiCache.adminOrders = res.data;
-      sessionStorage.setItem('adminOrders', JSON.stringify(res.data));
-      setOrders(res.data);
-      const c = res.data.filter((o: any) => o.status === 'Pending').length; if (c > prevCountsRef.current.orders) setPendingAlerts(prev => ({ ...prev, orders: true })); prevCountsRef.current.orders = c;
+      if (res.data.data) {
+        w.__apiCache.adminOrders = res.data.data;
+        w.__apiCache.adminOrdersMeta = res.data.meta;
+        sessionStorage.setItem('adminOrders', JSON.stringify(res.data.data));
+        setOrders(res.data.data);
+        setOrdersMeta(res.data.meta);
+        const c = res.data.meta.toApproveOrders || 0;
+        if (c > prevCountsRef.current.orders) setPendingAlerts(prev => ({ ...prev, orders: true }));
+        prevCountsRef.current.orders = c;
+      } else {
+        setOrders(res.data);
+      }
     } catch (err) { } finally { if (!background) setIsRefreshing(false); }
   };
 
@@ -448,71 +531,46 @@ export function OperationsDashboardPage() {
     if (!isBackground) setIsRefreshing(true);
     try {
       const res = await axios.get(`${API}/api/gallery`);
-      setGallery(res.data);
+      const now = new Date();
+      setGallery(res.data.filter((e: any) => new Date(e.date) <= now));
     } catch (err) { } finally { if (!isBackground) setIsRefreshing(false); }
   };
 
-  const handleUploadGalleryImage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const target = e.target as any;
-    if (!selectedGalleryEvent) return;
-
-    const formData = new FormData();
-    formData.append('photo', target.photo.files[0]);
-    formData.append('caption', target.caption.value);
-    formData.append('dateTaken', target.dateTaken.value);
-
+  const fetchCarouselImages = async () => {
     try {
-      await axios.post(`${API}/api/admin/gallery/${selectedGalleryEvent.id}/images`, formData, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      toast.success('Image added to gallery');
-      const updatedRes = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      setEvents(updatedRes.data);
-      setSelectedGalleryEvent(updatedRes.data.find((e: any) => e.id === selectedGalleryEvent.id));
-      target.reset();
-    } catch (err) {
-      toast.error('Failed to upload image');
-    }
+      const res = await axios.get(`${API}/api/carousel`);
+      setCarouselImages(res.data);
+    } catch (e) { console.error(e); }
   };
 
-  const handleDeleteGalleryImage = async (imageId: number) => {
-    if (!window.confirm("Delete this image?")) return;
-    try {
-      await axios.delete(`${API}/api/admin/gallery/images/${imageId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      toast.success('Image deleted');
-      const updatedRes = await axios.get(`${API}/api/admin/events`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      setEvents(updatedRes.data);
-      setSelectedGalleryEvent(updatedRes.data.find((e: any) => e.id === selectedGalleryEvent.id));
-    } catch (err) {
-      toast.error('Failed to delete image');
-    }
-  };
+
 
   useEffect(() => {
     if (location.pathname === '/operations' || location.pathname === '/operations/') {
-        if (selectedEventBreakdown) {
-            setSelectedEventBreakdown(null);
-            setSelectedAuthorForData(null);
-        }
+      if (selectedEventBreakdown) {
+        setSelectedEventBreakdown(null);
+        setSelectedAuthorForData(null);
+      }
     } else if (events.length > 0 && location.pathname.startsWith('/operations/events/')) {
-        const slug = location.pathname.split('/operations/events/')[1];
-        if (slug) {
-            if (!selectedEventBreakdown || selectedEventBreakdown.name.replace(/\s+/g, '-').toLowerCase() !== slug) {
-                const evt = events.find((e: any) => e.name.replace(/\s+/g, '-').toLowerCase() === slug);
-                if (evt) {
-                    setActiveTab('events');
-                    setSelectedEventBreakdown(evt);
-                    const isPastOrLegacy = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
-                    setShowAllPlatformAuthors(isPastOrLegacy);
-                    fetchEventRegistrations(evt.id);
-                    fetchAuthors(true);
-                    setTimeout(() => {
-                        const scrollEl = document.getElementById('admin-dashboard-scroll');
-                        if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'auto' });
-                        else window.scrollTo({ top: 0, behavior: 'auto' });
-                    }, 0);
-                }
-            }
+      const slug = location.pathname.split('/operations/events/')[1];
+      if (slug) {
+        if (!selectedEventBreakdown || selectedEventBreakdown.name.replace(/\s+/g, '-').toLowerCase() !== slug) {
+          const evt = events.find((e: any) => e.name.replace(/\s+/g, '-').toLowerCase() === slug);
+          if (evt) {
+            setActiveTab('events');
+            setSelectedEventBreakdown(evt);
+            const isPastOrLegacy = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
+            setShowAllPlatformAuthors(isPastOrLegacy);
+            fetchEventRegistrations(evt.id);
+            fetchAuthors(true);
+            setTimeout(() => {
+              const scrollEl = document.getElementById('admin-dashboard-scroll');
+              if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'auto' });
+              else window.scrollTo({ top: 0, behavior: 'auto' });
+            }, 0);
+          }
         }
+      }
     }
   }, [events, location.pathname, selectedEventBreakdown]);
 
@@ -539,6 +597,9 @@ export function OperationsDashboardPage() {
           promises.push(fetchForms(isBackground));
         } else if (activeTab === 'gallery') {
           promises.push(fetchGallery(isBackground));
+          promises.push(fetchCarouselImages());
+          promises.push(fetchEvents(isBackground));
+          promises.push(fetchLibraries(isBackground));
         } else if (activeTab === 'helpdesk') {
           promises.push(fetchQueriesAlert(true));
         }
@@ -856,27 +917,7 @@ export function OperationsDashboardPage() {
     } finally { setLoadingAction(null); }
   };
 
-  const handleVerifyOrder = async (id: number) => {
-    if (window.confirm('Are you sure you want to verify this payment?')) {
-      setLoadingAction('verifyOrder_' + id);
-      try {
-        await axios.post(`${API}/api/admin/orders/${id}/verify`);
-        fetchOrders();
-        setSelectedOrder(null);
-      } finally { setLoadingAction(null); }
-    }
-  };
 
-  const handleRejectOrder = async (id: number) => {
-    if (window.confirm('Are you sure you want to mark this payment as not received?')) {
-      setLoadingAction('rejectOrder_' + id);
-      try {
-        await axios.post(`${API}/api/admin/orders/${id}/reject-payment`);
-        fetchOrders();
-        setSelectedOrder(null);
-      } finally { setLoadingAction(null); }
-    }
-  };
 
 
   const handleEscalateOrder = async (id: number) => {
@@ -1102,7 +1143,7 @@ export function OperationsDashboardPage() {
         }
       }
     });
-    const uniqueDates = Array.from(new Set(orders.filter((o: any) => o.date).map((o: any) => o.date)));
+    const uniqueDates = Array.from(new Set<string>(orders.filter((o: any) => o.date).map((o: any) => o.date)));
     const recentDates = uniqueDates.slice(0, 7).reverse();
     const revenueTrendData = recentDates.map(d => ({ date: d, revenue: revenueTrendMap[d] || 0 }));
 
@@ -1113,10 +1154,8 @@ export function OperationsDashboardPage() {
     const avgOrderValue = completedOrders > 0 ? Math.round(totalRevenueWeb / completedOrders) : 0;
 
     const insights = [
-      { label: 'Avg Order Value', value: `₹${avgOrderValue}`, desc: 'Avg revenue per successful order', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
       { label: 'Order Completion', value: `${orderCompletionRate}%`, desc: 'Of all web orders', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
       { label: 'Web Books Sold', value: totalBooksSoldWeb, desc: 'Total physical copies sold online', icon: ShoppingCart, color: 'text-purple-600', bg: 'bg-purple-50' },
-      { label: 'Event Adoption', value: `${latestEventRate}%`, desc: 'Latest event adoption', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50', hoverData: last3Events }
     ];
 
     return (
@@ -1144,7 +1183,7 @@ export function OperationsDashboardPage() {
           {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Visual Data Insights (col-span-2) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
           <div className="lg:col-span-2 space-y-6">
             {/* Mini Insight Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {insights.map((insight, idx) => (
                 <div key={idx} className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow relative group">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${insight.bg} ${insight.color}`}>
@@ -1183,19 +1222,13 @@ export function OperationsDashboardPage() {
                 <div className="h-48 w-full">
                   {revenueTrendData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={revenueTrendData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
+                      <LineChart data={revenueTrendData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis dataKey="date" fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
                         <YAxis fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
                         <RechartsTooltip cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '3 3' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
-                        <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" name="Revenue (₹)" />
-                      </AreaChart>
+                        <Line type="linear" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={(props: any) => { const { cx, cy, index } = props; const total = revenueTrendData.length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={3} fill="#fff" stroke="#10b981" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }} name="Revenue (₹)" />
+                      </LineChart>
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-full flex items-center justify-center text-gray-400 text-xs">No revenue data.</div>
@@ -1424,217 +1457,438 @@ export function OperationsDashboardPage() {
   };
 
 
-  const SalesReportTab = ({ refreshTrigger }: { refreshTrigger?: number }) => {
-    const [reportPeriod, setReportPeriod] = useState('daily');
-    const [isExporting, setIsExporting] = useState(false);
-    const [salesChartData, setSalesChartData] = useState<any[]>([]);
-    const [salesTableData, setSalesTableData] = useState<any[]>([]);
-    const [isLoadingTable, setIsLoadingTable] = useState(false);
+  const SalesReportTab = React.useMemo(() => {
+    return function SalesReportTabComponent({ refreshTrigger }: { refreshTrigger?: number }) {
+    const [filterType, setFilterType] = useState('monthly');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [selectedMonthValue, setSelectedMonthValue] = useState(new Date().toISOString().slice(0, 7));
+    const [salesData, setSalesData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const prevStartDate = useRef('');
+    const prevEndDate = useRef('');
+    const hasLoadedInitialData = useRef(false);
+    const [tableChannelFilter, setTableChannelFilter] = useState('All');
     const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
     useEffect(() => {
-      const fetchChartData = async () => {
-        try {
-          const res = await axios.get(`${API}/api/admin/reports/chart?period=${reportPeriod}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          });
-          setSalesChartData(res.data);
-        } catch (err) {
-          toast.error('Failed to load chart data');
-        }
-      };
-      const fetchTableData = async () => {
-        setIsLoadingTable(true);
-        try {
-          const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}&format=json`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          });
-          setSalesTableData(res.data);
-        } catch (err) {
-          setSalesTableData([]);
-        } finally {
-          setIsLoadingTable(false);
-        }
-      };
-      fetchChartData();
-      fetchTableData();
-    }, [reportPeriod, API, refreshTrigger]);
+      if (filterType === 'custom') return;
+      const today = new Date();
+      let end = new Date(today);
+      let start = new Date(today);
 
-    const handleExportSalesReport = async () => {
-      setIsExporting(true);
-      try {
-        const res = await axios.get(`${API}/api/admin/reports/sales?period=${reportPeriod}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          responseType: 'blob',
-        });
-        const url = window.URL.createObjectURL(new Blob([res.data]));
-        const link = document.createElement('a');
-        const today = new Date().toISOString().split('T')[0];
-        link.href = url;
-        link.setAttribute('download', `sales_report_${reportPeriod}_${today}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        toast.success('Sales report exported successfully');
-      } catch (err: any) {
-        if (err.response && err.response.status === 404) {
-          toast.error('No sales data found for this period format.');
+      if (filterType === 'today') {
+        start.setHours(0, 0, 0, 0);
+      } else if (filterType === 'weekly') {
+        start.setDate(today.getDate() - 7);
+      } else if (filterType === 'monthly') {
+        start.setDate(today.getDate() - 30);
+      } else if (filterType === 'this_month') {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+      } else if (filterType === 'ytd') {
+        start = new Date(today.getFullYear(), 0, 1);
+      } else if (filterType === 'select_month') {
+        if (selectedMonthValue) {
+          const [yyyy, mm] = selectedMonthValue.split('-');
+          start = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+          end = new Date(parseInt(yyyy), parseInt(mm), 0);
         } else {
-          toast.error('Failed to export sales report');
+          return;
         }
-      } finally {
-        setIsExporting(false);
+      } else if (filterType === 'lifetime') {
+        start = new Date('2000-01-01');
       }
-    };
 
-    const todayStr = new Date().toDateString();
-    const todaysOrders = orders.filter((o: any) => new Date(o.createdAt).toDateString() === todayStr);
-    const ordersArrivedToday = todaysOrders.length;
-    const ordersAcceptedToday = todaysOrders.filter((o: any) => ['Processing', 'Dispatched', 'Completed'].includes(o.status)).length;
-    const ordersUnderDeliveryToday = todaysOrders.filter((o: any) => o.status === 'Dispatched').length;
-    const revenueToday = todaysOrders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
+      setStartDate(start.toISOString().split('T')[0]);
+      setEndDate(end.toISOString().split('T')[0]);
+    }, [filterType, selectedMonthValue]);
+
+    useEffect(() => {
+      if (!startDate || !endDate) return;
+      let isMounted = true;
+
+      const isDateChange = startDate !== prevStartDate.current || endDate !== prevEndDate.current;
+      prevStartDate.current = startDate;
+      prevEndDate.current = endDate;
+
+      const fetchSalesData = async () => {
+        if (isDateChange || !hasLoadedInitialData.current) setIsLoading(true);
+        try {
+          const res = await axios.get(`${API}/api/admin/sales-report?startDate=${startDate}&endDate=${endDate}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (isMounted) {
+            setSalesData(res.data);
+            hasLoadedInitialData.current = true;
+          }
+        } catch (err) {
+          if (isMounted && (isDateChange || !hasLoadedInitialData.current)) toast.error('Failed to load sales report');
+        } finally {
+          if (isMounted && (isDateChange || !hasLoadedInitialData.current)) setIsLoading(false);
+        }
+      };
+      fetchSalesData();
+      return () => { isMounted = false; };
+    }, [startDate, endDate, API, refreshTrigger]);
+
+    const handleExport = () => {
+      if (!salesData?.tableData?.length) return;
+      const csv = 'Date,Order ID,Channel,Event,Author,Title,Qty,Revenue\n' +
+        salesData.tableData.map((r: any) => `${r.date},${r.orderId},${r.channel},"${r.event}","${r.author}","${r.title}",${r.qty},${r.revenue}`).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sales_report_${startDate}_to_${endDate}.csv`;
+      a.click();
+    };
 
     return (
       <div className="space-y-6">
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Daily Sales Stats ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <h3 className="text-xl font-serif font-medium text-paa-navy flex items-center gap-2">
-          <Activity className="w-5 h-5 text-paa-gold" /> Today's Sales Activity
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="dash-kpi-card blue">
-            <div className="flex items-start justify-between mb-4">
-              <div className="dash-kpi-icon blue"><ShoppingCart className="w-5 h-5" /></div>
-            </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Orders Arrived Today</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersArrivedToday}</h3>
+        {/* Top Bar: Controls */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div>
+            <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-paa-gold" /> Dynamic Sales Report
+            </h3>
+            <p className="text-xs text-gray-500 font-medium">Aggregate revenue data instantly across any date range.</p>
           </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="text-xs font-bold tracking-widest uppercase py-2.5 px-4 rounded-xl border border-gray-200 bg-gray-50 text-paa-navy outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-full sm:w-auto cursor-pointer"
+            >
+              <option value="today">Today</option>
+              <option value="weekly">Weekly (Last 7 Days)</option>
+              <option value="monthly">Monthly (Last 30 Days)</option>
+              <option value="this_month">This Month</option>
+              <option value="ytd">Year to Date (YTD)</option>
+              <option value="select_month">Specific Month</option>
+              <option value="lifetime">Lifetime (All Time)</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
 
-          <div className="dash-kpi-card green">
-            <div className="flex items-start justify-between mb-4">
-              <div className="dash-kpi-icon green"><CheckCircle className="w-5 h-5" /></div>
-            </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Orders Accepted Today</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersAcceptedToday}</h3>
-          </div>
+            {filterType === 'select_month' && (
+              <div className="flex items-center gap-2 animate-fade-in">
+                <input
+                  type="month"
+                  value={selectedMonthValue}
+                  onChange={(e) => setSelectedMonthValue(e.target.value)}
+                  className="text-xs font-bold tracking-widest uppercase py-2.5 px-4 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer"
+                />
+              </div>
+            )}
 
-          <div className="dash-kpi-card amber">
-            <div className="flex items-start justify-between mb-4">
-              <div className="dash-kpi-icon amber"><Package className="w-5 h-5" /></div>
-            </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Made For Delivery Today</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{ordersUnderDeliveryToday}</h3>
-          </div>
+            {filterType === 'custom' && (
+              <div className="flex items-center gap-2 animate-fade-in">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="text-xs font-bold tracking-widest uppercase py-2 px-3 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500"
+                />
+                <span className="text-gray-400 font-medium text-sm">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="text-xs font-bold tracking-widest uppercase py-2 px-3 rounded-xl border border-gray-200 bg-white text-paa-navy outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
 
-          <div className="dash-kpi-card emerald">
-            <div className="flex items-start justify-between mb-4">
-              <div className="dash-kpi-icon emerald"><TrendingUp className="w-5 h-5" /></div>
-            </div>
-            <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">Today's Revenue</p>
-            <h3 className="text-3xl font-bold text-paa-navy tracking-tight">₹{revenueToday.toLocaleString()}</h3>
+            <button onClick={handleExport} disabled={!salesData?.tableData?.length || isLoading} className="flex items-center justify-center gap-2 bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+              <Download size={14} /> Export
+            </button>
           </div>
         </div>
 
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Sales & Revenue Reports ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <div className="bg-white p-4 md:p-8 border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-3xl-2xl mt-8">
-          <div className="mb-6 border-b border-paa-navy/5 pb-4">
-            <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
-              <FileText className="w-5 h-5" /> Sales & Revenue Reports
-            </h3>
-            <p className="text-paa-gray-text text-sm">Generate comprehensive reports on books sold through all channels (Web & Live Events).</p>
-          </div>
-
-          {salesChartData.length > 0 && (
-            <div className="mb-8 border border-paa-navy/5 p-4 rounded-xl overflow-x-auto">
-              <h4 className="text-sm font-bold text-paa-navy uppercase tracking-widest mb-4">Books Sold By Channel</h4>
-              <div className="h-64 min-w-[500px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={salesChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                    <XAxis dataKey="name" fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                    <YAxis fontSize={10} tick={{ fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                    <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                    <Area type="monotone" dataKey="Web" stackId="1" stroke="#3b82f6" fill="#bfdbfe" name="Online Orders (Web)" />
-                    <Area type="monotone" dataKey="POS" stackId="1" stroke="#10b981" fill="#a7f3d0" name="Event Sales (POS)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+        {isLoading ? (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-[140px] bg-white border border-gray-100 rounded-2xl shadow-sm p-5 flex flex-col justify-between">
+                  <div className="flex justify-between items-start">
+                    <div className="h-8 w-8 bg-gray-100 animate-pulse rounded-lg"></div>
+                  </div>
+                  <div>
+                    <div className="h-3 w-20 bg-gray-100 animate-pulse rounded mb-2"></div>
+                    <div className="h-8 w-32 bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                  <div className="h-4 w-full bg-gray-50 animate-pulse rounded mt-2"></div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 h-[300px] bg-white border border-gray-100 rounded-2xl shadow-sm p-6 flex flex-col">
+                <div className="h-4 w-40 bg-gray-200 animate-pulse rounded mb-6"></div>
+                <div className="flex-1 w-full bg-gray-50 animate-pulse rounded-xl"></div>
+              </div>
+              <div className="h-[300px] bg-white border border-gray-100 rounded-2xl shadow-sm p-6 flex flex-col">
+                <div className="h-4 w-32 bg-gray-200 animate-pulse rounded mb-2"></div>
+                <div className="h-2 w-48 bg-gray-100 animate-pulse rounded mb-6"></div>
+                <div className="flex-1 w-full bg-gray-50 animate-pulse rounded-full mx-10 my-4"></div>
+                <div className="h-4 w-48 bg-gray-100 animate-pulse rounded mx-auto mt-4"></div>
               </div>
             </div>
-          )}
-
-          <div className="flex flex-col md:flex-row gap-6 items-end">
-            <div className="flex-1 w-full">
-              <label className="dash-label mb-3 block">Report Grouping Period</label>
-              <div className="flex flex-wrap gap-2">
-                {['daily', 'weekly', 'monthly', 'yearly', 'lifelong'].map(period => (
-                  <button
-                    key={period}
-                    onClick={() => setReportPeriod(period)}
-                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-full transition-all border ${reportPeriod === period
-                      ? 'bg-paa-navy text-white border-paa-navy shadow-md'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-paa-navy/30'
-                      }`}
-                  >
-                    {period === 'lifelong' ? 'Lifetime' : period}
-                  </button>
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden min-h-[200px]">
+              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
+                <div className="h-8 w-64 bg-gray-200 animate-pulse rounded-lg"></div>
+              </div>
+              <div className="p-5 space-y-4">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="h-10 w-full bg-gray-50 animate-pulse rounded-lg"></div>
                 ))}
               </div>
             </div>
-            <button
-              onClick={handleExportSalesReport}
-              disabled={isExporting}
-              className="dash-btn dash-btn-primary whitespace-nowrap h-12 px-8 w-full md:w-auto"
-            >
-              {isExporting ? 'Generating Report...' : 'Download CSV Report'}
-            </button>
           </div>
-          <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="dash-table w-full text-left min-w-[600px]">
-                <thead className="bg-[#f0f4f8]">
-                  <tr>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Period</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Channel</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Author</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Book Title</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Qty</th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Revenue</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-paa-navy/5 bg-white">
-                  {isLoadingTable ? (
-                    <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text"><Loader2 className="w-5 h-5 animate-spin mx-auto text-paa-navy" /></td></tr>
-                  ) : salesTableData.length === 0 ? (
-                    <tr><td colSpan={6} className="text-center py-6 text-sm text-paa-gray-text italic">No sales data found for this period.</td></tr>
-                  ) : salesTableData.map((row: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-paa-navy">{row.Period}</td>
-                      <td className="px-4 py-3 text-sm text-paa-gray-text"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${row.Channel === 'Web' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>{row.Channel}</span></td>
-                      <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{row.Author}</td>
-                      <td className="px-4 py-3 text-sm text-paa-navy">{row.BookTitle}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{row.QuantitySold}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">₹{row.Revenue}</td>
-                    </tr>
+        ) : (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Row 1: KPI Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative">
+
+              <div className="dash-kpi-card green flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="dash-kpi-icon green"><DollarSign className="w-5 h-5" /></div>
+                  </div>
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Revenue</p>
+                  <h3 className="text-3xl font-black text-paa-navy tracking-tight">₹{(salesData?.kpis?.totalRevenue || 0).toLocaleString()}</h3>
+                </div>
+                {salesData?.kpis?.splits && (
+                  <div className="mt-4 pt-3 border-t border-green-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-green-800">
+                    <span>Web: ₹{(salesData.kpis.splits.web?.revenue || 0).toLocaleString()}</span>
+                    <span>Events: ₹{(salesData.kpis.splits.events?.revenue || 0).toLocaleString()}</span>
+                    <span>Fairs: ₹{(salesData.kpis.splits.bookFairs?.revenue || 0).toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="dash-kpi-card blue flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="dash-kpi-icon blue"><BookOpen className="w-5 h-5" /></div>
+                  </div>
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Books Sold</p>
+                  <h3 className="text-3xl font-black text-paa-navy tracking-tight">{salesData?.kpis?.totalBooksSold || 0} <span className="text-xs font-medium text-gray-400 lowercase tracking-normal">units</span></h3>
+                </div>
+                {salesData?.kpis?.splits && (
+                  <div className="mt-4 pt-3 border-t border-blue-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-blue-800">
+                    <span>Web: {salesData.kpis.splits.web?.books || 0}</span>
+                    <span>Events: {salesData.kpis.splits.events?.books || 0}</span>
+                    <span>Fairs: {salesData.kpis.splits.bookFairs?.books || 0}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="dash-kpi-card amber flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="dash-kpi-icon amber"><ShoppingCart className="w-5 h-5" /></div>
+                  </div>
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Orders</p>
+                  <h3 className="text-3xl font-black text-paa-navy tracking-tight">{salesData?.kpis?.totalOrders || 0}</h3>
+                </div>
+                {salesData?.kpis?.splits && (
+                  <div className="mt-4 pt-3 border-t border-amber-100/50 flex justify-between text-[10px] font-bold uppercase tracking-widest text-amber-800">
+                    <span>Web: {salesData.kpis.splits.web?.orders || 0}</span>
+                    <span>Events: {salesData.kpis.splits.events?.orders || 0}</span>
+                    <span>Fairs: {salesData.kpis.splits.bookFairs?.orders || 0}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: Visualizations */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative min-h-[300px]">
+
+              <div className="lg:col-span-2 border border-paa-navy/5 p-5 md:p-6 rounded-2xl bg-white shadow-sm flex flex-col">
+                <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-6">Revenue Over Time</h4>
+                <div className="flex-1 w-full min-h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={salesData?.chartData || []} margin={{ top: 35, right: 30, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis 
+                        dataKey="date" 
+                        fontSize={10} 
+                        tick={{ fill: '#94a3b8' }} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickMargin={15} 
+                        minTickGap={20} 
+                        tickFormatter={(val) => {
+                          const d = new Date(val);
+                          return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        }}
+                      />
+                      <YAxis fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val) => `₹${val}`} width={60} />
+                      <RechartsTooltip
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                        itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
+                        labelStyle={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
+                        formatter={(value: number) => [`₹${value}`, 'Revenue']}
+                        labelFormatter={(val) => {
+                          const d = new Date(val as string);
+                          return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        }}
+                      />
+                      <Line type="linear" dataKey="revenue" stroke="#06b6d4" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; const total = (salesData?.chartData || []).length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#06b6d4" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }}>
+                        <LabelList dataKey="revenue" position="top" content={(props: any) => {
+                          const { x, y, value, index } = props;
+                          const data = salesData?.chartData || [];
+                          const total = data.length;
+                          if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) {
+                            
+                            const prev = data[index - 1]?.revenue;
+                            const next = data[index + 1]?.revenue;
+                            
+                            // Default above
+                            let yPos = y - 12;
+                            
+                            // If it's a valley, place below so the line doesn't cut through
+                            if (prev !== undefined && next !== undefined && value <= prev && value <= next) {
+                              yPos = y + 20;
+                            } else if (prev !== undefined && value < prev && next === undefined) {
+                              yPos = y + 20;
+                            }
+
+                            return (
+                              <g>
+                                <text x={x} y={yPos} fill="none" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round" fontSize="10px" fontWeight="bold" textAnchor="middle">₹{value}</text>
+                                <text x={x} y={yPos} fill="#06b6d4" fontSize="10px" fontWeight="bold" textAnchor="middle">₹{value}</text>
+                              </g>
+                            );
+                          }
+                          return null;
+                        }} />
+                      </Line>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="border border-paa-navy/5 p-5 md:p-6 rounded-2xl bg-white shadow-sm flex flex-col">
+                <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-2">Sales by Channel</h4>
+                <p className="text-[10px] text-gray-400 mb-6 font-medium">Includes Legacy Archive & Airport Libraries</p>
+                <div className="flex-1 w-full min-h-[220px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={salesData?.channelData || []}
+                        cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value"
+                      >
+                        {(salesData?.channelData || []).map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.name === 'Web Orders' ? '#3b82f6' : entry.name === 'Events' ? '#f59e0b' : '#10b981'} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                        formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex justify-center gap-6 mt-4 flex-wrap">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">Web</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">Fairs</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">Events</span></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Granular Data Table */}
+            <div className="bg-white border border-paa-navy/5 rounded-2xl shadow-sm overflow-hidden relative min-h-[200px]">
+              <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/50">
+                <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest">Raw Sales Data</h4>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {['All', 'Web Orders', 'Events', 'Book Fairs'].map(ch => (
+                    <button
+                      key={ch}
+                      onClick={() => setTableChannelFilter(ch)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors ${tableChannelFilter === ch ? 'bg-paa-navy text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      {ch}
+                    </button>
                   ))}
-                </tbody>
-              </table>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm ml-2 md:ml-4">
+                    {(salesData?.tableData?.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter) || []).length} Records
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="dash-table w-full text-left table-fixed">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                    <tr>
+                      <th className="w-[12%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Date</th>
+                      <th className="w-[15%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Order ID</th>
+                      <th className="w-[12%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Channel</th>
+                      <th className="w-[20%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Author</th>
+                      <th className="w-[25%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Book Title</th>
+                      <th className="w-[8%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100 text-right">Qty</th>
+                      <th className="w-[10%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100 text-right">Rev (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 bg-white">
+                    {!isLoading && (salesData?.tableData?.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter) || []).length === 0 && (
+                      <tr><td colSpan={7} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period for the selected filter.</td></tr>
+                    )}
+                    {(salesData?.tableData?.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter) || []).map((row: any, idx: number) => (
+                      <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                        <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
+                        <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
+                        <td className="px-5 py-3 text-xs">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-100 text-blue-800 border-transparent shadow-sm' : row.channel === 'Events' ? 'bg-amber-100 text-amber-800 border-transparent shadow-sm' : 'bg-green-100 text-green-800 border-transparent shadow-sm'}`}>
+                            {row.channel === 'Web Orders' ? 'Web' : row.channel === 'Events' ? 'Events' : 'Fairs'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate pr-2" title={row.author}>{row.author}</td>
+                        <td className="px-5 py-3 pr-2 text-xs text-paa-navy truncate" title={row.title}>{row.title}</td>
+                        <td className="px-5 py-3 text-xs font-bold text-paa-navy text-right">{row.qty}</td>
+                        <td className="px-5 py-3 text-xs font-black text-indigo-600 text-right">₹{row.revenue}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     );
-  };
+    };
+  }, []);
 
   const WebOrdersTab = ({ refreshTrigger }: { refreshTrigger?: number }) => {
     const [fineModalAuthor, setFineModalAuthor] = useState<{ id: number, name: string } | null>(null);
     const [fineAmount, setFineAmount] = useState('500');
     const [isSubmittingFine, setIsSubmittingFine] = useState(false);
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
 
-    const successfulOrders = orders.filter((o: any) => o.status === 'Completed').length;
-    const toApproveOrders = orders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
-    const underDeliveryOrders = orders.filter((o: any) => o.status === 'Dispatched').length;
-    const returnedOrdersCount = orders.filter((o: any) => o.status === 'Returned' || o.status === 'Cancelled').length;
+    const filteredOrders = orders.filter((ord: any) => {
+      if (!localSearchTerm) return true;
+      const term = localSearchTerm.toLowerCase();
+      return (
+        (ord.id && ord.id.toLowerCase().includes(term)) ||
+        (ord.customer && ord.customer.toLowerCase().includes(term)) ||
+        (ord.customerEmail && ord.customerEmail.toLowerCase().includes(term)) ||
+        (ord.customerPhone && ord.customerPhone.toLowerCase().includes(term)) ||
+        (ord.address && ord.address.toLowerCase().includes(term)) ||
+        (ord.items && ord.items.some((it: any) =>
+          (it.title && it.title.toLowerCase().includes(term)) ||
+          (it.authorName && it.authorName.toLowerCase().includes(term))
+        ))
+      );
+    });
 
-    const totalRevenueWebOrders = orders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
-    const avgOrderValueWeb = successfulOrders > 0 ? Math.round(totalRevenueWebOrders / successfulOrders) : 0;
+    const successfulOrders = filteredOrders.filter((o: any) => o.status === 'Completed').length;
+    const toApproveOrders = filteredOrders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
+    const underDeliveryOrders = filteredOrders.filter((o: any) => o.status === 'Dispatched').length;
+    const returnedOrdersCount = filteredOrders.filter((o: any) => o.status === 'Returned' || o.status === 'Cancelled').length;
+
+    const totalRevenueWebOrders = filteredOrders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
 
     // Additional Insights
 
@@ -1643,7 +1897,7 @@ export function OperationsDashboardPage() {
 
     const lateDeliveriesMap: Record<number, { authorName: string, authorEmail: string, orderId: string, hours: number, count: number }> = {};
 
-    orders.forEach((o: any) => {
+    filteredOrders.forEach((o: any) => {
       o.items?.forEach((it: any) => {
         if (it.status === 'Delivered' && it.dispatchedAt && it.deliveredAt) {
           const time = new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime();
@@ -1654,91 +1908,143 @@ export function OperationsDashboardPage() {
     });
     const avgDeliveryDays = deliveredCount > 0 ? (totalDeliveryTime / deliveredCount / (1000 * 3600 * 24)).toFixed(1) : 0;
 
+    const handleDeleteOrder = async (id: number) => {
+      if (window.confirm('Are you sure you want to permanently delete this order?')) {
+        try {
+          await axios.delete(`${API}/api/admin/orders/${id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          fetchOrders();
+          toast.success('Order deleted successfully');
+        } catch (err) {
+          toast.error('Failed to delete order');
+        }
+      }
+    };
+
+    const getAggregateStatus = (ord: any) => {
+      const { status: ordStatus, items } = ord;
+      if (ordStatus === 'Cancelled') return { text: 'Cancelled', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
+      if (ordStatus === 'Payment Not Received') return { text: 'Payment Failed', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
+      if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') return { text: 'Pending Verification', style: 'bg-amber-100 text-amber-800 border-transparent shadow-sm' };
+
+      if (!items || items.length === 0) return { text: ordStatus, style: 'bg-gray-100 text-gray-700 border-transparent shadow-sm' };
+
+      const allCompleted = items.every((it: any) => it.status === 'Completed' || it.status === 'Delivered');
+      const anyDispatched = items.some((it: any) => it.status === 'Dispatched' || it.status === 'Completed' || it.status === 'Delivered');
+      const anyAccepted = items.some((it: any) => it.status === 'Accepted');
+      const anyRejected = items.some((it: any) => it.status === 'Rejected');
+
+      if (allCompleted) return { text: 'Delivered', style: 'bg-emerald-100 text-emerald-800 border-transparent shadow-sm' };
+      if (anyDispatched) return { text: 'Dispatched', style: 'bg-blue-100 text-blue-800 border-transparent shadow-sm' };
+      if (anyAccepted) return { text: 'Accepted', style: 'bg-purple-100 text-purple-800 border-transparent shadow-sm' };
+      if (anyRejected) return { text: 'Rejected', style: 'bg-red-100 text-red-800 border-transparent shadow-sm' };
+
+      return { text: 'Pending', style: 'bg-amber-100 text-amber-800 border-transparent shadow-sm' };
+    };
+
+    // State Distribution Extraction
+    const stateCounts: Record<string, number> = {};
+    filteredOrders.forEach((o: any) => {
+      if (o.address) {
+        const parts = o.address.split(',');
+        const lastPart = parts[parts.length - 1]; // e.g. " Maharashtra - 411001"
+        if (lastPart) {
+          const stateStr = lastPart.split('-')[0].trim();
+          if (stateStr) {
+            stateCounts[stateStr] = (stateCounts[stateStr] || 0) + 1;
+          }
+        }
+      }
+    });
+
+    const sortedStates = Object.entries(stateCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const topStates = sortedStates.slice(0, 6);
+    const othersCount = sortedStates.slice(6).reduce((sum, s) => sum + s.value, 0);
+    if (othersCount > 0) {
+      topStates.push({ name: 'Others', value: othersCount });
+    }
+    const pieColors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6', '#9CA3AF'];
+
 
     return (
       <div className="space-y-6">
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Order Tracking KPIs ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[
-            { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'text-green-600 bg-green-100', bgClass: 'border-green-100' },
-            { label: 'Avg Order Value', value: `₹${avgOrderValueWeb}`, icon: DollarSign, colorClass: 'text-emerald-600 bg-emerald-100', bgClass: 'border-emerald-100' },
-            { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'text-orange-600 bg-orange-100', bgClass: 'border-orange-100' },
-            { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'text-blue-600 bg-blue-100', bgClass: 'border-blue-100' },
-            { label: 'Avg Delivery Time', value: Number(avgDeliveryDays) > 0 ? `${avgDeliveryDays} Days` : 'N/A', icon: TrendingUp, colorClass: 'text-teal-600 bg-teal-100', bgClass: 'border-teal-100' },
-            { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'text-purple-600 bg-purple-100', bgClass: 'border-purple-100' },
-          ].map((kpi, i) => (
-            <div key={i} className={`bg-white rounded-2xl border p-4 shadow-sm flex flex-col justify-center items-start gap-3 hover:-translate-y-1 hover:shadow-md transition-all`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kpi.colorClass}`}>
-                <kpi.icon size={18} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold tracking-widest uppercase text-paa-gray-text mb-1">{kpi.label}</p>
-                <h3 className="text-2xl font-bold text-paa-navy">{kpi.value}</h3>
-              </div>
+        {/* Order Tracking KPIs & State Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="text-[11px] font-bold tracking-widest uppercase text-paa-gray-text flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-500" /> Order KPIs
+            </h3>
+            <div className="grid grid-cols-2 gap-4 h-[calc(100%-2rem)]">
+              {[
+                { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'green' },
+                { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'amber' },
+                { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'blue' },
+                { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'red' },
+              ].map((kpi, i) => (
+                <div key={i} className={`dash-kpi-card ${kpi.colorClass} flex flex-col justify-center items-start gap-2`}>
+                  <div className={`dash-kpi-icon ${kpi.colorClass}`}>
+                    <kpi.icon size={20} />
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xs font-semibold tracking-wide uppercase text-paa-gray-text mb-1">{kpi.label}</p>
+                    <h3 className="text-3xl font-bold text-paa-navy tracking-tight">{kpi.value}</h3>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div className="lg:col-span-1 bg-white border border-gray-100 rounded-2xl shadow-sm p-4 flex flex-col hover:shadow-md transition-shadow">
+            <h3 className="text-[11px] font-bold tracking-widest uppercase text-paa-gray-text mb-4 flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-indigo-500" /> State Distribution
+            </h3>
+            <div className="flex-1 w-full min-h-[160px]">
+              {topStates.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsPieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <Pie
+                      data={topStates}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={75}
+                      paddingAngle={2}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {topStates.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontWeight: 'bold' }}
+                      itemStyle={{ color: '#1a1a2e' }}
+                    />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 font-medium">No location data available</div>
+              )}
+            </div>
+            {topStates.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                {topStates.map((entry, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pieColors[idx % pieColors.length] }}></span>
+                    {entry.name} ({entry.value})
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
 
-        {/* Author Logistics Alerts */}
-        {(() => {
-          const alerts: any[] = [];
-          orders.forEach((ord: any) => {
-            ord.items?.forEach((it: any) => {
-              if (it.status === 'Completed' && it.deliveredAt && it.dispatchedAt) {
-                const days = (new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24);
-                if (days > 10 || (it.feedbackRating && it.feedbackRating <= 2) || (it.feedbackCondition === 'Damaged')) {
-                  alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: it.feedbackCondition === 'Damaged' ? 'Damaged Condition Reported' : (it.feedbackRating && it.feedbackRating <= 2) ? `Low Rating (${it.feedbackRating} Stars)` : `Slow Delivery (${Math.round(days)} days)` });
-                }
-              } else if (it.status === 'Dispatched' && it.dispatchedAt) {
-                const days = (new Date().getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24);
-                if (days > 14) alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: `Stuck in Transit (${Math.round(days)} days)` });
-              } else if ((it.status === 'Pending' || it.status === 'Accepted' || it.status === 'Pending Verification') && it.createdAt) {
-                const days = (new Date().getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600 * 24);
-                if (days > 7) alerts.push({ ...it, orderId: ord.id, customer: ord.customer, date: ord.date, issue: `Not Dispatched (${Math.round(days)} days)` });
-              }
-            });
-          });
 
-          if (alerts.length === 0) return null;
-
-          return (
-            <div className="bg-red-50 border border-red-200 shadow-sm flex flex-col mb-6">
-              <div className="p-4 border-b border-red-200 flex items-center gap-2 bg-red-100/50">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <h3 className="text-lg font-serif font-semibold text-red-900 tracking-tight">Author Logistics Alerts (Defaulters)</h3>
-              </div>
-              <div className="p-4 overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="text-xs uppercase tracking-widest text-red-800 border-b border-red-200">
-                      <th className="pb-2 font-bold">Author</th>
-                      <th className="pb-2 font-bold">Book</th>
-                      <th className="pb-2 font-bold">Issue</th>
-                      <th className="pb-2 font-bold">Order Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {alerts.map((a, idx) => (
-                      <tr key={idx} className="border-b border-red-100 last:border-0 text-sm text-red-900">
-                        <td className="py-3 font-bold">{a.authorName}</td>
-                        <td className="py-3">{a.title}</td>
-                        <td className="py-3 font-bold flex items-center gap-2">
-                          <span className="bg-red-200 text-red-800 px-2 py-1 rounded text-xs">{a.issue}</span>
-                          {a.feedbackComments && <span className="text-xs italic text-red-700 bg-red-50 px-2 py-1 rounded border border-red-100">"{a.feedbackComments}"</span>}
-                        </td>
-                        <td className="py-3">
-                          <p className="font-mono text-xs">{a.orderId}</p>
-                          <p className="text-xs opacity-80">{a.customer} ({a.date})</p>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        })()}
 
         <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out flex flex-col">
           <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
@@ -1748,7 +2054,13 @@ export function OperationsDashboardPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
-                <input type="text" placeholder="SEARCH ORDErs..." className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64" />
+                <input
+                  type="text"
+                  placeholder="SEARCH ORDErs..."
+                  value={localSearchTerm}
+                  onChange={(e) => setLocalSearchTerm(e.target.value)}
+                  className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64"
+                />
               </div>
               <button onClick={handleExportCSV} className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium rounded-full">
                 <ClipboardList className="w-4 h-4" /> Export CSV
@@ -1756,43 +2068,102 @@ export function OperationsDashboardPage() {
             </div>
           </div>
 
-          <div className="hidden md:block overflow-x-auto">
-            <table className="dash-table w-full">
+          <div className="hidden md:block w-full overflow-hidden">
+            <table className="dash-table w-full table-fixed">
               <thead>
-                <tr>
-                  <th>Order ID & Date</th>
-                  <th>Customer</th>
-                  <th>Items / Books</th>
-                  <th style={{ textAlign: 'center' }}>Amount</th>
-                  <th style={{ textAlign: 'center' }}>Status</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
+                <tr className="bg-indigo-50 border-b-2 border-indigo-100">
+                  <th className="w-1/6 !text-indigo-800 !bg-transparent !text-[14px]">Order ID & Date</th>
+                  <th className="w-1/5 !text-indigo-800 !bg-transparent !text-[14px]">Customer</th>
+                  <th className="w-1/3 !text-indigo-800 !bg-transparent !text-[14px]">Items / Books</th>
+                  <th className="w-[10%] !text-indigo-800 !bg-transparent !text-[14px]" style={{ textAlign: 'center' }}>Amount</th>
+                  <th className="w-[12%] !text-indigo-800 !bg-transparent !text-[14px]" style={{ textAlign: 'center' }}>Status</th>
+                  <th className="w-[12%] !text-indigo-800 !bg-transparent !text-[14px]" style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((ord: any) => (
-                  <tr key={ord.dbId}>
-                    <td>
-                      <p className="font-bold text-paa-navy mb-1">{ord.id}</p>
-                      <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3" /> {ord.date}</p>
-                    </td>
-                    <td className="font-bold text-paa-navy">{ord.customer}</td>
-                    <td>
-                      <ul className="text-xs text-paa-gray-text font-medium space-y-1">
-                        {ord.items.map((it: any, idx: number) => (
-                          <li key={idx} className="flex gap-2"><span className="text-paa-navy font-bold">{it.qty}x</span> <span>{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span></li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td style={{ textAlign: 'center' }} className="font-bold text-paa-navy">₹{ord.total}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className={`dash-badge ${ord.status === 'Completed' ? 'active' : ord.status === 'Payment Not Received' ? 'rejected' : 'pending'}`}>
-                        {ord.status === 'Completed' ? 'Payment Verified' : ord.status === 'Payment Not Received' ? 'Payment Failed' : 'Pending Verification'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button onClick={() => setSelectedOrder(ord)} className="dash-btn dash-btn-ghost">Details</button>
-                    </td>
-                  </tr>
+                {filteredOrders.map((ord: any, idx: number) => (
+                  <React.Fragment key={ord.dbId}>
+                    <tr onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)} className={`cursor-pointer transition-colors ${expandedOrderId === ord.dbId ? 'bg-indigo-50/30' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-100')} hover:bg-slate-200/60`}>
+                      <td className="truncate">
+                        <p className="font-bold text-paa-navy mb-1 truncate">{ord.id}</p>
+                        <p className="text-xs text-paa-gray-text flex items-center gap-1 font-medium truncate"><CalendarIcon className="w-3 h-3 shrink-0" /> {ord.date}</p>
+                      </td>
+                      <td className="font-bold text-paa-navy truncate pr-2" title={ord.customer}>{ord.customer}</td>
+                      <td className="truncate pr-2">
+                        <ul className="text-xs text-paa-gray-text font-medium space-y-1">
+                          {ord.items.slice(0, 2).map((it: any, idx: number) => (
+                            <li key={idx} className="flex gap-2 items-center truncate">
+                              <span className="text-paa-navy font-bold shrink-0">{it.qty}x</span>
+                              <span className="truncate">{it.title} <span className="text-gray-400 italic">by {it.authorName}</span></span>
+                            </li>
+                          ))}
+                          {ord.items.length > 2 && <li className="text-indigo-500 font-bold text-[10px] uppercase tracking-widest">+ {ord.items.length - 2} more items</li>}
+                        </ul>
+                      </td>
+                      <td style={{ textAlign: 'center' }} className="font-bold text-paa-navy">₹{ord.total}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={`inline-flex items-center justify-center w-full px-2 py-1 text-[9px] font-bold uppercase tracking-widest rounded-full border ${getAggregateStatus(ord).style}`}>
+                          {getAggregateStatus(ord).text}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="flex items-center justify-center gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteOrder(ord.dbId); }} className="p-1.5 rounded-full hover:bg-red-50 text-red-500 transition-colors" title="Delete Order">
+                            <Trash2 size={16} />
+                          </button>
+                          <button className="text-gray-400 p-1.5 rounded-full hover:bg-gray-100 transition-colors" title="Toggle Details">
+                            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${expandedOrderId === ord.dbId ? 'rotate-180' : ''}`} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedOrderId === ord.dbId && (
+                      <tr className="bg-indigo-50/10 border-b border-indigo-100/50 shadow-inner">
+                        <td colSpan={6} className="p-0">
+                          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in-up">
+                            {/* Order Details Column */}
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3 border-b border-indigo-100 pb-2">Order Details</h4>
+                              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                <p className="text-sm font-bold text-paa-navy mb-1">{ord.customer}</p>
+                                <p className="text-xs text-gray-500 mb-0.5">{ord.customerEmail}</p>
+                                <p className="text-xs text-gray-500 mb-3">{ord.customerPhone}</p>
+                                <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                  <span className="font-bold text-paa-navy block mb-1">Shipping Address:</span>
+                                  {ord.address}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Bill Summary Column */}
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3 border-b border-indigo-100 pb-2">Bill Summary</h4>
+                              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-2 text-sm">
+                                <div className="flex justify-between text-gray-600">
+                                  <span>Subtotal</span>
+                                  <span className="font-semibold text-paa-navy">₹{ord.subtotal}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600">
+                                  <span>Logistics Fees (Delivery)</span>
+                                  <span className="font-semibold text-paa-navy">₹{ord.deliveryCharges}</span>
+                                </div>
+                                {ord.bundleDiscount > 0 && (
+                                  <div className="flex justify-between text-green-600">
+                                    <span>Promotional Discount</span>
+                                    <span className="font-semibold">-₹{ord.bundleDiscount}</span>
+                                  </div>
+                                )}
+                                <div className="border-t border-gray-100 pt-2 mt-2 flex justify-between items-center">
+                                  <span className="font-bold text-paa-navy">Final Payable Amount</span>
+                                  <span className="text-lg font-black text-indigo-600">₹{ord.total}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
                 {orders.length === 0 && <tr><td colSpan={6} className="text-center py-8">No orders yet.</td></tr>}
               </tbody>
@@ -1807,8 +2178,8 @@ export function OperationsDashboardPage() {
                     <p className="font-bold text-paa-navy text-sm">{ord.id}</p>
                     <p className="text-[10px] text-paa-gray-text flex items-center gap-1 font-medium"><CalendarIcon className="w-3 h-3" /> {ord.date}</p>
                   </div>
-                  <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-widest ${ord.status === 'Completed' ? 'bg-green-100 text-green-700' : ord.status === 'Payment Not Received' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {ord.status === 'Completed' ? 'Verified' : ord.status === 'Payment Not Received' ? 'Failed' : 'Pending'}
+                  <span className={`text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-widest border ${getAggregateStatus(ord).style}`}>
+                    {getAggregateStatus(ord).text}
                   </span>
                 </div>
                 <div>
@@ -1823,53 +2194,134 @@ export function OperationsDashboardPage() {
                     ))}
                   </ul>
                 </div>
-                <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-1">
+                <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-1 cursor-pointer" onClick={() => setExpandedOrderId(expandedOrderId === ord.dbId ? null : ord.dbId)}>
                   <div className="text-sm font-bold text-paa-navy">₹{ord.total}</div>
-                  <button onClick={() => setSelectedOrder(ord)} className="text-xs font-bold text-paa-gold hover:text-paa-navy uppercase tracking-widest">Details</button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteOrder(ord.dbId); }} className="p-1.5 rounded-full hover:bg-red-50 text-red-500 transition-colors" title="Delete Order">
+                      <Trash2 size={16} />
+                    </button>
+                    <button className="p-1 rounded-full hover:bg-gray-100 text-paa-navy" title="Toggle Details">
+                      <ChevronDown size={16} className={`transition-transform duration-200 ${expandedOrderId === ord.dbId ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
                 </div>
+
+                {/* Mobile Expanded Details */}
+                {expandedOrderId === ord.dbId && (
+                  <div className="mt-2 pt-4 border-t border-dashed border-gray-200 space-y-4 animate-fade-in-up">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-1">Shipping Details</p>
+                      <p className="text-xs text-gray-500">{ord.customerEmail} • {ord.customerPhone}</p>
+                      <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">{ord.address}</p>
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-2">Bill Summary</p>
+                      <div className="flex justify-between text-gray-600"><span>Subtotal</span> <span className="font-semibold text-paa-navy">₹{ord.subtotal}</span></div>
+                      <div className="flex justify-between text-gray-600"><span>Delivery</span> <span className="font-semibold text-paa-navy">₹{ord.deliveryCharges}</span></div>
+                      {ord.bundleDiscount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span> <span className="font-semibold">-₹{ord.bundleDiscount}</span></div>}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
             {orders.length === 0 && <div className="text-center py-8 text-sm text-gray-500">No orders yet.</div>}
           </div>
-        </div>
 
+          {ordersMeta?.totalPages > 1 && (
+            <div className="flex justify-between items-center mt-6 py-4 border-t border-gray-100">
+              <span className="text-sm text-gray-500">Showing page {ordersPage} of {ordersMeta.totalPages} (Total: {ordersMeta.total} orders)</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setOrdersPage(p => Math.max(1, p - 1)); setTimeout(fetchOrders, 0); }}
+                  disabled={ordersPage === 1}
+                  className="px-4 py-2 border border-gray-200 rounded text-sm text-paa-navy disabled:opacity-50 font-medium bg-white hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => { setOrdersPage(p => Math.min(ordersMeta.totalPages, p + 1)); setTimeout(fetchOrders, 0); }}
+                  disabled={ordersPage === ordersMeta.totalPages}
+                  className="px-4 py-2 border border-gray-200 rounded text-sm text-paa-navy disabled:opacity-50 font-medium bg-white hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
   const LateAuthorsSystemTab = () => {
     const [activeTable, setActiveTable] = React.useState<'approvals' | 'suspended' | 'late' | 'history'>('late');
-    const [fineModalAuthor, setFineModalAuthor] = React.useState<{ id: number, name: string } | null>(null);
+    const [fineModalAuthor, setFineModalAuthor] = React.useState<{ id: number, name: string, orderId?: string, count?: number, hours?: number, delayType?: string } | null>(null);
     const [fineAmount, setFineAmount] = React.useState('500');
     const [isSubmittingFine, setIsSubmittingFine] = React.useState(false);
+    const [expandedCustomerRow, setExpandedCustomerRow] = React.useState<number | null>(null);
 
     // Reconstruct lateDeliveriesMap for active deliveries (to charge fine)
-    const lateDeliveriesMap: Record<number, any> = {};
+    const lateDeliveriesMap: Record<string, any> = {};
     orders.forEach((o: any) => {
       o.items?.forEach((it: any) => {
         if ((it.status === 'Pending Verification' || it.status === 'Pending' || it.status === 'Accepted') && it.createdAt) {
           const hours = (new Date().getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600);
+
+          const aId = it.authorId || it.book?.author?.id;
+          const aName = it.authorName || it.book?.author?.name || 'Unknown Author';
+          const aEmail = it.authorEmail || it.book?.author?.email;
+
           let ignoreForLate = false;
-          const authorData = authors.find((a: any) => a.id === it.authorId);
+          const authorData = authors.find((a: any) => a.id === aId);
           if (authorData?.extraData?.lastFinePaidAt) {
             if (new Date(it.createdAt).getTime() < new Date(authorData.extraData.lastFinePaidAt).getTime()) {
               ignoreForLate = true;
             }
           }
 
-          if (hours > 24 && it.authorId && !ignoreForLate) {
-            if (!lateDeliveriesMap[it.authorId]) {
-              lateDeliveriesMap[it.authorId] = { authorName: it.authorName, authorEmail: it.authorEmail, orderId: o.id, hours: Math.round(hours), count: 0 };
+          let isLate = false;
+          let delayType = '';
+          if ((it.status === 'Pending Verification' || it.status === 'Pending') && hours > 24) {
+            isLate = true;
+            delayType = 'Acceptance (>24h)';
+          } else if (it.status === 'Accepted' && hours > 48) {
+            isLate = true;
+            delayType = 'Dispatch (>48h)';
+          }
+
+          if (isLate && aId && !ignoreForLate) {
+            const key = `${aId}-${o.id}`;
+            if (!lateDeliveriesMap[key]) {
+              lateDeliveriesMap[key] = {
+                authorId: aId,
+                authorName: aName,
+                authorEmail: aEmail,
+                orderId: o.id,
+                hours: Math.round(hours),
+                count: 0,
+                customerInfo: { name: o.customerName && o.customerName !== 'N/A' ? o.customerName : 'Guest Customer', phone: o.customerPhone || 'No Phone', email: o.customerEmail || 'No Email' },
+                delayType,
+                lateItems: []
+              };
             }
-            lateDeliveriesMap[it.authorId].count++;
-            if (Math.round(hours) > lateDeliveriesMap[it.authorId].hours) {
-              lateDeliveriesMap[it.authorId].hours = Math.round(hours);
+            lateDeliveriesMap[key].count++;
+            lateDeliveriesMap[key].lateItems.push({
+              title: it.book?.title || 'Unknown Book',
+              quantity: it.quantity || 1,
+              price: it.book?.price || it.price || 0,
+              status: it.status
+            });
+
+            if (Math.round(hours) > lateDeliveriesMap[key].hours) {
+              lateDeliveriesMap[key].hours = Math.round(hours);
+              lateDeliveriesMap[key].customerInfo = { name: o.customerName && o.customerName !== 'N/A' ? o.customerName : 'Guest Customer', phone: o.customerPhone || 'No Phone', email: o.customerEmail || 'No Email' };
+              lateDeliveriesMap[key].delayType = delayType;
             }
           }
         }
       });
     });
-    const lateDeliveries = Object.entries(lateDeliveriesMap).map(([authorId, data]) => ({ authorId: Number(authorId), ...data })).sort((a, b) => b.hours - a.hours);
+    const lateDeliveries = Object.values(lateDeliveriesMap).sort((a: any, b: any) => b.hours - a.hours);
 
     // Identify pending fine approvals
     const pendingFineApprovals = authors.filter((a: any) =>
@@ -1881,8 +2333,8 @@ export function OperationsDashboardPage() {
     // Identify authors with fine history
     const historyAuthors = authors.filter((a: any) => a.extraData?.fineHistory && a.extraData.fineHistory.length > 0);
 
-    const handleOpenFineModal = (authorId: number, authorName: string) => {
-      setFineModalAuthor({ id: authorId, name: authorName });
+    const handleOpenFineModal = (authorId: number, authorName: string, ld?: any) => {
+      setFineModalAuthor({ id: authorId, name: authorName, ...ld });
       setFineAmount('500');
     };
 
@@ -1892,7 +2344,13 @@ export function OperationsDashboardPage() {
       if (isNaN(amount) || amount <= 0) return toast.error('Invalid amount');
       setIsSubmittingFine(true);
       try {
-        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${fineModalAuthor.id}/fine`, { amount }, {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${fineModalAuthor.id}/fine`, {
+          amount,
+          orderId: fineModalAuthor.orderId,
+          count: fineModalAuthor.count,
+          hours: fineModalAuthor.hours,
+          delayType: fineModalAuthor.delayType
+        }, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         toast.success(`Fine of ₹${amount} charged successfully`);
@@ -1977,16 +2435,16 @@ export function OperationsDashboardPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#f0fdf4] text-green-700 uppercase tracking-widest text-xs border-b border-green-100">
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th className="px-4 py-3 font-bold">Author Name</th>
-                    <th className="px-4 py-3 font-bold">Screenshot</th>
-                    <th className="px-4 py-3 font-bold text-center">Action</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Screenshot</th>
+                    <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {pendingFineApprovals.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No pending payments.</td></tr> : pendingFineApprovals.map((a: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-green-50 transition-colors">
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                       <td className="px-4 py-3">
                         <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${a.extraData.finePaymentScreenshot}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
@@ -2019,16 +2477,16 @@ export function OperationsDashboardPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#fef2f2] text-red-700 uppercase tracking-widest text-xs border-b border-red-100">
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th className="px-4 py-3 font-bold">Author Name</th>
-                    <th className="px-4 py-3 font-bold">Fine Amount</th>
-                    <th className="px-4 py-3 font-bold">Date Charged</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Fine Amount</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Date Charged</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {activeFines.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No currently fined authors.</td></tr> : activeFines.map((a: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-red-50 transition-colors">
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                       <td className="px-4 py-3 font-bold text-red-600">₹{a.extraData.lateFines}</td>
                       <td className="px-4 py-3 text-gray-600">{a.extraData.fineDate ? new Date(a.extraData.fineDate).toLocaleDateString() : 'N/A'}</td>
@@ -2050,81 +2508,128 @@ export function OperationsDashboardPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#fffbeb] text-orange-700 uppercase tracking-widest text-xs border-b border-orange-100">
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th className="px-4 py-3 font-bold">Latest Order ID</th>
-                    <th className="px-4 py-3 font-bold">Author Name</th>
-                    <th className="px-4 py-3 font-bold text-center">Unaccepted Items</th>
-                    <th className="px-4 py-3 font-bold text-center">Delay</th>
-                    <th className="px-4 py-3 font-bold text-center">Action</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Latest Order ID</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Unaccepted Items</th>
+                    <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Delay</th>
+                    <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {lateDeliveries.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">No late deliveries currently.</td></tr> : lateDeliveries.map((ld, idx) => (
-                    <tr key={idx} className="hover:bg-orange-50 transition-colors">
-                      <td className="px-4 py-3 font-bold text-paa-navy">{ld.orderId}</td>
-                      <td className="px-4 py-3 font-medium text-paa-navy">{ld.authorName}</td>
-                      <td className="px-4 py-3 text-center font-bold text-orange-600">{ld.count}</td>
-                      <td className="px-4 py-3 text-center text-xs text-orange-500">{ld.hours} hrs</td>
-                      <td className="px-4 py-3 text-center flex justify-center gap-2">
-                        {(() => {
-                          const authorInfo = authors.find((a: any) => a.id === ld.authorId);
-                          const fineAmt = authorInfo?.extraData?.lateFines || 0;
-                          const isPendingApprove = authorInfo?.extraData?.fineStatus === 'Pending Verification';
+                    <React.Fragment key={idx}>
+                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                        <td className="px-4 py-3 font-bold text-paa-navy flex items-center gap-2">
+                          <button onClick={() => setExpandedCustomerRow(expandedCustomerRow === idx ? null : idx)} className="text-gray-400 hover:text-paa-navy transition-colors focus:outline-none">
+                            <ChevronDown size={16} className={`transition-transform duration-300 ${expandedCustomerRow === idx ? 'rotate-180' : ''}`} />
+                          </button>
+                          {ld.orderId}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-paa-navy">{ld.authorName}</td>
+                        <td className="px-4 py-3 text-center font-bold text-orange-600">{ld.count}</td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="font-bold text-orange-500 mb-1">{ld.hours} hrs</div>
+                          {ld.delayType === 'Dispatch (>48h)' ? (
+                            <span className="bg-purple-100 text-purple-700 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest shadow-sm inline-block">Dispatch Wait</span>
+                          ) : (
+                            <span className="bg-orange-100 text-orange-700 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest shadow-sm inline-block">Acceptance Wait</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center flex justify-center gap-2">
+                          {(() => {
+                            const authorInfo = authors.find((a: any) => a.id === ld.authorId);
+                            const fineAmt = authorInfo?.extraData?.lateFines || 0;
+                            const isPendingApprove = authorInfo?.extraData?.fineStatus === 'Pending Verification';
 
-                          if (fineAmt > 0 && !isPendingApprove) {
-                            return (
-                              <span className="bg-red-100 text-red-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                                <AlertCircle size={12} /> Fine Active
-                              </span>
-                            );
-                          }
-                          if (isPendingApprove) {
-                            return (
-                              <span className="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                                <CheckCircle size={12} /> Reviewing Pmt
-                              </span>
-                            );
-                          }
+                            if (fineAmt > 0 && !isPendingApprove) {
+                              return (
+                                <span className="bg-red-100 text-red-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                  <AlertCircle size={12} /> Fine Active
+                                </span>
+                              );
+                            }
+                            if (isPendingApprove) {
+                              return (
+                                <span className="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                  <CheckCircle size={12} /> Reviewing Pmt
+                                </span>
+                              );
+                            }
 
-                          const notifiedDateStr = authorInfo?.extraData?.lateNotificationDate;
-                          let diffDays = -1;
-                          if (notifiedDateStr) {
-                            diffDays = (new Date().getTime() - new Date(notifiedDateStr).getTime()) / (1000 * 3600 * 24);
-                          }
+                            const notifiedDateStr = authorInfo?.extraData?.lateNotificationDate;
+                            let diffDays = -1;
+                            if (notifiedDateStr) {
+                              diffDays = (new Date().getTime() - new Date(notifiedDateStr).getTime()) / (1000 * 3600 * 24);
+                            }
 
-                          if (diffDays >= 0 && diffDays <= 3) {
-                            const daysLeft = Math.max(0, 3 - Math.floor(diffDays));
-                            return (
-                              <span className="bg-orange-100 text-orange-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                                <Check size={12} /> Notified ({daysLeft}d left)
-                              </span>
-                            );
-                          } else {
-                            return (
-                              <>
-                                <button onClick={async () => {
-                                  try {
-                                    await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${ld.authorId}/notify-late`, {}, {
-                                      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                                    });
-                                    toast.success(`Notification sent to ${ld.authorName}`);
-                                    fetchAuthors();
-                                  } catch (err) {
-                                    toast.error('Failed to notify author');
-                                  }
-                                }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors shadow-sm border border-blue-100" title="Send 3-Day Warning">
-                                  <Bell size={14} />
-                                </button>
-                                <button onClick={() => handleOpenFineModal(ld.authorId, ld.authorName)} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 font-bold text-xs shadow-sm border border-red-100 transition-colors" title="Charge Fine">
-                                  ₹
-                                </button>
-                              </>
-                            );
-                          }
-                        })()}
-                      </td>
-                    </tr>
+                            if (diffDays >= 0 && diffDays <= 1) {
+                              const daysLeft = Math.max(0, 1 - Math.floor(diffDays));
+                              return (
+                                <span className="bg-orange-100 text-orange-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                  <Check size={12} /> Notified ({daysLeft}d left)
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <>
+                                  <button onClick={async () => {
+                                    try {
+                                      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/authors/${ld.authorId}/notify-late`, {
+                                        orderId: ld.orderId, count: ld.count, hours: ld.hours, delayType: ld.delayType
+                                      }, {
+                                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                                      });
+                                      toast.success(`Notification sent to ${ld.authorName}`);
+                                      fetchAuthors();
+                                    } catch (err) {
+                                      toast.error('Failed to notify author');
+                                    }
+                                  }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors shadow-sm border border-blue-100" title="Send 1-Day Warning">
+                                    <Bell size={14} />
+                                  </button>
+                                  <button onClick={() => handleOpenFineModal(ld.authorId, ld.authorName, ld)} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 font-bold text-xs shadow-sm border border-red-100 transition-colors" title="Charge Fine">
+                                    ₹
+                                  </button>
+                                </>
+                              );
+                            }
+                          })()}
+                        </td>
+                      </tr>
+                      {expandedCustomerRow === idx && (
+                        <tr className="bg-orange-50/30">
+                          <td colSpan={5} className="px-8 py-4 border-b border-orange-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <div className="flex flex-col gap-1 text-sm text-paa-navy">
+                                <div className="font-semibold text-paa-gray-text text-xs uppercase tracking-widest mb-2">Customer Contact for {ld.orderId}</div>
+                                <div className="flex items-center gap-2"><User size={14} className="text-orange-400" /> {ld.customerInfo.name}</div>
+                                <div className="flex items-center gap-2"><Phone size={14} className="text-orange-400" /> {ld.customerInfo.phone}</div>
+                                <div className="flex items-center gap-2"><Mail size={14} className="text-orange-400" /> {ld.customerInfo.email}</div>
+                              </div>
+                              <div className="flex flex-col gap-1 text-sm text-paa-navy">
+                                <div className="font-semibold text-paa-gray-text text-xs uppercase tracking-widest mb-2">Delayed Items in {ld.orderId}</div>
+                                <div className="space-y-1">
+                                  {ld.lateItems.map((item: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center bg-white px-3 py-2 rounded shadow-sm border border-orange-100/50">
+                                      <div className="flex flex-col">
+                                        <span className="font-medium text-paa-navy">{item.title}</span>
+                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{item.status}</span>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="text-xs text-gray-500">Qty: {item.quantity}</span><br />
+                                        <span className="font-bold text-orange-600">₹{item.price * item.quantity}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -2142,18 +2647,18 @@ export function OperationsDashboardPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#eef2ff] text-indigo-700 uppercase tracking-widest text-xs border-b border-indigo-100">
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th className="px-4 py-3 font-bold">Author Name</th>
-                    <th className="px-4 py-3 font-bold">Fine Amount</th>
-                    <th className="px-4 py-3 font-bold">Payment Date</th>
-                    <th className="px-4 py-3 font-bold">Approved Date</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Fine Amount</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Payment Date</th>
+                    <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Approved Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {historyAuthors.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500 italic">No fine history available.</td></tr> : historyAuthors.flatMap((a: any) =>
                     a.extraData.fineHistory.map((h: any, idx: number) => (
-                      <tr key={`${a.id}-${idx}`} className="hover:bg-indigo-50 transition-colors">
+                      <tr key={`${a.id}-${idx}`} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                         <td className="px-4 py-3 font-bold text-indigo-600">₹{h.amount}</td>
                         <td className="px-4 py-3 text-gray-600">{h.paidAt ? new Date(h.paidAt).toLocaleDateString() : 'N/A'}</td>
@@ -2198,6 +2703,7 @@ export function OperationsDashboardPage() {
   };
 
   const renderAuthorsTab = ({ refreshTrigger }: any) => {
+
     const handleExportAuthorsCSV = () => {
       const dynamicKeys = Array.from(new Set<string>(
         authors.reduce((acc: string[], author: any) => {
@@ -2238,6 +2744,109 @@ export function OperationsDashboardPage() {
       link.click();
       document.body.removeChild(link);
     };
+    const handleDownloadCatalogue = async () => {
+      if (selectedAuthorIds.length === 0) return;
+      setIsDownloadingPdf(true);
+
+      try {
+        // Fetch full author data from the backend so we get all books, hobbies, skills, etc.
+        const fullAuthorsData = await Promise.all(
+          selectedAuthorIds.map(id =>
+            axios.get(`${API}/api/admin/authors/${id}/dashboard-data`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+              .then(res => res.data.authorProfile)
+          )
+        );
+
+        const formattedBooks: any[] = [];
+        fullAuthorsData.forEach(author => {
+          if (!author) return;
+          let ed = author.extraData;
+          if (typeof ed === 'string') {
+            try { ed = JSON.parse(ed); } catch (e) { ed = {}; }
+          }
+          ed = ed || {};
+
+          const authorBooks = author.books || [];
+
+          if (authorBooks.length === 0) {
+            formattedBooks.push({
+              id: 'NO_BOOK',
+              title: '',
+              synopsis: '',
+              mrp: null,
+              mrpRaw: '',
+              coverUrl: '',
+              authorName: author.name || 'Unknown Author',
+              authorBio: author.bio || '',
+              authorPhotoUrl: author.photoUrl || '',
+              authorInstagram: author.instagram || ed.instagram || '',
+              authorFacebook: author.facebook || ed.facebook || '',
+              authorWhatsapp: author.whatsapp || ed.whatsapp || '',
+              authorQualification: author.qualification || ed.qualification || '',
+              authorAge: author.age || ed.age || '',
+              authorExperience: author.experience || ed.experience || '',
+              authorSkills: author.skills || ed.skills || '',
+              authorHobbies: author.hobbies || ed.hobbies || '',
+              genre: '',
+              subGenre: '',
+              pages: null,
+              language: '',
+              isbn: '',
+              publisher: '',
+              publicationDate: '',
+              edition: '',
+              format: '',
+              rating: 5,
+              reviewsCount: 10
+            });
+          } else {
+            authorBooks.forEach((book: any) => {
+              formattedBooks.push({
+                id: book.id || String(Math.random()),
+                title: book.title || 'Untitled',
+                synopsis: book.synopsis || '',
+                mrp: parseFloat(book.mrp) || null,
+                mrpRaw: String(book.mrp || ''),
+                coverUrl: book.coverUrl || '',
+                authorName: author.name || 'Unknown Author',
+                authorBio: author.bio || '',
+                authorPhotoUrl: author.photoUrl || '',
+                authorInstagram: author.instagram || ed.instagram || '',
+                authorFacebook: author.facebook || ed.facebook || '',
+                authorWhatsapp: author.whatsapp || ed.whatsapp || '',
+                authorQualification: author.qualification || ed.qualification || '',
+                authorAge: author.age || ed.age || '',
+                authorExperience: author.experience || ed.experience || '',
+                authorSkills: author.skills || ed.skills || '',
+                authorHobbies: author.hobbies || ed.hobbies || '',
+                genre: book.genre || 'General',
+                subGenre: book.subGenre || '',
+                pages: parseInt(book.pages) || null,
+                language: book.language || 'English',
+                isbn: book.isbn || '',
+                publisher: book.publisher || '',
+                publicationDate: book.publicationDate || '',
+                edition: book.edition || '',
+                format: book.format || '',
+                rating: 5,
+                reviewsCount: 10
+              });
+            });
+          }
+        });
+
+        downloadCataloguePDF('Exclusive', formattedBooks, setIsDownloadingPdf).then(() => {
+          toast.success("PDF generated successfully!");
+        }).catch(err => {
+          console.error(err);
+          toast.error("Error generating PDF catalogue.");
+        });
+      } catch (err) {
+        console.error(err);
+        toast.error("Error fetching full author details.");
+        setIsDownloadingPdf(false);
+      }
+    };
 
     if (selectedPendingAuthor) {
       return (
@@ -2265,33 +2874,36 @@ export function OperationsDashboardPage() {
 
     return (
       <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-        <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f0f4f8]">
+        <div className="p-4 border-b border-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-t-xl">
           <div className="flex items-center gap-3">
-            <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight">Authors Directory</h3>
-            <span className="bg-white text-paa-navy border border-paa-navy/20 py-0.5 px-2 text-xs font-bold shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">{authors.length} Total</span>
+            <h3 className="text-2xl font-serif font-semibold text-white tracking-tight">Authors Directory</h3>
+            <span className="bg-white/20 text-white border-transparent py-1 px-3 text-xs font-bold shadow-sm rounded-full transition-all duration-300 ease-out">{authors.length} Total</span>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handleExportAuthorsCSV} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
+            <button onClick={handleDownloadCatalogue} disabled={selectedAuthorIds.length === 0 || isDownloadingPdf} className="dash-btn dash-btn-ghost flex items-center gap-2 border-white/30 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed">
+              {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {isDownloadingPdf ? 'Generating PDF...' : 'Download Catalogue'}
+            </button>
+            <button onClick={handleExportAuthorsCSV} className="dash-btn dash-btn-ghost flex items-center gap-2 border-white/30 text-white hover:bg-white/10">
               <Download className="w-4 h-4" /> Export CSV
             </button>
             <div className="flex items-center gap-2">
-              <div className="flex bg-gray-100 rounded-3xl-2xl p-1">
+              <div className="flex bg-black/20 rounded-3xl-2xl p-1 backdrop-blur-sm">
                 {['All', 'Reapplied', 'Pending', 'Edited', 'Active', 'Rejected'].map(status => (
                   <button
                     key={status}
                     onClick={() => setAuthorStatusFilter(status)}
-                    className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-paa-navy shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out' : 'text-gray-500 hover:text-paa-navy'}`}
+                    className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-indigo-900 shadow-premium' : 'text-white/70 hover:text-white'}`}
                   >
                     {status === 'Reapplied' ? '🔄 Reapplied' : status}
                   </button>
                 ))}
               </div>
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-paa-gray-text" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/50" />
                 <input
                   type="text"
-                  placeholder="SEARCH AUTHOrs..."
-                  className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64"
+                  placeholder="SEARCH AUTHORS..."
+                  className="pl-9 pr-4 py-2 bg-white/10 border border-white/20 text-white text-xs font-bold tracking-widest uppercase outline-none focus:border-white transition-colors w-64 placeholder-white/50 rounded-lg"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -2302,14 +2914,28 @@ export function OperationsDashboardPage() {
 
         <div className="overflow-x-auto">
           <table className="dash-table">
-            <thead>
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th>Author Details</th>
-                <th>Contact</th>
-                <th>Payment Info</th>
-                <th style={{ textAlign: 'center' }}>Status</th>
-                <th style={{ textAlign: 'center' }}>Books</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
+                <th className="w-10 text-center !bg-transparent">
+                  <input
+                    type="checkbox"
+                    checked={authors.length > 0 && selectedAuthorIds.length === authors.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedAuthorIds(authors.map(a => a.id));
+                      } else {
+                        setSelectedAuthorIds([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-paa-navy focus:ring-paa-navy cursor-pointer"
+                  />
+                </th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author Details</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Contact</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Payment Info</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Books</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -2330,9 +2956,23 @@ export function OperationsDashboardPage() {
                 if (!edA?.isReapplied && edB?.isReapplied) return 1;
                 if (a.status === 'Pending' && b.status !== 'Pending') return -1;
                 if (a.status !== 'Pending' && b.status === 'Pending') return 1;
-                return 0;
-              }).map((author) => (
-                <tr key={author.id}>
+                return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+              }).map((author, idx) => (
+                <tr key={author.id} className={`${selectedAuthorIds.includes(author.id) ? 'bg-indigo-50/30' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-100')} hover:bg-slate-200/60 transition-colors`}>
+                  <td className="text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedAuthorIds.includes(author.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedAuthorIds(prev => [...prev, author.id]);
+                        } else {
+                          setSelectedAuthorIds(prev => prev.filter(id => id !== author.id));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-paa-navy focus:ring-paa-navy cursor-pointer"
+                    />
+                  </td>
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-[#f0f4f8] border border-paa-navy/5 text-paa-navy flex items-center justify-center font-bold font-serif text-lg">
@@ -2379,7 +3019,7 @@ export function OperationsDashboardPage() {
                       const ed = typeof author.extraData === 'string' ? (() => { try { return JSON.parse(author.extraData); } catch (e) { return {}; } })() : (author.extraData || {});
                       const isReapplied = ed?.isReapplied === true && author.status === 'Pending';
                       return isReapplied ? (
-                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>🔄 Reapplied</span>
+                        <span className="dash-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid transparent' }}>🔄 Reapplied</span>
                       ) : (
                         <span className={`dash-badge ${author.status === 'Active' ? 'active' : author.status === 'Rejected' ? 'rejected' : 'pending'}`}>
                           {author.status}
@@ -2435,6 +3075,27 @@ export function OperationsDashboardPage() {
             </tbody>
           </table>
         </div>
+        {authorsMeta?.totalPages > 1 && (
+          <div className="flex justify-between items-center mt-6 py-4 border-t border-gray-100">
+            <span className="text-sm text-gray-500">Showing page {authorsPage} of {authorsMeta.totalPages} (Total: {authorsMeta.total} authors)</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setAuthorsPage(p => Math.max(1, p - 1)); setTimeout(fetchAuthors, 0); }}
+                disabled={authorsPage === 1}
+                className="px-4 py-2 border border-gray-200 rounded text-sm text-paa-navy disabled:opacity-50 font-medium bg-white hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => { setAuthorsPage(p => Math.min(authorsMeta.totalPages, p + 1)); setTimeout(fetchAuthors, 0); }}
+                disabled={authorsPage === authorsMeta.totalPages}
+                className="px-4 py-2 border border-gray-200 rounded text-sm text-paa-navy disabled:opacity-50 font-medium bg-white hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -2464,10 +3125,13 @@ export function OperationsDashboardPage() {
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">MRP</span><span className="text-lg font-black text-green-700">₹{selectedBookDetails.mrp}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Language</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
+              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Print Format</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.printFormat || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pages</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.pages || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Publisher</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
+              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Edition</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.edition || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Pub Date</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">ISBN</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
+              <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Purpose of Writing</span><span className="text-base font-bold text-paa-navy">{selectedBookDetails.purpose || '-'}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Current Stock</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.stock}</span></div>
               <div><span className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text block mb-1">Total Sales</span><span className="text-lg font-black text-paa-navy">{selectedBookDetails.sales}</span></div>
             </div>
@@ -2513,27 +3177,64 @@ export function OperationsDashboardPage() {
 
         <div className="overflow-x-auto">
           <table className="dash-table">
-            <thead>
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th>Book Info</th>
-                <th>Author</th>
-                <th style={{ textAlign: 'center' }}>Status</th>
-                <th style={{ textAlign: 'center' }}>Price</th>
-                <th style={{ textAlign: 'center' }}>Stock</th>
-                <th style={{ textAlign: 'center' }}>Sales</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Book Info</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Price</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Stock</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Sales</th>
+                <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter)).map((book) => (
-                <tr key={book.id}>
+              {books.filter(b => (bookStatusFilter === 'All' || b.status === bookStatusFilter))
+                .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }))
+                .map((book, idx) => (
+                <tr key={book.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                   <td>
-                    <p className="font-bold text-paa-navy mb-1 flex items-center">
-                      {book.title}
-                      {(book.overpriced || book.isOverpriced) && <span className="ml-2 bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Overpriced (Warning)</span>}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs font-medium">
-                      <span className="text-[#5bc0de] font-bold uppercase">{book.genre}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        {/* Front Cover */}
+                        <div className="relative w-10 h-14 bg-gray-50 flex items-center justify-center rounded border border-gray-200 shadow-sm overflow-hidden select-none">
+                          <span className="text-[8px] text-gray-400 text-center font-bold uppercase leading-tight px-1">
+                            {book.coverUrl ? 'Broken Front' : 'No Front'}
+                          </span>
+                          {book.coverUrl && (
+                            <img 
+                              src={book.coverUrl.startsWith('http') ? book.coverUrl : `${API}${book.coverUrl.startsWith('/') ? '' : '/'}${book.coverUrl}`} 
+                              alt="Front Cover" 
+                              className="absolute inset-0 w-full h-full object-cover" 
+                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                            />
+                          )}
+                        </div>
+
+                        {/* Back Cover */}
+                        <div className="relative w-10 h-14 bg-gray-50 flex items-center justify-center rounded border border-gray-200 shadow-sm overflow-hidden select-none">
+                          <span className="text-[8px] text-gray-400 text-center font-bold uppercase leading-tight px-1">
+                            {book.backCoverUrl ? 'Broken Back' : 'No Back'}
+                          </span>
+                          {book.backCoverUrl && (
+                            <img 
+                              src={book.backCoverUrl.startsWith('http') ? book.backCoverUrl : `${API}${book.backCoverUrl.startsWith('/') ? '' : '/'}${book.backCoverUrl}`} 
+                              alt="Back Cover" 
+                              className="absolute inset-0 w-full h-full object-cover" 
+                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="font-bold text-paa-navy mb-1 flex items-center">
+                          {book.title}
+                          {(book.overpriced || book.isOverpriced) && <span className="ml-2 bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Overpriced (Warning)</span>}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs font-medium">
+                          <span className="text-[#5bc0de] font-bold uppercase">{book.genre}</span>
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td>
@@ -2643,9 +3344,9 @@ export function OperationsDashboardPage() {
       const slug = evt.name.replace(/\s+/g, '-').toLowerCase();
       navigate(`/operations/events/${slug}`);
       setTimeout(() => {
-          const scrollEl = document.getElementById('admin-dashboard-scroll');
-          if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'auto' });
-          else window.scrollTo({ top: 0, behavior: 'auto' });
+        const scrollEl = document.getElementById('admin-dashboard-scroll');
+        if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'auto' });
+        else window.scrollTo({ top: 0, behavior: 'auto' });
       }, 0);
     };
 
@@ -2656,874 +3357,917 @@ export function OperationsDashboardPage() {
     };
 
     const handleSaveAggregateData = async () => {
-        try {
-            const formData = new FormData();
-            formData.append('aggAuthors', selectedEventBreakdown.aggAuthors?.toString() || '0');
-            formData.append('aggTitles', selectedEventBreakdown.aggTitles?.toString() || '0');
-            formData.append('aggSent', selectedEventBreakdown.aggSent?.toString() || '0');
-            formData.append('aggSold', selectedEventBreakdown.aggSold?.toString() || '0');
-            formData.append('aggRevenue', selectedEventBreakdown.aggRevenue?.toString() || '0');
-            
-            await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}`, formData, {
-               headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-            toast.success('Aggregate stats saved!');
-            fetchEvents();
-        } catch(err) {
-            toast.error('Failed to save aggregate stats');
-        }
+      try {
+        const formData = new FormData();
+        formData.append('aggAuthors', selectedEventBreakdown.aggAuthors?.toString() || '0');
+        formData.append('aggTitles', selectedEventBreakdown.aggTitles?.toString() || '0');
+        formData.append('aggSent', selectedEventBreakdown.aggSent?.toString() || '0');
+        formData.append('aggSold', selectedEventBreakdown.aggSold?.toString() || '0');
+        formData.append('aggRevenue', selectedEventBreakdown.aggRevenue?.toString() || '0');
+
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}`, formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        toast.success('Aggregate stats saved!');
+        fetchEvents();
+      } catch (err) {
+        toast.error('Failed to save aggregate stats');
+      }
     };
 
     if (isEventModalOpen) {
-        const isPastEvent = createEventStatus === 'Past' || createEventStatus === 'Legacy Archive';
-        return (
-          <div className="bg-white rounded-xl shadow-premium p-8 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center justify-between mb-6 border-b pb-4">
-               <h3 className="text-2xl font-serif text-paa-navy">Create New Event</h3>
-               <button onClick={() => setIsEventModalOpen(false)} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">Cancel & Go Back</button>
-            </div>
-            <form className="space-y-4" onSubmit={async (e) => {
-              e.preventDefault();
-              const target = e.target as any;
-              setIsSubmittingEvent(true);
-              try {
-                const fd = new FormData();
-                fd.append('name', target.name.value);
-                fd.append('date', target.date.value);
-                fd.append('location', target.location.value);
-                fd.append('duration', target.duration.value);
-                if (target.startTime?.value) fd.append('startTime', target.startTime.value);
-                if (target.endTime?.value) fd.append('endTime', target.endTime.value);
-                fd.append('eventType', target.eventType.value === 'Other' ? (target.otherEventType?.value || 'Other') : target.eventType.value);
-                fd.append('registrationFee', target.registrationFee.value);
-                fd.append('feeType', target.feeType.value);
-                if (target.description.value) fd.append('description', target.description.value);
-                fd.append('livePosEnabled', target.livePosEnabled?.checked ? 'true' : 'false');
-                if (target.banner.files[0]) fd.append('banner', target.banner.files[0]);
-                
-                if (!hasGranularData) {
-                    fd.append('aggAuthors', target.aggAuthors?.value || '0');
-                    fd.append('aggSent', target.aggSent?.value || '0');
-                    fd.append('aggSold', target.aggSold?.value || '0');
-                    fd.append('aggRevenue', target.aggRevenue?.value || '0');
-                }
-    
-                await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                toast.success('Event Created Successfully!');
-                setIsEventModalOpen(false);
-              } catch (err: any) {
-                toast.error(err.response?.data?.error || err.message);
-              } finally {
-                setIsSubmittingEvent(false);
-              }
-            }}>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-2"><label className="dash-label">Event Name</label><input required name="name" type="text" className="dash-input" /></div>
-                  <div>
-                     <label className="dash-label">Event Status</label>
-                     <select name="status" className="dash-input" value={createEventStatus} onChange={(e) => setCreateEventStatus(e.target.value)}>
-                        <option value="Upcoming">Upcoming</option>
-                        <option value="Past">Past (Granular Data)</option>
-                        <option value="Legacy Archive">Legacy Archive (Aggregate Data)</option>
-                     </select>
-                  </div>
-                  <div><label className="dash-label">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="dash-input" /></div>
-                </div>
-                
-                <div><label className="dash-label">Event Description</label><textarea name="description" rows={3} className="dash-input resize-y" placeholder="Short details about the event..."></textarea></div>
-      
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="dash-label">Event Type</label>
-                    <select name="eventType" className="dash-input" onChange={(e) => {
-                        const el = document.getElementById('otherEventTypeInput');
-                        if (el) el.style.display = e.target.value === 'Other' ? 'block' : 'none';
-                    }}>
-                      <option value="Book Fair">Book Fair</option>
-                      <option value="Literary Event">Literary Event</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    <input id="otherEventTypeInput" name="otherEventType" type="text" className="dash-input mt-2" placeholder="Specify event type" style={{ display: 'none' }} />
-                  </div>
-                  <div><label className="dash-label">Location (Venue)</label><input required name="location" type="text" className="dash-input" /></div>
-                  <div>
-                    <label className="dash-label">Date</label>
-                    <input required name="date" type="date" className="dash-input" value={createEventDate} onChange={(e) => setCreateEventDate(e.target.value)} />
-                    {createEventDate && (
-                      <div className={`text-[10px] mt-1 font-bold ${isPastEvent ? 'text-orange-500' : 'text-emerald-500'}`}>
-                        {isPastEvent ? '— Past Event' : '— Upcoming Event'}
-                      </div>
-                    )}
-                  </div>
-                  <div><label className="dash-label">Duration</label><input required name="duration" type="text" className="dash-input" placeholder="e.g. 3 days" /></div>
-                </div>
-      
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div><label className="dash-label">From Timing</label><input name="startTime" type="time" className="dash-input" /></div>
-                  <div><label className="dash-label">To Timing</label><input name="endTime" type="time" className="dash-input" /></div>
-                  <div><label className="dash-label">Registration Fee (₹)</label><input required name="registrationFee" type="number" defaultValue={0} className="dash-input" /></div>
-                  <div>
-                    <label className="dash-label">Fee Type</label>
-                    <select name="feeType" className="dash-input">
-                      <option value="Per Author">Per Author</option>
-                      <option value="Per Title">Per Title</option>
-                      <option value="Flat Fee">Flat Fee</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-    
-              <div className="flex items-center gap-2 mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                <input type="checkbox" name="livePosEnabled" id="livePosEnabled" className="w-4 h-4 text-paa-navy focus:ring-paa-navy rounded border-gray-300" defaultChecked={!isPastEvent} />
-                <label htmlFor="livePosEnabled" className="text-sm font-medium text-paa-navy">Enable Live POS tracking for this event</label>
-              </div>
-              
-              <div className="border-t border-gray-200 pt-6 mt-6">
-
-                  {createEventStatus !== 'Legacy Archive' && (
-                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm text-blue-800">
-                         * You can manage granular data for each author from the Event Breakdown view after creating this event.
-                      </div>
-                  )}
-              </div>
-    
-              <div className="flex justify-end gap-3 pt-6 border-t mt-6">
-                <button type="button" onClick={() => setIsEventModalOpen(false)} className="dash-btn dash-btn-ghost">Cancel</button>
-                <button type="submit" disabled={isSubmittingEvent} className="dash-btn dash-btn-primary min-w-[120px]">
-                  {isSubmittingEvent ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span> : 'Save Event Details'}
-                </button>
-              </div>
-            </form>
+      const isPastEvent = createEventStatus === 'Past' || createEventStatus === 'Legacy Archive';
+      return (
+        <div className="bg-white rounded-xl shadow-premium p-8 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between mb-6 border-b pb-4">
+            <h3 className="text-2xl font-serif text-paa-navy">Create New Event</h3>
+            <button onClick={() => setIsEventModalOpen(false)} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">Cancel & Go Back</button>
           </div>
-        );
+          <form className="space-y-4" onSubmit={async (e) => {
+            e.preventDefault();
+            const target = e.target as any;
+            setIsSubmittingEvent(true);
+            try {
+              const fd = new FormData();
+              fd.append('name', target.name.value);
+              fd.append('date', target.date.value);
+              fd.append('location', target.location.value);
+              fd.append('duration', target.duration.value);
+              if (target.startTime?.value) fd.append('startTime', target.startTime.value);
+              if (target.endTime?.value) fd.append('endTime', target.endTime.value);
+              fd.append('eventType', target.eventType.value === 'Other' ? (target.otherEventType?.value || 'Other') : target.eventType.value);
+              fd.append('registrationFee', target.registrationFee.value);
+              fd.append('feeType', target.feeType.value);
+              if (target.description.value) fd.append('description', target.description.value);
+              fd.append('livePosEnabled', target.livePosEnabled?.checked ? 'true' : 'false');
+              if (target.banner.files[0]) fd.append('banner', target.banner.files[0]);
+
+              if (!hasGranularData) {
+                fd.append('aggAuthors', target.aggAuthors?.value || '0');
+                fd.append('aggSent', target.aggSent?.value || '0');
+                fd.append('aggSold', target.aggSold?.value || '0');
+                fd.append('aggRevenue', target.aggRevenue?.value || '0');
+              }
+
+              await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+              toast.success('Event Created Successfully!');
+              setIsEventModalOpen(false);
+            } catch (err: any) {
+              toast.error(err.response?.data?.error || err.message);
+            } finally {
+              setIsSubmittingEvent(false);
+            }
+          }}>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2"><label className="dash-label">Event Name</label><input required name="name" type="text" className="dash-input" /></div>
+                <div>
+                  <label className="dash-label">Event Status</label>
+                  <select name="status" className="dash-input" value={createEventStatus} onChange={(e) => setCreateEventStatus(e.target.value)}>
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Past">Past (Granular Data)</option>
+                    <option value="Legacy Archive">Legacy Archive (Aggregate Data)</option>
+                  </select>
+                </div>
+                <div><label className="dash-label">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="dash-input" /></div>
+              </div>
+
+              <div><label className="dash-label">Event Description</label><textarea name="description" rows={3} className="dash-input resize-y" placeholder="Short details about the event..."></textarea></div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="dash-label">Event Type</label>
+                  <select name="eventType" className="dash-input" onChange={(e) => {
+                    const el = document.getElementById('otherEventTypeInput');
+                    if (el) el.style.display = e.target.value === 'Other' ? 'block' : 'none';
+                  }}>
+                    <option value="Book Fair">Book Fair</option>
+                    <option value="Literary Event">Literary Event</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <input id="otherEventTypeInput" name="otherEventType" type="text" className="dash-input mt-2" placeholder="Specify event type" style={{ display: 'none' }} />
+                </div>
+                <div><label className="dash-label">Location (Venue)</label><input required name="location" type="text" className="dash-input" /></div>
+                <div>
+                  <label className="dash-label">Date</label>
+                  <input required name="date" type="date" className="dash-input" value={createEventDate} onChange={(e) => setCreateEventDate(e.target.value)} />
+                  {createEventDate && (
+                    <div className={`text-[10px] mt-1 font-bold ${isPastEvent ? 'text-orange-500' : 'text-emerald-500'}`}>
+                      {isPastEvent ? '— Past Event' : '— Upcoming Event'}
+                    </div>
+                  )}
+                </div>
+                <div><label className="dash-label">Duration</label><input required name="duration" type="text" className="dash-input" placeholder="e.g. 3 days" /></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div><label className="dash-label">From Timing</label><input name="startTime" type="time" className="dash-input" /></div>
+                <div><label className="dash-label">To Timing</label><input name="endTime" type="time" className="dash-input" /></div>
+                <div><label className="dash-label">Registration Fee (₹)</label><input required name="registrationFee" type="number" defaultValue={0} className="dash-input" /></div>
+                <div>
+                  <label className="dash-label">Fee Type</label>
+                  <select name="feeType" className="dash-input">
+                    <option value="Per Author">Per Author</option>
+                    <option value="Per Title">Per Title</option>
+                    <option value="Flat Fee">Flat Fee</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+              <input type="checkbox" name="livePosEnabled" id="livePosEnabled" className="w-4 h-4 text-paa-navy focus:ring-paa-navy rounded border-gray-300" defaultChecked={!isPastEvent} />
+              <label htmlFor="livePosEnabled" className="text-sm font-medium text-paa-navy">Enable Live POS tracking for this event</label>
+            </div>
+
+            <div className="border-t border-gray-200 pt-6 mt-6">
+
+              {createEventStatus !== 'Legacy Archive' && (
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm text-blue-800">
+                  * You can manage granular data for each author from the Event Breakdown view after creating this event.
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+              <button type="button" onClick={() => setIsEventModalOpen(false)} className="dash-btn dash-btn-ghost">Cancel</button>
+              <button type="submit" disabled={isSubmittingEvent} className="dash-btn dash-btn-primary min-w-[120px]">
+                {isSubmittingEvent ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span> : 'Save Event Details'}
+              </button>
+            </div>
+          </form>
+        </div>
+      );
     }
 
     const allCombinedEvents = events.map((e: any) => ({ ...e, isLegacy: e.status === 'Legacy Archive' })).sort((a: any, b: any) => {
-       const da = new Date(a.date).getTime();
-       const db = new Date(b.date).getTime();
-       return (isNaN(db) ? 0 : db) - (isNaN(da) ? 0 : da);
+      const da = new Date(a.date).getTime();
+      const db = new Date(b.date).getTime();
+      return (isNaN(db) ? 0 : db) - (isNaN(da) ? 0 : da);
     });
 
 
     const handleEditAuthorData = (m: any) => {
-        const authorProfile = m.author || m;
-        setSelectedAuthorForData(authorProfile);
-        setManageRegStatus(m.optInStatus === 'Declined' ? 'Declined' : 'Registered');
-        setManagePaymentStatus(m.paymentStatus || 'Paid');
-        setManageAmountPaid(m.amountPaid || 0);
-        const isLegacyEvent = selectedEventBreakdown?.status === 'Legacy Archive' || selectedEventBreakdown?.isLegacy;
-        setUseGlobalOverride(isLegacyEvent || (m.manualTotalSold !== null && m.manualTotalSold !== undefined));
-        setGlobalSold(m.manualTotalSold || 0);
-        setGlobalRevenue(m.manualTotalRevenue || 0);
-        
-        const globalBooks = authorProfile.books || [];
-        const eventBooks = (m.books || []).filter((b: any) => b.bookId !== undefined);
+      const authorProfile = m.author || m;
+      setSelectedAuthorForData(authorProfile);
+      setManageRegStatus(m.optInStatus === 'Declined' ? 'Declined' : 'Registered');
+      setManagePaymentStatus(m.paymentStatus || 'Paid');
+      setManageAmountPaid(m.amountPaid || 0);
+      const isLegacyEvent = selectedEventBreakdown?.status === 'Legacy Archive' || selectedEventBreakdown?.isLegacy;
+      setUseGlobalOverride(isLegacyEvent || (m.manualTotalSold !== null && m.manualTotalSold !== undefined));
+      setGlobalSold(m.manualTotalSold || 0);
+      setGlobalRevenue(m.manualTotalRevenue || 0);
 
-        setManageAuthorBooks(globalBooks.map((gb: any) => {
-            const evb = eventBooks.find((eb: any) => eb.bookId === gb.id);
-            return {
-                bookId: gb.id,
-                title: gb.title || 'Unknown Book',
-                mrp: parseFloat(gb.mrp) || 0,
-                overrideMrp: evb?.overrideMrp || undefined,
-                isSelected: !!evb,
-                listedStock: evb ? (evb.listedStock || 0) : 0,
-                soldStock: evb ? (evb.soldStock || 0) : 0,
-                returnedStock: evb ? (evb.returnedStock || 0) : 0
-            };
-        }));
+      const globalBooks = authorProfile.books || [];
+      const eventBooks = (m.books || []).filter((b: any) => b.bookId !== undefined);
+
+      setManageAuthorBooks(globalBooks.map((gb: any) => {
+        const evb = eventBooks.find((eb: any) => eb.bookId === gb.id);
+        return {
+          bookId: gb.id,
+          title: gb.title || 'Unknown Book',
+          mrp: parseFloat(gb.mrp) || 0,
+          overrideMrp: evb?.overrideMrp || undefined,
+          isSelected: !!evb,
+          listedStock: evb ? (evb.listedStock || 0) : 0,
+          soldStock: evb ? (evb.soldStock || 0) : 0,
+          returnedStock: evb ? (evb.returnedStock || 0) : 0
+        };
+      }));
     };
 
     const handlePublishData = async () => {
-        try {
-            setIsPublishingData(true);
-            await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/author/${selectedAuthorForData.id}/publish`, {
-                registrationStatus: manageRegStatus,
-                paymentStatus: managePaymentStatus,
-                amountPaid: manageAmountPaid,
-                booksData: manageAuthorBooks,
-                useGlobalOverride,
-                globalSold,
-                globalRevenue
-            }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-            fetchEventRegistrations(selectedEventBreakdown.id);
-            toast.success('Data Published! The author will now see these metrics in their dashboard.');
-            setIsPublishingData(false);
-        } catch (err: any) {
-            toast.error(err.response?.data?.error || 'Failed to publish data.');
-            if (err.response?.data?.stack) console.error(err.response.data.stack);
-            setIsPublishingData(false);
-        }
+      try {
+        setIsPublishingData(true);
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/author/${selectedAuthorForData.id}/publish`, {
+          registrationStatus: manageRegStatus,
+          paymentStatus: managePaymentStatus,
+          amountPaid: manageAmountPaid,
+          booksData: manageAuthorBooks,
+          useGlobalOverride,
+          globalSold,
+          globalRevenue
+        }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        fetchEventRegistrations(selectedEventBreakdown.id);
+        toast.success('Data Published! The author will now see these metrics in their dashboard.');
+        setIsPublishingData(false);
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'Failed to publish data.');
+        if (err.response?.data?.stack) console.error(err.response.data.stack);
+        setIsPublishingData(false);
+      }
     };
 
     const handleSaveDraft = async () => {
-        try {
-            setIsPublishingData(true);
-            await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/author/${selectedAuthorForData.id}/publish`, {
-                registrationStatus: manageRegStatus,
-                paymentStatus: managePaymentStatus,
-                amountPaid: manageAmountPaid,
-                booksData: manageAuthorBooks,
-                useGlobalOverride,
-                globalSold,
-                globalRevenue,
-                isDraft: true
-            }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-            await fetchEventRegistrations(selectedEventBreakdown.id);
-            toast.success('Draft Saved! Data instantly reflected on the table.');
-            setIsPublishingData(false);
-        } catch (err: any) {
-            toast.error(err.response?.data?.error || 'Failed to save draft.');
-            setIsPublishingData(false);
-        }
+      try {
+        setIsPublishingData(true);
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/author/${selectedAuthorForData.id}/publish`, {
+          registrationStatus: manageRegStatus,
+          paymentStatus: managePaymentStatus,
+          amountPaid: manageAmountPaid,
+          booksData: manageAuthorBooks,
+          useGlobalOverride,
+          globalSold,
+          globalRevenue,
+          isDraft: true
+        }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        await fetchEventRegistrations(selectedEventBreakdown.id);
+        toast.success('Draft Saved! Data instantly reflected on the table.');
+        setIsPublishingData(false);
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'Failed to save draft.');
+        setIsPublishingData(false);
+      }
     };
     const handleDownloadEventReport = () => {
-        if (!selectedEventBreakdown) return;
-        
-        const totalParticipants = eventRegistrations.length;
-        const totalBooksListed = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || (a.manualTotalListed || 0)), 0);
-        const totalBooksSold = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
-        const totalSalesRevenue = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (parseFloat(b.overrideMrp || b.book?.mrp || b.mrp) || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
-        const totalFeesReceived = eventRegistrations.reduce((acc: number, a: any) => {
-            const fee = a.amountPaid != null ? parseFloat(a.amountPaid) : (a.paymentStatus === 'Paid' ? parseFloat(selectedEventBreakdown.registrationFee || 0) : 0);
-            return acc + (!isNaN(fee) ? fee : 0);
-        }, 0);
+      if (!selectedEventBreakdown) return;
 
-        let csv = `Event Report: ${selectedEventBreakdown.name}\n`;
-        csv += `Date/Duration:,${selectedEventBreakdown.date} / ${selectedEventBreakdown.duration}\n\n`;
-        
-        csv += `--- EVENT SUMMARY ---\n`;
-        csv += `Total Participants:,${totalParticipants}\n`;
-        csv += `Total Books Listed:,${totalBooksListed}\n`;
-        csv += `Total Books Sold:,${totalBooksSold}\n`;
-        csv += `Total Sales Revenue (MRP):,${totalSalesRevenue}\n`;
-        csv += `Total Fees Received:,${totalFeesReceived}\n\n`;
-        
-        csv += `--- INDIVIDUAL AUTHOR BREAKDOWN ---\n`;
-        csv += `S.No,Author Name,Phone,Email,Participated,Payment Status,Fees Paid,Book Title,MRP,Copies Received,Copies Sold,Revenue,Balance Remaining\n`;
-        
-        let sNo = 1;
-        
-        authors.forEach((author: any) => {
-            const reg = eventRegistrations.find((r: any) => r.author?.id === author.id || r.authorId === author.id || r.id === author.id);
-            const isParticipating = reg ? 'Yes' : 'No';
-            const amountPaid = reg?.amountPaid != null ? reg.amountPaid : (reg?.paymentStatus === 'Paid' ? (selectedEventBreakdown.registrationFee || 0) : '0');
-            const paymentStatus = reg?.paymentStatus || 'NA';
-            const authorName = (author.name || '').replace(/"/g, '""');
-            const phone = author.phone || 'NA';
-            const email = author.email || 'NA';
+      const eventNameStr = (selectedEventBreakdown.name || "").toLowerCase();
+      let staticFile = null;
+      if (eventNameStr.includes("dehradun")) staticFile = "DehradunBookFair (5).xlsx";
+      else if (eventNameStr.includes("goa")) staticFile = "GoaBookFair (2).xlsx";
+      else if (eventNameStr.includes("jammu")) staticFile = "JammuBookFair (1).xlsx";
+      else if (eventNameStr.includes("srinagar")) staticFile = "SrinagarBookFair (1).xlsx";
 
-            if (reg && reg.books && reg.books.length > 0) {
-                reg.books.forEach((b: any) => {
-                    const title = (b.book?.title || b.title || 'Unknown').replace(/"/g, '""');
-                    const mrp = b.overrideMrp || b.book?.mrp || b.mrp || 0;
-                    const listed = b.listedStock || 0;
-                    const sold = b.soldStock || 0;
-                    const balance = listed - sold;
-                    const revenue = sold * (parseFloat(mrp) || 0);
-                    
-                    csv += `${sNo},"${authorName}","${phone}","${email}","Yes","${paymentStatus}","${amountPaid}","${title}","${mrp}","${listed}","${sold}","${revenue}","${balance}"\n`;
-                    sNo++;
-                });
-            } else if (reg) {
-                // Participated but no books array or legacy
-                const listed = reg.manualTotalListed || 'NA';
-                const sold = reg.manualTotalSold || 0;
-                const revenue = reg.manualTotalRevenue || 0;
-                csv += `${sNo},"${authorName}","${phone}","${email}","Yes","${paymentStatus}","${amountPaid}","NA","NA","${listed}","${sold}","${revenue}","NA"\n`;
-                sNo++;
-            } else {
-                // Did not participate
-                csv += `${sNo},"${authorName}","${phone}","${email}","No","NA","0","NA","NA","0","0","0","0"\n`;
-                sNo++;
-            }
-        });
-        
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
+      if (staticFile) {
         const aLink = document.createElement('a');
-        aLink.href = url;
-        aLink.download = `${selectedEventBreakdown.name}.csv`;
+        aLink.href = `/Events/${staticFile}`;
+        aLink.download = staticFile;
         document.body.appendChild(aLink);
         aLink.click();
         document.body.removeChild(aLink);
-        window.URL.revokeObjectURL(url);
+        return;
+      }
+
+      const totalParticipants = eventRegistrations.length;
+      const totalBooksListed = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || (a.manualTotalListed || 0)), 0);
+      const totalBooksSold = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
+      const totalSalesRevenue = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (parseFloat(b.overrideMrp || b.book?.mrp || b.mrp) || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
+      const totalFeesReceived = eventRegistrations.reduce((acc: number, a: any) => {
+        const fee = a.amountPaid != null ? parseFloat(a.amountPaid) : (a.paymentStatus === 'Paid' ? parseFloat(selectedEventBreakdown.registrationFee || 0) : 0);
+        return acc + (!isNaN(fee) ? fee : 0);
+      }, 0);
+
+      let csv = `Event Report: ${selectedEventBreakdown.name}\n`;
+      csv += `Date/Duration:,${selectedEventBreakdown.date} / ${selectedEventBreakdown.duration}\n\n`;
+
+      csv += `--- EVENT SUMMARY ---\n`;
+      csv += `Total Participants:,${totalParticipants}\n`;
+      csv += `Total Books Listed:,${totalBooksListed}\n`;
+      csv += `Total Books Sold:,${totalBooksSold}\n`;
+      csv += `Total Sales Revenue (MRP):,${totalSalesRevenue}\n`;
+      csv += `Total Fees Received:,${totalFeesReceived}\n\n`;
+
+      csv += `--- INDIVIDUAL AUTHOR BREAKDOWN ---\n`;
+      csv += `S.No,Author Name,Phone,Email,Participated,Payment Status,Fees Paid,Book Title,MRP,Copies Received,Copies Sold,Revenue,Balance Remaining\n`;
+
+      let sNo = 1;
+
+      authors.forEach((author: any) => {
+        const reg = eventRegistrations.find((r: any) => r.author?.id === author.id || r.authorId === author.id || r.id === author.id);
+        const isParticipating = reg ? 'Yes' : 'No';
+        const amountPaid = reg?.amountPaid != null ? reg.amountPaid : (reg?.paymentStatus === 'Paid' ? (selectedEventBreakdown.registrationFee || 0) : '0');
+        const paymentStatus = reg?.paymentStatus || 'NA';
+        const authorName = (author.name || '').replace(/"/g, '""');
+        const phone = author.phone || 'NA';
+        const email = author.email || 'NA';
+
+        if (reg && reg.books && reg.books.length > 0) {
+          reg.books.forEach((b: any) => {
+            const title = (b.book?.title || b.title || 'Unknown').replace(/"/g, '""');
+            const mrp = b.overrideMrp || b.book?.mrp || b.mrp || 0;
+            const listed = b.listedStock || 0;
+            const sold = b.soldStock || 0;
+            const balance = listed - sold;
+            const revenue = sold * (parseFloat(mrp) || 0);
+
+            csv += `${sNo},"${authorName}","${phone}","${email}","Yes","${paymentStatus}","${amountPaid}","${title}","${mrp}","${listed}","${sold}","${revenue}","${balance}"\n`;
+            sNo++;
+          });
+        } else if (reg) {
+          // Participated but no books array or legacy
+          const listed = reg.manualTotalListed || 'NA';
+          const sold = reg.manualTotalSold || 0;
+          const revenue = reg.manualTotalRevenue || 0;
+          csv += `${sNo},"${authorName}","${phone}","${email}","Yes","${paymentStatus}","${amountPaid}","NA","NA","${listed}","${sold}","${revenue}","NA"\n`;
+          sNo++;
+        } else {
+          // Did not participate
+          csv += `${sNo},"${authorName}","${phone}","${email}","No","NA","0","NA","NA","0","0","0","0"\n`;
+          sNo++;
+        }
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const aLink = document.createElement('a');
+      aLink.href = url;
+      aLink.download = `${selectedEventBreakdown.name}.csv`;
+      document.body.appendChild(aLink);
+      aLink.click();
+      document.body.removeChild(aLink);
+      window.URL.revokeObjectURL(url);
     };
 
     if (selectedEventBreakdown) {
-       const isPastOrArchive = selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.status === 'Legacy Archive';
+      const isPastOrArchive = selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.status === 'Legacy Archive';
 
-       const totalAuthorsBase = eventRegistrations.length;
-       const totalListedBase = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
-       const totalSoldBase = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
-       const totalSaleBase = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
-       const totalTitlesBase = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books ? a.books.length : 0), 0);
+      const totalAuthorsBase = eventRegistrations.length;
+      const totalListedBase = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
+      const totalSoldBase = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
+      const totalSaleBase = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
+      const totalTitlesBase = eventRegistrations.reduce((acc: number, a: any) => acc + (a.books ? a.books.length : 0), 0);
 
-       const pubRegs = eventRegistrations.filter((a: any) => a.optInStatus === 'Registered');
-       const pubAuthors = pubRegs.length;
-       const pubListed = pubRegs.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
-       const pubSold = pubRegs.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
-       const pubSale = pubRegs.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
-       const pubTitles = pubRegs.reduce((acc: number, a: any) => acc + (a.books ? a.books.length : 0), 0);
+      const pubRegs = eventRegistrations.filter((a: any) => a.optInStatus === 'Registered');
+      const pubAuthors = pubRegs.length;
+      const pubListed = pubRegs.reduce((acc: number, a: any) => acc + (a.books?.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) || 0), 0);
+      const pubSold = pubRegs.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
+      const pubSale = pubRegs.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
+      const pubTitles = pubRegs.reduce((acc: number, a: any) => acc + (a.books ? a.books.length : 0), 0);
 
-       const totalAuthors = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : 'NA') : totalAuthorsBase;
-       const totalTitles = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggTitles != null ? selectedEventBreakdown.aggTitles : 'NA') : totalTitlesBase;
-       const totalListed = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : 'NA') : totalListedBase;
-       const totalSold = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : 'NA') : totalSoldBase;
-       const totalSale = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : 'NA') : totalSaleBase;
-       
-       let maxSold = -1;
-       let bestSellingBook = '-';
-       if (!selectedEventBreakdown.isLegacy) {
-          eventRegistrations.forEach((a: any) => {
-             (a.books || []).forEach((b: any) => {
-                 if ((b.soldStock || 0) > maxSold) {
-                     maxSold = b.soldStock;
-                     bestSellingBook = b.title || b.book?.title || '';
-                 }
-             });
+      const totalAuthors = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : 'NA') : totalAuthorsBase;
+      const totalTitles = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggTitles != null ? selectedEventBreakdown.aggTitles : 'NA') : totalTitlesBase;
+      const totalListed = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : 'NA') : totalListedBase;
+      const totalSold = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : 'NA') : totalSoldBase;
+      const totalSale = selectedEventBreakdown.isLegacy ? (selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : 'NA') : totalSaleBase;
+
+      let maxSold = -1;
+      let bestSellingBook = '-';
+      if (!selectedEventBreakdown.isLegacy) {
+        eventRegistrations.forEach((a: any) => {
+          (a.books || []).forEach((b: any) => {
+            if ((b.soldStock || 0) > maxSold) {
+              maxSold = b.soldStock;
+              bestSellingBook = b.title || b.book?.title || '';
+            }
           });
-       }
+        });
+      }
 
-       return (
-           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
-               <div className="flex items-center justify-between mb-6 border-b pb-4">
-                 <div>
-                    <h3 className="text-2xl font-serif text-paa-navy mb-1">{selectedEventBreakdown.name}</h3>
-                    <p className="text-sm text-gray-500 font-medium">{selectedEventBreakdown.date} &bull; {selectedEventBreakdown.location || 'Location TBA'} &bull; {selectedEventBreakdown.duration || 'Duration N/A'}</p>
-                    {selectedEventBreakdown.description && (
-                       <p className="text-sm text-gray-600 mt-2 max-w-3xl leading-relaxed">{selectedEventBreakdown.description}</p>
-                    )}
-                 </div>
-                 <div className="flex gap-2">
-                   {!selectedAuthorForData && (
-                     <>
-                              {selectedEventBreakdown.broadcastStatus !== 'Published' ? (
-                                <button onClick={async () => {
-                                    try {
-                                        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/publish-all`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                                        toast.success('Event Published to all Authors!');
-                                        setSelectedEventBreakdown({ ...selectedEventBreakdown, broadcastStatus: 'Published' });
-                                        fetchEvents();
-                                    } catch(err) {
-                                        toast.error('Failed to publish');
-                                    }
-                                }} className="dash-btn bg-paa-gold text-paa-navy hover:brightness-110 shadow-sm font-bold flex items-center gap-2">
-                                  PUBLISH TO ALL AUTHORS
-                                </button>
-                              ) : (
-                                <button onClick={async () => {
-                                    try {
-                                        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/unpublish`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                                        toast.success('Event unpublished from Author dashboards.');
-                                        setSelectedEventBreakdown({ ...selectedEventBreakdown, broadcastStatus: 'Draft' });
-                                        fetchEvents();
-                                    } catch(err) {
-                                        toast.error('Failed to unpublish');
-                                    }
-                                }} className="dash-btn bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-700 border border-gray-300 hover:border-red-300 transition-colors shadow-sm font-bold flex items-center gap-2">
-                                   <CheckCircle2 className="w-4 h-4 text-emerald-600" /> PUBLISHED &bull; Click to Unpublish
-                                </button>
-                              )}
-                       <button onClick={handleDownloadEventReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm font-bold flex items-center gap-2">
-                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download Report
-                       </button>
-                     </>
-                   )}
-                   <button onClick={() => {
-                     if (selectedAuthorForData) {
-                         setSelectedAuthorForData(null);
-                     } else {
-                         handleCloseBreakdown();
-                     }
-                 }} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">
-                    {selectedAuthorForData ? 'Back to Authors List' : 'Back to Events'}
-                 </button>
-               </div>
-               </div>
-                {/* KPI Cards */}
-                <div className="mb-2 flex justify-between items-center">
-                  <span className="text-xs text-gray-400">Event Summary</span>
-                  {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === "Past" || selectedEventBreakdown.status === "Legacy Archive") && ( isEditingKPIs ? ( <div className="flex gap-2"><button onClick={() => setIsEditingKPIs(false)} className="text-xs font-bold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-full transition-colors">Cancel</button><button onClick={async () => { await handleSaveAggregateData(); setIsEditingKPIs(false); }} className="text-xs font-bold bg-paa-navy text-paa-cream px-4 py-1.5 rounded-full hover:bg-paa-gold hover:text-paa-navy transition-colors active:scale-95">Save Stats</button></div> ) : ( <button onClick={() => setIsEditingKPIs(true)} className="text-xs font-bold text-paa-navy border border-paa-navy/20 bg-gray-50 hover:bg-paa-navy/5 px-4 py-1.5 rounded-full transition-colors">Edit Stats</button> ) )}
+      return (
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between mb-6 border-b pb-4">
+            <div>
+              <h3 className="text-2xl font-serif text-paa-navy mb-1">{selectedEventBreakdown.name}</h3>
+              <p className="text-sm text-gray-500 font-medium">{selectedEventBreakdown.date} &bull; {selectedEventBreakdown.location || 'Location TBA'} &bull; {selectedEventBreakdown.duration || 'Duration N/A'}</p>
+              {selectedEventBreakdown.description && (
+                <p className="text-sm text-gray-600 mt-2 max-w-3xl leading-relaxed">{selectedEventBreakdown.description}</p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {!selectedAuthorForData && (
+                <>
+                  {selectedEventBreakdown.broadcastStatus !== 'Published' ? (
+                    <button onClick={async () => {
+                      try {
+                        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/publish-all`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                        toast.success('Event Published to all Authors!');
+                        setSelectedEventBreakdown({ ...selectedEventBreakdown, broadcastStatus: 'Published' });
+                        fetchEvents();
+                      } catch (err) {
+                        toast.error('Failed to publish');
+                      }
+                    }} className="dash-btn bg-paa-gold text-paa-navy hover:brightness-110 shadow-sm font-bold flex items-center gap-2">
+                      PUBLISH TO ALL AUTHORS
+                    </button>
+                  ) : (
+                    <button onClick={async () => {
+                      try {
+                        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/unpublish`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                        toast.success('Event unpublished from Author dashboards.');
+                        setSelectedEventBreakdown({ ...selectedEventBreakdown, broadcastStatus: 'Draft' });
+                        fetchEvents();
+                      } catch (err) {
+                        toast.error('Failed to unpublish');
+                      }
+                    }} className="dash-btn bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-700 border border-gray-300 hover:border-red-300 transition-colors shadow-sm font-bold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" /> PUBLISHED &bull; Click to Unpublish
+                    </button>
+                  )}
+                  <button onClick={handleDownloadEventReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm font-bold flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download Report
+                  </button>
+                </>
+              )}
+              <button onClick={() => {
+                if (selectedAuthorForData) {
+                  setSelectedAuthorForData(null);
+                } else {
+                  handleCloseBreakdown();
+                }
+              }} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">
+                {selectedAuthorForData ? 'Back to Authors List' : 'Back to Events'}
+              </button>
+            </div>
+          </div>
+          {/* KPI Cards */}
+          <div className="mb-2 flex justify-between items-center">
+            <span className="text-xs text-gray-400">Event Summary</span>
+            {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === "Past" || selectedEventBreakdown.status === "Legacy Archive") && (isEditingKPIs ? (<div className="flex gap-2"><button onClick={() => setIsEditingKPIs(false)} className="text-xs font-bold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-full transition-colors">Cancel</button><button onClick={async () => { await handleSaveAggregateData(); setIsEditingKPIs(false); }} className="text-xs font-bold bg-paa-navy text-paa-cream px-4 py-1.5 rounded-full hover:bg-paa-gold hover:text-paa-navy transition-colors active:scale-95">Save Stats</button></div>) : (<button onClick={() => setIsEditingKPIs(true)} className="text-xs font-bold text-paa-navy border border-paa-navy/20 bg-gray-50 hover:bg-paa-navy/5 px-4 py-1.5 rounded-full transition-colors">Edit Stats</button>))}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
+              <div>
+                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>
+                {isEditingKPIs ? (<input type="text" autoFocus className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0" value={selectedEventBreakdown.aggAuthors == null ? "" : selectedEventBreakdown.aggAuthors} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-paa-navy font-bold">{selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : (totalAuthors === 'NA' ? 'NA' : totalAuthors)}</div>)}
+              </div>
+              {isPastOrArchive && !isEditingKPIs && totalAuthors !== 'NA' && (
+                <div className="text-[10px] text-gray-500 font-bold uppercase mt-2 pt-2 border-t border-gray-200">Plat. Reg: <span className="text-paa-navy">{pubAuthors}</span></div>
+              )}
+            </div>
+
+            <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between border-gray-200`}>
+              <div>
+                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Titles</div>
+                {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-gray-800 font-bold bg-transparent border-0 border-b-2 border-gray-300 focus:border-gray-600 outline-none w-full p-0" value={selectedEventBreakdown.aggTitles == null ? "" : selectedEventBreakdown.aggTitles} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggTitles: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-gray-800 font-bold">{selectedEventBreakdown.aggTitles != null ? selectedEventBreakdown.aggTitles : (totalTitles === 'NA' ? 'NA' : totalTitles)}</div>)}
+              </div>
+              {isPastOrArchive && !isEditingKPIs && totalTitlesBase > 0 && (
+                <div className="text-[10px] text-gray-500 font-bold uppercase mt-2 pt-2 border-t border-gray-200">Plat. Reg: <span className="text-gray-800">{pubTitles}</span></div>
+              )}
+            </div>
+
+            <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
+              <div>
+                <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Listed</div>
+                {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSent == null ? "" : selectedEventBreakdown.aggSent} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-blue-800 font-bold">{selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : (totalListed === 'NA' ? 'NA' : totalListed)}</div>)}
+              </div>
+              {isPastOrArchive && !isEditingKPIs && totalListed !== 'NA' && (
+                <div className="text-[10px] text-blue-600 font-bold uppercase mt-2 pt-2 border-t border-blue-200/50">Plat. Reg: <span className="text-blue-800">{pubListed}</span></div>
+              )}
+            </div>
+
+            <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
+              <div>
+                <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Sold</div>
+                {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSold == null ? "" : selectedEventBreakdown.aggSold} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-indigo-800 font-bold">{selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : (totalSold === 'NA' ? 'NA' : totalSold)}</div>)}
+              </div>
+              {isPastOrArchive && !isEditingKPIs && totalSold !== 'NA' && (
+                <div className="text-[10px] text-indigo-600 font-bold uppercase mt-2 pt-2 border-t border-indigo-200/50">Plat. Reg: <span className="text-indigo-800">{pubSold}</span></div>
+              )}
+            </div>
+
+            <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
+              <div>
+                <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
+                {isEditingKPIs ? (<div className="flex items-center gap-0.5"><span className="text-xl font-serif text-emerald-800 font-bold">₹</span><input type="text" className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0" value={selectedEventBreakdown.aggRevenue == null ? "" : selectedEventBreakdown.aggRevenue} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggRevenue: (val.toUpperCase() === "NA" || val === "") ? null : parseFloat(val) || 0 }) }} /></div>) : (<div className="text-xl font-serif text-emerald-800 font-bold">₹{selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : (totalSale || "-")}</div>)}
+              </div>
+              {isPastOrArchive && !isEditingKPIs && totalSale !== 'NA' && (
+                <div className="text-[10px] text-emerald-600 font-bold uppercase mt-2 pt-2 border-t border-emerald-200/50">Plat. Reg: <span className="text-emerald-800">₹{pubSale}</span></div>
+              )}
+            </div>
+
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Best Selling Book</div>
+                <div className="text-sm font-bold text-purple-900 truncate" title={bestSellingBook || "-"}>{bestSellingBook || "-"}</div>
+              </div>
+              <div className="text-[9px] text-purple-400 font-medium mt-2 pt-2 border-t border-purple-200/50">auto-calculated</div>
+            </div>
+          </div>
+
+
+          {selectedAuthorForData ? (
+            <div className="border border-gray-200 rounded-xl p-6 bg-gray-50 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                  {selectedAuthorForData.name.charAt(0)}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-                    <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
-                       <div>
-                           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors</div>
-                           {isEditingKPIs ? (<input type="text" autoFocus className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0" value={selectedEventBreakdown.aggAuthors == null ? "" : selectedEventBreakdown.aggAuthors} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggAuthors: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-paa-navy font-bold">{selectedEventBreakdown.aggAuthors != null ? selectedEventBreakdown.aggAuthors : (totalAuthors === 'NA' ? 'NA' : totalAuthors)}</div>)}
-                       </div>
-                        {isPastOrArchive && !isEditingKPIs && totalAuthors !== 'NA' && (
-                           <div className="text-[10px] text-gray-500 font-bold uppercase mt-2 pt-2 border-t border-gray-200">Plat. Reg: <span className="text-paa-navy">{pubAuthors}</span></div>
-                       )}
-                    </div>
-                    
-                    <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between border-gray-200`}>
-                       <div>
-                           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Titles</div>
-                           {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-gray-800 font-bold bg-transparent border-0 border-b-2 border-gray-300 focus:border-gray-600 outline-none w-full p-0" value={selectedEventBreakdown.aggTitles == null ? "" : selectedEventBreakdown.aggTitles} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggTitles: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-gray-800 font-bold">{selectedEventBreakdown.aggTitles != null ? selectedEventBreakdown.aggTitles : (totalTitles === 'NA' ? 'NA' : totalTitles)}</div>)}
-                       </div>
-                        {isPastOrArchive && !isEditingKPIs && totalTitlesBase > 0 && (
-                           <div className="text-[10px] text-gray-500 font-bold uppercase mt-2 pt-2 border-t border-gray-200">Plat. Reg: <span className="text-gray-800">{pubTitles}</span></div>
-                       )}
-                    </div>
-
-                    <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
-                       <div>
-                           <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Listed</div>
-                           {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSent == null ? "" : selectedEventBreakdown.aggSent} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSent: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-blue-800 font-bold">{selectedEventBreakdown.aggSent != null ? selectedEventBreakdown.aggSent : (totalListed === 'NA' ? 'NA' : totalListed)}</div>)}
-                       </div>
-                        {isPastOrArchive && !isEditingKPIs && totalListed !== 'NA' && (
-                           <div className="text-[10px] text-blue-600 font-bold uppercase mt-2 pt-2 border-t border-blue-200/50">Plat. Reg: <span className="text-blue-800">{pubListed}</span></div>
-                       )}
-                    </div>
-                    
-                    <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
-                       <div>
-                           <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Sold</div>
-                           {isEditingKPIs ? (<input type="text" className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0" value={selectedEventBreakdown.aggSold == null ? "" : selectedEventBreakdown.aggSold} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggSold: (val.toUpperCase() === "NA" || val === "") ? null : parseInt(val) || 0 }) }} />) : (<div className="text-xl font-serif text-indigo-800 font-bold">{selectedEventBreakdown.aggSold != null ? selectedEventBreakdown.aggSold : (totalSold === 'NA' ? 'NA' : totalSold)}</div>)}
-                       </div>
-                        {isPastOrArchive && !isEditingKPIs && totalSold !== 'NA' && (
-                           <div className="text-[10px] text-indigo-600 font-bold uppercase mt-2 pt-2 border-t border-indigo-200/50">Plat. Reg: <span className="text-indigo-800">{pubSold}</span></div>
-                       )}
-                    </div>
-                    
-                    <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
-                       <div>
-                           <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
-                           {isEditingKPIs ? (<div className="flex items-center gap-0.5"><span className="text-xl font-serif text-emerald-800 font-bold">₹</span><input type="text" className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0" value={selectedEventBreakdown.aggRevenue == null ? "" : selectedEventBreakdown.aggRevenue} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggRevenue: (val.toUpperCase() === "NA" || val === "") ? null : parseFloat(val) || 0 }) }} /></div>) : (<div className="text-xl font-serif text-emerald-800 font-bold">₹{selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : (totalSale || "-")}</div>)}
-                       </div>
-                        {isPastOrArchive && !isEditingKPIs && totalSale !== 'NA' && (
-                           <div className="text-[10px] text-emerald-600 font-bold uppercase mt-2 pt-2 border-t border-emerald-200/50">Plat. Reg: <span className="text-emerald-800">₹{pubSale}</span></div>
-                       )}
-                    </div>
-                    
-                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 shadow-sm flex flex-col justify-between">
-                       <div>
-                           <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Best Selling Book</div>
-                           <div className="text-sm font-bold text-purple-900 truncate" title={bestSellingBook || "-"}>{bestSellingBook || "-"}</div>
-                       </div>
-                       <div className="text-[9px] text-purple-400 font-medium mt-2 pt-2 border-t border-purple-200/50">auto-calculated</div>
-                    </div>
+                <div>
+                  <h4 className="font-bold text-paa-navy text-lg">{selectedAuthorForData.name}</h4>
+                  <p className="text-xs text-gray-500 font-medium">Managing Event Data</p>
                 </div>
+              </div>
 
-               
-               {selectedAuthorForData ? (
-                  <div className="border border-gray-200 rounded-xl p-6 bg-gray-50 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
-                     <div className="flex items-center gap-3 mb-6">
-                         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
-                             {selectedAuthorForData.name.charAt(0)}
-                         </div>
-                         <div>
-                             <h4 className="font-bold text-paa-navy text-lg">{selectedAuthorForData.name}</h4>
-                             <p className="text-xs text-gray-500 font-medium">Managing Event Data</p>
-                         </div>
-                     </div>
-                     
-                     <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Author Registration & Logistics</h4>
-                     <div className="grid grid-cols-2 gap-4 mb-8">
-                        <div>
-                           <label className="block text-xs font-bold text-gray-600 mb-1">{selectedEventBreakdown.isLegacy ? 'Mark Attendance' : 'Publish to Author Dashboard'}</label>
-                           <select className="w-full border border-gray-300 rounded p-2 text-sm font-semibold text-paa-navy" value={manageRegStatus} onChange={(e) => setManageRegStatus(e.target.value)}>
-                         <option value="Registered">{selectedEventBreakdown.isLegacy ? 'Yes, Mark Participated' : 'Yes, Publish Data'}</option>
-                         <option value="Declined">{selectedEventBreakdown.isLegacy ? 'No, Did Not Participate' : 'No, Keep Hidden'}</option>
-                      </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold text-gray-600 mb-1">Payment Status</label>
-                           <select className="w-full border border-gray-300 rounded p-2 text-sm" value={managePaymentStatus} onChange={(e) => setManagePaymentStatus(e.target.value)}>
-                              <option value="Paid">Paid</option>
-                              <option value="Unpaid">Unpaid</option>
-                              <option value="-">-</option>
-                           </select>
-                        </div>
-                        {managePaymentStatus === 'Paid' && (
-                            <div>
-                               <label className="block text-xs font-bold text-emerald-600 mb-1">Amount Paid (₹)</label>
-                               <input type="number" className="w-full border border-emerald-300 bg-emerald-50 text-emerald-800 rounded p-2 text-sm font-bold" value={manageAmountPaid} onChange={(e) => setManageAmountPaid(parseFloat(e.target.value) || 0)} />
-                            </div>
-                        )}
-                     </div>
-                     
-                     <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Book Sales & Metrics</h4>
-
-                     <div className="mb-4">
-                        <label className="flex items-center gap-2 text-sm font-bold text-paa-navy cursor-pointer bg-paa-gold/10 p-3 rounded-lg border border-paa-gold/30">
-                           <input type="checkbox" className="w-4 h-4 rounded text-paa-navy" checked={useGlobalOverride} onChange={(e) => setUseGlobalOverride(e.target.checked)} />
-                           Use Global Override (No book-wise breakdown available)
-                        </label>
-                     </div>
-                     
-                     {useGlobalOverride ? (
-                         <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Total Books Sold (Overall)</label>
-                                 <input type="number" className="w-full border border-gray-300 rounded p-2 font-mono" value={globalSold} onChange={(e) => setGlobalSold(parseInt(e.target.value) || 0)} />
-                             </div>
-                             <div>
-                                 <label className="block text-xs font-bold text-emerald-600 mb-1 uppercase tracking-wider">Total Revenue (₹)</label>
-                                 <input type="number" className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-2 font-mono font-bold" value={globalRevenue} onChange={(e) => setGlobalRevenue(parseInt(e.target.value) || 0)} />
-                             </div>
-                         </div>
-                     ) : (
-                     <div className="space-y-4">
-                        {/* Iterating over authors books */}
-
-                        {manageAuthorBooks.map((book: any, idx: number) => {
-                          const mrpToUse = book.overrideMrp !== undefined && book.overrideMrp !== '' ? parseFloat(book.overrideMrp) : book.mrp;
-                          const revenue = (mrpToUse || 0) * (book.soldStock || 0);
-                          return (
-                          <div key={idx} className="border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm hover:shadow transition-shadow">
-                             <div className="flex justify-between items-center p-4 bg-white border-b border-gray-100">
-                                 <div className="font-medium text-sm text-gray-800 flex items-center gap-2">
-                                     {book.title} 
-                                     <div className="flex items-center gap-1 text-xs text-gray-500 font-normal ml-2">
-                                        (MRP: ₹<input type="text" className="w-14 border border-gray-200 rounded p-0.5 text-xs text-center outline-none focus:border-paa-navy" value={book.overrideMrp !== undefined ? book.overrideMrp : (book.mrp || '')} onChange={(e) => {
-                                            const newBooks = [...manageAuthorBooks];
-                                            newBooks[idx].overrideMrp = e.target.value;
-                                            setManageAuthorBooks(newBooks);
-                                        }} />)
-                                     </div>
-                                 </div>
-                                <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
-                                   <input type="checkbox" checked={book.isSelected} onChange={(e) => {
-                                      const newBooks = [...manageAuthorBooks];
-                                      newBooks[idx].isSelected = e.target.checked;
-                                      setManageAuthorBooks(newBooks);
-                                   }} className="rounded text-paa-navy w-4 h-4" /> Listed for this event
-                                </label>
-                             </div>
-                             <div className="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-5 gap-4">
-                                <div>
-                                   <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Quantities Listed</label>
-                                   <input type="number" value={book.listedStock} onChange={(e) => {
-                                      const newBooks = [...manageAuthorBooks];
-                                      newBooks[idx].listedStock = parseInt(e.target.value) || 0;
-                                      if (newBooks[idx].listedStock > 0) newBooks[idx].isSelected = true;
-                                      if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
-                                      setManageAuthorBooks(newBooks);
-                                   }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
-                                </div>
-                                <div>
-                                   <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Manual Sold</label>
-                                   <input type="number" value={book.soldStock} onChange={(e) => {
-                                      const newBooks = [...manageAuthorBooks];
-                                      newBooks[idx].soldStock = parseInt(e.target.value) || 0;
-                                      if (newBooks[idx].soldStock > 0) newBooks[idx].isSelected = true;
-                                      if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
-                                      setManageAuthorBooks(newBooks);
-                                   }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
-                                </div>
-                                <div>
-                                   <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Returned</label>
-                                   <input type="number" value={book.returnedStock} onChange={(e) => {
-                                      const newBooks = [...manageAuthorBooks];
-                                      newBooks[idx].returnedStock = parseInt(e.target.value) || 0;
-                                      setManageAuthorBooks(newBooks);
-                                   }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
-                                </div>
-                                <div>
-                                   <label className="block text-[10px] font-bold text-emerald-600 mb-1 uppercase tracking-wider">Revenue (₹)</label>
-                                   <div className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-2 text-sm font-mono font-bold">
-                                      ₹{revenue}
-                                   </div>
-                                </div>
-                                <div>
-                                   <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">POS Sold (Auto)</label>
-                                   <input type="number" defaultValue="0" disabled className="w-full border border-gray-200 bg-gray-100 text-gray-500 rounded p-2 text-sm font-mono" />
-                                </div>
-                             </div>
-                          </div>
-                        )})}
-                     </div>
-                     
-                     )}
-                     <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 items-center">
-                        <span className="text-xs text-gray-500 mr-auto font-medium">* Explicit publish required for authors to see past data in their dashboard.</span>
-                        <button onClick={handleSaveDraft} disabled={isPublishingData} className="px-6 py-2.5 text-sm text-paa-navy border border-paa-navy rounded-lg font-bold hover:bg-paa-navy hover:text-white transition-colors">{isPublishingData ? 'SAVING...' : 'Save Draft'}</button>
-                        <button onClick={handlePublishData} disabled={isPublishingData} className="px-8 py-2.5 text-sm bg-paa-gold text-paa-navy rounded-lg font-black hover:brightness-110 transition-all shadow-md">{isPublishingData ? 'PUBLISHING...' : 'PUBLISH TO AUTHOR'}</button>
-                     </div>
-                  </div>
-               ) : (
+              <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Author Registration & Logistics</h4>
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">{selectedEventBreakdown.isLegacy ? 'Mark Attendance' : 'Publish to Author Dashboard'}</label>
+                  <select className="w-full border border-gray-300 rounded p-2 text-sm font-semibold text-paa-navy" value={manageRegStatus} onChange={(e) => setManageRegStatus(e.target.value)}>
+                    <option value="Registered">{selectedEventBreakdown.isLegacy ? 'Yes, Mark Participated' : 'Yes, Publish Data'}</option>
+                    <option value="Declined">{selectedEventBreakdown.isLegacy ? 'No, Did Not Participate' : 'No, Keep Hidden'}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Payment Status</label>
+                  <select className="w-full border border-gray-300 rounded p-2 text-sm" value={managePaymentStatus} onChange={(e) => setManagePaymentStatus(e.target.value)}>
+                    <option value="Paid">Paid</option>
+                    <option value="Unpaid">Unpaid</option>
+                    <option value="-">-</option>
+                  </select>
+                </div>
+                {managePaymentStatus === 'Paid' && (
                   <div>
-                     <div className="flex justify-between items-center mb-4">
-                         <div>
-                           <h4 className="font-bold text-gray-700">Authors Participated / Registered</h4>
-                           {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past') && (
-                              <p className="text-xs text-gray-400 mt-0.5">Showing all platform-registered authors - fill in data for those who attended this event</p>
-                           )}
-                         </div>
-                         <input 
-                            type="text" 
-                            placeholder="Search authors..." 
-                            className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy"
-                            value={authorSearch}
-                            onChange={(e) => setAuthorSearch(e.target.value)}
-                         />
-                      </div>
-                     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                         <table className="dash-table w-full">
-                             <thead>
-                                 <tr>
-                                     <th>Author Name</th>
-                                     <th>Books Listed</th>
-                                     <th>Quantities</th>
-                                     <th>Books Sold</th>
-                                     <th>Revenue</th>
-                                     {!selectedEventBreakdown.isLegacy && (
-                                        <th style={{ textAlign: 'center' }}>Payment</th>
-                                     )}
-                                     <th>Status</th>
-                                     <th style={{ textAlign: 'center' }}>Actions</th>
-                                 </tr>
-                             </thead>
-                             <tbody className="divide-y divide-gray-100">
-                                 {(showAllPlatformAuthors ? authors : eventRegistrations).filter((a: any) => (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase()))
-                                 .map((a: any) => {
-                                     const showAllAuthors = showAllPlatformAuthors;
-                                     let m = a;
-                                     if (showAllAuthors) {
-                                         const reg = eventRegistrations.find(r => r.authorId === a.id);
-                                         if (reg) m = { ...a, ...reg, author: a, id: a.id };
-                                     }
-                                     return { a, m, showAllAuthors };
-                                 })
-                                 .sort((rowA: any, rowB: any) => {
-                                     const isPubA = (rowA.m.books && rowA.m.books.length > 0) || rowA.m.manualTotalSold != null;
-                                     const isPubB = (rowB.m.books && rowB.m.books.length > 0) || rowB.m.manualTotalSold != null;
-                                     if (isPubA && !isPubB) return 1;
-                                     if (!isPubA && isPubB) return -1;
-                                     return 0;
-                                 })
-                                 .slice(0, 50).map(({ a, m, showAllAuthors }, i: number) => {
-                                     const authorData = showAllAuthors ? m : m.author;
-                                     const hasBooks = m.books && m.books.length > 0;
-                                     const listed = hasBooks ? m.books.reduce((s:number,b:any)=>s+(b.listedStock||0),0) : 0;
-                                     const sold = hasBooks ? m.books.reduce((s:number,b:any)=>s+(b.soldStock||0),0) : ((m.manualTotalSold !== null && m.manualTotalSold !== undefined) ? m.manualTotalSold : 0);
-                                     const rev = hasBooks ? m.books.reduce((s:number,b:any)=>s+((b.soldStock||0)*(b.overrideMrp||b.mrp||b.book?.mrp||0)),0) : ((m.manualTotalRevenue !== null && m.manualTotalRevenue !== undefined) ? m.manualTotalRevenue : 0);
-                                     const isExpanded = expandedAuthorId === (showAllAuthors ? m.id : m.authorId);
-                                     const status = m.optInStatus || 'Unpublished';
-                                     const hasData = (m.books && m.books.length > 0) || m.manualTotalSold != null;
-                                     const validScreenshot = a.paymentScreenshot && typeof a.paymentScreenshot === 'string' && a.paymentScreenshot !== 'null' && a.paymentScreenshot !== 'undefined' && a.paymentScreenshot.trim() !== '';
-                                     return (
-                                     <React.Fragment key={i}>
-                                     <tr className="hover:bg-gray-50/50 transition-colors">
-                                         <td>
-                                            <p className="font-bold text-paa-navy">{authorData?.name || 'Unknown'}</p>
-                                         </td>
-                                         <td className="p-3 text-sm text-gray-600">{m.books?.length || 0} Books</td>
-                                         <td className="p-3 font-mono text-sm text-gray-600">{listed}</td>
-                                         <td className="p-3 font-mono text-sm text-gray-600">{sold}</td>
-                                         <td className="p-3 font-mono text-sm text-emerald-600 font-bold">{'₹'}{rev}</td>
-                                         {!selectedEventBreakdown.isLegacy && (
-                                            <td className="p-3 text-center align-middle">
-                                               <div className="flex flex-col items-center justify-center h-full">
-                                                 {selectedEventBreakdown.status === 'Past' ? (
-                                                    <div className="text-sm text-emerald-600 font-bold">
-                                                        {m.amountPaid ? `₹${m.amountPaid}` : <span className="text-gray-400 font-normal">-</span>}
-                                                    </div>
-                                                 ) : (
-                                                    <>
-                                                        {validScreenshot && (
-                                                            <a href={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} target="_blank" rel="noreferrer" className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80 mx-auto">
-                                                                <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
-                                                            </a>
-                                                        )}
-                                                        {m.amountPaid ? (
-                                                            <div className="text-[10px] text-emerald-600 font-bold mt-1">₹{m.amountPaid}</div>
-                                                        ) : (
-                                                            !validScreenshot && <span className="text-sm text-gray-400 font-bold">-</span>
-                                                        )}
-                                                        {validScreenshot && status === 'Registered' && (
-                                                            <div className="mt-1">
-                                                                <input 
-                                                                    type="text" 
-                                                                    placeholder="Txn ID" 
-                                                                    defaultValue={m.transactionId || ''} 
-                                                                    onBlur={(e) => updateTransactionId(m.eventId, m.authorId, e.target.value)}
-                                                                    className="w-20 text-[9px] text-center p-0.5 border border-gray-200 bg-gray-50 rounded outline-none focus:border-paa-navy font-mono"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                 )}
-                                               </div>
-                                            </td>
-                                         )}
-                                         <td className="p-3">
-                                            {status === 'Registered' ? (
-                                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3"/> {selectedEventBreakdown.isLegacy ? 'Participated' : (hasData ? 'Published' : 'Registered')}</span>
-                                            ) : (status === 'Pending' || status === 'Pending Approval' || status === 'Unpublished') ? (
-                                                <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max">Pending</span>
-                                            ) : status === 'Declined' ? (
-                                                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><XCircle className="w-3 h-3"/> Hidden</span>
-                                            ) : (
-                                                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold uppercase flex items-center gap-1 w-max">{status}</span>
-                                            )}
-                                         </td>
-                                         <td className="p-3 text-center">
-                                             <div className="flex gap-2 justify-center items-center">
-                                                 <button onClick={() => setExpandedAuthorId(isExpanded ? null : (showAllAuthors ? m.id : m.authorId))} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-bold border border-gray-200 transition-colors shadow-sm">
-                                                     {isExpanded ? <ChevronUp className="w-4 h-4 mx-auto"/> : <ChevronDown className="w-4 h-4 mx-auto"/>}
-                                                 </button>
-                                                 {showAllAuthors || status === 'Registered' ? (
-                                                     <button onClick={() => {
-                                                         handleEditAuthorData(m);
-                                                         if (selectedEventBreakdown.isLegacy && m.optInStatus) {
-                                                             setUseGlobalOverride(true);
-                                                             setGlobalSold(m.manualTotalSold || 0);
-                                                             setGlobalRevenue(m.manualTotalRevenue || 0);
-                                                             setManageRegStatus(m.optInStatus === 'Registered' ? 'Registered' : 'Declined');
-                                                         }
-                                                     }} className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-bold border border-indigo-200 transition-colors shadow-sm whitespace-nowrap">
-                                                         Manage Data
-                                                     </button>
-                                                 ) : null}
-                                             </div>
-                                         </td>
-                                     </tr>
-                                     {isExpanded && (
-                                         <tr>
-                                             <td colSpan={8} className="p-0 border-b border-gray-200">
-                                                 <div className="bg-gray-50 p-4 border-l-4 border-paa-navy m-2 rounded-r-lg">
-                                                     <div className="flex gap-4">
-                                                         <div className="flex-1 w-full">
-                                                             <div className="flex justify-between items-center mb-3">
-                                                                <h5 className="text-xs font-bold text-gray-500 uppercase">Individual Book Breakdown</h5>
-                                                                {!selectedEventBreakdown.isLegacy && (status === 'Pending' || status === 'Pending Approval') && (
-                                                                   <div className="flex gap-2">
-                                                                       <button onClick={() => handleRejectRegistration(selectedEventBreakdown.id, m.authorId)} className="py-1 px-4 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors">Reject</button>
-                                                                       <button onClick={() => handleApproveRegistration(selectedEventBreakdown.id, m.authorId)} className="py-1 px-4 text-xs font-bold text-white bg-paa-navy hover:bg-paa-gold hover:text-paa-navy rounded transition-colors shadow-sm">Approve</button>
-                                                                   </div>
-                                                                )}
-                                                             </div>
-                                                             {m.books?.length > 0 ? (
-                                                                 <div className="flex flex-col gap-3">
-                                                                     {m.books.map((b:any, j:number) => (
-                                                                         <div key={j} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-                                                                             <div className="font-bold text-paa-navy flex-1 w-full text-base truncate" title={b.title || b.book?.title || 'Unknown Book'}>
-                                                                                 {b.title || b.book?.title || 'Unknown Book'}
-                                                                                 <span className="text-xs text-gray-400 font-medium ml-3 tracking-wider">(MRP: ₹{b.overrideMrp || b.mrp || b.book?.mrp || 'N/A'})</span>
-                                                                             </div>
-                                                                             <div className="flex font-mono text-sm text-gray-600 gap-8 md:gap-12 bg-gray-50/80 px-6 py-2 rounded-lg border border-gray-100 w-full md:w-auto justify-between md:justify-end">
-                                                                                 <div className="flex flex-col items-center md:items-end">
-                                                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Listed</span>
-                                                                                    <span className="font-bold text-gray-700">{b.listedStock || 0}</span>
-                                                                                 </div>
-                                                                                 {!selectedEventBreakdown.isLegacy && (
-                                                                                    <div className="flex flex-col items-center md:items-end">
-                                                                                        <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Fee</span>
-                                                                                        <span className="font-bold text-indigo-700">₹{selectedEventBreakdown.feeType === 'Per Title' ? selectedEventBreakdown.registrationFee : (j === 0 ? selectedEventBreakdown.registrationFee : 0)}</span>
-                                                                                    </div>
-                                                                                 )}
-                                                                                 <div className="flex flex-col items-center md:items-end">
-                                                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Sold</span>
-                                                                                    <span className="font-bold text-indigo-700">{b.soldStock || 0}</span>
-                                                                                 </div>
-                                                                                 <div className="flex flex-col items-center md:items-end">
-                                                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Rev</span>
-                                                                                    <span className="font-bold text-emerald-600">{b.soldStock ? `₹${(b.soldStock) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)}` : '₹0'}</span>
-                                                                                 </div>
-                                                                             </div>
-                                                                         </div>
-                                                                     ))}
-                                                                 </div>
-                                                             ) : (
-                                                                 <p className="text-xs text-gray-500">No books found for this author in this event.</p>
-                                                             )}
-                                                         </div>
-                                                     </div>
-                                                 </div>
-                                             </td>
-                                         </tr>
-                                     )}
-                                     </React.Fragment>
-                                 )})}
-                             </tbody>
-                         </table>
-                         {authors.length > 50 && (
-                             <div className="p-3 text-center text-xs text-gray-500 bg-gray-50 border-t border-gray-100">
-                                 Showing top 50 results. Use search to find specific authors.
-                             </div>
-                         )}
-                     </div>
+                    <label className="block text-xs font-bold text-emerald-600 mb-1">Amount Paid (₹)</label>
+                    <input type="number" className="w-full border border-emerald-300 bg-emerald-50 text-emerald-800 rounded p-2 text-sm font-bold" value={manageAmountPaid} onChange={(e) => setManageAmountPaid(parseFloat(e.target.value) || 0)} />
                   </div>
-               )}
-           </div>
-       );
+                )}
+              </div>
+
+              <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Book Sales & Metrics</h4>
+
+              <div className="mb-4">
+                <label className="flex items-center gap-2 text-sm font-bold text-paa-navy cursor-pointer bg-paa-gold/10 p-3 rounded-lg border border-paa-gold/30">
+                  <input type="checkbox" className="w-4 h-4 rounded text-paa-navy" checked={useGlobalOverride} onChange={(e) => setUseGlobalOverride(e.target.checked)} />
+                  Use Global Override (No book-wise breakdown available)
+                </label>
+              </div>
+
+              {useGlobalOverride ? (
+                <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Total Books Sold (Overall)</label>
+                    <input type="number" className="w-full border border-gray-300 rounded p-2 font-mono" value={globalSold} onChange={(e) => setGlobalSold(parseInt(e.target.value) || 0)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-600 mb-1 uppercase tracking-wider">Total Revenue (₹)</label>
+                    <input type="number" className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-2 font-mono font-bold" value={globalRevenue} onChange={(e) => setGlobalRevenue(parseInt(e.target.value) || 0)} />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Iterating over authors books */}
+
+                  {manageAuthorBooks.map((book: any, idx: number) => {
+                    const mrpToUse = book.overrideMrp !== undefined && book.overrideMrp !== '' ? parseFloat(book.overrideMrp) : book.mrp;
+                    const revenue = (mrpToUse || 0) * (book.soldStock || 0);
+                    return (
+                      <div key={idx} className="border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm hover:shadow transition-shadow">
+                        <div className="flex justify-between items-center p-4 bg-white border-b border-gray-100">
+                          <div className="font-medium text-sm text-gray-800 flex items-center gap-2">
+                            {book.title}
+                            <div className="flex items-center gap-1 text-xs text-gray-500 font-normal ml-2">
+                              (MRP: ₹<input type="text" className="w-14 border border-gray-200 rounded p-0.5 text-xs text-center outline-none focus:border-paa-navy" value={book.overrideMrp !== undefined ? book.overrideMrp : (book.mrp || '')} onChange={(e) => {
+                                const newBooks = [...manageAuthorBooks];
+                                newBooks[idx].overrideMrp = e.target.value;
+                                setManageAuthorBooks(newBooks);
+                              }} />)
+                            </div>
+                          </div>
+                          <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
+                            <input type="checkbox" checked={book.isSelected} onChange={(e) => {
+                              const newBooks = [...manageAuthorBooks];
+                              newBooks[idx].isSelected = e.target.checked;
+                              setManageAuthorBooks(newBooks);
+                            }} className="rounded text-paa-navy w-4 h-4" /> Listed for this event
+                          </label>
+                        </div>
+                        <div className="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-5 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Quantities Listed</label>
+                            <input type="number" value={book.listedStock} onChange={(e) => {
+                              const newBooks = [...manageAuthorBooks];
+                              newBooks[idx].listedStock = parseInt(e.target.value) || 0;
+                              if (newBooks[idx].listedStock > 0) newBooks[idx].isSelected = true;
+                              if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
+                              setManageAuthorBooks(newBooks);
+                            }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Manual Sold</label>
+                            <input type="number" value={book.soldStock} onChange={(e) => {
+                              const newBooks = [...manageAuthorBooks];
+                              newBooks[idx].soldStock = parseInt(e.target.value) || 0;
+                              if (newBooks[idx].soldStock > 0) newBooks[idx].isSelected = true;
+                              if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
+                              setManageAuthorBooks(newBooks);
+                            }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Returned</label>
+                            <input type="number" value={book.returnedStock} onChange={(e) => {
+                              const newBooks = [...manageAuthorBooks];
+                              newBooks[idx].returnedStock = parseInt(e.target.value) || 0;
+                              setManageAuthorBooks(newBooks);
+                            }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-emerald-600 mb-1 uppercase tracking-wider">Revenue (₹)</label>
+                            <div className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-2 text-sm font-mono font-bold">
+                              ₹{revenue}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">POS Sold (Auto)</label>
+                            <input type="number" defaultValue="0" disabled className="w-full border border-gray-200 bg-gray-100 text-gray-500 rounded p-2 text-sm font-mono" />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+              )}
+              <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 items-center">
+                <span className="text-xs text-gray-500 mr-auto font-medium">* Explicit publish required for authors to see past data in their dashboard.</span>
+                <button onClick={handleSaveDraft} disabled={isPublishingData} className="px-6 py-2.5 text-sm text-paa-navy border border-paa-navy rounded-lg font-bold hover:bg-paa-navy hover:text-white transition-colors">{isPublishingData ? 'SAVING...' : 'Save Draft'}</button>
+                <button onClick={handlePublishData} disabled={isPublishingData} className="px-8 py-2.5 text-sm bg-paa-gold text-paa-navy rounded-lg font-black hover:brightness-110 transition-all shadow-md">{isPublishingData ? 'PUBLISHING...' : 'PUBLISH TO AUTHOR'}</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h4 className="font-bold text-gray-700">Authors Participated / Registered</h4>
+                  {(selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past') && (
+                    <p className="text-xs text-gray-400 mt-0.5">Showing all platform-registered authors - fill in data for those who attended this event</p>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search authors..."
+                  className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy"
+                  value={authorSearch}
+                  onChange={(e) => setAuthorSearch(e.target.value)}
+                />
+              </div>
+              <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                <table className="dash-table w-full">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+                    <tr>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author Name</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Books Listed</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Quantities</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Books Sold</th>
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Revenue</th>
+                      {!selectedEventBreakdown.isLegacy && (
+                        <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Payment</th>
+                      )}
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
+                      <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(showAllPlatformAuthors ? authors : eventRegistrations).filter((a: any) => (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase()))
+                      .map((a: any) => {
+                        const showAllAuthors = showAllPlatformAuthors;
+                        let m = a;
+                        if (showAllAuthors) {
+                          const reg = eventRegistrations.find(r => r.authorId === a.id);
+                          if (reg) m = { ...a, ...reg, author: a, id: a.id };
+                        }
+                        return { a, m, showAllAuthors };
+                      })
+                      .sort((rowA: any, rowB: any) => {
+                        const isPubA = (rowA.m.books && rowA.m.books.length > 0) || rowA.m.manualTotalSold != null;
+                        const isPubB = (rowB.m.books && rowB.m.books.length > 0) || rowB.m.manualTotalSold != null;
+                        if (isPubA && !isPubB) return 1;
+                        if (!isPubA && isPubB) return -1;
+                        return 0;
+                      })
+                      .slice(0, 50).map(({ a, m, showAllAuthors }, i: number) => {
+                        const authorData = showAllAuthors ? m : m.author;
+                        const hasBooks = m.books && m.books.length > 0;
+                        const listed = hasBooks ? m.books.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) : 0;
+                        const sold = hasBooks ? m.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : ((m.manualTotalSold !== null && m.manualTotalSold !== undefined) ? m.manualTotalSold : 0);
+                        const rev = hasBooks ? m.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)), 0) : ((m.manualTotalRevenue !== null && m.manualTotalRevenue !== undefined) ? m.manualTotalRevenue : 0);
+                        const isExpanded = expandedAuthorId === (showAllAuthors ? m.id : m.authorId);
+                        const status = m.optInStatus || 'Unpublished';
+                        const hasData = (m.books && m.books.length > 0) || m.manualTotalSold != null;
+                        const validScreenshot = a.paymentScreenshot && typeof a.paymentScreenshot === 'string' && a.paymentScreenshot !== 'null' && a.paymentScreenshot !== 'undefined' && a.paymentScreenshot.trim() !== '';
+                        return (
+                          <React.Fragment key={i}>
+                            <tr className="hover:bg-gray-50/50 transition-colors">
+                              <td>
+                                <p className="font-bold text-paa-navy">{authorData?.name || 'Unknown'}</p>
+                              </td>
+                              <td className="p-3 text-sm text-gray-600">{m.books?.length || 0} Books</td>
+                              <td className="p-3 font-mono text-sm text-gray-600">{listed}</td>
+                              <td className="p-3 font-mono text-sm text-gray-600">{sold}</td>
+                              <td className="p-3 font-mono text-sm text-emerald-600 font-bold">{'₹'}{rev}</td>
+                              {!selectedEventBreakdown.isLegacy && (
+                                <td className="p-3 text-center align-middle">
+                                  <div className="flex flex-col items-center justify-center h-full">
+                                    {selectedEventBreakdown.status === 'Past' ? (
+                                      <div className="text-sm text-emerald-600 font-bold">
+                                        {m.amountPaid ? `₹${m.amountPaid}` : <span className="text-gray-400 font-normal">-</span>}
+                                      </div>
+                                    ) : (
+                                      <>
+                                        {validScreenshot && (
+                                          <a href={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} target="_blank" rel="noreferrer" className="block w-10 h-10 border border-gray-300 rounded overflow-hidden shadow-sm hover:opacity-80 mx-auto">
+                                            <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
+                                          </a>
+                                        )}
+                                        {m.amountPaid ? (
+                                          <div className="text-[10px] text-emerald-600 font-bold mt-1">₹{m.amountPaid}</div>
+                                        ) : (
+                                          !validScreenshot && <span className="text-sm text-gray-400 font-bold">-</span>
+                                        )}
+                                        {validScreenshot && status === 'Registered' && (
+                                          <div className="mt-1">
+                                            <input
+                                              type="text"
+                                              placeholder="Txn ID"
+                                              defaultValue={m.transactionId || ''}
+                                              onBlur={(e) => updateTransactionId(m.eventId, m.authorId, e.target.value)}
+                                              className="w-20 text-[9px] text-center p-0.5 border border-gray-200 bg-gray-50 rounded outline-none focus:border-paa-navy font-mono"
+                                            />
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              )}
+                              <td className="p-3">
+                                {status === 'Registered' ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3" /> {selectedEventBreakdown.isLegacy ? 'Participated' : (hasData ? 'Published' : 'Registered')}</span>
+                                ) : (status === 'Pending' || status === 'Pending Approval' || status === 'Unpublished') ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max">Pending</span>
+                                ) : status === 'Declined' ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><XCircle className="w-3 h-3" /> Hidden</span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold uppercase flex items-center gap-1 w-max">{status}</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-center">
+                                <div className="flex gap-2 justify-center items-center">
+                                  <button onClick={() => setExpandedAuthorId(isExpanded ? null : (showAllAuthors ? m.id : m.authorId))} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-bold border border-gray-200 transition-colors shadow-sm">
+                                    {isExpanded ? <ChevronUp className="w-4 h-4 mx-auto" /> : <ChevronDown className="w-4 h-4 mx-auto" />}
+                                  </button>
+                                  {showAllAuthors || status === 'Registered' ? (
+                                    <button onClick={() => {
+                                      handleEditAuthorData(m);
+                                      if (selectedEventBreakdown.isLegacy && m.optInStatus) {
+                                        setUseGlobalOverride(true);
+                                        setGlobalSold(m.manualTotalSold || 0);
+                                        setGlobalRevenue(m.manualTotalRevenue || 0);
+                                        setManageRegStatus(m.optInStatus === 'Registered' ? 'Registered' : 'Declined');
+                                      }
+                                    }} className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-bold border border-indigo-200 transition-colors shadow-sm whitespace-nowrap">
+                                      Manage Data
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </td>
+                            </tr>
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={8} className="p-0 border-b border-gray-200">
+                                  <div className="bg-gray-50 p-4 border-l-4 border-paa-navy m-2 rounded-r-lg">
+                                    <div className="flex gap-4">
+                                      <div className="flex-1 w-full">
+                                        <div className="flex justify-between items-center mb-3">
+                                          <h5 className="text-xs font-bold text-gray-500 uppercase">Individual Book Breakdown</h5>
+                                          {!selectedEventBreakdown.isLegacy && (status === 'Pending' || status === 'Pending Approval') && (
+                                            <div className="flex gap-2">
+                                              <button onClick={() => handleRejectRegistration(selectedEventBreakdown.id, m.authorId)} className="py-1 px-4 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors">Reject</button>
+                                              <button onClick={() => handleApproveRegistration(selectedEventBreakdown.id, m.authorId)} className="py-1 px-4 text-xs font-bold text-white bg-paa-navy hover:bg-paa-gold hover:text-paa-navy rounded transition-colors shadow-sm">Approve</button>
+                                            </div>
+                                          )}
+                                        </div>
+                                        {m.books?.length > 0 ? (
+                                          <div className="flex flex-col gap-3">
+                                            {m.books.map((b: any, j: number) => (
+                                              <div key={j} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+                                                <div className="font-bold text-paa-navy flex-1 w-full text-base truncate" title={b.title || b.book?.title || 'Unknown Book'}>
+                                                  {b.title || b.book?.title || 'Unknown Book'}
+                                                  <span className="text-xs text-gray-400 font-medium ml-3 tracking-wider">(MRP: ₹{b.overrideMrp || b.mrp || b.book?.mrp || 'N/A'})</span>
+                                                </div>
+                                                <div className="flex font-mono text-sm text-gray-600 gap-8 md:gap-12 bg-gray-50/80 px-6 py-2 rounded-lg border border-gray-100 w-full md:w-auto justify-between md:justify-end">
+                                                  <div className="flex flex-col items-center md:items-end">
+                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Listed</span>
+                                                    <span className="font-bold text-gray-700">{b.listedStock || 0}</span>
+                                                  </div>
+                                                  {!selectedEventBreakdown.isLegacy && (
+                                                    <div className="flex flex-col items-center md:items-end">
+                                                      <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Fee</span>
+                                                      <span className="font-bold text-indigo-700">₹{selectedEventBreakdown.feeType === 'Per Title' ? selectedEventBreakdown.registrationFee : (j === 0 ? selectedEventBreakdown.registrationFee : 0)}</span>
+                                                    </div>
+                                                  )}
+                                                  <div className="flex flex-col items-center md:items-end">
+                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Sold</span>
+                                                    <span className="font-bold text-indigo-700">{b.soldStock || 0}</span>
+                                                  </div>
+                                                  <div className="flex flex-col items-center md:items-end">
+                                                    <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Rev</span>
+                                                    <span className="font-bold text-emerald-600">{b.soldStock ? `₹${(b.soldStock) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)}` : '₹0'}</span>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <p className="text-xs text-gray-500">No books found for this author in this event.</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        )
+                      })}
+                  </tbody>
+                </table>
+                {authors.length > 50 && (
+                  <div className="p-3 text-center text-xs text-gray-500 bg-gray-50 border-t border-gray-100">
+                    Showing top 50 results. Use search to find specific authors.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
     }
 
     if (isRefreshing) return (
-       <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
-             <div className="h-6 w-48 bg-gray-200 animate-pulse rounded"></div>
-             <div className="h-10 w-32 bg-gray-200 animate-pulse rounded"></div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-             {[1,2,3,4].map(n => <div key={n} className="h-24 bg-gray-100 animate-pulse rounded-xl"></div>)}
-          </div>
-          <div className="h-64 bg-gray-100 animate-pulse rounded-xl mb-6"></div>
-          <div className="h-10 w-64 bg-gray-200 animate-pulse rounded mb-4"></div>
-          <div className="space-y-4">
-             {[1,2,3,4].map(n => <div key={n} className="h-14 bg-gray-100 animate-pulse rounded-xl w-full"></div>)}
-          </div>
-       </div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
+          <div className="h-6 w-48 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-10 w-32 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[1, 2, 3, 4].map(n => <div key={n} className="h-24 bg-gray-100 animate-pulse rounded-xl"></div>)}
+        </div>
+        <div className="h-64 bg-gray-100 animate-pulse rounded-xl mb-6"></div>
+        <div className="h-10 w-64 bg-gray-200 animate-pulse rounded mb-4"></div>
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map(n => <div key={n} className="h-14 bg-gray-100 animate-pulse rounded-xl w-full"></div>)}
+        </div>
+      </div>
     );
     const now = new Date();
     let chartEvents = allCombinedEvents.filter((e: any) => {
-        const eventDate = new Date(e.date || e.startDate || 0);
-        if (eventDate >= now) return false;
+      const eventDate = new Date(e.date || e.startDate || 0);
+      if (eventDate >= now) return false;
 
-        if (eventGraphFilter === 'All') return true;
-        if (eventGraphFilter === 'Literary Event') return e.eventType?.toLowerCase().includes('literary');
-        if (eventGraphFilter === 'Book Fair') return e.eventType?.toLowerCase().includes('fair');
-        if (eventGraphFilter === 'Meet the Authors / Other') return !e.eventType?.toLowerCase().includes('literary') && !e.eventType?.toLowerCase().includes('fair');
-        return true;
+      if (eventGraphFilter === 'All') return true;
+      if (eventGraphFilter === 'Literary Event') return e.eventType?.toLowerCase().includes('literary');
+      if (eventGraphFilter === 'Book Fair') return e.eventType?.toLowerCase().includes('fair');
+      if (eventGraphFilter === 'Meet the Authors / Other') return !e.eventType?.toLowerCase().includes('literary') && !e.eventType?.toLowerCase().includes('fair');
+      return true;
     });
-    
+
     chartEvents.sort((a: any, b: any) => {
-        const dateA = new Date(a.date || a.startDate || 0);
-        const dateB = new Date(b.date || b.startDate || 0);
-        return dateA.getTime() - dateB.getTime();
+      const dateA = new Date(a.date || a.startDate || 0);
+      const dateB = new Date(b.date || b.startDate || 0);
+      return dateA.getTime() - dateB.getTime();
     });
 
     if (eventTimeFilter === 'Last 15') {
-        chartEvents = chartEvents.slice(-15);
+      chartEvents = chartEvents.slice(-15);
     } else if (eventTimeFilter === 'Last Quarter') {
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(now.getMonth() - 3);
-        chartEvents = chartEvents.filter((e: any) => new Date(e.date || e.startDate) >= threeMonthsAgo);
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(now.getMonth() - 3);
+      chartEvents = chartEvents.filter((e: any) => new Date(e.date || e.startDate) >= threeMonthsAgo);
     } else if (!isNaN(parseInt(eventTimeFilter))) {
-        const targetYear = parseInt(eventTimeFilter);
-        const startOfYear = new Date(targetYear, 0, 1);
-        const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59);
-        chartEvents = chartEvents.filter((e: any) => {
-            const d = new Date(e.date || e.startDate);
-            return d >= startOfYear && d <= endOfYear;
-        });
+      const targetYear = parseInt(eventTimeFilter);
+      const startOfYear = new Date(targetYear, 0, 1);
+      const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59);
+      chartEvents = chartEvents.filter((e: any) => {
+        const d = new Date(e.date || e.startDate);
+        return d >= startOfYear && d <= endOfYear;
+      });
     }
 
     const currentYear = new Date().getFullYear();
     const availableYears = [];
     for (let y = currentYear; y >= 2025; y--) {
-        availableYears.push(y);
+      availableYears.push(y);
     }
 
-    const chartData = chartEvents.map((e: any) => ({ 
-        name: e.name, 
-        booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0 
+    const chartData = chartEvents.map((e: any) => ({
+      name: e.name,
+      booksSold: (e.isLegacy ? e.aggSold : e.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0)) || 0
     }));
 
     let dateRangeString = 'All Time';
     if (chartEvents.length > 0) {
-        const firstDate = new Date(chartEvents[0].date || chartEvents[0].startDate);
-        const lastDate = new Date(chartEvents[chartEvents.length - 1].date || chartEvents[chartEvents.length - 1].startDate);
-        const formatOpts: Intl.DateTimeFormatOptions = { month: 'short', year: 'numeric' };
-        if (firstDate.getTime() === lastDate.getTime()) {
-            dateRangeString = firstDate.toLocaleDateString(undefined, formatOpts);
-        } else {
-            dateRangeString = `${firstDate.toLocaleDateString(undefined, formatOpts)} - ${lastDate.toLocaleDateString(undefined, formatOpts)}`;
-        }
+      const firstDate = new Date(chartEvents[0].date || chartEvents[0].startDate);
+      const lastDate = new Date(chartEvents[chartEvents.length - 1].date || chartEvents[chartEvents.length - 1].startDate);
+      const formatOpts: Intl.DateTimeFormatOptions = { month: 'short', year: 'numeric' };
+      if (firstDate.getTime() === lastDate.getTime()) {
+        dateRangeString = firstDate.toLocaleDateString(undefined, formatOpts);
+      } else {
+        dateRangeString = `${firstDate.toLocaleDateString(undefined, formatOpts)} - ${lastDate.toLocaleDateString(undefined, formatOpts)}`;
+      }
+    }
+
+    let filteredTableEvents = allCombinedEvents.filter((e: any) => {
+      if (eventGraphFilter === 'All') return true;
+      if (eventGraphFilter === 'Literary Event') return e.eventType?.toLowerCase().includes('literary');
+      if (eventGraphFilter === 'Book Fair') return e.eventType?.toLowerCase().includes('fair');
+      if (eventGraphFilter === 'Meet the Authors / Other') return !e.eventType?.toLowerCase().includes('literary') && !e.eventType?.toLowerCase().includes('fair');
+      return true;
+    });
+
+    if (eventTimeFilter === 'Last 15') {
+      filteredTableEvents = filteredTableEvents.slice(0, 15);
+    } else if (eventTimeFilter === 'Last Quarter') {
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(now.getMonth() - 3);
+      filteredTableEvents = filteredTableEvents.filter((e: any) => new Date(e.date || e.startDate) >= threeMonthsAgo);
+    } else if (!isNaN(parseInt(eventTimeFilter))) {
+      const targetYear = parseInt(eventTimeFilter);
+      const startOfYear = new Date(targetYear, 0, 1);
+      const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59);
+      filteredTableEvents = filteredTableEvents.filter((e: any) => {
+        const d = new Date(e.date || e.startDate);
+        return d >= startOfYear && d <= endOfYear;
+      });
     }
 
     return (
@@ -3542,208 +4286,258 @@ export function OperationsDashboardPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Events Organized</p>
-                <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.length}</div>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Books Sold</p>
-                <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggSold : evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0)) || 0), 0)}</div>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Authors Participated</p>
-                <div className="text-2xl font-serif text-paa-navy">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggAuthors : evt._count?.eventAuthors) || 0), 0)}</div>
-            </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
-                <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Gross Revenue</p>
-                <div className="text-2xl font-serif text-emerald-800 font-bold">₹{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? (evt.aggRevenue || ((evt.aggSold || 0) * 200) || 0) : evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0)) || 0), 0).toLocaleString()}</div>
-            </div>
+          <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 border-none text-white rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1">Total Events Organized</p>
+            <div className="text-2xl font-serif">{allCombinedEvents.length}</div>
+          </div>
+          <div className="bg-gradient-to-br from-rose-500 to-rose-600 border-none text-white rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-bold text-rose-100 uppercase tracking-wider mb-1">Total Books Sold</p>
+            <div className="text-2xl font-serif">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggSold : evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0)) || 0), 0)}</div>
+          </div>
+          <div className="bg-gradient-to-br from-amber-500 to-orange-500 border-none text-white rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-bold text-orange-100 uppercase tracking-wider mb-1">Authors Participated</p>
+            <div className="text-2xl font-serif">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggAuthors : evt._count?.eventAuthors) || 0), 0)}</div>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-500 border-none text-white rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-bold text-emerald-100 uppercase tracking-wider mb-1">Total Gross Revenue</p>
+            <div className="text-2xl font-serif font-bold">₹{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? (evt.aggRevenue || ((evt.aggSold || 0) * 200) || 0) : evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0)) || 0), 0).toLocaleString()}</div>
+          </div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <div>
-                    <h4 className="font-bold text-paa-navy">Events Performance Overview <span className="text-gray-500 font-normal ml-2 text-sm tracking-wide">({dateRangeString})</span></h4>
-                    <p className="text-xs text-gray-500 font-medium mt-1">Comparing book sales and author participation across all events.</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
-                    <select 
-                        className="border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-paa-navy text-gray-700 bg-gray-50"
-                        value={eventTimeFilter}
-                        onChange={(e) => setEventTimeFilter(e.target.value)}
-                    >
-                        <option value="Last 15">Last 15 Events</option>
-                        <option value="All">All Time</option>
-                        <option value="Last Quarter">Last Quarter</option>
-                        {availableYears.map(y => (
-                            <option key={y} value={y.toString()}>{y}</option>
-                        ))}
-                    </select>
-                    <select 
-                        className="border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-paa-navy text-gray-700 bg-gray-50"
-                        value={eventGraphFilter}
-                        onChange={(e) => setEventGraphFilter(e.target.value)}
-                    >
-                        <option value="All">All Event Types</option>
-                        <option value="Literary Event">Literary Events Only</option>
-                        <option value="Book Fair">Book Fairs Only</option>
-                        <option value="Meet the Authors / Other">Meet the Authors / Other</option>
-                    </select>
-                    <div className="w-px h-6 bg-gray-200 hidden md:block"></div>
-                    <div className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${!showBooksSold ? 'opacity-50' : ''}`} onClick={() => setShowBooksSold(!showBooksSold)}>
-                        <div className="w-3 h-3 rounded-sm bg-paa-navy"></div> Books Sold
-                    </div>
-                </div>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+              <h4 className="font-bold text-paa-navy">Events Performance Overview <span className="text-gray-500 font-normal ml-2 text-sm tracking-wide">({dateRangeString})</span></h4>
+              <p className="text-xs text-gray-500 font-medium mt-1">Comparing book sales and author participation across all events.</p>
             </div>
-            <div className="h-[400px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} angle={-90} textAnchor="end" dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
-                        <YAxis orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                        <RechartsTooltip 
-                            cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '3 3' }}
-                            contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
-                        />
-                        {showBooksSold && <Line type="monotone" dataKey="booksSold" name="Books Sold" stroke="var(--color-paa-navy, #1e3a8a)" strokeWidth={3} dot={{ r: 4, fill: '#1e3a8a', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />}
-                    </LineChart>
-                </ResponsiveContainer>
+            <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
+              <select
+                className="border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-paa-navy text-gray-700 bg-gray-50"
+                value={eventTimeFilter}
+                onChange={(e) => setEventTimeFilter(e.target.value)}
+              >
+                <option value="Last 15">Last 15 Events</option>
+                <option value="All">All Time</option>
+                <option value="Last Quarter">Last Quarter</option>
+                {availableYears.map(y => (
+                  <option key={y} value={y.toString()}>{y}</option>
+                ))}
+              </select>
+              <select
+                className="border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-paa-navy text-gray-700 bg-gray-50"
+                value={eventGraphFilter}
+                onChange={(e) => setEventGraphFilter(e.target.value)}
+              >
+                <option value="All">All Event Types</option>
+                <option value="Literary Event">Literary Events Only</option>
+                <option value="Book Fair">Book Fairs Only</option>
+                <option value="Meet the Authors / Other">Meet the Authors / Other</option>
+              </select>
+              <div className="w-px h-6 bg-gray-200 hidden md:block"></div>
+              <div className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${!showBooksSold ? 'opacity-50' : ''}`} onClick={() => setShowBooksSold(!showBooksSold)}>
+                <div className="w-3 h-3 rounded-sm bg-paa-navy"></div> Books Sold
+              </div>
             </div>
+          </div>
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 25, right: 10, left: -20, bottom: 80 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} angle={-90} textAnchor="end" dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
+                <YAxis orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                <RechartsTooltip
+                  cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '3 3' }}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
+                />
+                {showBooksSold && (
+                  <Line type="linear" dataKey="booksSold" name="Books Sold" stroke="#ec4899" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; return <circle cx={cx} cy={cy} r={4} fill="#ec4899" stroke="#fff" strokeWidth={2} key={`dot-${index}`} />; }} activeDot={{ r: 6 }}>
+                    <LabelList dataKey="booksSold" position="top" content={(props: any) => {
+                      const { x, y, value, index } = props;
+                      const prev = chartData[index - 1]?.booksSold;
+                      const next = chartData[index + 1]?.booksSold;
+                      
+                      let yPos = y - 12;
+                      
+                      if (prev !== undefined && next !== undefined && value <= prev && value <= next) {
+                        yPos = y + 20;
+                      } else if (prev !== undefined && value < prev && next === undefined) {
+                        yPos = y + 20;
+                      }
+
+                      return (
+                        <g>
+                          <text x={x} y={yPos} fill="none" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                          <text x={x} y={yPos} fill="#ec4899" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                        </g>
+                      );
+                    }} />
+                  </Line>
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
         <div className="flex justify-between items-center mb-4 mt-8">
-            <h4 className="font-bold text-gray-700">Events Registry</h4>
-            <input 
-                type="text" 
-                placeholder="Search events..." 
-                className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy shadow-sm"
-                value={eventSearch}
-                onChange={(e) => setEventSearch(e.target.value)}
-            />
+          <h4 className="font-bold text-gray-700">Events Registry</h4>
+          <input
+            type="text"
+            placeholder="Search events..."
+            className="border border-gray-300 rounded-lg p-2 text-sm w-64 outline-none focus:border-paa-navy shadow-sm"
+            value={eventSearch}
+            onChange={(e) => setEventSearch(e.target.value)}
+          />
         </div>
         <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm animate-in fade-in duration-500">
-          <div className="overflow-x-auto">
-            <table className="dash-table w-full text-left min-w-[600px]">
-              <thead className="bg-[#f0f4f8]">
+          <div className="w-full">
+            <table className="dash-table w-full text-left table-fixed">
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
-                  <th className="w-12 pl-6 pr-2 py-3 border-b border-paa-navy/5"></th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Event Name</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Date</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Event Type</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Registration Fee</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5">Status</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-center">POS</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Authors</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Books</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Revenue</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-paa-navy/5 text-right">Actions</th>
+                  <th className="w-10 px-1 py-3 text-center !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5"></th>
+                  <th className="px-2 py-3 w-[20%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Name</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Date</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Type</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Reg Fee</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Status</th>
+                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-center">POS</th>
+                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Authors</th>
+                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Books</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Revenue</th>
+                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-paa-navy/5 bg-white">
-               {allCombinedEvents.filter(evt => evt.name.toLowerCase().includes(eventSearch.toLowerCase())).map((evt: any, i: number) => {
+              <tbody className="divide-y divide-paa-navy/5 bg-white text-[11px]">
+                {filteredTableEvents.filter((evt: any) => evt.name.toLowerCase().includes(eventSearch.toLowerCase())).map((evt: any, i: number) => {
                   const isPastOrArchive = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
                   const authors = isPastOrArchive ? (evt.aggAuthors != null ? evt.aggAuthors : 'NA') : (evt._count?.eventAuthors || 0);
-                  const books = isPastOrArchive ? (evt.aggSold != null ? evt.aggSold : 'NA') : (evt.eventBooks?.reduce((s:number, eb:any) => s + (eb.soldStock || 0), 0) || 0);
-                  const revenue = isPastOrArchive ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s:number, eb:any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
+                  const books = isPastOrArchive ? (evt.aggSold != null ? evt.aggSold : 'NA') : (evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0) || 0);
+                  const revenue = isPastOrArchive ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
                   return (
-                      <React.Fragment key={i}>
-                       <tr className={`hover:bg-gray-50 transition-colors ${expandedEventIndex === i ? 'bg-gray-50' : ''}`}>
-                         <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => setExpandedEventIndex(expandedEventIndex === i ? null : i)}>
-                            <button className="text-gray-400 hover:text-paa-navy transition-colors">
-                                {expandedEventIndex === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    <React.Fragment key={i}>
+                      <tr className={`hover:bg-gray-50 transition-colors ${expandedEventIndex === i ? 'bg-gray-50' : ''}`}>
+                        <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => setExpandedEventIndex(expandedEventIndex === i ? null : i)}>
+                          <button className="text-gray-400 hover:text-paa-navy transition-colors">
+                            {expandedEventIndex === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{evt.name}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{evt.date}</td>
+                        <td className="px-4 py-3 text-sm text-paa-gray-text capitalize">{evt.eventType || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
+                          <div>₹{evt.registrationFee || 0}</div>
+                          {evt.registrationFee > 0 && <div className="text-[10px] font-normal text-gray-500 uppercase tracking-widest mt-0.5">{evt.feeType || 'Per Author'}</div>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1.5 items-start">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Pending Approval' ? 'bg-orange-100 text-orange-700' : evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
+                              {evt.isLegacy ? 'Legacy Archive' : evt.status}
+                            </span>
+                            <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                              {evt.broadcastStatus === 'Published' ? (
+                                <span className="text-emerald-600 flex items-center gap-1" title="Published to all authors"><CheckCircle2 className="w-3 h-3" /> All</span>
+                              ) : (evt.registrations?.length > 0) ? (
+                                <span className="text-orange-500 flex items-center gap-1" title="Published to individual authors"><CheckCircle2 className="w-3 h-3" /> Partial</span>
+                              ) : (
+                                <span className="text-gray-400 flex items-center gap-1" title="Not published"><XCircle className="w-3 h-3" /> Hidden</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-center">{evt.livePosEnabled && !evt.isPast && !evt.isLegacy && evt.status !== 'Legacy Archive' ? <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Enabled</span> : <span className="text-gray-400">-</span>}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {authors}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{books}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">{revenue}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex gap-2 justify-center">
+                            {evt.status === 'Pending Approval' ? (
+                              <>
+                                <button title="Approve Event" onClick={async () => {
+                                  if (window.confirm('Approve this event?')) {
+                                    try {
+                                      await axios.put(`${API}/api/admin/events/${evt.id}/status`, { status: 'Upcoming' }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                      toast.success('Event approved');
+                                      fetchEvents();
+                                    } catch (err) { toast.error('Failed to approve'); }
+                                  }
+                                }} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors shadow-sm">
+                                  <Check className="w-4 h-4" />
+                                </button>
+                                <button title="Reject Event" onClick={async () => {
+                                  if (window.confirm('Reject this event?')) {
+                                    try {
+                                      await axios.put(`${API}/api/admin/events/${evt.id}/status`, { status: 'Rejected' }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                      toast.success('Event rejected');
+                                      fetchEvents();
+                                    } catch (err) { toast.error('Failed to reject'); }
+                                  }
+                                }} className="p-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition-colors shadow-sm">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
+                                <Eye className="w-4 h-4" />
+                                {evt.registrations?.filter((r: any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length > 0 && (
+                                  <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse shadow-sm">
+                                    {evt.registrations.filter((r: any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length}
+                                  </span>
+                                )}
+                              </button>
+                            )}
+                            <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
+                              <Edit2 className="w-4 h-4" />
                             </button>
-                         </td>
-                         <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{evt.name}</td>
-                         <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{evt.date}</td>
-                         <td className="px-4 py-3 text-sm text-paa-gray-text capitalize">{evt.eventType || 'N/A'}</td>
-                         <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
-                            <div>₹{evt.registrationFee || 0}</div>
-                            {evt.registrationFee > 0 && <div className="text-[10px] font-normal text-gray-500 uppercase tracking-widest mt-0.5">{evt.feeType || 'Per Author'}</div>}
-                         </td>
-                         <td className="px-4 py-3">
-                            <div className="flex flex-col gap-1.5 items-start">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
-                                   {evt.isLegacy ? 'Legacy Archive' : evt.status}
-                                </span>
-                                <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                                    {evt.broadcastStatus === 'Published' ? (
-                                        <span className="text-emerald-600 flex items-center gap-1" title="Published to all authors"><CheckCircle2 className="w-3 h-3" /> All</span>
-                                    ) : (evt.registrations?.length > 0) ? (
-                                        <span className="text-orange-500 flex items-center gap-1" title="Published to individual authors"><CheckCircle2 className="w-3 h-3" /> Partial</span>
-                                    ) : (
-                                        <span className="text-gray-400 flex items-center gap-1" title="Not published"><XCircle className="w-3 h-3" /> Hidden</span>
-                                    )}
+                            <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors shadow-sm">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedEventIndex === i && (
+                        <tr className="bg-[#f8fafc] border-b border-gray-100 shadow-inner">
+                          <td colSpan={11} className="p-0">
+                            <div className="flex flex-col md:flex-row gap-8 px-8 py-6 border-l-4 border-indigo-400 ml-6 my-4 bg-white rounded-r-xl shadow-sm mr-6">
+                              <div className="flex-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><FileText className="w-3 h-3" /> Event Description</p>
+                                <p className="text-sm text-paa-navy leading-relaxed">{evt.description || 'No description provided.'}</p>
+                              </div>
+                              <div className="w-px bg-gray-100 hidden md:block"></div>
+                              <div className="flex flex-col gap-5 min-w-[150px]">
+                                <div>
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> Location</p>
+                                  <p className="text-sm text-paa-navy font-semibold">{evt.location || evt.address || 'TBA'}</p>
                                 </div>
-                            </div>
-                         </td>
-                         <td className="px-4 py-3 text-sm font-bold text-center">{evt.livePosEnabled && !evt.isPast && !evt.isLegacy && evt.status !== 'Legacy Archive' ? <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Enabled</span> : <span className="text-gray-400">-</span>}</td>
-                         <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
-                            <div className="flex items-center justify-end gap-2">
-                                {authors}
-                            </div>
-                         </td>
-                         <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{books}</td>
-                         <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">{revenue}</td>
-                         <td className="px-4 py-3 text-right">
-                            <div className="flex gap-2 justify-center">
-                                <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
-                                   <Eye className="w-4 h-4" />
-                                   {evt.registrations?.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length > 0 && (
-                                       <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse shadow-sm">
-                                           {evt.registrations.filter((r:any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length}
-                                       </span>
-                                   )}
-                                </button>
-                                <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
-                                   <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors shadow-sm">
-                                   <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                         </td>
-                       </tr>
-                       {expandedEventIndex === i && (
-                          <tr className="bg-[#f8fafc] border-b border-gray-100 shadow-inner">
-                             <td colSpan={11} className="p-0">
-                                <div className="flex flex-col md:flex-row gap-8 px-8 py-6 border-l-4 border-indigo-400 ml-6 my-4 bg-white rounded-r-xl shadow-sm mr-6">
-                                   <div className="flex-1">
-                                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><FileText className="w-3 h-3"/> Event Description</p>
-                                      <p className="text-sm text-paa-navy leading-relaxed">{evt.description || 'No description provided.'}</p>
-                                   </div>
-                                   <div className="w-px bg-gray-100 hidden md:block"></div>
-                                   <div className="flex flex-col gap-5 min-w-[150px]">
-                                      <div>
-                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3"/> Location</p>
-                                         <p className="text-sm text-paa-navy font-semibold">{evt.location || evt.address || 'TBA'}</p>
-                                      </div>
-                                      <div>
-                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><CalendarIcon className="w-3 h-3"/> Duration</p>
-                                         <p className="text-sm text-paa-navy font-semibold">{evt.duration || (evt.durationDays ? `${evt.durationDays} Days` : 'N/A')}</p>
-                                      </div>
-                                   </div>
-                                   <div className="w-px bg-gray-100 hidden md:block"></div>
-                                   <div className="min-w-[160px]">
-                                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><ImageIcon className="w-3 h-3"/> Event Banner</p>
-                                      {evt.bannerUrl ? (
-                                         <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-video w-40 relative group">
-                                           <img src={evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`} alt="Banner" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                         </div>
-                                      ) : (
-                                         <div className="aspect-video w-40 bg-gray-50 rounded-lg border border-gray-200 border-dashed flex items-center justify-center text-[10px] text-gray-400 italic">No Banner Uploaded</div>
-                                      )}
-                                   </div>
+                                <div>
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Duration</p>
+                                  <p className="text-sm text-paa-navy font-semibold">{evt.duration || (evt.durationDays ? `${evt.durationDays} Days` : 'N/A')}</p>
                                 </div>
-                             </td>
-                          </tr>
-                       )}
-                      </React.Fragment>
-                   );
-               })}
-               {allCombinedEvents.length === 0 && <tr><td colSpan={11} className="text-center py-6 text-sm text-paa-gray-text italic">No events found.</td></tr>}
-            </tbody>
-          </table>
+                              </div>
+                              <div className="w-px bg-gray-100 hidden md:block"></div>
+                              <div className="min-w-[160px]">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><ImageIcon className="w-3 h-3" /> Event Banner</p>
+                                {evt.bannerUrl ? (
+                                  <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-video w-40 relative group">
+                                    <img src={evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`} alt="Banner" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                  </div>
+                                ) : (
+                                  <div className="aspect-video w-40 bg-gray-50 rounded-lg border border-gray-200 border-dashed flex items-center justify-center text-[10px] text-gray-400 italic">No Banner Uploaded</div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+                {filteredTableEvents.length === 0 && <tr><td colSpan={11} className="text-center py-6 text-sm text-paa-gray-text italic">No events found.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       </div>
     );
   };
@@ -4011,12 +4805,12 @@ export function OperationsDashboardPage() {
           <div className="border border-paa-navy/5 rounded-3xl-2xl shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out overflow-hidden">
             <div className="overflow-x-auto">
               <table className="dash-table">
-                <thead>
+                <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                   <tr>
-                    <th>Author Name</th>
-                    <th>Email</th>
+                    <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author Name</th>
+                    <th className="!text-[14px] !text-indigo-800 !bg-transparent">Email</th>
                     {dynamicKeys.filter(k => selectedColumns.includes(k)).map(key => (
-                      <th key={key} className="text-paa-gold">{key}</th>
+                      <th key={key} className="text-paa-gold !text-[14px] !text-indigo-800 !bg-transparent">{key}</th>
                     ))}
                   </tr>
                 </thead>
@@ -4080,11 +4874,11 @@ export function OperationsDashboardPage() {
           </div>
           <div className="overflow-x-auto bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out">
             <table className="dash-table">
-              <thead>
+              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
-                  <th>Author</th>
-                  <th>Date</th>
-                  <th>Answers</th>
+                  <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author</th>
+                  <th className="!text-[14px] !text-indigo-800 !bg-transparent">Date</th>
+                  <th className="!text-[14px] !text-indigo-800 !bg-transparent">Answers</th>
                 </tr>
               </thead>
               <tbody>
@@ -4139,9 +4933,43 @@ export function OperationsDashboardPage() {
 
   const renderGalleryTab = () => {
 
+    const handleCarouselUpload = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (carouselImages.length >= 10) return toast.error('Maximum 10 images allowed for the carousel.');
+
+      setUploadingCarousel(true);
+      const formData = new FormData();
+      formData.append('image', file);
+      try {
+        await axios.post(`${API}/api/admin/carousel`, formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        toast.success('Carousel image uploaded.');
+        fetchCarouselImages();
+      } catch (err) {
+        toast.error('Failed to upload image.');
+      } finally {
+        setUploadingCarousel(false);
+      }
+    };
+
+    const handleCarouselDelete = async (filename: string) => {
+      try {
+        await axios.delete(`${API}/api/admin/carousel/${filename}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        toast.success('Carousel image removed.');
+        fetchCarouselImages();
+      } catch (err) {
+        toast.error('Failed to remove image.');
+      }
+    };
+
     const handleUploadGalleryImage = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedGalleryEvent || galleryUploadFiles.length === 0) return;
+      
       setIsUploadingGallery(true);
       try {
         const token = localStorage.getItem('token');
@@ -4149,26 +4977,27 @@ export function OperationsDashboardPage() {
           const formData = new FormData();
           formData.append('photo', file);
           if (galleryUploadCaption) formData.append('caption', galleryUploadCaption);
+          formData.append('itemType', selectedGalleryEvent.itemType || 'Event');
           // Pass the raw event.id, the backend automatically resolves/creates the galleryEvent
           return axios.post(`${API}/api/admin/gallery/${selectedGalleryEvent.id}/images`, formData, {
             headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
           });
         });
-        
+
         const results = await Promise.all(promises);
         const newImages = results.map(r => r.data);
-        
+
         toast.success('Images uploaded successfully. They are now live on the Customer Site!');
         setGalleryUploadFiles([]);
         setGalleryUploadCaption('');
-        
+
         // Update the current view without closing it
         setSelectedGalleryEvent((prev: any) => ({
-           ...prev,
-           galleryEvent: {
-              ...prev.galleryEvent,
-              images: [...(prev.galleryEvent?.images || []), ...newImages]
-           }
+          ...prev,
+          galleryEvent: {
+            ...prev.galleryEvent,
+            images: [...(prev.galleryEvent?.images || []), ...newImages]
+          }
         }));
       } catch (err) {
         console.error(err);
@@ -4178,234 +5007,380 @@ export function OperationsDashboardPage() {
       }
     };
 
-    const filteredEvents = events.filter((e: any) => {
-       const matchSearch = (e.name?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase()) || (e.location?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase());
-       const matchType = galleryTabFilterType ? e.eventType === galleryTabFilterType : true;
-       const matchDate = galleryTabFilterDate ? new Date(e.date).toISOString().startsWith(galleryTabFilterDate) : true;
-       return matchSearch && matchType && matchDate;
-    }).sort((a: any, b: any) => {
-       const aPending = a.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
-       const bPending = b.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
-       
-       if (aPending !== bPending) return bPending - aPending; // Always prioritize events with pending approvals
+    const handleUploadBannerImage = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedGalleryEvent || !bannerUploadFile) return;
+      setIsUploadingBanner(true);
+      try {
+        const token = localStorage.getItem('token');
+        const fd = new FormData();
+        fd.append('banner', bannerUploadFile);
+        
+        const isLib = selectedGalleryEvent.itemType === 'Library';
+        
+        if (!isLib) {
+          fd.append('name', selectedGalleryEvent.name);
+          fd.append('location', selectedGalleryEvent.location);
+          fd.append('date', selectedGalleryEvent.date);
+          fd.append('duration', selectedGalleryEvent.duration);
+          fd.append('status', selectedGalleryEvent.status);
+          fd.append('eventType', selectedGalleryEvent.eventType);
+        }
 
-       if (galleryTabSortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
-       if (galleryTabSortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
-       if (galleryTabSortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
-       if (galleryTabSortBy === 'name_desc') return (b.name || '').localeCompare(a.name || '');
-       return 0;
+        const endpoint = isLib
+          ? `${API}/api/admin/libraries/${selectedGalleryEvent.id}/banner`
+          : `${API}/api/admin/events/${selectedGalleryEvent.id}`;
+
+        const res = await axios.put(endpoint, fd, {
+          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+        });
+
+        toast.success('Banner uploaded successfully!');
+        setBannerUploadFile(null);
+
+        // Update the current view without closing it
+        setSelectedGalleryEvent((prev: any) => ({
+          ...prev,
+          bannerUrl: res.data.bannerUrl
+        }));
+        
+        if (isLib) {
+          fetchLibraries(true);
+        } else {
+          fetchEvents(true);
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to upload banner.');
+      } finally {
+        setIsUploadingBanner(false);
+      }
+    };
+
+    const combinedGalleryItems = [
+      ...events.map((e: any) => ({ ...e, itemType: 'Event' })),
+      ...libraries.filter(l => l.type === 'Airport Library').map((l: any) => ({
+        ...l,
+        itemType: 'Library',
+        eventType: l.type,
+        date: l.createdAt,
+        location: l.city,
+      }))
+    ];
+
+    const filteredEvents = combinedGalleryItems.filter((e: any) => {
+      const matchSearch = (e.name?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase()) || (e.location?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase());
+      const matchType = galleryTabFilterType ? e.eventType === galleryTabFilterType : true;
+      const matchDate = galleryTabFilterDate ? new Date(e.date).toISOString().startsWith(galleryTabFilterDate) : true;
+      return matchSearch && matchType && matchDate;
+    }).sort((a: any, b: any) => {
+      const aPending = a.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
+      const bPending = b.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
+
+      if (aPending !== bPending) return bPending - aPending; // Always prioritize events with pending approvals
+
+      if (galleryTabSortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (galleryTabSortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (galleryTabSortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+      if (galleryTabSortBy === 'name_desc') return (b.name || '').localeCompare(a.name || '');
+      return 0;
     });
 
     return (
-    <div className="space-y-6">
-      {!selectedGalleryEvent ? (
-        <div className="dash-panel animate-fade-in-up">
-          <div className="dash-panel-header flex justify-between items-center">
-            <h2 className="dash-panel-title">Gallery Management</h2>
-            <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
-              Auto-synced with All Events
-            </span>
-          </div>
-
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm">
-              <div className="flex-[3] min-w-[300px] relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input type="text" placeholder="Search by name or location..." value={galleryTabSearchTerm} onChange={e => setGalleryTabSearchTerm(e.target.value)} className="dash-input w-full h-full min-w-[280px]" style={{ paddingLeft: '2.5rem' }} />
+      <div className="space-y-6">
+        {!selectedGalleryEvent ? (
+          <div className="dash-panel animate-fade-in-up">
+            <div className="dash-panel-header flex justify-between items-center">
+              <div className="flex gap-2">
+                <button onClick={() => setGallerySubTab('events')} className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${gallerySubTab === 'events' ? 'bg-paa-navy text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:text-paa-navy hover:bg-gray-200'}`}>Event Galleries</button>
+                <button onClick={() => setGallerySubTab('carousel')} className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${gallerySubTab === 'carousel' ? 'bg-paa-navy text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:text-paa-navy hover:bg-gray-200'}`}>Buyer Carousel</button>
               </div>
-              <select value={galleryTabFilterType} onChange={e => setGalleryTabFilterType(e.target.value)} className="dash-input md:w-48">
-                <option value="">All Event Types</option>
-                <option value="Book Fair">Book Fair</option>
-                <option value="Literary Event">Literary Event</option>
-              </select>
-              <input type="date" value={galleryTabFilterDate} onChange={e => setGalleryTabFilterDate(e.target.value)} className="dash-input md:w-40" />
-              <select value={galleryTabSortBy} onChange={e => setGalleryTabSortBy(e.target.value)} className="dash-input md:w-48">
-                <option value="date_desc">Latest First</option>
-                <option value="date_asc">Oldest First</option>
-                <option value="name_asc">Name (A-Z)</option>
-                <option value="name_desc">Name (Z-A)</option>
-              </select>
+              {gallerySubTab === 'events' && (
+                <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
+                  Auto-synced with All Events
+                </span>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredEvents.map((evt: any) => {
-                const firstImage = evt.galleryEvent?.images?.[0]?.url;
-                const bannerUrl = firstImage ? (firstImage.startsWith('http') ? firstImage : `${API}${firstImage}`) : (evt.bannerUrl ? (evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`) : null);
-                const imageCount = evt.galleryEvent?.images?.length || 0;
-                const pendingCount = evt.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
-                return (
-                  <div key={evt.id} className="group flex flex-col bg-white border border-paa-navy/10 rounded-xl overflow-hidden hover:shadow-premium transition-all duration-300">
-                    <div className="relative h-48 w-full overflow-hidden bg-paa-navy/5 shrink-0">
-                      {bannerUrl ? (
-                         <img src={bannerUrl} alt={evt.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out" />
-                      ) : (
-                         <div className="w-full h-full flex flex-col items-center justify-center text-paa-navy/40 group-hover:scale-105 transition-transform duration-700 ease-in-out bg-gradient-to-br from-paa-cream to-gray-200">
-                            <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
-                            <span className="text-xs font-bold uppercase tracking-widest text-paa-navy/60">No Photos Yet</span>
-                         </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-paa-navy/90 via-paa-navy/40 to-transparent"></div>
-                      <div className="absolute top-3 right-3">
-                        <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-[10px] font-extrabold uppercase tracking-widest rounded-full text-paa-navy shadow-sm">
-                          {evt.eventType || 'Event'}
-                        </span>
-                      </div>
-                      {pendingCount > 0 && (
-                        <div className="absolute top-3 left-3">
-                          <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-md">
-                            {pendingCount} Pending
-                          </span>
-                        </div>
-                      )}
-                      <div className="absolute bottom-4 left-4 right-4">
-                        <h4 className="text-white font-serif font-bold text-xl leading-tight line-clamp-2 drop-shadow-md">{evt.name}</h4>
-                        <p className="text-white/80 text-xs font-semibold uppercase tracking-widest mt-1 flex items-center gap-1 drop-shadow-sm">
-                          <CalendarIcon size={12} /> {evt.date ? new Date(evt.date).toLocaleDateString() : 'N/A'}
-                        </p>
-                      </div>
+            <div className="p-6">
+              {gallerySubTab === 'carousel' ? (
+                <div className="animate-fade-in-up">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                    <div>
+                      <h3 className="font-bold text-paa-navy text-lg tracking-tight">Buyer Side Carousel Images</h3>
+                      <p className="text-sm text-gray-500">Upload up to 10 high-quality images for the landing page carousel. ({carouselImages.length}/10 uploaded)</p>
                     </div>
-                    
-                    <div className="p-5 flex flex-col flex-1 justify-between gap-4">
-                      <div className="flex items-start justify-between text-sm">
-                         <div>
-                           <p className="font-bold text-paa-navy">{evt.location}</p>
-                           <p className="text-xs text-gray-500 mt-0.5">{evt.duration}</p>
-                         </div>
-                         <div className="flex flex-col items-end">
-                            <span className="text-2xl font-black text-paa-navy leading-none">{imageCount}</span>
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Photos</span>
-                         </div>
+                    <input type="file" accept="image/*" className="hidden" ref={carouselFileInputRef} onChange={handleCarouselUpload} />
+                    <button
+                      onClick={() => carouselFileInputRef.current?.click()}
+                      disabled={uploadingCarousel || carouselImages.length >= 10}
+                      className="bg-paa-navy text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg hover:bg-paa-gold transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                    >
+                      {uploadingCarousel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add Image
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {carouselImages.map(img => (
+                      <div key={img.id} className="bg-white rounded-2xl border border-gray-100 shadow-premium overflow-hidden group relative aspect-[4/3]">
+                        <img src={`${API}${img.url}`} alt="Carousel" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <button onClick={() => handleCarouselDelete(img.url.split('/').pop()!)} className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg" title="Remove">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
-                      
-                      <button
-                        onClick={() => setSelectedGalleryEvent(evt)}
-                        className="w-full dash-btn dash-btn-primary flex justify-center items-center gap-2 group-hover:bg-paa-gold group-hover:text-paa-navy group-hover:border-paa-gold transition-colors"
-                      >
-                        <ImageIcon size={16} /> Manage Gallery
+                    ))}
+                  </div>
+
+                  {carouselImages.length === 0 && (
+                    <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 border-dashed mt-6">
+                      <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ImageIcon className="w-8 h-8 text-gray-300" />
+                      </div>
+                      <h3 className="text-lg font-bold text-paa-navy">No Carousel Images</h3>
+                      <p className="text-gray-500 text-sm mt-1">Upload images here to show them in the landing page carousel.</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-paa-navy/5 shadow-sm">
+                    <div className="flex-[3] min-w-[300px] relative">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      <input type="text" placeholder="Search by name or location..." value={galleryTabSearchTerm} onChange={e => setGalleryTabSearchTerm(e.target.value)} className="dash-input w-full h-full min-w-[280px]" style={{ paddingLeft: '2.5rem' }} />
+                    </div>
+                    <select value={galleryTabFilterType} onChange={e => setGalleryTabFilterType(e.target.value)} className="dash-input md:w-48">
+                      <option value="">All Event Types</option>
+                      <option value="Book Fair">Book Fair</option>
+                      <option value="Literary Event">Literary Event</option>
+                      <option value="Airport Library">Flybraries</option>
+                    </select>
+                    <input type="date" value={galleryTabFilterDate} onChange={e => setGalleryTabFilterDate(e.target.value)} className="dash-input md:w-40" />
+                    <select value={galleryTabSortBy} onChange={e => setGalleryTabSortBy(e.target.value)} className="dash-input md:w-48">
+                      <option value="date_desc">Latest First</option>
+                      <option value="date_asc">Oldest First</option>
+                      <option value="name_asc">Name (A-Z)</option>
+                      <option value="name_desc">Name (Z-A)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredEvents.map((evt: any) => {
+                      const firstImage = evt.galleryEvent?.images?.[0]?.url;
+                      const bannerUrl = firstImage ? (firstImage.startsWith('http') ? firstImage : `${API}${firstImage}`) : (evt.bannerUrl ? (evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${API}${evt.bannerUrl}`) : null);
+                      const imageCount = evt.galleryEvent?.images?.length || 0;
+                      const pendingCount = evt.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
+                      return (
+                        <div key={evt.id} className="group flex flex-col bg-white border border-paa-navy/10 rounded-xl overflow-hidden hover:shadow-premium transition-all duration-300">
+                          <div className="relative h-48 w-full overflow-hidden bg-paa-navy/5 shrink-0">
+                            {bannerUrl ? (
+                              <img src={bannerUrl} alt={evt.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out" />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center text-paa-navy/40 group-hover:scale-105 transition-transform duration-700 ease-in-out bg-gradient-to-br from-paa-cream to-gray-200">
+                                <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
+                                <span className="text-xs font-bold uppercase tracking-widest text-paa-navy/60">No Photos Yet</span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-paa-navy/90 via-paa-navy/40 to-transparent"></div>
+                            <div className="absolute top-3 right-3">
+                              <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-[10px] font-extrabold uppercase tracking-widest rounded-full text-paa-navy shadow-sm">
+                                {evt.eventType || 'Event'}
+                              </span>
+                            </div>
+                            {pendingCount > 0 && (
+                              <div className="absolute top-3 left-3">
+                                <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-md">
+                                  {pendingCount} Pending
+                                </span>
+                              </div>
+                            )}
+                            <div className="absolute bottom-4 left-4 right-4">
+                              <h4 className="text-white font-serif font-bold text-xl leading-tight line-clamp-2 drop-shadow-md">{evt.name}</h4>
+                              <p className="text-white/80 text-xs font-semibold uppercase tracking-widest mt-1 flex items-center gap-1 drop-shadow-sm">
+                                <CalendarIcon size={12} /> {evt.date ? new Date(evt.date).toLocaleDateString() : 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="p-5 flex flex-col flex-1 justify-between gap-4">
+                            <div className="flex items-start justify-between text-sm">
+                              <div>
+                                <p className="font-bold text-paa-navy">{evt.location}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{evt.duration}</p>
+                              </div>
+                              <div className="flex flex-col items-end">
+                                <span className="text-2xl font-black text-paa-navy leading-none">{imageCount}</span>
+                                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Photos</span>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => setSelectedGalleryEvent(evt)}
+                              className="w-full dash-btn dash-btn-primary flex justify-center items-center gap-2 group-hover:bg-paa-gold group-hover:text-paa-navy group-hover:border-paa-gold transition-colors"
+                            >
+                              <ImageIcon size={16} /> Manage Gallery
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="dash-panel animate-fade-in-up">
+            <div className="dash-panel-header flex justify-between items-center">
+              <div>
+                <h3 className="dash-panel-title">{selectedGalleryEvent.name}</h3>
+                <p className="text-sm text-gray-500 mt-1 uppercase tracking-widest font-bold text-[10px]">Gallery Management</p>
+              </div>
+              <button onClick={() => { fetchEvents(true); setSelectedGalleryEvent(null); setGalleryUploadFiles([]); }} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors">
+                &larr; Back to Events
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 bg-gray-50/30">
+              <div className="lg:col-span-1 flex flex-col gap-6">
+                {/* Upload Section */}
+                <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm h-fit">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Upload New Photos</h4>
+                <form onSubmit={handleUploadGalleryImage} className="flex flex-col gap-4">
+                  <div>
+                    <label className="dash-label">Photos (Select Multiple) *</label>
+                    <input type="file" multiple accept="image/*" className="dash-input text-xs w-full" onChange={e => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        const selected = Array.from(e.target.files);
+                        setGalleryUploadFiles(prev => [...prev, ...selected]);
+                      }
+                    }} />
+                  </div>
+                  {galleryUploadFiles.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto py-2 px-1">
+                      {galleryUploadFiles.map((file, i) => (
+                        <div key={i} className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-gray-200 group shadow-sm">
+                          <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="Preview" />
+                          <button type="button" onClick={() => setGalleryUploadFiles(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 w-5 h-5 bg-black/50 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div>
+                    <label className="dash-label">Caption (Optional)</label>
+                    <input className="dash-input w-full" placeholder="e.g., Book signing moment..." value={galleryUploadCaption} onChange={e => setGalleryUploadCaption(e.target.value)} />
+                  </div>
+                  <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
+                    <button type="button" onClick={() => setGalleryUploadFiles([])} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Clear</button>
+                    <button type="submit" disabled={isUploadingGallery} className="dash-btn dash-btn-primary disabled:opacity-50">{isUploadingGallery ? 'Uploading...' : 'Upload Image'}</button>
+                  </div>
+                </form>
+              </div>
+              
+              {/* Upload Banner Section */}
+              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm h-fit">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Upload Banner Image</h4>
+                <form onSubmit={handleUploadBannerImage} className="flex flex-col gap-4">
+                  <div>
+                    <label className="dash-label">Banner Photo *</label>
+                    <input type="file" accept="image/*" className="dash-input text-xs w-full" onChange={e => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        setBannerUploadFile(e.target.files[0]);
+                      }
+                    }} />
+                  </div>
+                  {bannerUploadFile && (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm mt-2">
+                      <img src={URL.createObjectURL(bannerUploadFile)} className="w-full h-full object-cover" alt="Banner Preview" />
+                      <button type="button" onClick={() => setBannerUploadFile(null)} className="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white flex items-center justify-center rounded-full hover:bg-red-500 transition-all">
+                        <X size={14} />
                       </button>
                     </div>
+                  )}
+                  {selectedGalleryEvent.bannerUrl && !bannerUploadFile && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500 mb-1">Current Banner:</p>
+                      <img src={`${API}${selectedGalleryEvent.bannerUrl}`} className="w-full aspect-video object-cover rounded-lg border border-gray-200" alt="Current Banner" />
+                    </div>
+                  )}
+                  <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-gray-100">
+                    <button type="button" onClick={() => setBannerUploadFile(null)} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Clear</button>
+                    <button type="submit" disabled={isUploadingBanner || !bannerUploadFile} className="dash-btn dash-btn-primary disabled:opacity-50">{isUploadingBanner ? 'Uploading...' : 'Upload Banner'}</button>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="dash-panel animate-fade-in-up">
-          <div className="dash-panel-header flex justify-between items-center">
-            <div>
-              <h3 className="dash-panel-title">{selectedGalleryEvent.name}</h3>
-              <p className="text-sm text-gray-500 mt-1 uppercase tracking-widest font-bold text-[10px]">Gallery Management</p>
-            </div>
-            <button onClick={() => { fetchEvents(true); setSelectedGalleryEvent(null); setGalleryUploadFiles([]); }} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors">
-              &larr; Back to Events
-            </button>
-          </div>
-
-          <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 bg-gray-50/30">
-            {/* Upload Section */}
-            <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm h-fit">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Upload New Photos</h4>
-              <form onSubmit={handleUploadGalleryImage} className="flex flex-col gap-4">
-                <div>
-                  <label className="dash-label">Photos (Select Multiple) *</label>
-                  <input type="file" multiple accept="image/*" className="dash-input text-xs w-full" onChange={e => {
-                      if (e.target.files && e.target.files.length > 0) {
-                          const selected = Array.from(e.target.files);
-                          setGalleryUploadFiles(prev => [...prev, ...selected]);
-                      }
-                  }} />
-                </div>
-                {galleryUploadFiles.length > 0 && (
-                   <div className="flex gap-2 overflow-x-auto py-2 px-1">
-                      {galleryUploadFiles.map((file, i) => (
-                         <div key={i} className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-gray-200 group shadow-sm">
-                            <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="Preview" />
-                            <button type="button" onClick={() => setGalleryUploadFiles(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 w-5 h-5 bg-black/50 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all">
-                               <X size={12} />
-                            </button>
-                         </div>
-                      ))}
-                   </div>
-                )}
-                <div>
-                  <label className="dash-label">Caption (Optional)</label>
-                  <input className="dash-input w-full" placeholder="e.g., Book signing moment..." value={galleryUploadCaption} onChange={e => setGalleryUploadCaption(e.target.value)} />
-                </div>
-                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
-                  <button type="button" onClick={() => setGalleryUploadFiles([])} className="px-6 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Clear</button>
-                  <button type="submit" disabled={isUploadingGallery} className="dash-btn dash-btn-primary disabled:opacity-50">{isUploadingGallery ? 'Uploading...' : 'Upload Image'}</button>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
 
-            {/* Existing Images Section */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Existing Photos ({selectedGalleryEvent.galleryEvent?.images?.length || 0})</h4>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                 {[...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
+              {/* Existing Images Section */}
+              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-gray-100 pb-2">Existing Photos ({selectedGalleryEvent.galleryEvent?.images?.length || 0})</h4>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {[...(selectedGalleryEvent.galleryEvent?.images || [])].sort((a: any, b: any) => {
                     if (a.status === 'Pending' && b.status !== 'Pending') return -1;
                     if (b.status === 'Pending' && a.status !== 'Pending') return 1;
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                 }).map((img: any) => (
-                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm">
-                       <img src={`${API}${img.url}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                       
-                       {/* Always visible status badge */}
-                       <div className="absolute top-2 left-2 z-10">
-                         <span className={`px-2 py-0.5 text-[9px] uppercase font-bold rounded-sm shadow-md ${img.status === 'Approved' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{img.status}</span>
-                       </div>
+                  }).map((img: any) => (
+                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group bg-gray-100 border border-gray-200 shadow-sm cursor-pointer" onClick={() => setViewingGalleryImage(`${API}${img.url}`)}>
+                      <img src={`${API}${img.url}`} className="w-full h-full object-cover" alt="Gallery photo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
 
-                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 z-20">
-                          <div className="flex justify-end items-start">
-                             <div className="flex gap-1">
-                               {img.status !== 'Approved' && (
-                                  <button onClick={async (e) => {
-                                     e.stopPropagation();
-                                     try {
-                                       await axios.put(`${API}/api/admin/gallery/images/${img.id}/approve`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                                       toast.success('Photo approved.');
-                                       setSelectedGalleryEvent({...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.map((i: any) => i.id === img.id ? {...i, status: 'Approved'} : i) }});
-                                       fetchEvents(true);
-                                     } catch (err: any) { toast.error(err.response?.data?.error || err.message || 'Failed to approve photo.'); }
-                                  }} className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 shadow-sm" title="Approve Photo">
-                                     <CheckCircle2 size={12} />
-                                  </button>
-                               )}
-                               <button onClick={async (e) => {
-                                  e.stopPropagation();
-                                  if(window.confirm('Delete this photo completely?')) {
-                                     try {
-                                       await axios.delete(`${API}/api/admin/gallery/images/${img.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                                       toast.success('Photo deleted.');
-                                       setSelectedGalleryEvent({...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.filter((i: any) => i.id !== img.id) }});
-                                       fetchEvents(true);
-                                     } catch (err: any) { toast.error(err.response?.data?.error || err.message || 'Failed to delete photo.'); }
-                                  }
-                               }} className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-sm" title="Delete Photo"><Trash2 size={12} /></button>
-                            </div>
+                      {/* Always visible status badge */}
+                      <div className="absolute top-2 left-2 z-10">
+                        <span className={`px-2 py-0.5 text-[9px] uppercase font-bold rounded-sm shadow-md ${img.status === 'Approved' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>{img.status}</span>
+                      </div>
+
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 z-20">
+                        <div className="flex justify-end items-start">
+                          <div className="flex gap-1">
+                            {img.status !== 'Approved' && (
+                              <button onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await axios.put(`${API}/api/admin/gallery/images/${img.id}/approve`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                  toast.success('Photo approved.');
+                                  setSelectedGalleryEvent({ ...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.map((i: any) => i.id === img.id ? { ...i, status: 'Approved' } : i) } });
+                                  fetchEvents(true);
+                                } catch (err: any) { toast.error(err.response?.data?.error || err.message || 'Failed to approve photo.'); }
+                              }} className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 shadow-sm" title="Approve Photo">
+                                <CheckCircle2 size={12} />
+                              </button>
+                            )}
+                            <button onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm('Delete this photo completely?')) {
+                                try {
+                                  await axios.delete(`${API}/api/admin/gallery/images/${img.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                  toast.success('Photo deleted.');
+                                  setSelectedGalleryEvent({ ...selectedGalleryEvent, galleryEvent: { ...selectedGalleryEvent.galleryEvent, images: selectedGalleryEvent.galleryEvent.images.filter((i: any) => i.id !== img.id) } });
+                                  fetchEvents(true);
+                                } catch (err: any) { toast.error(err.response?.data?.error || err.message || 'Failed to delete photo.'); }
+                              }
+                            }} className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-sm" title="Delete Photo"><Trash2 size={12} /></button>
                           </div>
-                          <div className="mt-auto pb-1 px-1">
-                             {String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim() && <p className="text-white text-xs line-clamp-2 font-medium leading-tight drop-shadow-md mb-1">{String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim()}</p>}
-                             {String(img.caption || '').match(/\(Uploaded by (.*?)\)/) && <p className="text-paa-gold text-[9px] uppercase tracking-widest font-bold">By: {String(img.caption || '').match(/\(Uploaded by (.*?)\)/)?.[1]}</p>}
-                          </div>
-                       </div>
+                        </div>
+                        <div className="mt-auto pb-1 px-1">
+                          {String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim() && <p className="text-white text-xs line-clamp-2 font-medium leading-tight drop-shadow-md mb-1">{String(img.caption || '').replace(/\(Uploaded by .*?\)/, '').trim()}</p>}
+                          {String(img.caption || '').match(/\(Uploaded by (.*?)\)/) && <p className="text-paa-gold text-[9px] uppercase tracking-widest font-bold">By: {String(img.caption || '').match(/\(Uploaded by (.*?)\)/)?.[1]}</p>}
+                        </div>
+                      </div>
                     </div>
-                 ))}
-                 {(!selectedGalleryEvent.galleryEvent?.images || selectedGalleryEvent.galleryEvent.images.length === 0) && (
+                  ))}
+                  {(!selectedGalleryEvent.galleryEvent?.images || selectedGalleryEvent.galleryEvent.images.length === 0) && (
                     <div className="col-span-full py-16 text-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                       <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                       No photos uploaded for this event yet.
+                      <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      No photos uploaded for this event yet.
                     </div>
-                 )}
+                  )}
+                </div>
               </div>
             </div>
+
           </div>
-          
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     );
   };
 
@@ -4446,10 +5421,10 @@ export function OperationsDashboardPage() {
             <span className="font-serif font-bold text-lg tracking-tight hidden md:block text-paa-navy ml-1">Admin Portal</span>
           </div>
           <span className="font-serif font-bold text-lg md:hidden text-paa-navy">Menu</span>
-          <button onClick={() => setSidebarOpen(false)} className="md:hidden p-2 text-paa-navy"><X size={20} /></button>
+
         </div>
 
-        <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 py-5 px-4 space-y-1.5 overflow-y-auto">
           {[
             { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
             { id: 'web_orders', label: 'Web Orders', icon: ShoppingCart, hasAlert: pendingAlerts.orders },
@@ -4458,11 +5433,12 @@ export function OperationsDashboardPage() {
             { id: 'books', label: 'Books Catalog', icon: BookOpen, hasAlert: pendingAlerts.books },
             { id: 'inventory', label: 'Inventory / Distribution', icon: BookOpen },
             { id: 'events', label: 'Events & Fairs', icon: CalendarIcon },
+            { id: 'library_donations', label: 'Library Donations', icon: BookOpen },
+            { id: 'reviews', label: 'Reviews & Feedback', icon: MessageSquare },
             { id: 'gallery', label: 'Gallery Management', icon: ImageIcon },
             { id: 'late_authors', label: 'Late Authors System', icon: AlertCircle },
             { id: 'helpdesk', label: 'Helpdesk / Queries', icon: Users, hasAlert: pendingAlerts.queries },
             { id: 'settings', label: 'System Settings', icon: Settings },
-            { id: 'library_donations', label: 'Library Donations', icon: BookOpen },
           ].map((item) => (
             <button
               key={item.id}
@@ -4471,7 +5447,7 @@ export function OperationsDashboardPage() {
                 localStorage.setItem('adminActiveTab', item.id);
                 setSidebarOpen(false);
               }}
-              className={`w-full flex items-center justify-start text-left gap-3 px-4 py-3 text-xs font-bold tracking-widest uppercase transition-all duration-300 rounded-xl border ${activeTab === item.id
+              className={`w-full flex items-center justify-start text-left gap-3 px-4 py-2.5 text-xs font-bold tracking-widest uppercase transition-all duration-300 rounded-xl border ${activeTab === item.id
                 ? 'bg-paa-navy text-paa-cream border-paa-navy shadow-premium'
                 : 'text-paa-navy border-[transparent] hover:bg-black/5 hover:border-black/5'
                 }`}
@@ -4500,8 +5476,8 @@ export function OperationsDashboardPage() {
         {/* Top Header */}
         <header className="dash-header h-[68px] flex items-center justify-between px-6 md:px-8 shrink-0 relative z-50">
           <div className="flex items-center gap-2">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
-              <Menu className="w-5 h-5" />
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <div className="flex items-center gap-2 text-xs font-medium">
               <span className="text-paa-gray-text">Admin Portal</span>
@@ -4624,24 +5600,27 @@ export function OperationsDashboardPage() {
 
         {/* Scrollable Body */}
         <div id="admin-dashboard-scroll" className="flex-1 overflow-auto p-4 sm:p-7">
-          {activeTab === 'overview' && <OverviewTab refreshTrigger={lastRefreshTime} />}
-          {activeTab === 'web_orders' && <WebOrdersTab refreshTrigger={lastRefreshTime} />}
-          {activeTab === 'sales_report' && <SalesReportTab refreshTrigger={lastRefreshTime} />}
-          {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
-          {activeTab === 'books' && <BooksTab />}
-          {activeTab === 'inventory' && <AdminInventoryTab />}
-          {activeTab === 'events' && renderEventsTab()}
-          {activeTab === 'forms' && <FormsTab />}
-          {activeTab === 'gallery' && renderGalleryTab()}
-          {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
-          {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
-          {activeTab === 'library_donations' && <LibraryDonationsTab />}
-          {activeTab === 'settings' && (
-            <div className="p-8 text-center text-gray-500">
-              <h2 className="text-2xl font-bold mb-2">System Settings</h2>
-              <p>Settings panel coming soon...</p>
-            </div>
-          )}
+          <Suspense fallback={<div className="p-10 text-center text-gray-500 font-medium">Loading module...</div>}>
+            {activeTab === 'overview' && <OverviewTab refreshTrigger={lastRefreshTime} />}
+            {activeTab === 'web_orders' && <WebOrdersTab refreshTrigger={lastRefreshTime} />}
+            {activeTab === 'sales_report' && <SalesReportTab refreshTrigger={lastRefreshTime} />}
+            {activeTab === 'authors' && renderAuthorsTab({ refreshTrigger: lastRefreshTime })}
+            {activeTab === 'books' && <BooksTab />}
+            {activeTab === 'inventory' && <AdminInventoryTab />}
+            {activeTab === 'events' && renderEventsTab()}
+            {activeTab === 'forms' && <FormsTab />}
+            {activeTab === 'gallery' && renderGalleryTab()}
+            {activeTab === 'reviews' && <AdminReviewsTab />}
+            {activeTab === 'late_authors' && <LateAuthorsSystemTab />}
+            {activeTab === 'helpdesk' && <HelpdeskTab refreshTrigger={lastRefreshTime} />}
+            {activeTab === 'library_donations' && <LibraryDonationsTab />}
+            {activeTab === 'settings' && (
+              <div className="p-8 text-center text-gray-500">
+                <h2 className="text-2xl font-bold mb-2">System Settings</h2>
+                <p>Settings panel coming soon...</p>
+              </div>
+            )}
+          </Suspense>
         </div>
       </main>
 
@@ -4651,18 +5630,29 @@ export function OperationsDashboardPage() {
         {selectedBookDetails && (
           <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
             <div className="flex gap-4">
-              {selectedBookDetails.coverUrl && (
-                <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-32 h-44 object-cover border border-paa-navy/20 shadow-sm" />
-              )}
+              <div className="flex gap-2">
+                {selectedBookDetails.coverUrl && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Front Cover</span>
+                    <img src={selectedBookDetails.coverUrl.startsWith('http') ? selectedBookDetails.coverUrl : `${API}${selectedBookDetails.coverUrl}`} alt="Cover" className="w-28 h-40 object-cover border border-paa-navy/20 shadow-sm rounded" />
+                  </div>
+                )}
+                {selectedBookDetails.backCoverUrl && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Back Cover</span>
+                    <img src={selectedBookDetails.backCoverUrl.startsWith('http') ? selectedBookDetails.backCoverUrl : `${API}${selectedBookDetails.backCoverUrl}`} alt="Back Cover" className="w-28 h-40 object-cover border border-paa-navy/20 shadow-sm rounded" />
+                  </div>
+                )}
+              </div>
               <div>
-                <h3 className="text-xl font-bold text-paa-navy">{selectedBookDetails.title}</h3>
+                <h3 className="text-xl font-bold text-paa-navy mt-4">{selectedBookDetails.title}</h3>
                 {selectedBookDetails.subtitle && <p className="text-sm font-medium text-paa-gray-text">{selectedBookDetails.subtitle}</p>}
                 <p className="text-sm font-medium mt-1">Author: <span className="font-bold">{selectedBookDetails.authorName}</span></p>
                 <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mt-2 bg-[#eef2f6] inline-block px-2 py-0.5">{selectedBookDetails.genre} {selectedBookDetails.subGenre && `> ${selectedBookDetails.subGenre}`}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-paa-navy/5 pt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-paa-navy/5 pt-4">
               <div><span className="text-[10px] uppercase text-paa-gray-text block">MRP</span><span className="text-sm font-bold text-green-700">₹{selectedBookDetails.mrp}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Language</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.language || '-'}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Format</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.format || '-'}</span></div>
@@ -4670,8 +5660,11 @@ export function OperationsDashboardPage() {
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Publisher</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.publisher || '-'}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Pub Date</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.publicationDate || '-'}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">ISBN</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.isbn || '-'}</span></div>
+              <div><span className="text-[10px] uppercase text-paa-gray-text block">Edition</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.edition || '-'}</span></div>
+              <div><span className="text-[10px] uppercase text-paa-gray-text block">Print Format</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.printFormat || '-'}</span></div>
+              <div><span className="text-[10px] uppercase text-paa-gray-text block">Purpose</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.purpose || '-'}</span></div>
               <div><span className="text-[10px] uppercase text-paa-gray-text block">Current Stock</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.stock}</span></div>
-              <div><span className="text-[10px] uppercase text-paa-gray-text block">Total Sales</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.sales}</span></div>
+              <div><span className="text-[10px] uppercase text-paa-gray-text block">Total Sales</span><span className="text-sm font-bold text-paa-navy">{selectedBookDetails.sales || 0}</span></div>
             </div>
 
             <div className="border-t border-paa-navy/5 pt-4">
@@ -4683,9 +5676,9 @@ export function OperationsDashboardPage() {
       </Modal>
 
 
-      
 
-      
+
+
 
       <Modal isOpen={isEditEventModalOpen} onClose={() => setIsEditEventModalOpen(false)} title="Edit Event" maxWidthClass="!max-w-4xl w-[90vw]">
         {editingEvent && (
@@ -4711,6 +5704,7 @@ export function OperationsDashboardPage() {
                 <select name="eventType" className="dash-input" value={editingEvent.eventType} onChange={e => setEditingEvent({ ...editingEvent, eventType: e.target.value })}>
                   <option value="Book Fair">Book Fair</option>
                   <option value="Literary Event">Literary Event</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
             </div>
@@ -4762,54 +5756,6 @@ export function OperationsDashboardPage() {
         )}
       </Modal>
 
-      {/* Gallery Images Management Modal */}
-      <Modal isOpen={!!selectedGalleryEvent} onClose={() => setSelectedGalleryEvent(null)} title={`Manage Images: ${selectedGalleryEvent?.name}`}>
-        {selectedGalleryEvent && (
-          <div className="space-y-6">
-            <form onSubmit={handleUploadGalleryImage} className="space-y-4 bg-gray-50 p-4 border border-paa-navy/5 rounded-3xl-2xl">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Upload New Image</h4>
-              <div>
-                <input required type="file" name="photo" accept="image/*" className="w-full text-sm text-paa-gray-text file:mr-4 file:py-2 file:px-4 file:rounded-3xl-2xl file:border-0 file:text-xs file:font-bold file:bg-paa-navy/10 file:text-paa-navy hover:file:bg-paa-navy/20 transition-colors" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1 block">Caption (Optional)</label><input type="text" name="caption" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-white focus:border-paa-navy" placeholder="E.g. Audience cheering" /></div>
-                <div><label className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text mb-1 block">Date Taken (Optional)</label><input type="date" name="dateTaken" className="w-full border border-paa-navy/20 p-2 text-sm outline-none bg-white focus:border-paa-navy" /></div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <button type="submit" className="bg-paa-navy text-paa-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-paa-gold transition-colors rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">Upload</button>
-              </div>
-            </form>
-
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-4 border-b border-paa-navy/5 pb-2">Uploaded Images ({selectedGalleryEvent.galleryEvent?.images?.length || 0})</h4>
-              {(!selectedGalleryEvent.galleryEvent?.images || selectedGalleryEvent.galleryEvent.images.length === 0) ? (
-                <div className="text-center py-8 text-paa-gray-text text-sm">No additional images uploaded for this event.</div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
-                  {selectedGalleryEvent.galleryEvent.images.map((img: any) => (
-                    <div key={img.id} className="relative group rounded-3xl-2xl overflow-hidden border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out bg-white">
-                      <img src={img.url.startsWith('http') ? img.url : `${API}${img.url}`} alt={img.caption || 'Event Image'} className="w-full h-32 object-cover" />
-                      <button
-                        onClick={() => handleDeleteGalleryImage(img.id)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-3xl-2xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow"
-                        title="Delete Image"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                      {(img.caption || img.dateTaken) && (
-                        <div className="p-2 text-xs">
-                          {img.caption && <p className="font-medium text-paa-navy truncate" title={img.caption}>{img.caption}</p>}
-                          {img.dateTaken && <p className="text-[10px] text-paa-gray-text mt-0.5">{new Date(img.dateTaken).toLocaleDateString()}</p>}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
 
 
       {/* Event Report Modal */}
@@ -4938,13 +5884,13 @@ export function OperationsDashboardPage() {
                             </div>
                           </div>
                           <table className="w-full text-left text-xs whitespace-nowrap bg-white">
-                            <thead className="bg-gray-50 text-gray-500 uppercase tracking-widest">
+                            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                               <tr>
-                                <th className="px-3 py-2">Book Title</th>
-                                <th className="px-3 py-2 text-center">Listed</th>
-                                <th className="px-3 py-2 text-center">Sold</th>
-                                <th className="px-3 py-2 text-center">Available</th>
-                                <th className="px-3 py-2 text-right">Revenue</th>
+                                <th className="px-3 py-2 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                                <th className="px-3 py-2 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Listed</th>
+                                <th className="px-3 py-2 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Sold</th>
+                                <th className="px-3 py-2 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Available</th>
+                                <th className="px-3 py-2 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -4973,14 +5919,14 @@ export function OperationsDashboardPage() {
                 <p className="text-center text-gray-500 italic">No books were listed for this event.</p>
               ) : Array.isArray(eventReportData) && eventReportData.length > 0 ? (
                 <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-[#f0f4f8] text-paa-navy uppercase tracking-widest text-xs border-b border-paa-navy/5">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
-                      <th className="px-4 py-3 font-bold">Author</th>
-                      <th className="px-4 py-3 font-bold">Book Title</th>
-                      <th className="px-4 py-3 font-bold text-center">Listed</th>
-                      <th className="px-4 py-3 font-bold text-center">Sold</th>
-                      <th className="px-4 py-3 font-bold text-center">Returned</th>
-                      <th className="px-4 py-3 font-bold text-right">Revenue</th>
+                      <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Author</th>
+                      <th className="px-4 py-3 font-bold !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
+                      <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Listed</th>
+                      <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Sold</th>
+                      <th className="px-4 py-3 font-bold text-center !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Returned</th>
+                      <th className="px-4 py-3 font-bold text-right !text-[14px] uppercase tracking-widest !text-indigo-800 !bg-transparent">Revenue</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -5028,97 +5974,16 @@ export function OperationsDashboardPage() {
         </div>
       )}
 
-      {/* Order Details Modal */}
-      <Modal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} title={`Order Details: ${selectedOrder?.id}`}>
-        {selectedOrder && (
-          <div className="space-y-6">
-            <div className="bg-gray-50 p-4 border border-paa-navy/5 flex justify-between items-start">
-              <div>
-                <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">Customer Details</p>
-                <p className="font-bold text-paa-navy">{selectedOrder.customer}</p>
-                <p className="text-sm font-medium text-paa-gray-text mt-1">Placed on: {selectedOrder.date}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold tracking-widest uppercase text-paa-gray-text mb-1">Total Amount</p>
-                <p className="font-bold text-xl text-paa-navy">₹{selectedOrder.total}</p>
-              </div>
-            </div>
 
-            <div>
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-3">Ordered Books</h3>
-              <ul className="space-y-2">
-                {selectedOrder.items.map((it: any, idx: number) => {
-                  let processingDays = null;
-                  let deliveryDays = null;
-                  if (it.createdAt && it.dispatchedAt) {
-                    processingDays = Math.max(0, Math.round((new Date(it.dispatchedAt).getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600 * 24)));
-                  }
-                  if (it.dispatchedAt && it.deliveredAt) {
-                    deliveryDays = Math.max(0, Math.round((new Date(it.deliveredAt).getTime() - new Date(it.dispatchedAt).getTime()) / (1000 * 3600 * 24)));
-                  }
 
-                  return (
-                    <li key={idx} className="flex flex-col border-b border-paa-navy/5 pb-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-sm text-paa-navy">{it.title} <span className="text-gray-400 italic font-normal text-xs ml-1">by {it.authorName}</span></span>
-                        <span className="font-bold text-paa-navy text-sm">Qty: {it.qty}</span>
-                      </div>
-                      {(processingDays !== null || deliveryDays !== null) && (
-                        <div className="flex gap-4 mt-1 text-[10px] uppercase font-bold tracking-widest text-paa-gray-text">
-                          {processingDays !== null && <span>Processing Time: <span className="text-paa-navy">{processingDays} {processingDays === 1 ? 'day' : 'days'}</span></span>}
-                          {deliveryDays !== null && <span>Delivery Time: <span className="text-paa-navy">{deliveryDays} {deliveryDays === 1 ? 'day' : 'days'}</span></span>}
-                        </div>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-2xl font-serif font-semibold text-paa-navy tracking-tight mb-3">Payment Information</h3>
-              {selectedOrder.payment === 'Paid' ? (
-                <div className="bg-[#f0f4f8] p-4 border border-paa-navy/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-paa-navy mb-1 uppercase tracking-widest">Payment Uploaded</p>
-                    <a href={`${API}${selectedOrder.paymentScreenshot}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">View Screenshot</a>
-                  </div>
-                  {selectedOrder.status === 'Completed' ? (
-                    <div className="flex items-center gap-2 text-green-700 bg-green-100 px-3 py-1 border border-green-300">
-                      <CheckCircle2 className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">Verified</span>
-                    </div>
-                  ) : selectedOrder.status === 'Payment Not Received' ? (
-                    <div className="flex items-center gap-2 text-red-700 bg-red-100 px-3 py-1 border border-red-300">
-                      <XCircle className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">Rejected</span>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleVerifyOrder(selectedOrder.dbId)} disabled={loadingAction === 'verifyOrder_' + selectedOrder.dbId} className="bg-[#5cb85c] hover:bg-[#4cae4c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
-                        {loadingAction === 'verifyOrder_' + selectedOrder.dbId ? 'Verifying...' : 'Verify'}
-                      </button>
-                      <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-white border border-[#d9534f] text-[#d9534f] hover:bg-[#d9534f] hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
-                        {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Rejecting...' : 'Reject'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="bg-red-50 p-4 border border-red-200 text-red-700 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="w-5 h-5" />
-                    <span className="text-sm font-bold">No payment screenshot uploaded</span>
-                  </div>
-                  {selectedOrder.status !== 'Payment Not Received' && (
-                    <button onClick={() => handleRejectOrder(selectedOrder.dbId)} disabled={loadingAction === 'rejectOrder_' + selectedOrder.dbId} className="bg-[#d9534f] hover:bg-[#c9302c] text-white px-4 py-2 text-xs font-bold uppercase tracking-widest shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out transition-colors disabled:opacity-50">
-                      {loadingAction === 'rejectOrder_' + selectedOrder.dbId ? 'Updating...' : 'Mark Failed'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
+      {viewingGalleryImage && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setViewingGalleryImage(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-50 p-2" onClick={() => setViewingGalleryImage(null)}>
+            <X className="w-8 h-8 drop-shadow-md" />
+          </button>
+          <img src={viewingGalleryImage} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" alt="Gallery Fullscreen" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
 
       <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Create New Form">
         <form className="space-y-4" onSubmit={async (e) => {
@@ -5874,342 +6739,171 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
   };
 
   const filteredQueries = queries.filter(q => {
-    const matchesFilter = filterType === 'All' || 
-                          (filterType === 'Message' && q.itemType === 'Message') || 
-                          (filterType === 'Pending' && q.itemType === 'Query' && q.status === 'Pending') ||
-                          (filterType === 'Answered' && q.itemType === 'Query' && q.status === 'Answered') ||
-                          (filterType === 'Resolved' && q.itemType === 'Query' && q.status === 'Resolved');
-    
+    const matchesFilter = filterType === 'All' ||
+      (filterType === 'Message' && q.itemType === 'Message') ||
+      (filterType === 'Pending' && q.itemType === 'Query' && q.status === 'Pending') ||
+      (filterType === 'Answered' && q.itemType === 'Query' && q.status === 'Answered') ||
+      (filterType === 'Resolved' && q.itemType === 'Query' && q.status === 'Resolved');
+
     if (!matchesFilter) return false;
-    
+
     if (searchQuery.trim()) {
       const lowerQ = searchQuery.toLowerCase();
-      return (q.subject?.toLowerCase().includes(lowerQ) || 
-              q.author?.name?.toLowerCase().includes(lowerQ) || 
-              q.user?.name?.toLowerCase().includes(lowerQ) ||
-              q.author?.email?.toLowerCase().includes(lowerQ) ||
-              q.user?.email?.toLowerCase().includes(lowerQ));
+      return (q.subject?.toLowerCase().includes(lowerQ) ||
+        q.author?.name?.toLowerCase().includes(lowerQ) ||
+        q.user?.name?.toLowerCase().includes(lowerQ) ||
+        q.author?.email?.toLowerCase().includes(lowerQ) ||
+        q.user?.email?.toLowerCase().includes(lowerQ));
     }
-    
+
     return true;
   });
 
   return (
     <div className="space-y-6 w-full">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b border-paa-navy/5 pb-4 gap-4">
-          <div>
-            <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
-              <Users className="w-5 h-5" /> Messages / Queries
-            </h3>
-            <p className="text-paa-gray-text text-sm">Manage author queries and contact inquiries.</p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-            <input 
-              type="text" 
-              placeholder="Search Subject, Name, Email..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-3 py-1.5 text-sm border border-gray-200 rounded-3xl-2xl outline-none focus:border-paa-navy w-full sm:w-64"
-            />
-            <div className="flex bg-gray-100 rounded-3xl-2xl p-1 overflow-x-auto w-full sm:w-auto">
-              {[
-                { id: 'All', label: 'All', color: 'bg-gray-800 text-white' },
-                { id: 'Pending', label: 'New Unopened Tickets', color: 'bg-orange-100 text-orange-800' },
-                { id: 'Answered', label: 'Opened Tickets', color: 'bg-blue-100 text-blue-800' },
-                { id: 'Resolved', label: 'Closed Tickets', color: 'bg-green-100 text-green-800' },
-                { id: 'Message', label: 'Messages', color: 'bg-gray-800 text-white' }
-              ].map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setFilterType(t.id as any)}
-                  className={`px-3 py-1 text-[10px] font-bold tracking-widest uppercase transition-all rounded-3xl-2xl whitespace-nowrap ${filterType === t.id ? `${t.color} shadow-sm` : 'text-gray-500 hover:text-paa-navy'}`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => fetchQueries()} className="shrink-0 p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
-              <RefreshCw size={18} />
-            </button>
-          </div>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b border-paa-navy/5 pb-4 gap-4">
+        <div>
+          <h3 className="text-xl font-serif font-medium text-paa-navy mb-1 flex items-center gap-2">
+            <Users className="w-5 h-5" /> Messages / Queries
+          </h3>
+          <p className="text-paa-gray-text text-sm">Manage author queries and contact inquiries.</p>
         </div>
-
-        <div className="space-y-4">
-          {filteredQueries.length === 0 ? (
-            <p className="text-sm text-gray-500 italic text-center py-8">No messages or queries found.</p>
-          ) : filteredQueries.map(q => (
-            <div key={q.id} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden transition-all duration-200 group">
-              {/* Row Header */}
-              <div 
-                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
-                onClick={() => setExpandedQueryId(expandedQueryId === q.id ? null : q.id)}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <input
+            type="text"
+            placeholder="Search Subject, Name, Email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-3xl-2xl outline-none focus:border-paa-navy w-full sm:w-64"
+          />
+          <div className="flex bg-gray-100 rounded-3xl-2xl p-1 overflow-x-auto w-full sm:w-auto">
+            {[
+              { id: 'All', label: 'All', color: 'bg-gray-800 text-white' },
+              { id: 'Pending', label: 'New Unopened Tickets', color: 'bg-orange-100 text-orange-800' },
+              { id: 'Answered', label: 'Opened Tickets', color: 'bg-blue-100 text-blue-800' },
+              { id: 'Resolved', label: 'Closed Tickets', color: 'bg-green-100 text-green-800' },
+              { id: 'Message', label: 'Messages', color: 'bg-gray-800 text-white' }
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setFilterType(t.id as any)}
+                className={`px-3 py-1 text-[10px] font-bold tracking-widest uppercase transition-all rounded-3xl-2xl whitespace-nowrap ${filterType === t.id ? `${t.color} shadow-sm` : 'text-gray-500 hover:text-paa-navy'}`}
               >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className={`w-1 h-10 rounded-full ${q.itemType === 'Message' ? 'bg-blue-500' : q.status === 'Resolved' ? 'bg-green-500' : q.status === 'Pending' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.itemType === 'Message' ? 'bg-blue-100 text-blue-800' : q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
-                        {q.itemType} {q.itemType === 'Query' ? `#TKT-${q.id.toString().padStart(4, '0')}` : ''}
-                      </span>
-                      <h4 className="font-bold text-paa-navy text-sm line-clamp-1">{q.subject}</h4>
-                    </div>
-                    {q.itemType !== 'Message' && (
-                      <p className="text-[10px] text-gray-500">From: <span className="font-bold">{q.author?.name || q.user?.name || 'Unknown'}</span> ({q.author?.email || q.user?.email || 'N/A'})</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  {q.status !== 'Resolved' && (
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleResolve(q.id); }}
-                      className="px-3 py-1 border border-green-200 text-green-700 bg-white hover:bg-green-50 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 transition-colors shadow-sm"
-                      title="Mark as Resolved"
-                    >
-                      <CheckCircle2 size={12} /> Resolve
-                    </button>
-                  )}
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                    title="Delete Query"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  {q.itemType !== 'Message' && (
-                    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
-                      {q.status === 'Resolved' ? 'Closed' : q.status === 'Pending' ? 'New' : 'Opened'}
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => fetchQueries()} className="shrink-0 p-2 border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded-3xl-2xl text-paa-navy transition-colors shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out rounded-full active:scale-95 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out">
+            <RefreshCw size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {filteredQueries.length === 0 ? (
+          <p className="text-sm text-gray-500 italic text-center py-8">No messages or queries found.</p>
+        ) : filteredQueries.map(q => (
+          <div key={q.id} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden transition-all duration-200 group">
+            {/* Row Header */}
+            <div
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+              onClick={() => setExpandedQueryId(expandedQueryId === q.id ? null : q.id)}
+            >
+              <div className="flex items-center gap-4 flex-1">
+                <div className={`w-1 h-10 rounded-full ${q.itemType === 'Message' ? 'bg-blue-500' : q.status === 'Resolved' ? 'bg-green-500' : q.status === 'Pending' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.itemType === 'Message' ? 'bg-blue-100 text-blue-800' : q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {q.itemType} {q.itemType === 'Query' ? `#TKT-${q.id.toString().padStart(4, '0')}` : ''}
                     </span>
-                  )}
-                  <div className="text-gray-400">
-                    <ChevronDown size={20} className={`transform transition-transform duration-300 ${expandedQueryId === q.id ? 'rotate-180' : ''}`} />
+                    <h4 className="font-bold text-paa-navy text-sm line-clamp-1">{q.subject}</h4>
                   </div>
+                  {q.itemType !== 'Message' && (
+                    <p className="text-[10px] text-gray-500">From: <span className="font-bold">{q.author?.name || q.user?.name || 'Unknown'}</span> ({q.author?.email || q.user?.email || 'N/A'})</p>
+                  )}
                 </div>
               </div>
-              
-              {/* Expandable Content */}
-              {expandedQueryId === q.id && (
-                <div className="p-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
-                  <div className="flex-1">
-                    {q.itemType === 'Query' ? (
-                      <QueryThreadDisplay query={q} currentUserType="Admin" />
-                    ) : (
-                      <div className="bg-white p-4 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-sm">
-                        {q.message}
-                      </div>
-                    )}
-                    
-                    {q.itemType === 'Message' && (
-                      <p className="text-[10px] text-gray-500 italic mt-2">Reply to this inquiry directly via email to {q.author?.email || q.user?.email}.</p>
-                    )}
-                  </div>
-                  
-                  {q.itemType === 'Query' && q.status !== 'Resolved' && (
-                    <div className="shrink-0 pt-4 border-t border-gray-100">
-                      <div className="flex items-center gap-2 bg-white rounded-full border border-gray-200 px-4 py-2 shadow-sm focus-within:border-paa-navy focus-within:ring-1 focus-within:ring-paa-navy/20 transition-all">
-                        <input
-                          type="text"
-                          placeholder="Type reply..."
-                          className="flex-1 bg-transparent border-none outline-none text-sm text-gray-800 placeholder:text-gray-400"
-                          value={replyText[q.id] || ''}
-                          onChange={e => setReplyText({ ...replyText, [q.id]: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && replyText[q.id]?.trim() && !isReplying[q.id]) {
-                              handleReply(q.id);
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={() => handleReply(q.id)}
-                          disabled={isReplying[q.id] || !replyText[q.id]?.trim()}
-                          className="p-2 bg-paa-navy text-white rounded-full hover:bg-paa-gold transition-colors disabled:opacity-50 disabled:hover:bg-paa-navy flex shrink-0 items-center justify-center"
-                          title="Send Reply"
-                        >
-                          <Send size={16} className={isReplying[q.id] ? "opacity-50" : ""} />
-                        </button>
-                      </div>
+
+              <div className="flex items-center gap-4">
+                {q.status !== 'Resolved' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleResolve(q.id); }}
+                    className="px-3 py-1 border border-green-200 text-green-700 bg-white hover:bg-green-50 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 transition-colors shadow-sm"
+                    title="Mark as Resolved"
+                  >
+                    <CheckCircle2 size={12} /> Resolve
+                  </button>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                  title="Delete Query"
+                >
+                  <Trash2 size={16} />
+                </button>
+                {q.itemType !== 'Message' && (
+                  <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                    {q.status === 'Resolved' ? 'Closed' : q.status === 'Pending' ? 'New' : 'Opened'}
+                  </span>
+                )}
+                <div className="text-gray-400">
+                  <ChevronDown size={20} className={`transform transition-transform duration-300 ${expandedQueryId === q.id ? 'rotate-180' : ''}`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Expandable Content */}
+            {expandedQueryId === q.id && (
+              <div className="p-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
+                <div className="flex-1">
+                  {q.itemType === 'Query' ? (
+                    <QueryThreadDisplay query={q} currentUserType="Admin" />
+                  ) : (
+                    <div className="bg-white p-4 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-4 shadow-sm">
+                      {q.message}
                     </div>
                   )}
+
+                  {q.itemType === 'Message' && (
+                    <p className="text-[10px] text-gray-500 italic mt-2">Reply to this inquiry directly via email to {q.author?.email || q.user?.email}.</p>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+
+                {q.itemType === 'Query' && q.status !== 'Resolved' && (
+                  <div className="shrink-0 pt-4 border-t border-gray-100">
+                    <div className="flex items-center gap-2 bg-white rounded-full border border-gray-200 px-4 py-2 shadow-sm focus-within:border-paa-navy focus-within:ring-1 focus-within:ring-paa-navy/20 transition-all">
+                      <input
+                        type="text"
+                        placeholder="Type reply..."
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-800 placeholder:text-gray-400"
+                        value={replyText[q.id] || ''}
+                        onChange={e => setReplyText({ ...replyText, [q.id]: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && replyText[q.id]?.trim() && !isReplying[q.id]) {
+                            handleReply(q.id);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => handleReply(q.id)}
+                        disabled={isReplying[q.id] || !replyText[q.id]?.trim()}
+                        className="p-2 bg-paa-navy text-white rounded-full hover:bg-paa-gold transition-colors disabled:opacity-50 disabled:hover:bg-paa-navy flex shrink-0 items-center justify-center"
+                        title="Send Reply"
+                      >
+                        <Send size={16} className={isReplying[q.id] ? "opacity-50" : ""} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
 
 export default OperationsDashboardPage;
 
-
-
-
-function GalleryReviewTab() {
-  const [pendingImages, setPendingImages] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  const fetchPendingImages = async () => {
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/pending`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setPendingImages(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => { fetchPendingImages(); }, []);
-
-  const handleAction = async (id: number, action: 'approve' | 'reject') => {
-    try {
-      const token = localStorage.getItem('token');
-      if (action === 'approve') {
-        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/images/${id}/approve`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Image approved for public gallery.');
-      } else {
-        await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/gallery/images/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Image rejected and deleted.');
-      }
-      fetchPendingImages();
-    } catch (err) {
-      toast.error('Failed to process image action.');
-    }
-  };
-
-  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy" /></div>;
-
-  return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Gallery Review</h2>
-          <p className="text-sm text-gray-500 mt-1">Review event photos uploaded by authors before they appear in the public gallery.</p>
-        </div>
-        <div className="bg-amber-100 text-amber-800 px-4 py-2 rounded-xl text-sm font-bold shadow-sm border border-amber-200 flex items-center gap-2">
-          <ImageIcon className="w-4 h-4" /> {pendingImages.length} Pending
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
-        {pendingImages.map(img => (
-          <div key={img.id} className="bg-white rounded-3xl-2xl border border-gray-100 shadow-premium overflow-hidden hover:-translate-y-1 transition-all">
-            <div className="aspect-square bg-gray-100 relative group">
-              <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${img.url}`} alt="Event" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                <button onClick={() => handleAction(img.id, 'approve')} className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors shadow-lg" title="Approve"><Check size={20} /></button>
-                <button onClick={() => handleAction(img.id, 'reject')} className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg" title="Reject"><X size={20} /></button>
-              </div>
-            </div>
-            <div className="p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-paa-navy mb-1 line-clamp-1">{img.galleryEvent?.location || 'Unknown Event'}</p>
-              <p className="text-sm text-gray-600 line-clamp-2">{img.caption || 'No caption provided'}</p>
-              <div className="mt-4 flex gap-2">
-                <button onClick={() => handleAction(img.id, 'approve')} className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 py-2 rounded-xl text-xs font-bold transition-colors text-center border border-green-200">APPROVE</button>
-                <button onClick={() => handleAction(img.id, 'reject')} className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 py-2 rounded-xl text-xs font-bold transition-colors text-center border border-red-200">REJECT</button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {pendingImages.length === 0 && (
-        <div className="text-center py-20 bg-white rounded-3xl-2xl border border-gray-100 border-dashed">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-green-500" />
-          </div>
-          <h3 className="text-lg font-serif text-paa-navy">All caught up!</h3>
-          <p className="text-gray-500 text-sm mt-1">There are no pending gallery images to review.</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-
-function AdminReviewsTab() {
-  const [reviews, setReviews] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/reviews`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        setReviews(res.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReviews();
-  }, []);
-
-  if (loading) return <div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-paa-navy" /></div>;
-
-  return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-serif text-paa-navy tracking-tight">Global Book Reviews</h2>
-          <p className="text-sm text-gray-500 mt-1">Monitor all customer feedback and ratings across the platform.</p>
-        </div>
-        <div className="bg-paa-navy text-paa-cream px-4 py-2 rounded-xl text-sm font-bold shadow-sm flex items-center gap-2">
-          <Star className="w-4 h-4" /> {reviews.length} Total Reviews
-        </div>
-      </div>
-
-      <div className="bg-white rounded-3xl-2xl border border-gray-100 shadow-premium overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Reviewer</th>
-              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Book</th>
-              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Rating</th>
-              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Feedback</th>
-              <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-paa-navy border-b border-gray-100">Date</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {reviews.map(r => (
-              <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="font-bold text-sm text-paa-navy">{r.reviewerName}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="font-bold text-sm text-paa-navy line-clamp-1">{r.book?.title}</div>
-                  <div className="text-xs text-gray-500 line-clamp-1">by {r.book?.author?.name}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex bg-amber-50 text-amber-700 px-2 py-1 rounded-lg w-fit items-center gap-1">
-                    <span className="font-bold text-sm">{r.rating}</span>
-                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <p className="text-sm text-gray-600 line-clamp-2 min-w-[200px] italic">"{r.comment}"</p>
-                </td>
-                <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
-                  {new Date(r.createdAt).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-            {reviews.length === 0 && (
-              <tr><td colSpan={5} className="text-center py-10 text-gray-500">No reviews found in the system.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
 

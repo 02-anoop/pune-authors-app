@@ -8,7 +8,8 @@ const navLinks = [
   { label: "Services", href: "/services" },
   { label: "Books", href: "/catalogue" },
   { label: "Gallery", href: "/gallery" },
-  // { label: "Events", href: "/events" },
+  { label: "Events", href: "/events" },
+  { label: "Flybraries", href: "/flybraries" },
   { label: "Contact", href: "/contact" },
 ];
 

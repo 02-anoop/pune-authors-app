@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { ArrowLeft, Star, BookOpen, User, Tag, IndianRupee, Send, MessageSquare, Package } from "lucide-react";
+import { BookReviewForm, BookReviewPayload } from "./BookReviewForm";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:3001").trim();
 
@@ -83,9 +84,6 @@ export function BookDetailPage() {
   const [error, setError] = useState("");
 
   // Review form state
-  const [reviewName, setReviewName] = useState("");
-  const [reviewRating, setReviewRating] = useState(0);
-  const [reviewComment, setReviewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState("");
 
@@ -116,24 +114,26 @@ export function BookDetailPage() {
     .finally(() => setLoading(false));
   }, [id]);
 
-  const handleSubmitReview = async () => {
-    if (!reviewName.trim() || !reviewComment.trim() || reviewRating === 0) {
-      setSubmitMsg("Please fill in your name, rating and comment.");
-      return;
-    }
+  const handleSubmitReview = async (data: BookReviewPayload) => {
     setSubmitting(true);
     setSubmitMsg("");
     try {
       const res = await fetch(`${API}/api/books/${id}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reviewerName: reviewName, rating: reviewRating, comment: reviewComment }),
+        body: JSON.stringify({ 
+          reviewerName: data.reviewerName, 
+          rating: data.overallRating, 
+          comment: data.reviewText,
+          writingStyleRating: data.writingStyleRating,
+          contentQualityRating: data.contentQualityRating,
+          enjoyedMost: data.enjoyedMost
+        }),
       });
-      const data = await res.json();
-      if (!res.ok) { setSubmitMsg(data.error || "Failed to submit"); return; }
+      const responseData = await res.json();
+      if (!res.ok) { setSubmitMsg(responseData.error || "Failed to submit"); return; }
       // Prepend review locally
-      setBook((prev) => prev ? { ...prev, reviews: [data, ...prev.reviews] } : prev);
-      setReviewName(""); setReviewRating(0); setReviewComment("");
+      setBook((prev) => prev ? { ...prev, reviews: [responseData, ...prev.reviews] } : prev);
       setSubmitMsg("✓ Your review has been submitted. Thank you!");
     } catch {
       setSubmitMsg("Network error. Please try again.");
@@ -384,12 +384,42 @@ export function BookDetailPage() {
                            try { ed = JSON.parse(ed); } catch(e) { ed = {}; }
                         }
                         if (!ed || typeof ed !== 'object') return null;
-                        return Object.entries(ed).filter(([k, v]) => typeof v !== 'object' && v !== null && v !== '' && !['bundleRules', 'bundleRule', 'lowStockAlerts', 'lateFines', 'isPublishedByPublisher', 'whyJoining', 'conflictOfInterestSignature', 'agreedToGuidelines', 'agreedToInfoDoc'].includes(k)).map(([k, v]) => (
-                          <div key={k}>
-                            <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{k}</span>
-                            <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>{String(v)}</span>
-                          </div>
-                        ));
+
+                        const excludedKeys = [
+                          'bundleRules', 'bundleRule', 'lowStockAlerts', 'lateFines', 
+                          'isPublishedByPublisher', 'whyJoining', 'conflictOfInterestSignature', 
+                          'agreedToGuidelines', 'agreedToInfoDoc', 'isReapplied', 'hasPendingEdits', 
+                          'editedProfileFields', 'fineHistory', 'lateNotificationDate', 'fineDate', 
+                          'fineStatus', 'finePaymentScreenshot', 'finePaymentDate', 'lastFinePaidAt'
+                        ];
+
+                        return Object.entries(ed)
+                          .filter(([k, v]) => typeof v !== 'object' && v !== null && v !== '' && !excludedKeys.includes(k))
+                          .map(([k, v]) => {
+                            const valStr = String(v);
+                            const isUrl = valStr.startsWith('http://') || valStr.startsWith('https://');
+                            const isLongField = isUrl || valStr.length > 30 || ['youtube', 'linkedin', 'instagram', 'facebook', 'website', 'social'].includes(k.toLowerCase());
+
+                            return (
+                              <div key={k} style={{ gridColumn: isLongField ? '1 / -1' : 'auto' }}>
+                                <span style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{k}</span>
+                                {isUrl ? (
+                                  <a 
+                                    href={valStr} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    style={{ display: 'block', fontSize: 13, color: '#059669', fontWeight: 500, textDecoration: 'underline', wordBreak: 'break-all' }}
+                                  >
+                                    {valStr}
+                                  </a>
+                                ) : (
+                                  <span style={{ display: 'block', fontSize: 13, color: '#1a1a2e', fontWeight: 500, wordBreak: 'break-word' }}>
+                                    {valStr}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          });
                       })()}
                     </div>
                   </div>
@@ -428,41 +458,11 @@ export function BookDetailPage() {
           </section>
 
           {/* Write a review */}
-          <section style={{ background: "#fff", border: "1px solid #eaeaea", padding: "3rem" }}>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 400, color: "#111", margin: "0 0 1.5rem" }}>Write a Review</h2>
-            <div style={{ width: 30, height: 1, background: "#111", marginBottom: "2rem" }}></div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-              <input
-                placeholder="Your Name"
-                value={reviewName}
-                onChange={(e) => setReviewName(e.target.value)}
-                style={{ border: "none", borderBottom: "1px solid #eaeaea", padding: "0.5rem 0", fontSize: 13, fontFamily: "var(--font-body)", outline: "none", transition: "border 0.2s" }}
-                onFocus={(e) => (e.target.style.borderColor = "#111")}
-                onBlur={(e) => (e.target.style.borderColor = "#eaeaea")}
-              />
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#374151", margin: "0 0 0.5rem" }}>Your Rating</p>
-                <StarRating value={reviewRating} onChange={setReviewRating} />
-              </div>
-              <textarea
-                placeholder="Share your thoughts about this book…"
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                rows={4}
-                style={{ border: "none", borderBottom: "1px solid #eaeaea", padding: "0.5rem 0", fontSize: 13, fontFamily: "var(--font-body)", outline: "none", resize: "none", transition: "border 0.2s" }}
-                onFocus={(e) => (e.target.style.borderColor = "#111")}
-                onBlur={(e) => (e.target.style.borderColor = "#eaeaea")}
-              />
-              {submitMsg && (
-                <p style={{ fontSize: 11, color: submitMsg.startsWith("✓") ? "#111" : "#b44d28", fontWeight: 500, margin: 0 }}>{submitMsg}</p>
-              )}
-              <button
-                onClick={handleSubmitReview}
-                disabled={submitting}
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#111", color: "#fff", border: "none", padding: "1rem 2rem", fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1, fontFamily: "var(--font-body)", alignSelf: "flex-start", transition: "opacity 0.2s" }}>
-                {submitting ? "Submitting…" : "Submit Review"}
-              </button>
-            </div>
+          <section>
+            <BookReviewForm onSubmit={handleSubmitReview} isSubmitting={submitting} />
+            {submitMsg && (
+              <p style={{ fontSize: 13, color: submitMsg.startsWith("✓") ? "#111" : "#b44d28", fontWeight: 500, marginTop: "1rem", textAlign: "center" }}>{submitMsg}</p>
+            )}
           </section>
         </div>
 

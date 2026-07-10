@@ -106,10 +106,20 @@
   transform: translate(20px, -20px);
 }
 
-.dash-kpi-card.blue::after { background: #3b82f6; }
-.dash-kpi-card.green::after { background: #10b981; }
-.dash-kpi-card.amber::after { background: #f59e0b; }
-.dash-kpi-card.red::after { background: #ef4444; }
+.dash-kpi-card.blue { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #bfdbfe; }
+.dash-kpi-card.green { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #bbf7d0; }
+.dash-kpi-card.amber { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-color: #fde68a; }
+.dash-kpi-card.red { background: linear-gradient(135deg, #fef2f2, #fee2e2); border-color: #fecaca; }
+
+.dash-kpi-card.blue:hover { box-shadow: 0 10px 30px rgba(59,130,246,0.15); border-color: #93c5fd; }
+.dash-kpi-card.green:hover { box-shadow: 0 10px 30px rgba(16,185,129,0.15); border-color: #86efac; }
+.dash-kpi-card.amber:hover { box-shadow: 0 10px 30px rgba(245,158,11,0.15); border-color: #fcd34d; }
+.dash-kpi-card.red:hover { box-shadow: 0 10px 30px rgba(239,68,68,0.15); border-color: #fca5a5; }
+
+.dash-kpi-card.blue::after { background: #3b82f6; opacity: 0.1; }
+.dash-kpi-card.green::after { background: #10b981; opacity: 0.1; }
+.dash-kpi-card.amber::after { background: #f59e0b; opacity: 0.1; }
+.dash-kpi-card.red::after { background: #ef4444; opacity: 0.1; }
 
 .dash-kpi-icon {
   width: 44px;
@@ -121,10 +131,10 @@
   flex-shrink: 0;
 }
 
-.dash-kpi-icon.blue { background: rgba(59,130,246,0.1); color: #3b82f6; }
-.dash-kpi-icon.green { background: rgba(16,185,129,0.1); color: #10b981; }
-.dash-kpi-icon.amber { background: rgba(245,158,11,0.1); color: #f59e0b; }
-.dash-kpi-icon.red { background: rgba(239,68,68,0.1); color: #ef4444; }
+.dash-kpi-icon.blue { background: #3b82f6; color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+.dash-kpi-icon.green { background: #10b981; color: #fff; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+.dash-kpi-icon.amber { background: #f59e0b; color: #fff; box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+.dash-kpi-icon.red { background: #ef4444; color: #fff; box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
 
 /* ── CHART / DATA PANELS ── */
 .dash-panel {
@@ -217,18 +227,19 @@ table tr td *:hover,
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 20px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-.dash-badge.pending { background: rgba(245,158,11,0.1); color: #d97706; border: 1px solid rgba(245,158,11,0.2); }
-.dash-badge.approved, .dash-badge.active { background: rgba(16,185,129,0.1); color: #059669; border: 1px solid rgba(16,185,129,0.2); }
-.dash-badge.rejected { background: rgba(239,68,68,0.08); color: #dc2626; border: 1px solid rgba(239,68,68,0.15); }
-.dash-badge.info { background: rgba(59,130,246,0.1); color: #2563eb; border: 1px solid rgba(59,130,246,0.2); }
+.dash-badge.pending { background: #fef3c7; color: #92400e; border: 1px solid transparent; }
+.dash-badge.approved, .dash-badge.active { background: #d1fae5; color: #065f46; border: 1px solid transparent; }
+.dash-badge.rejected { background: #fee2e2; color: #991b1b; border: 1px solid transparent; }
+.dash-badge.info { background: #dbeafe; color: #1e40af; border: 1px solid transparent; }
 
 /* ── ACTION BUTTONS ── */
 .dash-btn {

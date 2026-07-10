@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import axios from "axios";
 import localforage from "localforage";
 import qrCode from "./data/qr_code.jpeg";
+// import charterPdf from "./data/Group Activities and Charter.pdf";
+const charterPdf = "#";
 import pastEvents from "./data/past_events.json";
 import { bookCategories } from "../data/categories";
 import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon, ArrowLeft, Info, CalendarDays, Briefcase, MapPin, Clock, LogOut } from "lucide-react";
@@ -78,71 +80,72 @@ function WizardAboutStep() {
 }
 
 function WizardEventsStep() {
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [currentPastEventIndex, setCurrentPastEventIndex] = useState(0);
-
-  useEffect(() => {
-    const fetchUpcomingEvents = async () => {
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/public/events`);
-        setUpcomingEvents(res.data);
-      } catch (error) {
-        console.error("Failed to fetch upcoming events:", error);
-      }
-    };
-    fetchUpcomingEvents();
-  }, []);
 
   const nextPastEvent = () => setCurrentPastEventIndex((prev) => (prev + 1) % pastEvents.length);
   const prevPastEvent = () => setCurrentPastEventIndex((prev) => (prev - 1 + pastEvents.length) % pastEvents.length);
 
-  const totalEvents = pastEvents.length;
-  const totalAuthors = pastEvents.reduce((sum, e) => sum + (e.authorsParticipated || 0), 0);
-  const totalBooks = pastEvents.reduce((sum, e) => sum + (e.booksSold || 0), 0);
+  const fairs = pastEvents.filter(e => e.name.toLowerCase().includes("fair"));
+  const literaryEvents = pastEvents.filter(e => !e.name.toLowerCase().includes("fair"));
+
+  const totalFairs = fairs.length;
+  const totalFairsBooks = fairs.reduce((sum, e) => sum + (e.booksSold || 0), 0);
+
+  const totalLiteraryEvents = literaryEvents.length;
+  const totalLiteraryBooks = literaryEvents.reduce((sum, e) => sum + (e.booksSold || 0), 0);
+
+  const totalLibraries = 4;
+  const totalLibraryBooks = 450;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Literary Events</h2>
-      <p className="text-sm text-paa-gray-text mb-8">Discover our book fairs, reading sessions, and literary festivals across India.</p>
+      <h2 className="font-serif text-2xl font-medium text-paa-navy mb-2">Literary Events & Book Fairs</h2>
+      <p className="text-sm text-paa-gray-text mb-8">Discover our impact through book fairs, reading sessions, and airport library initiatives across India.</p>
 
       <div className="space-y-10">
-        {upcomingEvents.length > 0 && (
-          <div>
-            <h3 className="font-serif text-xl text-paa-navy mb-6 border-b border-gray-100 pb-2">Upcoming Events</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {upcomingEvents.map((event, i) => (
-                <div key={i} className="bg-white p-5 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-3">
-                     <span className="text-xs font-bold text-paa-gold uppercase tracking-widest bg-paa-gold/10 px-2 py-1 rounded">{event.date}</span>
-                     <span className="text-xs text-gray-500 flex items-center gap-1"><Clock size={12}/> {event.duration}</span>
-                  </div>
-                  <h4 className="font-serif text-lg text-gray-900 font-medium mb-2">{event.name}</h4>
-                  <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-auto pt-4"><MapPin size={14}/> {event.location}</p>
-                </div>
-              ))}
+        <div>
+          <h3 className="font-serif text-xl text-paa-navy mb-6 border-b border-gray-100 pb-2">Our Impact</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-paa-gold/10 rounded-full flex items-center justify-center mb-4 text-paa-gold">
+                <BookOpen size={24} />
+              </div>
+              <div className="text-4xl font-serif text-paa-navy mb-1">{totalLiteraryEvents}</div>
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Literary Events</div>
+              <div className="w-full pt-4 border-t border-gray-100 mt-auto">
+                 <div className="text-xl font-serif text-paa-gold">{totalLiteraryBooks}+</div>
+                 <div className="text-[10px] uppercase tracking-widest text-gray-400">Books Sold</div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-paa-gold/10 rounded-full flex items-center justify-center mb-4 text-paa-gold">
+                <MapPin size={24} />
+              </div>
+              <div className="text-4xl font-serif text-paa-navy mb-1">{totalFairs}</div>
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Book Fairs</div>
+              <div className="w-full pt-4 border-t border-gray-100 mt-auto">
+                 <div className="text-xl font-serif text-paa-gold">{totalFairsBooks}+</div>
+                 <div className="text-[10px] uppercase tracking-widest text-gray-400">Books Sold</div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-paa-gold/10 rounded-full flex items-center justify-center mb-4 text-paa-gold">
+                <Briefcase size={24} />
+              </div>
+              <div className="text-4xl font-serif text-paa-navy mb-1">{totalLibraries}</div>
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Airport Libraries</div>
+              <div className="w-full pt-4 border-t border-gray-100 mt-auto">
+                 <div className="text-xl font-serif text-paa-gold">{totalLibraryBooks}+</div>
+                 <div className="text-[10px] uppercase tracking-widest text-gray-400">Books Distributed</div>
+              </div>
             </div>
           </div>
-        )}
 
-        <div>
-          <h3 className="font-serif text-xl text-paa-navy mb-6 border-b border-gray-100 pb-2">Past Highlights & Impact</h3>
-          <div className="flex flex-col md:flex-row gap-8 items-center">
-            <div className="w-full md:w-5/12 flex flex-col gap-6">
-              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
-                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalEvents}+</div>
-                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Events Organized</div>
-              </div>
-              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
-                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalAuthors}+</div>
-                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Author Participations</div>
-              </div>
-              <div className="bg-white p-6 rounded-2xl border border-paa-navy/5 shadow-sm">
-                <div className="text-3xl md:text-5xl font-serif text-paa-gold mb-1">{totalBooks}+</div>
-                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Books Sold</div>
-              </div>
-            </div>
-
-            <div className="w-full md:w-7/12 relative min-h-[420px] md:min-h-[450px] flex justify-center perspective-[1000px]">
+          <h3 className="font-serif text-xl text-paa-navy mb-6 border-b border-gray-100 pb-2">Event Highlights</h3>
+          <div className="relative min-h-[420px] md:min-h-[450px] flex justify-center perspective-[1000px]">
               {pastEvents.map((event, index) => {
                 const diff = (index - currentPastEventIndex + pastEvents.length) % pastEvents.length;
                 if (diff > 2 && diff < pastEvents.length - 1) return null;
@@ -183,7 +186,6 @@ function WizardEventsStep() {
                  <button onClick={prevPastEvent} className="p-3 bg-white rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 shadow-md transition-all active:scale-95"><ChevronLeft size={20} /></button>
                  <button onClick={nextPastEvent} className="p-3 bg-paa-navy rounded-full text-white hover:bg-paa-navy/90 shadow-md transition-all active:scale-95"><ChevronRight size={20} /></button>
               </div>
-            </div>
           </div>
         </div>
       </div>
@@ -398,7 +400,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
        }));
 
        if (initialData.extraData) {
-          setExtraDataState(initialData.extraData);
+          setExtraDataState(extra);
        }
        if (initialData.photoUrl) setAuthorPhotoUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.photoUrl}`);
        if (initialData.paymentScreenshot) setPaymentScreenshotUrl(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}${initialData.paymentScreenshot}`);
@@ -1629,12 +1631,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3 cursor-pointer group" onClick={() => { if (!form.agreedToInfoDoc) setShowInfoDoc(true); else update("agreedToInfoDoc", false); }}>
+                    <div className="flex items-start gap-3 cursor-pointer group" onClick={() => { if (!form.agreedToInfoDoc) { window.open(charterPdf, '_blank'); update("agreedToInfoDoc", true); } else update("agreedToInfoDoc", false); }}>
                       <div className="mt-0.5">
                         <input type="checkbox" checked={form.agreedToInfoDoc} readOnly className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 pointer-events-none" />
                       </div>
                       <div className="text-sm text-paa-navy font-medium">
-                        I have read the <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowInfoDoc(true); }} className="text-emerald-600 hover:text-emerald-700 underline underline-offset-2">Group Information Document</button> *
+                        I have read the <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(charterPdf, '_blank'); update("agreedToInfoDoc", true); }} className="text-emerald-600 hover:text-emerald-700 underline underline-offset-2">Group Information Document</button> *
                       </div>
                     </div>
                   </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Download, Edit, Trash2, Megaphone, MapPin, Search, Calendar, Package, Plus, X, List, CheckCircle, CheckCircle2, XCircle, FileDown, BookOpen, Eye, ChevronDown, ChevronUp } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, LabelList } from 'recharts';
 
 export function LibraryDonationsTab() {
   const [drives, setDrives] = useState<any[]>([]);
@@ -16,6 +16,7 @@ export function LibraryDonationsTab() {
   const [selectedDriveBreakdown, setSelectedDriveBreakdown] = useState<any>(null);
   const [driveSearch, setDriveSearch] = useState('');
   const [graphFilter, setGraphFilter] = useState<'both' | 'books' | 'authors'>('both');
+  const [donationTimeFilter, setDonationTimeFilter] = useState<string>('All');
 
   // Editing States
   const [editingDrive, setEditingDrive] = useState<any>(null);
@@ -196,8 +197,8 @@ export function LibraryDonationsTab() {
 
   const fetchAuthors = async () => {
     try {
-      const res = await axios.get(`${API}/api/admin/authors`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-      setAdminAuthors(res.data);
+      const res = await axios.get(`${API}/api/admin/authors?limit=10000`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setAdminAuthors(res.data.data || res.data);
     } catch (err) { }
   };
 
@@ -460,6 +461,23 @@ export function LibraryDonationsTab() {
   const handleExportCampaignReport = () => {
     if (!selectedDriveBreakdown) return;
 
+    const driveNameStr = (selectedDriveBreakdown.library?.name || selectedDriveBreakdown.campaignName || "").toLowerCase();
+    let staticFile = null;
+    if (driveNameStr.includes("kolkata")) staticFile = "KolkataAirport (2).xlsx";
+    else if (driveNameStr.includes("mangalor")) staticFile = "MangalorAirport (1).xlsx";
+    else if (driveNameStr.includes("pune")) staticFile = "PuneAirport (1).xlsx";
+    else if (driveNameStr.includes("thiruvananthapuram")) staticFile = "THIRUVANANTHAPURAM AIRPORT (1).xlsx";
+
+    if (staticFile) {
+        const aLink = document.createElement('a');
+        aLink.href = `/Airports/${staticFile}`;
+        aLink.download = staticFile;
+        document.body.appendChild(aLink);
+        aLink.click();
+        document.body.removeChild(aLink);
+        return;
+    }
+
     let csvContent = 'Author Name,Library Name,Book Title,Genre,Qty Committed,Qty Collected,Qty Dispatched,Qty Received,Pending Qty,Library Confirmation Status,Donation Value (MRP)\n';
 
     registrations.forEach((reg: any) => {
@@ -525,7 +543,7 @@ export function LibraryDonationsTab() {
   };
 
   const handleExportAuthorDonationReport = () => {
-    let csvContent = 'Author Name,Donation Campaigns Participated,Libraries Donated To,Total Books Donated,Total Donation Value (MRP)\n';
+    let csvContent = 'Author Name,Donation Campaigns Participated,Libraries Donated To,Registered Book Titles (System),Donated Book Titles,Total Books Donated,Total Donation Value (MRP)\n';
 
     const authorLogsMap = new Map();
     globalLogs.forEach((log: any) => {
@@ -534,6 +552,7 @@ export function LibraryDonationsTab() {
           name: log.author?.name || 'Unknown',
           campaigns: new Set(),
           libraries: new Set(),
+          donatedTitles: new Set(),
           totalBooks: 0,
           totalValue: 0
         });
@@ -551,11 +570,22 @@ export function LibraryDonationsTab() {
         const qty = b.quantityDonated || 0;
         authorData.totalBooks += qty;
         authorData.totalValue += qty * (b.book?.mrp || 0);
+        if (b.book?.title) {
+          authorData.donatedTitles.add(b.book.title);
+        }
       });
     });
 
-    authorLogsMap.forEach((data: any) => {
-      csvContent += `"${data.name}",${data.campaigns.size},${data.libraries.size},${data.totalBooks},${data.totalValue}\n`;
+    authorLogsMap.forEach((data: any, authorId: number) => {
+      // Find matching author in adminAuthors to get all system-registered books
+      const systemAuthor = adminAuthors?.find((a: any) => a.id === authorId);
+      const systemTitles = systemAuthor?.books?.map((b: any) => b.title) || [];
+      const uniqueSystemTitles = Array.from(new Set(systemTitles));
+      
+      const systemTitlesStr = uniqueSystemTitles.map((t: any) => String(t).replace(/"/g, '""')).join('; ');
+      const donatedTitlesStr = Array.from(data.donatedTitles).map((t: any) => t.replace(/"/g, '""')).join('; ');
+
+      csvContent += `"${data.name.replace(/"/g, '""')}",${data.campaigns.size},${data.libraries.size},"${systemTitlesStr}","${donatedTitlesStr}",${data.totalBooks},${data.totalValue}\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -859,13 +889,13 @@ export function LibraryDonationsTab() {
 
         <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
           <table className="w-full text-left bg-white whitespace-nowrap min-w-max">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-indigo-50 border-b-2 border-indigo-100">
               <tr>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Author Name</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Books Donating</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Payment</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase">Donation Pipeline & Status</th>
-                <th className="p-3 text-xs font-bold text-gray-500 uppercase text-right">Actions</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Author Name</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Books Donating</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Payment</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Donation Pipeline & Status</th>
+                <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -875,10 +905,15 @@ export function LibraryDonationsTab() {
                   a.name.toLowerCase().includes(registrySearch.toLowerCase())
                 );
 
+                // Sort authors alphabetically by name
+                const sortedAuthors = [...filteredAuthors].sort((a: any, b: any) => 
+                  (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+                );
+
                 // Build list of items to render
                 const itemsToRender: { author: any, reg: any }[] = [];
                 
-                filteredAuthors.forEach((author: any) => {
+                sortedAuthors.forEach((author: any) => {
                   const authorRegs = registrations.filter((r: any) => r.authorId === author.id);
                   
                   if (authorRegs.length > 0) {
@@ -904,7 +939,7 @@ export function LibraryDonationsTab() {
                   );
                 }
 
-                return itemsToRender.map(({ author, reg }) => {
+                return itemsToRender.map(({ author, reg }, idx) => {
                   const isRegistered = !!reg;
                   const totalQty = isRegistered ? reg.books.reduce((acc: any, b: any) => acc + (b.quantityDonated || 0), 0) : 0;
                   const totalValue = isRegistered ? reg.books.reduce((acc: any, b: any) => acc + ((b.quantityDonated || 0) * (b.book?.mrp || 0)), 0) : 0;
@@ -912,7 +947,7 @@ export function LibraryDonationsTab() {
 
                   return (
                     <React.Fragment key={isRegistered ? reg.id : `not-reg-${author.id}`}>
-                      <tr className="hover:bg-gray-50/50 transition-colors animate-in fade-in duration-300">
+                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors animate-in fade-in duration-300`}>
                         <td className="p-3">
                           <div className="font-medium text-paa-navy">{author.name}</div>
                           <div className="text-xs text-gray-500">{new Date(author.createdAt || Date.now()).toLocaleDateString()}</div>
@@ -1369,15 +1404,15 @@ export function LibraryDonationsTab() {
 
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
                 <table className="w-full text-left min-w-max">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Book Title</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-blue-50/50">Committed</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-amber-50/50">Collected</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-indigo-50/50">Dispatched</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase text-center bg-emerald-50/50">Received</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Library Conf.</th>
-                      <th className="p-3 text-xs font-bold text-gray-500 uppercase">Remarks</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Book Title</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Committed</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Collected</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Dispatched</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Received</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Library Conf.</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Remarks</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1450,7 +1485,12 @@ export function LibraryDonationsTab() {
   // ==========================================
   // RENDER: MAIN LIST (DONATION DRIVES)
   // ==========================================
-  const calculatedBooks = drives.reduce((sum, drive) => {
+
+
+  const nonDraftDrives = drives.filter(d => d.visibility !== 'Draft');
+  const nonDraftDrivesCount = nonDraftDrives.length;
+
+  const calculatedBooks = nonDraftDrives.reduce((sum, drive) => {
     const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
     const totalBooks = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
     const driveOverride = statsOverrides?.driveOverrides?.[drive.id] || statsOverrides?.driveOverrides?.[drive.id.toString()];
@@ -1460,7 +1500,7 @@ export function LibraryDonationsTab() {
     return sum + books;
   }, 0);
 
-  const calculatedAuthors = drives.reduce((sum, drive) => {
+  const calculatedAuthors = nonDraftDrives.reduce((sum, drive) => {
     const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
     const totalAuthors = new Set(driveLogs.map(l => l.authorId)).size;
     const driveOverride = statsOverrides?.driveOverrides?.[drive.id] || statsOverrides?.driveOverrides?.[drive.id.toString()];
@@ -1469,6 +1509,8 @@ export function LibraryDonationsTab() {
       : totalAuthors;
     return sum + authors;
   }, 0);
+
+  const activeLibrariesCount = libraries.filter(lib => drives.some(d => d.libraryId === lib.id && d.visibility !== 'Draft')).length;
 
   const filteredDrives = drives.filter(d => d.title.toLowerCase().includes(driveSearch.toLowerCase()));
 
@@ -1523,10 +1565,10 @@ export function LibraryDonationsTab() {
         ) : (
           <button
             onClick={() => {
-              setOverrideDrives(statsOverrides.drivesOverride !== null ? statsOverrides.drivesOverride : drives.length);
+              setOverrideDrives(statsOverrides.drivesOverride !== null ? statsOverrides.drivesOverride : nonDraftDrivesCount);
               setOverrideBooks(statsOverrides.booksOverride !== null ? statsOverrides.booksOverride : calculatedBooks);
               setOverrideAuthors(statsOverrides.authorsOverride !== null ? statsOverrides.authorsOverride : calculatedAuthors);
-              setOverrideLibraries(statsOverrides.librariesOverride !== null ? statsOverrides.librariesOverride : libraries.length);
+              setOverrideLibraries(statsOverrides.librariesOverride !== null ? statsOverrides.librariesOverride : activeLibrariesCount);
               setIsEditingStats(true);
             }}
             className="text-xs font-bold text-paa-navy border border-paa-navy/20 bg-gray-50 hover:bg-paa-navy/5 px-4 py-1.5 rounded-full transition-colors"
@@ -1538,68 +1580,68 @@ export function LibraryDonationsTab() {
 
       {/* Dashboard Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Drives Organized</div>
+        <div className={`bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-indigo-300 ring-offset-1" : "border-none"}`}>
+          <div className="text-[10px] font-bold text-indigo-100 uppercase tracking-wider mb-1">Total Drives Organized</div>
           {isEditingStats ? (
             <input
               type="text"
               autoFocus
-              className="text-xl font-serif text-paa-navy font-bold bg-transparent border-0 border-b-2 border-paa-navy/30 focus:border-paa-navy outline-none w-full p-0"
+              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
               value={overrideDrives}
               placeholder="NA"
               onChange={e => setOverrideDrives(e.target.value)}
             />
           ) : (
-            <div className="text-xl font-serif text-paa-navy font-bold">
-              {statsOverrides.drivesOverride !== null ? statsOverrides.drivesOverride : drives.length}
+            <div className="text-xl font-serif text-white font-bold">
+              {statsOverrides.drivesOverride !== null ? statsOverrides.drivesOverride : nonDraftDrivesCount}
             </div>
           )}
         </div>
-        <div className={`bg-blue-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-blue-400 ring-1 ring-blue-100" : "border-blue-200"}`}>
-          <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Total Books Donated</div>
+        <div className={`bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-rose-300 ring-offset-1" : "border-none"}`}>
+          <div className="text-[10px] font-bold text-rose-100 uppercase tracking-wider mb-1">Total Books Donated</div>
           {isEditingStats ? (
             <input
               type="text"
-              className="text-xl font-serif text-blue-800 font-bold bg-transparent border-0 border-b-2 border-blue-300 focus:border-blue-600 outline-none w-full p-0"
+              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
               value={overrideBooks}
               placeholder="NA"
               onChange={e => setOverrideBooks(e.target.value)}
             />
           ) : (
-            <div className="text-xl font-serif text-blue-800 font-bold">
+            <div className="text-xl font-serif text-white font-bold">
               {statsOverrides.booksOverride !== null ? statsOverrides.booksOverride : calculatedBooks}
             </div>
           )}
         </div>
-        <div className={`bg-indigo-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-indigo-400 ring-1 ring-indigo-100" : "border-indigo-200"}`}>
-          <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Authors Participated</div>
+        <div className={`bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-orange-300 ring-offset-1" : "border-none"}`}>
+          <div className="text-[10px] font-bold text-orange-100 uppercase tracking-wider mb-1">Authors Participated</div>
           {isEditingStats ? (
             <input
               type="text"
-              className="text-xl font-serif text-indigo-800 font-bold bg-transparent border-0 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none w-full p-0"
+              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
               value={overrideAuthors}
               placeholder="NA"
               onChange={e => setOverrideAuthors(e.target.value)}
             />
           ) : (
-            <div className="text-xl font-serif text-indigo-800 font-bold">
+            <div className="text-xl font-serif text-white font-bold">
               {statsOverrides.authorsOverride !== null ? statsOverrides.authorsOverride : calculatedAuthors}
             </div>
           )}
         </div>
-        <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm ${isEditingStats ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
-          <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Active Libraries</div>
+        <div className={`bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-emerald-300 ring-offset-1" : "border-none"}`}>
+          <div className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider mb-1">Active Libraries</div>
           {isEditingStats ? (
             <input
               type="text"
-              className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0"
+              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
               value={overrideLibraries}
               placeholder="NA"
               onChange={e => setOverrideLibraries(e.target.value)}
             />
           ) : (
-            <div className="text-xl font-serif text-emerald-800 font-bold">
-              {statsOverrides.librariesOverride !== null ? statsOverrides.librariesOverride : libraries.length}
+            <div className="text-xl font-serif text-white font-bold">
+              {statsOverrides.librariesOverride !== null ? statsOverrides.librariesOverride : activeLibrariesCount}
             </div>
           )}
         </div>
@@ -1607,7 +1649,54 @@ export function LibraryDonationsTab() {
 
       {/* Donations Performance Chart */}
       {(() => {
-        const chartData = drives.map(drive => {
+        let chartDrives = [...nonDraftDrives];
+        
+        // Sort chronologically so that slice(-15) works correctly
+        chartDrives.sort((a: any, b: any) => {
+          const dateA = new Date(a.registrationEndDate || a.createdAt || 0);
+          const dateB = new Date(b.registrationEndDate || b.createdAt || 0);
+          return dateA.getTime() - dateB.getTime();
+        });
+
+        const now = new Date();
+        if (donationTimeFilter === 'Last 15') {
+          chartDrives = chartDrives.slice(-15);
+        } else if (donationTimeFilter === 'Last Quarter') {
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setMonth(now.getMonth() - 3);
+          chartDrives = chartDrives.filter((d: any) => new Date(d.registrationEndDate || d.createdAt) >= threeMonthsAgo);
+        } else if (!isNaN(parseInt(donationTimeFilter))) {
+          const targetYear = parseInt(donationTimeFilter);
+          const startOfYear = new Date(targetYear, 0, 1);
+          const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59);
+          chartDrives = chartDrives.filter((d: any) => {
+            const date = new Date(d.registrationEndDate || d.createdAt);
+            return date >= startOfYear && date <= endOfYear;
+          });
+        }
+
+        const currentYear = new Date().getFullYear();
+        const availableYears = [];
+        for (let y = currentYear; y >= 2025; y--) {
+          availableYears.push(y);
+        }
+
+        let dateRangeString = 'All Time';
+        if (chartDrives.length > 0) {
+          const sortedDates = chartDrives
+            .map(d => new Date(d.registrationEndDate || d.createdAt))
+            .sort((a, b) => a.getTime() - b.getTime());
+          const firstDate = sortedDates[0];
+          const lastDate = sortedDates[sortedDates.length - 1];
+          const formatOpts: Intl.DateTimeFormatOptions = { month: 'short', year: 'numeric' };
+          if (firstDate.getTime() === lastDate.getTime() || firstDate.toLocaleDateString(undefined, formatOpts) === lastDate.toLocaleDateString(undefined, formatOpts)) {
+            dateRangeString = firstDate.toLocaleDateString(undefined, formatOpts);
+          } else {
+            dateRangeString = `${firstDate.toLocaleDateString(undefined, formatOpts)} - ${lastDate.toLocaleDateString(undefined, formatOpts)}`;
+          }
+        }
+
+        const chartData = chartDrives.map(drive => {
           const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
           const totalBooks = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
           const totalAuthors = new Set(driveLogs.map(l => l.authorId)).size;
@@ -1631,60 +1720,31 @@ export function LibraryDonationsTab() {
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <div>
-                <h4 className="font-bold text-paa-navy font-serif">Donations Performance Overview</h4>
+                <h4 className="font-bold text-paa-navy font-serif">Donations Performance Overview <span className="text-gray-500 font-normal ml-2 text-sm tracking-wide">({dateRangeString})</span></h4>
                 <p className="text-xs text-gray-500 font-medium mt-1">Comparing total books donated and author participation across campaigns.</p>
               </div>
               
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Switcher Buttons */}
-                <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 shadow-sm text-xs font-bold">
-                  <button 
-                    onClick={() => setGraphFilter('both')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      graphFilter === 'both' 
-                        ? 'bg-white text-paa-navy shadow-sm' 
-                        : 'text-gray-500 hover:text-paa-navy'
-                    }`}
-                  >
-                    Both
-                  </button>
-                  <button 
-                    onClick={() => setGraphFilter('books')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      graphFilter === 'books' 
-                        ? 'bg-white text-paa-navy shadow-sm' 
-                        : 'text-gray-500 hover:text-paa-navy'
-                    }`}
-                  >
-                    Books Only
-                  </button>
-                  <button 
-                    onClick={() => setGraphFilter('authors')}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
-                      graphFilter === 'authors' 
-                        ? 'bg-white text-paa-navy shadow-sm' 
-                        : 'text-gray-500 hover:text-paa-navy'
-                    }`}
-                  >
-                    Authors Only
-                  </button>
-                </div>
-
+              <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
+                <select
+                  className="border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-paa-navy text-gray-700 bg-gray-50"
+                  value={donationTimeFilter}
+                  onChange={(e) => setDonationTimeFilter(e.target.value)}
+                >
+                  <option value="Last 15">Last 15 Campaigns</option>
+                  <option value="All">All Time</option>
+                  <option value="Last Quarter">Last Quarter</option>
+                  {availableYears.map(y => (
+                    <option key={y} value={y.toString()}>{y}</option>
+                  ))}
+                </select>
                 {/* Legends */}
-                <div className="flex items-center gap-4 text-xs font-bold">
-                  {(graphFilter === 'both' || graphFilter === 'books') && (
-                    <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-paa-navy"></div> Books Donated</div>
-                  )}
-                  {(graphFilter === 'both' || graphFilter === 'authors') && (
-                    <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-indigo-400"></div> Authors Participated</div>
-                  )}
-                </div>
+                <div className="flex items-center gap-1.5"><div className="w-3.5 h-1.5 rounded-full bg-paa-navy"></div> Books Donated</div>
               </div>
             </div>
-            
-            <div className="h-64 w-full">
+
+            <div className="h-64 w-full animate-in fade-in duration-500">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 15, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} dy={10} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
@@ -1692,28 +1752,17 @@ export function LibraryDonationsTab() {
                     cursor={{ stroke: '#E5E7EB', strokeWidth: 1 }}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                   />
-                  {(graphFilter === 'both' || graphFilter === 'books') && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="booksDonated" 
-                      name="Books Donated" 
-                      stroke="var(--color-paa-navy, #1e3a8a)" 
-                      strokeWidth={3} 
-                      activeDot={{ r: 6 }} 
-                      dot={{ r: 3 }}
-                    />
-                  )}
-                  {(graphFilter === 'both' || graphFilter === 'authors') && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="authorsCount" 
-                      name="Authors" 
-                      stroke="#818CF8" 
-                      strokeWidth={3} 
-                      activeDot={{ r: 6 }} 
-                      dot={{ r: 3 }}
-                    />
-                  )}
+                  <Line 
+                    type="linear" 
+                    dataKey="booksDonated" 
+                    name="Books Donated" 
+                    stroke="var(--color-paa-navy, #1e3a8a)" 
+                    strokeWidth={3} 
+                    activeDot={{ r: 6 }} 
+                    dot={(props: any) => { const { cx, cy, index } = props; const total = chartData.length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={3} fill="#fff" stroke="var(--color-paa-navy, #1e3a8a)" strokeWidth={2} key={`dot-books-${index}`} />; } return null; }}
+                  >
+                    <LabelList dataKey="booksDonated" position="top" offset={10} style={{ fill: '#4b5563', fontSize: 10, fontWeight: 'bold' }} />
+                  </Line>
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -1735,15 +1784,15 @@ export function LibraryDonationsTab() {
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
         <table className="w-full text-left min-w-max">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-indigo-50 border-b-2 border-indigo-100">
             <tr>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Drive Name</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Deadline</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Location</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Authors</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Books</th>
-              <th className="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Drive Name</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Deadline</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Location</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Status</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Authors</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Books</th>
+              <th className="p-4 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -1751,7 +1800,7 @@ export function LibraryDonationsTab() {
               <tr><td colSpan={7} className="p-12 text-center text-gray-500">Loading donation drives...</td></tr>
             ) : filteredDrives.length === 0 ? (
               <tr><td colSpan={7} className="p-12 text-center text-gray-500">No donation drives found. Click "Create New Drive" to start.</td></tr>
-            ) : filteredDrives.map(drive => {
+            ) : filteredDrives.map((drive, idx) => {
               // Calculate books for this drive from globalLogs (since fetchDrives doesn't nest books)
               const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
               const totalBooks = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
@@ -1768,7 +1817,7 @@ export function LibraryDonationsTab() {
                 : totalBooks;
 
               return (
-                <tr key={drive.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={drive.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
                   <td className="p-4 max-w-[200px]">
                     <div className="font-bold text-sm text-paa-navy leading-snug line-clamp-2" title={drive.title}>{drive.title}</div>
                   </td>
@@ -1898,12 +1947,12 @@ export function LibraryDonationsTab() {
               {/* Libraries Table */}
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
-                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Library</th>
-                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Location</th>
-                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Contact</th>
-                      <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Library</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Location</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider">Contact</th>
+                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase tracking-wider text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">

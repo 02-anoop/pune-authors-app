@@ -1512,7 +1512,8 @@ export function OperationsDashboardPage() {
       prevEndDate.current = endDate;
 
       const fetchSalesData = async () => {
-        if (isDateChange || !hasLoadedInitialData.current) setIsLoading(true);
+        const needsLoadingState = isDateChange || !hasLoadedInitialData.current;
+        if (needsLoadingState) setIsLoading(true);
         try {
           const res = await axios.get(`${API}/api/admin/sales-report?startDate=${startDate}&endDate=${endDate}`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -1522,9 +1523,9 @@ export function OperationsDashboardPage() {
             hasLoadedInitialData.current = true;
           }
         } catch (err) {
-          if (isMounted && (isDateChange || !hasLoadedInitialData.current)) toast.error('Failed to load sales report');
+          if (isMounted && needsLoadingState) toast.error('Failed to load sales report');
         } finally {
-          if (isMounted && (isDateChange || !hasLoadedInitialData.current)) setIsLoading(false);
+          if (isMounted) setIsLoading(false);
         }
       };
       fetchSalesData();
@@ -4296,15 +4297,15 @@ export function OperationsDashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 border-none text-white rounded-xl p-4 shadow-sm">
             <p className="text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1">Total Events Organized</p>
-            <div className="text-2xl font-serif">{allCombinedEvents.length}</div>
+            <div className="text-2xl font-serif">{allCombinedEvents.filter(e => { const d = new Date(e.date).getTime(); return isNaN(d) || d <= Date.now(); }).length}</div>
           </div>
           <div className="bg-gradient-to-br from-rose-500 to-rose-600 border-none text-white rounded-xl p-4 shadow-sm">
             <p className="text-xs font-bold text-rose-100 uppercase tracking-wider mb-1">Total Books Sold</p>
             <div className="text-2xl font-serif">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggSold : evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0)) || 0), 0)}</div>
           </div>
           <div className="bg-gradient-to-br from-amber-500 to-orange-500 border-none text-white rounded-xl p-4 shadow-sm">
-            <p className="text-xs font-bold text-orange-100 uppercase tracking-wider mb-1">Authors Participated</p>
-            <div className="text-2xl font-serif">{allCombinedEvents.reduce((acc, evt) => acc + ((evt.isLegacy ? evt.aggAuthors : evt._count?.eventAuthors) || 0), 0)}</div>
+            <p className="text-xs font-bold text-orange-100 uppercase tracking-wider mb-1">Forthcoming Events</p>
+            <div className="text-2xl font-serif">{allCombinedEvents.filter(e => { const d = new Date(e.date).getTime(); return !isNaN(d) && d > Date.now(); }).length}</div>
           </div>
           <div className="bg-gradient-to-br from-emerald-500 to-teal-500 border-none text-white rounded-xl p-4 shadow-sm">
             <p className="text-xs font-bold text-emerald-100 uppercase tracking-wider mb-1">Total Gross Revenue</p>

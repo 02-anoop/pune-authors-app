@@ -3827,7 +3827,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
       toast.success('Event proposed successfully! It is now pending admin approval.');
       setShowProposeEventModal(false);
       setProposeEventForm({ name: '', location: '', date: '', duration: '', eventType: 'Book Fair', description: '' });
-      fetchDashboard();
+      fetchAuthorEvents();
     } catch (err: any) {
       console.error(err);
       toast.error(err.response?.data?.error || 'Failed to propose event');

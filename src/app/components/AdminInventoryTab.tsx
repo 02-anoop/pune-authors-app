@@ -337,8 +337,8 @@ export function AdminInventoryTab() {
                                   {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty} copies
                                 </span>
                                 <div className="flex gap-2 ml-auto">
-                                  <button onClick={() => approveStock(log.id, 'Approved')} className="flex items-center justify-center p-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors shadow-sm" title="Accept"><Check size={16} strokeWidth={2.5} /></button>
-                                  <button onClick={() => approveStock(log.id, 'Rejected')} className="flex items-center justify-center p-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors shadow-sm" title="Reject"><X size={16} strokeWidth={2.5} /></button>
+                                  <button onClick={() => approveStock(log.id, 'approve')} className="flex items-center justify-center p-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors shadow-sm" title="Accept"><Check size={16} strokeWidth={2.5} /></button>
+                                  <button onClick={() => approveStock(log.id, 'reject')} className="flex items-center justify-center p-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors shadow-sm" title="Reject"><X size={16} strokeWidth={2.5} /></button>
                                 </div>
                               </div>
                             ))}

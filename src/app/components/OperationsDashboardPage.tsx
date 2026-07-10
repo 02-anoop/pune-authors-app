@@ -2874,41 +2874,42 @@ export function OperationsDashboardPage() {
 
     return (
       <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
-        <div className="p-4 border-b border-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-t-xl">
+        <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-t-xl">
           <div className="flex items-center gap-3">
-            <h3 className="text-2xl font-serif font-semibold text-white tracking-tight">Authors Directory</h3>
-            <span className="bg-white/20 text-white border-transparent py-1 px-3 text-xs font-bold shadow-sm rounded-full transition-all duration-300 ease-out">{authors.length} Total</span>
+            <h3 className="text-2xl font-serif font-semibold text-[#0b1a2e] tracking-tight">Authors Directory</h3>
+            <span className="bg-[#0b1a2e]/10 text-[#0b1a2e] py-1 px-3 text-xs font-bold shadow-sm rounded-full">{authors.length} Total</span>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={handleDownloadCatalogue} disabled={selectedAuthorIds.length === 0 || isDownloadingPdf} className="dash-btn dash-btn-ghost flex items-center gap-2 border-white/30 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed">
-              {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {isDownloadingPdf ? 'Generating PDF...' : 'Download Catalogue'}
+          <div className="relative shrink-0">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="SEARCH AUTHORS..."
+              className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 text-[#0b1a2e] text-xs font-bold tracking-widest uppercase outline-none focus:border-[#0b1a2e] focus:bg-white transition-colors w-full sm:w-72 placeholder-gray-400 rounded-lg"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="p-3 bg-gray-50/80 border-b border-gray-200 flex flex-col xl:flex-row xl:items-center justify-between gap-3 overflow-x-auto">
+          <div className="flex bg-white border border-gray-200 rounded-3xl-2xl p-1 shadow-sm shrink-0">
+            {['All', 'Reapplied', 'Pending', 'Edited', 'Active', 'Rejected'].map(status => (
+              <button
+                key={status}
+                onClick={() => setAuthorStatusFilter(status)}
+                className={`px-4 py-1.5 text-xs font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl whitespace-nowrap ${authorStatusFilter === status ? 'bg-[#0b1a2e] text-white shadow-premium' : 'text-gray-500 hover:text-[#0b1a2e] hover:bg-gray-50'}`}
+              >
+                {status === 'Reapplied' ? '🔄 Reapplied' : status}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={handleDownloadCatalogue} disabled={selectedAuthorIds.length === 0 || isDownloadingPdf} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 hover:text-[#0b1a2e] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
+              {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {isDownloadingPdf ? 'Generating...' : 'Download Catalogue'}
             </button>
-            <button onClick={handleExportAuthorsCSV} className="dash-btn dash-btn-ghost flex items-center gap-2 border-white/30 text-white hover:bg-white/10">
+            <button onClick={handleExportAuthorsCSV} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 hover:text-[#0b1a2e] whitespace-nowrap shadow-sm">
               <Download className="w-4 h-4" /> Export CSV
             </button>
-            <div className="flex items-center gap-2">
-              <div className="flex bg-black/20 rounded-3xl-2xl p-1 backdrop-blur-sm">
-                {['All', 'Reapplied', 'Pending', 'Edited', 'Active', 'Rejected'].map(status => (
-                  <button
-                    key={status}
-                    onClick={() => setAuthorStatusFilter(status)}
-                    className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-3xl-2xl ${authorStatusFilter === status ? 'bg-white text-indigo-900 shadow-premium' : 'text-white/70 hover:text-white'}`}
-                  >
-                    {status === 'Reapplied' ? '🔄 Reapplied' : status}
-                  </button>
-                ))}
-              </div>
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/50" />
-                <input
-                  type="text"
-                  placeholder="SEARCH AUTHORS..."
-                  className="pl-9 pr-4 py-2 bg-white/10 border border-white/20 text-white text-xs font-bold tracking-widest uppercase outline-none focus:border-white transition-colors w-64 placeholder-white/50 rounded-lg"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
           </div>
         </div>
 
@@ -2958,7 +2959,7 @@ export function OperationsDashboardPage() {
                 if (a.status !== 'Pending' && b.status === 'Pending') return 1;
                 return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
               }).map((author, idx) => (
-                <tr key={author.id} className={`${selectedAuthorIds.includes(author.id) ? 'bg-indigo-50/30' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-100')} hover:bg-slate-200/60 transition-colors`}>
+                <tr key={author.id} className={`${selectedAuthorIds.includes(author.id) ? 'bg-indigo-100' : (idx % 2 === 0 ? 'bg-white' : 'bg-sky-50')} hover:bg-sky-100 transition-colors`}>
                   <td className="text-center">
                     <input
                       type="checkbox"
@@ -5479,6 +5480,8 @@ export function OperationsDashboardPage() {
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
+            <img src="/logo.png" alt="PAA Logo" className="h-6 w-auto object-contain md:hidden mr-1" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+            <div className="hidden md:hidden w-6 h-6 rounded-full bg-[#b44d28] items-center justify-center text-white text-[10px] font-bold mr-1">P</div>
             <div className="flex items-center gap-2 text-xs font-medium">
               <span className="text-paa-gray-text">Admin Portal</span>
               <span className="text-paa-navy/20">/</span>

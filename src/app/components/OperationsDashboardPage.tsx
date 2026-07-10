@@ -4282,7 +4282,7 @@ export function OperationsDashboardPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
-          <h3 className="text-lg font-serif font-medium text-paa-navy">Events & Fairs Ecosystem</h3>
+          <h3 className="text-3xl font-serif font-bold text-paa-navy">Events & Fairs Ecosystem</h3>
           <div className="flex gap-3">
             <button onClick={handleExportEventRegistrations} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
               <Download className="w-4 h-4" /> Export Authors/Events CSV
@@ -4387,7 +4387,7 @@ export function OperationsDashboardPage() {
           </div>
         </div>
         <div className="flex justify-between items-center mb-4 mt-8">
-          <h4 className="font-bold text-gray-700">Events Registry</h4>
+          <h4 className="text-2xl font-serif font-bold text-paa-navy">Events Registry</h4>
           <input
             type="text"
             placeholder="Search events..."
@@ -4402,8 +4402,7 @@ export function OperationsDashboardPage() {
               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
                   <th className="w-10 px-1 py-3 text-center !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5"></th>
-                  <th className="px-2 py-3 w-[20%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Name</th>
-                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Date</th>
+                  <th className="px-2 py-3 w-[30%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Name</th>
                   <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Type</th>
                   <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Reg Fee</th>
                   <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Status</th>
@@ -4422,14 +4421,16 @@ export function OperationsDashboardPage() {
                   const revenue = isPastOrArchive ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
                   return (
                     <React.Fragment key={i}>
-                      <tr className={`hover:bg-gray-50 transition-colors ${expandedEventIndex === i ? 'bg-gray-50' : ''}`}>
+                      <tr className={`hover:bg-indigo-50/60 transition-colors ${expandedEventIndex === i ? 'bg-indigo-50/60' : (i % 2 === 0 ? 'bg-white' : 'bg-indigo-50/30')}`}>
                         <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => setExpandedEventIndex(expandedEventIndex === i ? null : i)}>
                           <button className="text-gray-400 hover:text-paa-navy transition-colors">
                             {expandedEventIndex === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </button>
                         </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-paa-navy">{evt.name}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{evt.date}</td>
+                        <td className="px-4 py-3">
+                          <div className="text-base font-bold text-paa-navy mb-1">{evt.name}</div>
+                          <div className="text-[10px] font-bold text-paa-gray-text uppercase tracking-widest">{evt.date}</div>
+                        </td>
                         <td className="px-4 py-3 text-sm text-paa-gray-text capitalize">{evt.eventType || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">
                           <div>₹{evt.registrationFee || 0}</div>

@@ -26,9 +26,6 @@ export const AdminReviewsTab = () => {
     fetchReviews();
   }, []);
 
-  if (loading) {
-    return <div className="text-center py-12 text-paa-gray-text">Loading reviews...</div>;
-  }
 
   const filteredReviews = bookReviews.filter(r => {
     const query = searchQuery.toLowerCase();
@@ -72,7 +69,30 @@ export const AdminReviewsTab = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-paa-navy/5">
-              {filteredReviews.map((review) => (
+              {loading ? (
+                [1, 2, 3, 4, 5].map((i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                      <div className="h-3 bg-gray-100 rounded w-16"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                      <div className="h-3 bg-gray-100 rounded w-20"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-2 items-center min-w-[120px]">
+                        <div className="h-6 bg-yellow-50 rounded w-full"></div>
+                        <div className="h-5 bg-blue-50 rounded w-full"></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                    </td>
+                  </tr>
+                ))
+              ) : filteredReviews.map((review) => (
                 <tr key={review.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-bold text-paa-navy">{review.reviewerName}</div>
@@ -115,7 +135,7 @@ export const AdminReviewsTab = () => {
                   </td>
                 </tr>
               ))}
-              {filteredReviews.length === 0 && (
+              {(!loading && filteredReviews.length === 0) && (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-medium">
                     {searchQuery ? 'No reviews match your search.' : 'No book reviews found.'}

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import axios from "axios";
 import localforage from "localforage";
 import qrCode from "./data/qr_code.jpeg";
-const charterPdf = "/Group Activities and Charter.pdf"; // Replaced broken import
+import charterPdf from "./data/Group Activities and Charter.pdf";
 import pastEvents from "./data/past_events.json";
 import { bookCategories } from "../data/categories";
 import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon, ArrowLeft, Info, CalendarDays, Briefcase, MapPin, Clock, LogOut } from "lucide-react";

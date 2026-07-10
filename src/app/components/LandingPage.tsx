@@ -424,13 +424,23 @@ export function LandingPage() {
                    <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Trending <span style={{color: "#f16522"}}>Books</span></h3>
                    <div style={{ display: "flex", gap: "1rem" }}>
                      {galleryItems.filter(b => b.coverUrl && b.coverUrl.trim() !== "").slice(0, 3).map((book, i) => (
-                       <Link key={i} to={`/catalogue?q=${book.title}`} style={{ flex: 1, textDecoration: "none" }}>
+                       <Link key={i} to={`/book/${book.id}`} style={{ flex: 1, textDecoration: "none" }}>
                          <div style={{ width: "100%", paddingTop: "140%", position: "relative", borderRadius: 6, overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.15)", background: "#e2e8f0" }}>
-                           {book.coverUrl ? (
-                             <img src={book.coverUrl} onError={(e) => { e.currentTarget.style.display = 'none'; }} alt="Book Cover" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                           ) : (
-                             <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "#e2e8f0" }} />
-                           )}
+                           <img 
+                             src={book.coverUrl} 
+                             onError={(e) => { 
+                               e.currentTarget.style.display = 'none'; 
+                               if (e.currentTarget.nextElementSibling) {
+                                 (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex'; 
+                               }
+                             }} 
+                             alt="Book Cover" 
+                             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }} 
+                           />
+                           <div style={{ display: "none", position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "#1e293b", color: "white", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "1rem", textAlign: "center", zIndex: 0 }}>
+                             <span style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: "0.5rem", lineHeight: 1.2 }}>{book.title}</span>
+                             <span style={{ fontSize: "0.85rem", opacity: 0.9, color: "#f16522" }}>{book.authorName}</span>
+                           </div>
                          </div>
                        </Link>
                      ))}
@@ -798,8 +808,9 @@ export function LandingPage() {
               <div className="horizontal-scroll" style={{ display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "1rem", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
                 {(() => {
                   const indianLangs = ["Hindi", "English", "Marathi", "Sanskrit", "Tamil", "Telugu", "Kannada", "Malayalam", "Gujarati", "Bengali", "Punjabi", "Urdu", "Odia", "Assamese", "Maithili", "Bhojpuri"];
-                  const otherRegional = availableLanguages.filter(l => l.searchParam.toLowerCase() !== "english" && l.searchParam.toLowerCase() !== "hindi" && indianLangs.some(ind => ind.toLowerCase() === l.searchParam.toLowerCase()));
-                  const foreign = availableLanguages.filter(l => l.searchParam.toLowerCase() !== "english" && l.searchParam.toLowerCase() !== "hindi" && !indianLangs.some(ind => ind.toLowerCase() === l.searchParam.toLowerCase()) && l.name !== "Others");
+                  const safeParam = (l: any) => l.searchParam ? l.searchParam.toLowerCase() : "";
+                  const otherRegional = availableLanguages.filter(l => safeParam(l) !== "english" && safeParam(l) !== "hindi" && indianLangs.some(ind => ind.toLowerCase() === safeParam(l)));
+                  const foreign = availableLanguages.filter(l => safeParam(l) !== "english" && safeParam(l) !== "hindi" && !indianLangs.some(ind => ind.toLowerCase() === safeParam(l)) && l.name !== "Others");
 
                   if (languageDrilldown === "Others") {
                     return otherRegional.length > 0 ? otherRegional.map((l, i) => (

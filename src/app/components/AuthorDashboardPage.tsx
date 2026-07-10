@@ -50,6 +50,17 @@ export function AuthorDashboardPage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [dismissedToastId, setDismissedToastId] = useState<string | null>(() => localStorage.getItem('paa_dismissed_toast'));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
   const [fineScreenshot, setFineScreenshot] = useState<File | null>(null);
   const [isSubmittingFine, setIsSubmittingFine] = useState(false);
   const [showFineModal, setShowFineModal] = useState(false);
@@ -409,7 +420,7 @@ export function AuthorDashboardPage() {
             <div className="hidden w-8 h-8 rounded-full bg-[#b44d28] flex items-center justify-center text-white text-sm font-bold">P</div>
             <span className="font-serif font-bold text-lg tracking-tight text-paa-navy ml-1">Author Portal</span>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 text-paa-navy"><X size={20} /></button>
+
         </div>
 
         <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
@@ -438,8 +449,8 @@ export function AuthorDashboardPage() {
         {/* Top Header — breadcrumb */}
         <header className="dash-header h-[68px] flex items-center justify-between px-6 md:px-8 shrink-0 relative z-50">
           <div className="flex items-center gap-2">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
-              <Menu className="w-5 h-5" />
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <div className="flex items-center gap-2 text-xs font-medium">
               <span className="text-paa-gray-text">Author Portal</span>

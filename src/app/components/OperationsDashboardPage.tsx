@@ -76,6 +76,17 @@ export function OperationsDashboardPage() {
     (() => { const t = localStorage.getItem('adminActiveTab'); return t === 'author_data' ? 'overview' : ((t as any) || 'overview'); })()
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedBookDetails, setSelectedBookDetails] = useState<any>(null);
   const [pendingAlerts, setPendingAlerts] = useState({ orders: false, queries: false, authors: false, books: false });
@@ -5410,7 +5421,7 @@ export function OperationsDashboardPage() {
             <span className="font-serif font-bold text-lg tracking-tight hidden md:block text-paa-navy ml-1">Admin Portal</span>
           </div>
           <span className="font-serif font-bold text-lg md:hidden text-paa-navy">Menu</span>
-          <button onClick={() => setSidebarOpen(false)} className="md:hidden p-2 text-paa-navy"><X size={20} /></button>
+
         </div>
 
         <nav className="flex-1 py-5 px-4 space-y-1.5 overflow-y-auto">
@@ -5465,8 +5476,8 @@ export function OperationsDashboardPage() {
         {/* Top Header */}
         <header className="dash-header h-[68px] flex items-center justify-between px-6 md:px-8 shrink-0 relative z-50">
           <div className="flex items-center gap-2">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
-              <Menu className="w-5 h-5" />
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <div className="flex items-center gap-2 text-xs font-medium">
               <span className="text-paa-gray-text">Admin Portal</span>

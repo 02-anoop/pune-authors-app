@@ -3698,13 +3698,8 @@ router.post('/api/author/events/:eventId/opt-out', verifyToken, async (req, res)
 router.get('/api/public/events', async (req, res) => {
   try {
     const events = await prisma.event.findMany({
-      where: {
-        OR: [
-          { broadcastStatus: 'CustomersAlso' },
-          { broadcastStatus: 'AuthorsOnly' } // let's show all active events? Or just CustomersAlso? Let's show CustomersAlso
-        ]
-      },
       include: {
+         galleryEvent: { include: { images: true } },
          _count: { 
              select: { 
                 eventBooks: true, 
@@ -3714,9 +3709,7 @@ router.get('/api/public/events', async (req, res) => {
       },
       orderBy: { id: 'desc' }
     });
-    // Actually let's just fetch all events that are CustomersAlso
-    const publicEvents = events.filter(e => e.broadcastStatus === 'CustomersAlso');
-    res.json(publicEvents);
+    res.json(events);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch public events' });
   }

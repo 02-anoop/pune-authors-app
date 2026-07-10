@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import pastEvents from './data/past_events.json';
 import { Calendar, MapPin, Users, BookOpen, Clock, TrendingUp, Search, Download } from 'lucide-react';
 
 // --- FADE IN ON SCROLL (SUBTLE) ---
@@ -38,12 +37,20 @@ export function EventsPage() {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
 
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [pastEventsData, setPastEventsData] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/public/events`);
-        setUpcomingEvents(res.data);
+        const now = new Date();
+        now.setHours(0,0,0,0);
+        
+        const up = res.data.filter((e: any) => new Date(e.date).getTime() >= now.getTime() && e.eventType !== 'Flybraries').sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const past = res.data.filter((e: any) => new Date(e.date).getTime() < now.getTime() && e.eventType !== 'Flybraries').sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        setUpcomingEvents(up);
+        setPastEventsData(past);
       } catch (error) {
         console.error("Failed to fetch upcoming events:", error);
       }
@@ -51,10 +58,18 @@ export function EventsPage() {
     fetchUpcomingEvents();
   }, []);
 
-  const filteredPastEvents = pastEvents.filter(e => 
+  const filteredPastEvents = pastEventsData.filter(e => 
     e.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    e.address.toLowerCase().includes(searchTerm.toLowerCase())
-  ).reverse();
+    (e.location || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getEventBanner = (event: any) => {
+    let url = event.bannerUrl;
+    if (url) {
+      return url.startsWith('http') ? url : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${url}`;
+    }
+    return null;
+  };
 
   return (
     <main style={{ fontFamily: "var(--font-body)", background: "#fafafa", color: "#111", minHeight: "calc(100vh - 64px)", overflowX: "hidden" }}>
@@ -67,7 +82,7 @@ export function EventsPage() {
               PAA Community
             </div>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem, 5vw, 4rem)", fontWeight: 400, color: "#111", lineHeight: 1.1, letterSpacing: "-0.01em", maxWidth: 800 }}>
-              Literary <span style={{ fontStyle: "italic", color: "#b44d28" }}>Events.</span>
+              Literary Events <span style={{ fontStyle: "italic", color: "#b44d28" }}>& Book Fairs.</span>
             </h1>
             <p style={{ fontSize: 15, color: "#333", lineHeight: 1.8, marginTop: "2rem", maxWidth: 600, fontWeight: 400 }}>
               Discover our upcoming book fairs, reading sessions, and literary festivals across India. Join the movement and celebrate the written word.
@@ -104,7 +119,7 @@ export function EventsPage() {
                 cursor: "pointer", transition: "color 0.2s ease", position: "relative"
               }}
             >
-              Past ({pastEvents.length})
+              Past ({filteredPastEvents.length})
             </button>
           </div>
           
@@ -141,16 +156,16 @@ export function EventsPage() {
               </div>
             </FadeIn>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "3rem" }}>
+            <div className="events-grid">
               {upcomingEvents.map((event, i) => (
                 <FadeIn key={event.id} delay={i * 100}>
                   <div className="event-card" style={{ display: "flex", flexDirection: "column", height: "100%", border: "1px solid #eaeaea", background: "#fff", padding: "2rem", transition: "transform 0.4s ease, box-shadow 0.4s ease" }}>
-                    <div style={{ height: 180, overflow: "hidden", marginBottom: "1.5rem", border: "1px solid #eaeaea", background: "#fafafa", padding: "0.25rem" }}>
-                      {(event as any).bannerUrl ? (
-                         <img src={(event as any).bannerUrl.startsWith('http') ? (event as any).bannerUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${(event as any).bannerUrl}`} alt={event.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div style={{ height: 200, overflow: "hidden", marginBottom: "1.5rem", border: "1px solid #eaeaea", background: "#f9f9f9", padding: "0.25rem" }}>
+                      {getEventBanner(event) ? (
+                         <img src={getEventBanner(event)} alt={event.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
-                         <div style={{ width: "100%", height: "100%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", textAlign: "center" }}>
-                            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "#333", margin: 0, lineHeight: 1.2 }}>{event.name}</h3>
+                         <div style={{ width: "100%", height: "100%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem", textAlign: "center" }}>
+                            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "#888", margin: 0, lineHeight: 1.2 }}>{event.name}</h3>
                          </div>
                       )}
                     </div>
@@ -167,16 +182,22 @@ export function EventsPage() {
                       <MapPin size={14} color="#ccc" style={{ marginTop: "0.2rem", flexShrink: 0 }} /> {event.location}
                     </p>
                     
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1.5rem", marginBottom: "2rem" }}>
-                      <div>
-                        <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Authors</div>
-                        <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event._count?.eventAuthors || 0}</div>
+                    {((event._count?.eventAuthors > 0) || (event._count?.eventBooks > 0)) && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1.5rem", marginBottom: "2rem" }}>
+                        {event._count?.eventAuthors > 0 ? (
+                          <div>
+                            <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Authors</div>
+                            <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event._count.eventAuthors}</div>
+                          </div>
+                        ) : <div />}
+                        {event._count?.eventBooks > 0 ? (
+                          <div>
+                            <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Books</div>
+                            <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event._count.eventBooks}</div>
+                          </div>
+                        ) : <div />}
                       </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Books</div>
-                        <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event._count?.eventBooks || 0}</div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </FadeIn>
               ))}
@@ -193,21 +214,21 @@ export function EventsPage() {
                 </div>
               </FadeIn>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "3rem" }}>
+              <div className="events-grid">
                 {filteredPastEvents.map((event, i) => (
                   <FadeIn key={event.id} delay={i * 50}>
                     <div className="event-card" style={{ display: "flex", flexDirection: "column", height: "100%", border: "1px solid #eaeaea", background: "#fff", padding: "2rem", transition: "transform 0.4s ease, box-shadow 0.4s ease" }}>
-                      <div style={{ height: 180, overflow: "hidden", marginBottom: "1.5rem", border: "1px solid #eaeaea", background: "#fafafa", padding: "0.25rem" }}>
-                        {(event as any).photoUrl ? (
-                           <img src={(event as any).photoUrl.startsWith('http') ? (event as any).photoUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${(event as any).photoUrl}`} alt={event.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<div style="width:100%;height:100%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;padding:1rem;text-align:center"><h3 style="font-family:var(--font-display);font-size:24px;color:#333;margin:0;line-height:1.2">${event.name}</h3></div>` }} />
+                      <div style={{ height: 200, overflow: "hidden", marginBottom: "1.5rem", border: "1px solid #eaeaea", background: "#f9f9f9", padding: "0.25rem" }}>
+                        {getEventBanner(event) ? (
+                           <img src={getEventBanner(event)} alt={event.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         ) : (
-                           <div style={{ width: "100%", height: "100%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", textAlign: "center" }}>
-                              <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "#333", margin: 0, lineHeight: 1.2 }}>{event.name}</h3>
+                           <div style={{ width: "100%", height: "100%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem", textAlign: "center" }}>
+                              <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "#888", margin: 0, lineHeight: 1.2 }}>{event.name}</h3>
                            </div>
                         )}
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-                        <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#333" }}>
+                        <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#b44d28" }}>
                           {event.date}
                         </span>
                         <span style={{ fontSize: 10, color: "#555", display: "flex", alignItems: "center", gap: "0.3rem" }}>
@@ -216,26 +237,25 @@ export function EventsPage() {
                       </div>
                       <h3 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 400, color: "#111", marginBottom: "1rem", flexGrow: 1 }}>{event.name}</h3>
                       <p style={{ fontSize: 13, color: "#333", fontWeight: 400, display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "2rem" }}>
-                        <MapPin size={14} color="#ccc" style={{ marginTop: "0.2rem", flexShrink: 0 }} /> {event.address}
+                        <MapPin size={14} color="#ccc" style={{ marginTop: "0.2rem", flexShrink: 0 }} /> {event.location}
                       </p>
                       
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1.5rem", marginBottom: "2rem" }}>
-                        <div>
-                          <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Authors</div>
-                          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event.authorsParticipated}</div>
+                      {((event._count?.eventAuthors > 0) || (event._count?.eventBooks > 0)) && (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", borderTop: "1px solid #eaeaea", paddingTop: "1.5rem", marginBottom: "0rem" }}>
+                          {event._count?.eventAuthors > 0 ? (
+                            <div>
+                              <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Authors</div>
+                              <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event._count.eventAuthors}</div>
+                            </div>
+                          ) : <div />}
+                          {event._count?.eventBooks > 0 ? (
+                            <div>
+                              <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Books</div>
+                              <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event._count.eventBooks}</div>
+                            </div>
+                          ) : <div />}
                         </div>
-                        <div>
-                          <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Books Sold</div>
-                          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "#111" }}>{event.booksSold !== null ? event.booksSold : "TBA"}</div>
-                        </div>
-                      </div>
-                      
-                      <div onClick={() => { if ((event as any).reportUrl) window.open((event as any).reportUrl.startsWith('http') ? (event as any).reportUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${(event as any).reportUrl}`, '_blank'); else alert('Detailed report is not available for this legacy event.'); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #eaeaea", paddingTop: "1.5rem", cursor: "pointer" }} className="report-hover">
-                        <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#111", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <TrendingUp size={12} /> View Report
-                        </span>
-                        <Download size={14} color="#888" className="report-icon" />
-                      </div>
+                      )}
                     </div>
                   </FadeIn>
                 ))}
@@ -258,6 +278,9 @@ export function EventsPage() {
         .event-card:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
         .report-hover:hover span { color: #b44d28 !important; }
         .report-hover:hover .report-icon { color: #b44d28 !important; }
+        .events-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 3rem; }
+        @media (min-width: 768px) { .events-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 1024px) { .events-grid { grid-template-columns: repeat(3, 1fr); } }
       `}</style>
     </main>
   );

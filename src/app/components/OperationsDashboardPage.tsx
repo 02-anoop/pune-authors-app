@@ -4185,16 +4185,64 @@ export function OperationsDashboardPage() {
     if (isRefreshing) return (
       <div className="space-y-6">
         <div className="flex items-center justify-between border-b border-paa-navy/5 pb-4">
-          <div className="h-6 w-48 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-10 w-32 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-8 w-64 bg-gray-200 animate-pulse rounded"></div>
+          <div className="flex gap-3">
+            <div className="h-10 w-40 bg-gray-200 animate-pulse rounded-lg"></div>
+            <div className="h-10 w-36 bg-gray-200 animate-pulse rounded-lg"></div>
+          </div>
         </div>
+        
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[1, 2, 3, 4].map(n => <div key={n} className="h-24 bg-gray-100 animate-pulse rounded-xl"></div>)}
+          {[1, 2, 3, 4].map(n => (
+            <div key={n} className="h-24 bg-gray-100 animate-pulse rounded-xl p-4 flex flex-col justify-between shadow-sm">
+              <div className="h-3 w-2/3 bg-gray-200 rounded"></div>
+              <div className="h-8 w-1/3 bg-gray-200 rounded"></div>
+            </div>
+          ))}
         </div>
-        <div className="h-64 bg-gray-100 animate-pulse rounded-xl mb-6"></div>
-        <div className="h-10 w-64 bg-gray-200 animate-pulse rounded mb-4"></div>
-        <div className="space-y-4">
-          {[1, 2, 3, 4].map(n => <div key={n} className="h-14 bg-gray-100 animate-pulse rounded-xl w-full"></div>)}
+        
+        <div className="h-72 bg-gray-100 animate-pulse rounded-xl mb-8 p-6 flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <div className="h-5 w-40 bg-gray-200 rounded"></div>
+            <div className="h-8 w-32 bg-gray-200 rounded"></div>
+          </div>
+          <div className="flex-1 w-full bg-gray-200/50 rounded-lg"></div>
+        </div>
+
+        <div className="flex justify-between items-center mb-4">
+          <div className="h-6 w-40 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-10 w-64 bg-gray-200 animate-pulse rounded-lg"></div>
+        </div>
+
+        <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+          <div className="w-full bg-indigo-50/50 p-4 border-b-2 border-indigo-100 flex gap-4">
+             <div className="h-4 w-[30%] bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-4 w-[10%] bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-4 w-[10%] bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-4 w-[10%] bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-4 w-[10%] bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-4 w-[10%] bg-gray-200 animate-pulse rounded"></div>
+             <div className="h-4 flex-1 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+          <div className="bg-white divide-y divide-gray-50">
+            {[1, 2, 3, 4, 5].map(n => (
+              <div key={n} className="p-4 flex gap-4 items-center">
+                <div className="w-[30%] flex flex-col gap-2">
+                  <div className="h-4 w-3/4 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-3 w-1/2 bg-gray-100 animate-pulse rounded"></div>
+                </div>
+                <div className="w-[10%]"><div className="h-4 w-full bg-gray-100 animate-pulse rounded"></div></div>
+                <div className="w-[10%]"><div className="h-4 w-full bg-gray-100 animate-pulse rounded"></div></div>
+                <div className="w-[10%]"><div className="h-6 w-full bg-gray-200 animate-pulse rounded-full"></div></div>
+                <div className="w-[10%]"><div className="h-4 w-full bg-gray-100 animate-pulse rounded"></div></div>
+                <div className="w-[10%]"><div className="h-4 w-full bg-gray-100 animate-pulse rounded"></div></div>
+                <div className="flex-1 flex justify-end gap-2">
+                  <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-lg"></div>
+                  <div className="h-8 w-8 bg-gray-200 animate-pulse rounded-lg"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -4399,18 +4447,18 @@ export function OperationsDashboardPage() {
         <div className="mt-8 border border-paa-navy/5 rounded-2xl overflow-hidden shadow-sm animate-in fade-in duration-500">
           <div className="w-full">
             <table className="dash-table w-full text-left table-fixed">
-              <thead className="bg-indigo-50 border-b-2 border-indigo-100">
+              <thead className="bg-indigo-100 border-b-2 border-indigo-200">
                 <tr>
-                  <th className="w-10 px-1 py-3 text-center !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5"></th>
-                  <th className="px-2 py-3 w-[30%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Name</th>
-                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Event Type</th>
-                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Reg Fee</th>
-                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5">Status</th>
-                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-center">POS</th>
-                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Authors</th>
-                  <th className="px-2 py-3 w-[8%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Books</th>
-                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Revenue</th>
-                  <th className="px-2 py-3 w-[10%] !text-[10px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 text-right">Actions</th>
+                  <th className="w-10 px-1 py-3 text-center !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5"></th>
+                  <th className="px-2 py-3 w-[30%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5">Event Name</th>
+                  <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5">Event Type</th>
+                  <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Reg Fee</th>
+                  <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5">Status</th>
+                  <th className="px-2 py-3 w-[8%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-center">POS</th>
+                  <th className="px-2 py-3 w-[8%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Authors</th>
+                  <th className="px-2 py-3 w-[8%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Books</th>
+                  <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Revenue</th>
+                  <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-paa-navy/5 bg-white text-[11px]">
@@ -4421,7 +4469,7 @@ export function OperationsDashboardPage() {
                   const revenue = isPastOrArchive ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
                   return (
                     <React.Fragment key={i}>
-                      <tr className={`hover:bg-indigo-50/60 transition-colors ${expandedEventIndex === i ? 'bg-indigo-50/60' : (i % 2 === 0 ? 'bg-white' : 'bg-indigo-50/30')}`}>
+                      <tr className={`hover:bg-indigo-100 transition-colors ${expandedEventIndex === i ? 'bg-indigo-100' : (i % 2 === 0 ? 'bg-white' : 'bg-indigo-50')}`}>
                         <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => setExpandedEventIndex(expandedEventIndex === i ? null : i)}>
                           <button className="text-gray-400 hover:text-paa-navy transition-colors">
                             {expandedEventIndex === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -4438,7 +4486,7 @@ export function OperationsDashboardPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1.5 items-start">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${evt.isLegacy ? 'bg-gray-200 text-gray-700' : (evt.status === 'Pending Approval' ? 'bg-orange-100 text-orange-700' : evt.status === 'Upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700')}`}>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest shadow-sm ${evt.isLegacy ? 'bg-slate-500 text-white' : (evt.status === 'Pending Approval' ? 'bg-orange-500 text-white' : evt.status === 'Upcoming' ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white')}`}>
                               {evt.isLegacy ? 'Legacy Archive' : evt.status}
                             </span>
                             <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
@@ -4472,7 +4520,7 @@ export function OperationsDashboardPage() {
                                       fetchEvents();
                                     } catch (err) { toast.error('Failed to approve'); }
                                   }
-                                }} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors shadow-sm">
+                                }} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 rounded-lg border border-emerald-200 transition-colors shadow-sm">
                                   <Check className="w-4 h-4" />
                                 </button>
                                 <button title="Reject Event" onClick={async () => {
@@ -4483,12 +4531,12 @@ export function OperationsDashboardPage() {
                                       fetchEvents();
                                     } catch (err) { toast.error('Failed to reject'); }
                                   }
-                                }} className="p-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition-colors shadow-sm">
+                                }} className="p-2 text-orange-600 bg-orange-50 hover:bg-orange-600 hover:text-white hover:border-orange-600 rounded-lg border border-orange-200 transition-colors shadow-sm">
                                   <X className="w-4 h-4" />
                                 </button>
                               </>
                             ) : (
-                              <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
+                              <button title="View Breakdown" onClick={() => handleOpenBreakdown(evt)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 rounded-lg border border-indigo-200 transition-colors shadow-sm relative">
                                 <Eye className="w-4 h-4" />
                                 {evt.registrations?.filter((r: any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length > 0 && (
                                   <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse shadow-sm">
@@ -4497,10 +4545,10 @@ export function OperationsDashboardPage() {
                                 )}
                               </button>
                             )}
-                            <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors shadow-sm">
+                            <button title="Edit Event" onClick={() => { setEditingEvent(evt); setIsEditEventModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded-lg border border-blue-200 transition-colors shadow-sm">
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors shadow-sm">
+                            <button title="Delete Event" onClick={() => handleDeleteEvent(evt.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white hover:border-red-600 rounded-lg border border-red-200 transition-colors shadow-sm">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>

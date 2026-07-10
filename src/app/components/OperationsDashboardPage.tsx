@@ -1446,7 +1446,8 @@ export function OperationsDashboardPage() {
   };
 
 
-  const SalesReportTab = ({ refreshTrigger }: { refreshTrigger?: number }) => {
+  const SalesReportTab = React.useMemo(() => {
+    return function SalesReportTabComponent({ refreshTrigger }: { refreshTrigger?: number }) {
     const [filterType, setFilterType] = useState('monthly');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -1696,22 +1697,58 @@ export function OperationsDashboardPage() {
                 <h4 className="text-xs font-bold text-paa-navy uppercase tracking-widest mb-6">Revenue Over Time</h4>
                 <div className="flex-1 w-full min-h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={salesData?.chartData || []}>
+                    <LineChart data={salesData?.chartData || []} margin={{ top: 35, right: 30, left: 10, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickMargin={10} minTickGap={20} />
+                      <XAxis 
+                        dataKey="date" 
+                        fontSize={10} 
+                        tick={{ fill: '#94a3b8' }} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickMargin={15} 
+                        minTickGap={20} 
+                        tickFormatter={(val) => {
+                          const d = new Date(val);
+                          return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        }}
+                      />
                       <YAxis fontSize={10} tick={{ fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val) => `₹${val}`} width={60} />
                       <RechartsTooltip
                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', padding: '12px' }}
                         itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
                         labelStyle={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
                         formatter={(value: number) => [`₹${value}`, 'Revenue']}
+                        labelFormatter={(val) => {
+                          const d = new Date(val as string);
+                          return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        }}
                       />
                       <Line type="linear" dataKey="revenue" stroke="#06b6d4" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; const total = (salesData?.chartData || []).length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#06b6d4" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }}>
                         <LabelList dataKey="revenue" position="top" content={(props: any) => {
                           const { x, y, value, index } = props;
-                          const total = (salesData?.chartData || []).length;
+                          const data = salesData?.chartData || [];
+                          const total = data.length;
                           if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) {
-                            return <text x={x} y={y - 10} fill="#06b6d4" fontSize="10px" fontWeight="bold" textAnchor="middle">₹{value}</text>;
+                            
+                            const prev = data[index - 1]?.revenue;
+                            const next = data[index + 1]?.revenue;
+                            
+                            // Default above
+                            let yPos = y - 12;
+                            
+                            // If it's a valley, place below so the line doesn't cut through
+                            if (prev !== undefined && next !== undefined && value <= prev && value <= next) {
+                              yPos = y + 20;
+                            } else if (prev !== undefined && value < prev && next === undefined) {
+                              yPos = y + 20;
+                            }
+
+                            return (
+                              <g>
+                                <text x={x} y={yPos} fill="none" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round" fontSize="10px" fontWeight="bold" textAnchor="middle">₹{value}</text>
+                                <text x={x} y={yPos} fill="#06b6d4" fontSize="10px" fontWeight="bold" textAnchor="middle">₹{value}</text>
+                              </g>
+                            );
                           }
                           return null;
                         }} />
@@ -1809,7 +1846,8 @@ export function OperationsDashboardPage() {
         )}
       </div>
     );
-  };
+    };
+  }, []);
 
   const WebOrdersTab = ({ refreshTrigger }: { refreshTrigger?: number }) => {
     const [fineModalAuthor, setFineModalAuthor] = useState<{ id: number, name: string } | null>(null);
@@ -4292,7 +4330,7 @@ export function OperationsDashboardPage() {
           </div>
           <div className="h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
+              <LineChart data={chartData} margin={{ top: 25, right: 10, left: -20, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} angle={-90} textAnchor="end" dy={10} interval={0} height={100} tickFormatter={(v) => v.length > 25 ? v.substring(0, 25) + '...' : v} />
                 <YAxis orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
@@ -4301,8 +4339,27 @@ export function OperationsDashboardPage() {
                   contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                 />
                 {showBooksSold && (
-                  <Line type="linear" dataKey="booksSold" name="Books Sold" stroke="#ec4899" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; const total = chartData.length; if (total <= 30 || index % Math.ceil(total / 15) === 0 || index === total - 1) { return <circle cx={cx} cy={cy} r={4} fill="#ec4899" stroke="#fff" strokeWidth={2} key={`dot-${index}`} />; } return null; }} activeDot={{ r: 6 }}>
-                    <LabelList dataKey="booksSold" position="top" style={{ fontSize: '10px', fill: '#ec4899', fontWeight: 'bold' }} />
+                  <Line type="linear" dataKey="booksSold" name="Books Sold" stroke="#ec4899" strokeWidth={3} dot={(props: any) => { const { cx, cy, index } = props; return <circle cx={cx} cy={cy} r={4} fill="#ec4899" stroke="#fff" strokeWidth={2} key={`dot-${index}`} />; }} activeDot={{ r: 6 }}>
+                    <LabelList dataKey="booksSold" position="top" content={(props: any) => {
+                      const { x, y, value, index } = props;
+                      const prev = chartData[index - 1]?.booksSold;
+                      const next = chartData[index + 1]?.booksSold;
+                      
+                      let yPos = y - 12;
+                      
+                      if (prev !== undefined && next !== undefined && value <= prev && value <= next) {
+                        yPos = y + 20;
+                      } else if (prev !== undefined && value < prev && next === undefined) {
+                        yPos = y + 20;
+                      }
+
+                      return (
+                        <g>
+                          <text x={x} y={yPos} fill="none" stroke="#ffffff" strokeWidth={4} strokeLinejoin="round" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                          <text x={x} y={yPos} fill="#ec4899" fontSize="10px" fontWeight="bold" textAnchor="middle">{value}</text>
+                        </g>
+                      );
+                    }} />
                   </Line>
                 )}
               </LineChart>

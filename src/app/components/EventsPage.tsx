@@ -53,14 +53,14 @@ export function EventsPage() {
           const d = new Date(e.date);
           if (isNaN(d.getTime())) return e.status === 'Upcoming' || e.status === 'Live';
           return d >= now;
-        }).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        }).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
         
         const past = res.data.filter((e: any) => {
           if (e.eventType === 'Flybraries') return false;
           const d = new Date(e.date);
           if (isNaN(d.getTime())) return e.status !== 'Upcoming' && e.status !== 'Live';
           return d < now;
-        }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
         
         setUpcomingEvents(up);
         setPastEventsData(past);

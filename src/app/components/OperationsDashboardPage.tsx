@@ -213,7 +213,7 @@ const WebOrdersTab = ({
           <div className="grid grid-cols-2 gap-4 h-[calc(100%-2rem)]">
             {[
               { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'green' },
-              { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'amber' },
+              { label: 'Pending Verification', value: toApproveOrders, icon: Clock, colorClass: 'amber' },
               { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'blue' },
               { label: 'Total Customers', value: totalCustomers, icon: Users, colorClass: 'red' },
             ].map((kpi, i) => (

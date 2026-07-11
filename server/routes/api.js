@@ -1138,23 +1138,33 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
     const totalAuthors = await prisma.author.count();
     const totalBooks = await prisma.book.count();
     
-    const [eventParticipations, pendingEventRegistrations] = await Promise.all([
+    const [eventParticipations, pendingEventRegistrations, totalEvents, totalLibraries] = await Promise.all([
       prisma.eventAuthor.count({ where: { optInStatus: 'Registered' } }),
-      prisma.eventAuthor.count({ where: { optInStatus: 'Pending Approval' } })
+      prisma.eventAuthor.count({ where: { optInStatus: 'Pending Approval' } }),
+      prisma.event.count(),
+      prisma.library.count()
     ]);
     
     // 1. Total Revenue
-    const webRevenueAgg = await prisma.order.aggregate({
-      _sum: { amount: true },
-      where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } }
+    const webOrderItems = await prisma.orderItem.findMany({
+      where: { order: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } }, status: { notIn: ['Cancelled', 'Rejected'] } },
+      select: { quantity: true, book: { select: { mrp: true } } }
     });
-    const webRevenue = webRevenueAgg._sum.amount || 0;
+    const webRevenue = webOrderItems.reduce((sum, item) => sum + (item.quantity * (item.book?.mrp || 0)), 0);
     
-    const posRevenueAgg = await prisma.posOrder.aggregate({
-      _sum: { totalAmount: true }
+    const posOrderItems = await prisma.posOrderItem.findMany({
+      where: { posOrder: { paymentStatus: 'CONFIRMED' } },
+      select: { quantity: true, price: true }
     });
-    const posRevenue = posRevenueAgg._sum.totalAmount || 0;
-    const totalRevenue = webRevenue + posRevenue;
+    const posRevenue = posOrderItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+
+    const manualSales = await prisma.eventAuthor.findMany({
+      where: { manualTotalSold: { gt: 0 } },
+      select: { manualTotalRevenue: true }
+    });
+    const manualRevenue = manualSales.reduce((sum, item) => sum + (item.manualTotalRevenue || 0), 0);
+
+    const totalRevenue = webRevenue + posRevenue + manualRevenue;
 
     // 2. Revenue Data (Last 6 Months)
     // We can use Prisma groupBy or queryRaw. To be safe across DBs, we'll fetch only date & amount for web orders
@@ -1164,12 +1174,13 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
     sixMonthsAgo.setDate(1);
     sixMonthsAgo.setHours(0,0,0,0);
     
-    const recentOrders = await prisma.order.findMany({
+    const recentOrders = await prisma.orderItem.findMany({
       where: { 
-        status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] },
+        order: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } },
+        status: { notIn: ['Cancelled', 'Rejected'] },
         createdAt: { gte: sixMonthsAgo }
       },
-      select: { amount: true, createdAt: true }
+      select: { quantity: true, book: { select: { mrp: true } }, createdAt: true }
     });
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1185,7 +1196,7 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
       const d = new Date(o.createdAt);
       const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
       if (revenueDataMap[key]) {
-        revenueDataMap[key].revenue += o.amount;
+        revenueDataMap[key].revenue += (o.quantity * (o.book?.mrp || 0));
       }
     });
     const revenueData = Object.values(revenueDataMap);
@@ -1252,6 +1263,7 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
 
     // 5. Event Sales
     const posItems = await prisma.posOrderItem.findMany({
+      where: { posOrder: { paymentStatus: 'CONFIRMED' } },
       select: {
         quantity: true,
         posOrder: { select: { event: { select: { name: true } } } }
@@ -1263,6 +1275,17 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
       const eventName = item.posOrder.event.name;
       if (!eventSalesMap[eventName]) eventSalesMap[eventName] = { name: eventName, booksSold: 0 };
       eventSalesMap[eventName].booksSold += item.quantity;
+    });
+
+    const manualSalesBooks = await prisma.eventAuthor.findMany({
+      where: { manualTotalSold: { gt: 0 } },
+      select: { manualTotalSold: true, event: { select: { name: true } } }
+    });
+    manualSalesBooks.forEach(item => {
+      if (!item.event) return;
+      const eventName = item.event.name;
+      if (!eventSalesMap[eventName]) eventSalesMap[eventName] = { name: eventName, booksSold: 0 };
+      eventSalesMap[eventName].booksSold += item.manualTotalSold;
     });
     const allEvents = await prisma.event.findMany({ select: { name: true } });
     allEvents.forEach(evt => {
@@ -1291,9 +1314,20 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
     activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const recentActivities = activities.slice(0, 8);
 
+    // 7. Global Order KPIs for Dashboard Table Header
+    const [globalSuccessfulOrders, globalPendingOrders, globalDispatchedOrders, uniqueCustomersData] = await Promise.all([
+      prisma.order.count({ where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } } }),
+      prisma.order.count({ where: { status: { in: ['Pending Verification', 'Processing', 'Pending'] } } }),
+      prisma.order.count({ where: { status: 'Dispatched' } }),
+      prisma.order.groupBy({ by: ['customerEmail'], _count: { id: true }, where: { customerEmail: { not: null } } })
+    ]);
+    const globalTotalCustomers = uniqueCustomersData.length;
+
     const result = { 
       totalAuthors, totalBooks, eventParticipations, totalRevenue, revenueData, recentActivities,
-      salesByAuthor, salesByGenre, topSellingBooks, topCustomers, lowStockAlerts, eventSalesData, pendingEventRegistrations
+      salesByAuthor, salesByGenre, topSellingBooks, topCustomers, lowStockAlerts, eventSalesData, pendingEventRegistrations,
+      globalSuccessfulOrders, globalPendingOrders, globalDispatchedOrders, globalTotalCustomers,
+      totalEvents, totalLibraries
     };
     
     setCache('admin:dashboard-stats', result, 45 * 1000);
@@ -2830,6 +2864,7 @@ router.get('/api/admin/orders', verifyToken, isAdmin, async (req, res) => {
           bundleDiscount: true,
           amount: true,
           status: true,
+          transactionId: true,
           paymentScreenshot: true,
           items: {
             select: {
@@ -5297,12 +5332,12 @@ router.get('/api/admin/sales-analytics', verifyToken, isAdmin, async (req, res) 
     const webOrders = await prisma.orderItem.findMany({
       where: {
         createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
-        order: { paymentVerified: true },
+        order: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } },
         status: { notIn: ['Cancelled', 'Rejected'] }
       },
       include: {
         order: { select: { customerName: true, id: true } },
-        book: { select: { title: true, author: { select: { name: true } } } }
+        book: { select: { title: true, mrp: true, author: { select: { name: true } } } }
       }
     });
 
@@ -5310,7 +5345,7 @@ router.get('/api/admin/sales-analytics', verifyToken, isAdmin, async (req, res) 
     const posOrders = await prisma.posOrderItem.findMany({
       where: {
         createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
-        posOrder: { status: 'PAID' }
+        posOrder: { paymentStatus: 'CONFIRMED' }
       },
       include: {
         posOrder: { select: { id: true, event: { select: { name: true } } } },
@@ -5319,14 +5354,14 @@ router.get('/api/admin/sales-analytics', verifyToken, isAdmin, async (req, res) 
     });
 
     // 3. Fetch Event Manual Sales (if they have dates)
-    const manualSales = await prisma.eventRegistration.findMany({
+    const manualSales = await prisma.eventAuthor.findMany({
       where: {
-        manualSoldQty: { gt: 0 },
-        ...(Object.keys(dateFilter).length > 0 ? { updatedAt: dateFilter } : {})
+        manualTotalSold: { gt: 0 },
+        ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {})
       },
       include: {
-        author: { select: { name: true } },
-        event: { select: { name: true } }
+        event: { select: { name: true } },
+        author: { select: { name: true } }
       }
     });
 
@@ -5335,7 +5370,7 @@ router.get('/api/admin/sales-analytics', verifyToken, isAdmin, async (req, res) 
     let totalUnits = 0;
     
     webOrders.forEach(item => {
-      const revenue = item.quantity * item.price;
+      const revenue = item.quantity * (item.book?.mrp || 0);
       totalRevenue += revenue;
       totalUnits += item.quantity;
       ledger.push({
@@ -5367,17 +5402,17 @@ router.get('/api/admin/sales-analytics', verifyToken, isAdmin, async (req, res) 
     });
 
     manualSales.forEach(item => {
-      totalRevenue += item.manualSoldAmount || 0;
-      totalUnits += item.manualSoldQty || 0;
+      totalRevenue += item.manualTotalRevenue || 0;
+      totalUnits += item.manualTotalSold || 0;
       ledger.push({
-        date: item.updatedAt || item.createdAt,
+        date: item.createdAt,
         channel: 'Manual',
         refId: `EVT-${item.eventId}`,
         customer: 'Walk-in (Manual)',
         title: 'Mixed Books',
         author: item.author.name,
-        qty: item.manualSoldQty,
-        revenue: item.manualSoldAmount || 0
+        qty: item.manualTotalSold || 0,
+        revenue: item.manualTotalRevenue || 0
       });
     });
 

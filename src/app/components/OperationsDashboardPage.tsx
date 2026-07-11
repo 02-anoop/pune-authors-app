@@ -5,7 +5,7 @@ import {
   Eye, Edit, Edit2, Trash2, X, BarChart3, Filter, CheckCircle2, XCircle,
   TrendingUp, Bell, MapPin, MoreVertical, Check, CreditCard, Menu,
   ShoppingCart, Package, LogOut, ArrowLeft, ClipboardList, Image as ImageIcon, ChevronDown, ChevronUp, Loader2, FileText, AlertCircle,
-  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, ChevronLeft, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send, User, Phone
+  LayoutDashboard, LayoutGrid, CheckCircle, Clock, ChevronRight, ChevronLeft, Download, BarChart2, DollarSign, ExternalLink, HelpCircle, Key, Globe, Mail, PieChart, Activity, Printer, FileDown, CheckSquare, Lock, MessageSquare, Star, Megaphone, UserCircle, Send, User, Phone, Library
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, LineChart, Line, LabelList
@@ -120,7 +120,7 @@ export function OperationsDashboardPage() {
   // State for data
   const [stats, setStats] = useState<any>(() => {
     const cached = sessionStorage.getItem('adminStats');
-    return cached ? JSON.parse(cached) : { totalAuthors: 0, totalBooks: 0, eventParticipations: 0, totalRevenue: 0, revenueData: [], recentActivities: [], salesByAuthor: [], salesByGenre: [], topSellingBooks: [], topCustomers: [], lowStockAlerts: [] };
+    return cached ? JSON.parse(cached) : { totalAuthors: 0, totalBooks: 0, totalEvents: 0, totalLibraries: 0, totalRevenue: 0, revenueData: [], recentActivities: [], salesByAuthor: [], salesByGenre: [], topSellingBooks: [], topCustomers: [], lowStockAlerts: [] };
   });
   const [authors, setAuthors] = useState<any[]>(() => {
     const cached = sessionStorage.getItem('adminAuthors');
@@ -1161,11 +1161,12 @@ export function OperationsDashboardPage() {
     return (
       <div className="space-y-6">
         {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ High Level KPIs ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
           {[
             { label: 'Total Authors', value: stats?.totalAuthors || 0, icon: Users, colorClass: 'blue' },
             { label: 'Books Published', value: stats?.totalBooks || 0, icon: BookOpen, colorClass: 'green' },
-            { label: 'Event Participations', value: stats?.eventParticipations || 0, icon: CalendarIcon, colorClass: 'amber' },
+            { label: 'No of Events', value: stats?.totalEvents || 0, icon: CalendarIcon, colorClass: 'amber' },
+            { label: 'No of Flybraries', value: stats?.totalLibraries || 0, icon: Library, colorClass: 'purple' },
             { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },
           ].map((kpi, i) => (
             <div key={i} className={`dash-kpi-card ${kpi.colorClass}`}>
@@ -1913,14 +1914,15 @@ export function OperationsDashboardPage() {
       );
     });
 
-    const successfulOrders = filteredOrders.filter((o: any) => o.status === 'Completed').length;
-    const toApproveOrders = filteredOrders.filter((o: any) => o.status === 'Pending Verification' || o.status === 'Processing').length;
-    const underDeliveryOrders = filteredOrders.filter((o: any) => o.status === 'Dispatched').length;
+    const successfulOrders = stats?.globalSuccessfulOrders || 0;
+    const toApproveOrders = stats?.globalPendingOrders || 0;
+    const underDeliveryOrders = stats?.globalDispatchedOrders || 0;
     const returnedOrdersCount = filteredOrders.filter((o: any) => o.status === 'Returned' || o.status === 'Cancelled').length;
 
     const totalRevenueWebOrders = filteredOrders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
 
     // Additional Insights
+    const totalCustomers = stats?.globalTotalCustomers || 0;
 
     let totalDeliveryTime = 0;
     let deliveredCount = 0;
@@ -1994,7 +1996,7 @@ export function OperationsDashboardPage() {
                 { label: 'Successful Orders', value: successfulOrders, icon: Check, colorClass: 'green' },
                 { label: 'Pending Fulfillment', value: toApproveOrders, icon: Clock, colorClass: 'amber' },
                 { label: 'Under Delivery', value: underDeliveryOrders, icon: Package, colorClass: 'blue' },
-                { label: 'Total Customers', value: new Set(orders.map((o: any) => o.customerEmail)).size, icon: Users, colorClass: 'red' },
+                { label: 'Total Customers', value: totalCustomers, icon: Users, colorClass: 'red' },
               ].map((kpi, i) => (
                 <div key={i} className={`dash-kpi-card ${kpi.colorClass} flex flex-col justify-center items-start gap-2`}>
                   <div className={`dash-kpi-icon ${kpi.colorClass}`}>
@@ -2011,7 +2013,7 @@ export function OperationsDashboardPage() {
 
           <div className="lg:col-span-1 bg-white border border-gray-100 rounded-2xl shadow-sm p-4 flex flex-col hover:shadow-md transition-shadow">
             <h3 className="text-[11px] font-bold tracking-widest uppercase text-paa-gray-text mb-4 flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-indigo-500" /> State Distribution
+              <PieChart className="w-4 h-4 text-indigo-500" /> State Distribution (Current Page)
             </h3>
             <div className="flex-1 w-full min-h-[160px]">
               {topStates.length > 0 ? (

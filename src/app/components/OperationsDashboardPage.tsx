@@ -5132,12 +5132,9 @@ export function OperationsDashboardPage() {
       const matchSearch = (e.name?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase()) || (e.location?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase());
       const matchType = galleryTabFilterType ? e.eventType === galleryTabFilterType : true;
       const matchDate = galleryTabFilterDate ? new Date(e.date).toISOString().startsWith(galleryTabFilterDate) : true;
-      return matchSearch && matchType && matchDate;
+      const isPastEvent = new Date(e.date) <= new Date();
+      return matchSearch && matchType && matchDate && isPastEvent;
     }).sort((a: any, b: any) => {
-      const aPending = a.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
-      const bPending = b.galleryEvent?.images?.filter((i: any) => i.status !== 'Approved').length || 0;
-
-      if (aPending !== bPending) return bPending - aPending; // Always prioritize events with pending approvals
 
       if (galleryTabSortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
       if (galleryTabSortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -5153,7 +5150,7 @@ export function OperationsDashboardPage() {
             <div className="dash-panel-header flex justify-between items-center">
               <div className="flex gap-2">
                 <button onClick={() => setGallerySubTab('events')} className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${gallerySubTab === 'events' ? 'bg-paa-navy text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:text-paa-navy hover:bg-gray-200'}`}>Event Galleries</button>
-                <button onClick={() => setGallerySubTab('carousel')} className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${gallerySubTab === 'carousel' ? 'bg-paa-navy text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:text-paa-navy hover:bg-gray-200'}`}>Buyer Carousel</button>
+                <button onClick={() => setGallerySubTab('carousel')} className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${gallerySubTab === 'carousel' ? 'bg-paa-navy text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:text-paa-navy hover:bg-gray-200'}`}>Featured Gallery Images</button>
               </div>
               {gallerySubTab === 'events' && (
                 <span className="px-4 py-2 bg-paa-cream text-paa-navy text-xs font-bold uppercase tracking-widest border border-paa-navy/10 rounded-xl">
@@ -5167,8 +5164,8 @@ export function OperationsDashboardPage() {
                 <div className="animate-fade-in-up">
                   <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
                     <div>
-                      <h3 className="font-bold text-paa-navy text-lg tracking-tight">Buyer Side Carousel Images</h3>
-                      <p className="text-sm text-gray-500">Upload up to 10 high-quality images for the landing page carousel. ({carouselImages.length}/10 uploaded)</p>
+                      <h3 className="font-bold text-paa-navy text-lg tracking-tight">Featured Gallery Images</h3>
+                      <p className="text-sm text-gray-500">Upload up to 10 high-quality images for the landing page showcase. ({carouselImages.length}/10 uploaded)</p>
                     </div>
                     <input type="file" accept="image/*" className="hidden" ref={carouselFileInputRef} onChange={handleCarouselUpload} />
                     <button
@@ -5183,7 +5180,7 @@ export function OperationsDashboardPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {carouselImages.map(img => (
                       <div key={img.id} className="bg-white rounded-2xl border border-gray-100 shadow-premium overflow-hidden group relative aspect-[4/3]">
-                        <img src={`${API}${img.url}`} alt="Carousel" className="w-full h-full object-cover" />
+                        <img src={`${API}${img.url}`} alt="Featured Image" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <button onClick={() => handleCarouselDelete(img.url.split('/').pop()!)} className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg" title="Remove">
                             <Trash2 size={16} />
@@ -5198,8 +5195,8 @@ export function OperationsDashboardPage() {
                       <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                         <ImageIcon className="w-8 h-8 text-gray-300" />
                       </div>
-                      <h3 className="text-lg font-bold text-paa-navy">No Carousel Images</h3>
-                      <p className="text-gray-500 text-sm mt-1">Upload images here to show them in the landing page carousel.</p>
+                      <h3 className="text-lg font-bold text-paa-navy">No Featured Images</h3>
+                      <p className="text-gray-500 text-sm mt-1">Upload images here to feature them on the main landing page showcase.</p>
                     </div>
                   )}
                 </div>

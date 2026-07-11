@@ -5718,7 +5718,8 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
                         (ge.city?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchType = filterType ? ge.type === filterType : true;
     const matchDate = filterDate ? new Date(ge.date).toISOString().startsWith(filterDate) : true;
-    return matchSearch && matchType && matchDate;
+    const isPastEvent = new Date(ge.date) <= new Date();
+    return matchSearch && matchType && matchDate && isPastEvent;
   }).sort((a: any, b: any) => {
     if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
     if (sortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();

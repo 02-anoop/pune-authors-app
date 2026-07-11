@@ -1820,7 +1820,7 @@ export function OperationsDashboardPage() {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="dash-table w-full text-left table-fixed">
+                <table className="dash-table w-full text-left min-w-[950px]">
                   <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                     <tr>
                       <th className="w-[12%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 border-b border-gray-100">Date</th>

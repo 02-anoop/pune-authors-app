@@ -97,21 +97,24 @@ const WebOrdersTab = ({
     const { status: ordStatus, items } = ord;
     if (ordStatus === 'Cancelled') return { text: 'Cancelled', style: 'bg-red-500 text-white border-transparent shadow-md' };
     if (ordStatus === 'Payment Not Received') return { text: 'Payment Failed', style: 'bg-red-500 text-white border-transparent shadow-md' };
-    if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') return { text: 'Pending Verification', style: 'bg-yellow-400 text-black border-transparent shadow-md' };
 
-    if (!items || items.length === 0) return { text: ordStatus, style: 'bg-gray-500 text-white border-transparent shadow-md' };
+    if (items && items.length > 0) {
+      const allCompleted = items.every((it: any) => it.status === 'Completed' || it.status === 'Delivered');
+      const anyDispatched = items.some((it: any) => it.status === 'Dispatched' || it.status === 'Completed' || it.status === 'Delivered');
+      const anyAccepted = items.some((it: any) => it.status === 'Accepted');
+      const anyRejected = items.some((it: any) => it.status === 'Rejected');
 
-    const allCompleted = items.every((it: any) => it.status === 'Completed' || it.status === 'Delivered');
-    const anyDispatched = items.some((it: any) => it.status === 'Dispatched' || it.status === 'Completed' || it.status === 'Delivered');
-    const anyAccepted = items.some((it: any) => it.status === 'Accepted');
-    const anyRejected = items.some((it: any) => it.status === 'Rejected');
+      if (allCompleted) return { text: 'Delivered', style: 'bg-green-500 text-white border-transparent shadow-md' };
+      if (anyDispatched) return { text: 'Dispatched', style: 'bg-blue-500 text-white border-transparent shadow-md' };
+      if (anyAccepted) return { text: 'Accepted', style: 'bg-purple-500 text-white border-transparent shadow-md' };
+      if (anyRejected) return { text: 'Rejected', style: 'bg-red-500 text-white border-transparent shadow-md' };
+    }
 
-    if (allCompleted) return { text: 'Delivered', style: 'bg-green-500 text-white border-transparent shadow-md' };
-    if (anyDispatched) return { text: 'Dispatched', style: 'bg-blue-500 text-white border-transparent shadow-md' };
-    if (anyAccepted) return { text: 'Accepted', style: 'bg-purple-500 text-white border-transparent shadow-md' };
-    if (anyRejected) return { text: 'Rejected', style: 'bg-red-500 text-white border-transparent shadow-md' };
+    if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') {
+      return { text: 'Pending Verification', style: 'bg-yellow-400 text-black border-transparent shadow-md' };
+    }
 
-    return { text: 'Pending', style: 'bg-yellow-400 text-black border-transparent shadow-md' };
+    return { text: ordStatus || 'Pending', style: 'bg-gray-500 text-white border-transparent shadow-md' };
   };
 
   const filteredOrders = orders.filter((ord: any) => {

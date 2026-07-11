@@ -935,6 +935,9 @@ export function OperationsDashboardPage() {
         prevOrderCountRef.current = w.__apiCache.adminOrders.length;
       }
 
+      // Fetch overview stats in the background so KPI cards stay in sync
+      fetchOverview(true).catch(() => {});
+
       const res = await axios.get(`${API}/api/admin/orders?page=${ordersPage}&limit=50`);
       const newCount = res.data.meta?.total || res.data.length;
 

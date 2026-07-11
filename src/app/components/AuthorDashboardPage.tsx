@@ -1541,8 +1541,8 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
               {filteredTitles.length === 0 ? (
                 <tr><td colSpan={10} className="text-center py-10 text-paa-gray-text italic text-sm">No titles for this filter.</td></tr>
               ) : filteredTitles.map((row: any, idx: number) => (
-                <tr key={row.id}>
-                  <td className="text-paa-gray-text text-xs">{idx + 1}</td>
+                <tr key={row.id} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200`}>
+                  <td className="text-paa-gray-text text-xs text-center">{idx + 1}</td>
                   <td>{authorBooks.find((b: any) => b.id === row.id)?.coverUrl
                     ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-9 h-12 object-cover rounded-lg shadow-sm" />
                     : <div className="w-9 h-12 bg-gray-100 rounded-lg border flex items-center justify-center text-[9px] text-gray-400">No cover</div>}
@@ -2028,7 +2028,7 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                       dataKey="value"
                     >
                       {inventory.map((_: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][index % 8]} />
+                        <Cell key={`cell-${index}`} fill={['#ef4444','#22c55e','#f59e0b','#a855f7','#06b6d4','#eab308','#ec4899','#3b82f6','#84cc16','#f97316'][index % 10]} />
                       ))}
                     </Pie>
                     <Tooltip
@@ -2043,7 +2043,7 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 border-t pt-3 max-h-[80px] overflow-y-auto">
               {inventory.map((b: any, i: number) => (
                 <div key={b.id} className="flex items-center gap-2 text-[10px]">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ['#6366f1','#16a34a','#0284c7','#9333ea','#f59e0b','#ef4444','#06b6d4','#ec4899'][i % 8] }} />
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ['#ef4444','#22c55e','#f59e0b','#a855f7','#06b6d4','#eab308','#ec4899','#3b82f6','#84cc16','#f97316'][i % 10] }} />
                   <span className="text-gray-500 truncate max-w-[120px]" title={b.title}>{b.title}</span>
                   <span className="font-bold text-paa-navy ml-1">{b.currentStock}</span>
                 </div>
@@ -2076,8 +2076,8 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                         dataKey="value"
                       >
                         {[
-                          { name: 'Airport Library', color: '#0284c7' },
-                          { name: 'Book Fairs', color: '#9333ea' }
+                          { name: 'Airport Library', color: '#06b6d4' },
+                          { name: 'Book Fairs', color: '#ec4899' }
                         ].filter(item => (item.name === 'Airport Library' ? totalAirport : totalEvent) > 0).map((item, index) => (
                           <Cell key={`cell-${index}`} fill={item.color} />
                         ))}
@@ -2094,8 +2094,8 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
             {/* Legend */}
             <div className="flex justify-center gap-6 mt-3 border-t pt-3">
               {[
-                { name: 'Airport Library', value: totalAirport, color: '#0284c7' },
-                { name: 'Book Fairs', value: totalEvent, color: '#9333ea' }
+                { name: 'Airport Library', value: totalAirport, color: '#06b6d4' },
+                { name: 'Book Fairs', value: totalEvent, color: '#ec4899' }
               ].map(item => (
                 <div key={item.name} className="flex items-center gap-2 text-[10px]">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
@@ -2125,11 +2125,11 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
         {/* LEFT — Main Table */}
         <div className="bg-white border border-black/5 rounded-[14px] shadow-sm overflow-hidden flex-1 min-w-0">
           <div className="overflow-x-auto">
-            <table className="dash-table w-full text-left min-w-[800px]">
+            <table className="dash-table w-full text-left">
               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
-                  {['S.No', 'Title', 'Author', 'MRP', 'QTY Sold (Web)', 'QTY to Airport', 'QTY for Book Fair', 'Current Stock', 'Last Updated', 'Update Stock'].map(h => (
-                    <th key={h} className={`px-4 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent border-b border-paa-navy/5 whitespace-nowrap ${h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}`}>
+                  {['S.No', 'Title', 'Author', 'MRP', 'Web Qty', 'Airport Qty', 'Fair Qty', 'Stock', 'Updated', 'Logs', 'Update'].map(h => (
+                    <th key={h} className={`px-2 py-2 !text-[11px] font-bold uppercase tracking-wider !text-indigo-800 !bg-transparent border-b border-paa-navy/5 whitespace-nowrap ${h === 'Title' || h === 'Author' ? 'text-left' : 'text-center'}`}>
                       {h}
                     </th>
                   ))}
@@ -2138,43 +2138,43 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
               <tbody>
                 {inventory.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-gray-400 text-sm italic">
+                    <td colSpan={11} className="py-12 text-center text-gray-400 text-sm italic">
                       No books in your inventory yet. Add books from your Overview tab.
                     </td>
                   </tr>
                 ) : inventory.map((book, idx) => {
                   const isSelected = selectedBook?.id === book.id;
                   return (
-                    <tr
-                      key={book.id}
-                      onClick={() => handleRowClick(book)}
-                      className={`cursor-pointer transition-colors hover:bg-gray-50 border-b border-black/5 ${isSelected ? 'bg-indigo-50/40 ring-2 ring-indigo-200 ring-inset' : 'bg-white'}`}
-                    >
+                    <React.Fragment key={book.id}>
+                      <tr
+                        onClick={() => handleRowClick(book)}
+                        className={`cursor-pointer transition-colors hover:bg-blue-200 border-b border-black/5 ${isSelected ? 'bg-blue-300 ring-2 ring-blue-500 ring-inset' : idx % 2 === 0 ? 'bg-white' : 'bg-blue-100'}`}
+                      >
                       {/* S.No */}
-                      <td className="px-4 py-3 text-center text-sm font-bold text-gray-500">{idx + 1}</td>
+                      <td className="px-2 py-2 text-center text-sm font-bold text-gray-500">{idx + 1}</td>
                       {/* Title */}
-                      <td className="px-4 py-3 max-w-[160px]">
+                      <td className="px-2 py-2 max-w-[140px]">
                         <p className="font-bold text-paa-navy m-0 truncate" title={book.title}>{book.title}</p>
-                        <p className="text-[10px] text-gray-400 m-0 uppercase tracking-widest mt-1">{book.genre}</p>
+                        <p className="text-[9px] text-gray-400 m-0 uppercase tracking-widest mt-1 truncate">{book.genre}</p>
                       </td>
                       {/* Author */}
-                      <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">{book.authorName}</td>
+                      <td className="px-2 py-2 text-xs font-medium text-gray-700 whitespace-nowrap truncate max-w-[100px]">{book.authorName}</td>
                       {/* MRP */}
-                      <td className="px-4 py-3 text-center text-sm font-bold text-paa-navy">₹{book.mrp}</td>
+                      <td className="px-2 py-2 text-center text-sm font-bold text-paa-navy">₹{book.mrp}</td>
                       {/* QTY Web */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-2 py-2 text-center">
                         <span className="font-bold text-green-600 text-sm">{book.webSold}</span>
                       </td>
                       {/* QTY Airport */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-2 py-2 text-center">
                         <span className="font-bold text-sky-600 text-sm">{book.airportQty}</span>
                       </td>
                       {/* QTY Book Fair */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-2 py-2 text-center">
                         <span className="font-bold text-purple-600 text-sm">{book.eventQty}</span>
                       </td>
                       {/* Current Stock */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-2 py-2 text-center">
                         <div className="flex flex-col items-center gap-1">
                           <span className={`font-bold text-sm ${book.isLowStock ? 'text-red-600' : 'text-paa-navy'}`}>
                             {book.currentStock}
@@ -2187,47 +2187,25 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                         </div>
                       </td>
                       {/* Last Updated */}
-                      <td className="px-4 py-3 text-center text-gray-500 text-xs relative" onClick={e => e.stopPropagation()}>
-                        <div className="flex flex-col items-center gap-1.5">
-                          <span>
-                            {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                          </span>
-                          {book.stockHistory && book.stockHistory.length > 0 && (
-                            <div className="relative">
-                              <button
-                                onClick={() => setActiveHistoryId(activeHistoryId === book.id ? null : book.id)}
-                                className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-paa-navy hover:text-paa-gold border border-paa-navy/20 bg-gray-50 hover:bg-gray-100 rounded transition-colors shadow-sm cursor-pointer"
-                              >
-                                View Logs <ChevronDown size={10} className={`transform transition-transform duration-300 ${activeHistoryId === book.id ? 'rotate-180' : ''}`} />
-                              </button>
-                              
-                              {activeHistoryId === book.id && (
-                                <div className="absolute top-full mt-1.5 right-1/2 translate-x-1/2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-50 text-left max-h-56 overflow-y-auto">
-                                  <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2 border-b pb-1">Stock Changes</p>
-                                  <div className="space-y-2">
-                                    {book.stockHistory.map((log: any) => (
-                                      <div key={log.id} className="border-b border-gray-100 last:border-0 pb-1.5 last:pb-0 text-[10px]">
-                                        <div className="flex justify-between items-center text-gray-400 font-semibold mb-0.5">
-                                          <span>{new Date(log.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                                          <span className={`font-bold ${log.changeQty > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty}
-                                          </span>
-                                        </div>
-                                        <div className="flex justify-between text-gray-600">
-                                          <span>Status: <span className={`font-bold ${log.status === 'Pending' ? 'text-amber-600' : log.status === 'Approved' ? 'text-green-600' : 'text-red-600'}`}>{log.status || 'Approved'}</span></span>
-                                          {log.status !== 'Pending' && <span>New Total: {log.currentStock}</span>}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                      <td className="px-2 py-2 text-center text-gray-500 text-[10px]">
+                        <span>
+                          {book.lastActivity ? new Date(book.lastActivity).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                        </span>
+                      </td>
+                      {/* Logs Column */}
+                      <td className="px-2 py-2 text-center" onClick={e => e.stopPropagation()}>
+                        {book.stockHistory && book.stockHistory.length > 0 && (
+                          <button
+                            onClick={() => setActiveHistoryId(activeHistoryId === book.id ? null : book.id)}
+                            className="flex items-center justify-center p-1.5 text-blue-500 hover:text-white border border-blue-200 bg-blue-50 hover:bg-blue-500 rounded-full transition-colors shadow-sm cursor-pointer mx-auto"
+                            title="View Stock Logs"
+                          >
+                            <ChevronDown size={14} strokeWidth={3} className={`transform transition-transform duration-300 ${activeHistoryId === book.id ? 'rotate-180' : ''}`} />
+                          </button>
+                        )}
                       </td>
                       {/* Update Stock */}
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <td className="px-2 py-2" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
                           <input
                             id={`stock-input-${book.id}`}
@@ -2237,19 +2215,48 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                             value={newStocks[book.id] || ''}
                             onChange={e => setNewStocks(prev => ({ ...prev, [book.id]: e.target.value }))}
                             onKeyDown={e => { if (e.key === 'Enter') handleUpdateStock(book.id); }}
-                            className="w-[68px] px-2 py-1.5 border border-black/10 rounded-md text-xs text-center outline-none bg-white text-paa-navy"
+                            className="w-[50px] px-1 py-1 border border-black/10 rounded-md text-xs text-center outline-none bg-white text-paa-navy"
                           />
                           <button
                             id={`stock-update-btn-${book.id}`}
                             onClick={() => handleUpdateStock(book.id)}
                             disabled={!newStocks[book.id] || updatingId === book.id}
-                            className={`px-2.5 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all ${newStocks[book.id] ? (parseInt(newStocks[book.id] || '0') < 0 ? 'bg-red-600 text-white' : 'bg-paa-navy text-white cursor-pointer') : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                            className={`px-1.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all ${newStocks[book.id] ? (parseInt(newStocks[book.id] || '0') < 0 ? 'bg-red-600 text-white' : 'bg-paa-navy text-white cursor-pointer') : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                           >
                             {updatingId === book.id ? '...' : (parseInt(newStocks[book.id] || '0') < 0 ? 'Remove' : 'Add')}
                           </button>
                         </div>
                       </td>
-                    </tr>
+                      </tr>
+                      {activeHistoryId === book.id && (
+                        <tr>
+                          <td colSpan={11} className="p-0 border-b border-black/5">
+                            <div className="bg-slate-50 p-6 shadow-inner">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4 border-b border-slate-200 pb-2">Stock Changes Log</p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {(book.stockHistory || []).map((log: any) => (
+                                  <div key={log.id} className="bg-white border border-slate-200 rounded-lg p-3 text-xs shadow-sm">
+                                    <div className="flex justify-between items-center text-slate-400 font-semibold mb-2">
+                                      <span>{new Date(log.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                      <span className={`text-lg font-black ${log.changeQty > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-600">
+                                      <span className="font-medium">Status: <span className={`font-bold ${log.status === 'Pending' ? 'text-amber-500' : log.status === 'Approved' ? 'text-green-600' : 'text-red-600'}`}>{log.status || 'Approved'}</span></span>
+                                      {log.status !== 'Pending' && <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">Total: {log.currentStock}</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                                {(!book.stockHistory || book.stockHistory.length === 0) && (
+                                  <div className="text-slate-400 italic">No logs available for this book.</div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -2532,8 +2539,8 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
                 const statusColor = row.type.includes('Event') ? 'bg-[#4a90e2]' : row.type.includes('Fair') ? 'bg-[#e74c3c]' : 'bg-[#43a047]';
 
                 return (
-                  <tr key={row.id} className="border-b border-paa-navy/5 even:bg-gray-100">
-                    <td className="p-3 border-r border-paa-navy/5 text-center bg-[#f0f4f8]">{index + 1}</td>
+                  <tr key={row.id} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200 border-b border-paa-navy/5`}>
+                    <td className="p-3 border-r border-paa-navy/5 text-center">{index + 1}</td>
                     <td className="p-3 border-r border-paa-navy/5 font-medium">{row.name}</td>
                     <td className="p-3 border-r border-paa-navy/5 text-xs">{row.type}</td>
                     <td className="p-3 border-r border-paa-navy/5">{row.date}</td>
@@ -3323,7 +3330,7 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                 const orderDate = new Date(ord.createdAt || ord.date);
                 const isSlaBreached = (new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60) > 24 && ['Pending Verification', 'Pending'].includes(ord.status);
                 return (
-                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                  <tr key={idx} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200`}>
                     <td className="px-5 py-4">
                       <p className="font-bold text-paa-navy tracking-wide text-xs">ORD-{ord.orderId}</p>
                       <p className="text-[9px] text-gray-400 uppercase tracking-widest mt-1">{ord.date}</p>
@@ -4116,7 +4123,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
 
                   return (
                     <React.Fragment key={i}>
-                    <tr className={`hover:bg-gray-50 transition-colors ${expandedEventId === evt.id ? 'bg-gray-50' : ''}`}>
+                    <tr className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200 ${expandedEventId === evt.id ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
                       <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => { 
                          setExpandedEventId(expandedEventId === evt.id ? null : evt.id);
                          if (expandedEventId !== evt.id && evt.isInvite && evt.registration === 'Pending' && !evt.isPast) {
@@ -5287,7 +5294,7 @@ function AuthorSalesReport({ data }: { data: any }) {
                 <tr><td colSpan={6} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period for the selected filter.</td></tr>
               )}
               {(tableData.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter)).map((row: any, idx: number) => (
-                <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={idx} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200`}>
                   <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
                   <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
                   <td className="px-5 py-3 text-xs">
@@ -5971,9 +5978,12 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
                     </div>
                   )}
 
-                  <div className="mt-auto">
-                    <button onClick={() => setSelectedGalleryEvent(ge)} className="w-full dash-btn dash-btn-primary flex justify-center items-center gap-2 py-3 bg-paa-navy hover:bg-paa-gold hover:text-paa-navy hover:border-paa-gold transition-colors shadow-sm rounded-xl">
-                       <Upload className="w-4 h-4" /> Upload Photos
+                  <div className="mt-auto flex gap-2">
+                    <button onClick={() => setSelectedGalleryEvent(ge)} className="flex-1 dash-btn flex justify-center items-center gap-2 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm rounded-xl text-sm font-semibold">
+                       <ImageIcon className="w-4 h-4" /> View Gallery
+                    </button>
+                    <button onClick={() => setSelectedGalleryEvent(ge)} className="flex-1 dash-btn flex justify-center items-center gap-2 py-2.5 bg-paa-navy text-white hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-sm rounded-xl text-sm font-semibold">
+                       <Upload className="w-4 h-4" /> Upload
                     </button>
                   </div>
                 </div>
@@ -6244,11 +6254,11 @@ function AuthorQueries() {
             <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No queries or issues found.</p>
           </div>
-        ) : filteredQueries.map(q => (
-          <div key={q.id} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden transition-all duration-200 group">
+        ) : filteredQueries.map((q, idx) => (
+          <div key={q.id} className={`border border-gray-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 group ${q.status === 'Resolved' ? 'bg-green-50' : q.status === 'Pending' ? 'bg-orange-50' : 'bg-blue-50'}`}>
             {/* Row Header */}
             <div 
-              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+              className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${q.status === 'Resolved' ? 'hover:bg-green-100' : q.status === 'Pending' ? 'hover:bg-orange-100' : 'hover:bg-blue-100'}`}
               onClick={() => setExpandedQueryId(expandedQueryId === q.id ? null : q.id)}
             >
               <div className="flex items-center gap-4 flex-1">

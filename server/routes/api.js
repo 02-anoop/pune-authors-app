@@ -1145,26 +1145,38 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
       prisma.library.count()
     ]);
     
-    // 1. Total Revenue
-    const webOrderItems = await prisma.orderItem.findMany({
-      where: { order: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } }, status: { notIn: ['Cancelled', 'Rejected'] } },
-      select: { quantity: true, book: { select: { mrp: true } } }
+    // 1. Total Revenue (Aligned with Sales Report logic)
+    const webOrdersAll = await prisma.order.findMany({
+      where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } },
+      include: { items: { include: { book: true } } }
     });
-    const webRevenue = webOrderItems.reduce((sum, item) => sum + (item.quantity * (item.book?.mrp || 0)), 0);
-    
-    const posOrderItems = await prisma.posOrderItem.findMany({
-      where: { posOrder: { paymentStatus: 'CONFIRMED' } },
-      select: { quantity: true, price: true }
+    let webRevenue = 0;
+    webOrdersAll.forEach(o => {
+      o.items.forEach(i => {
+        webRevenue += i.quantity * (i.book?.mrp || 0);
+      });
     });
-    const posRevenue = posOrderItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 
-    const manualSales = await prisma.eventAuthor.findMany({
-      where: { manualTotalSold: { gt: 0 } },
-      select: { manualTotalRevenue: true }
+    const posOrdersAll = await prisma.posOrder.findMany({
+      include: { items: true }
     });
-    const manualRevenue = manualSales.reduce((sum, item) => sum + (item.manualTotalRevenue || 0), 0);
+    let posRevenue = 0;
+    posOrdersAll.forEach(po => {
+      po.items.forEach(i => {
+        posRevenue += i.quantity * (i.price || 0);
+      });
+    });
 
-    const totalRevenue = webRevenue + posRevenue + manualRevenue;
+    const legacyEventsAll = await prisma.event.findMany({
+      where: { status: 'Legacy Archive' }
+    });
+    let legacyRevenue = 0;
+    legacyEventsAll.forEach(evt => {
+      const qty = evt.aggSold || 0;
+      legacyRevenue += evt.aggRevenue || (qty * 200) || 0;
+    });
+
+    const totalRevenue = webRevenue + posRevenue + legacyRevenue;
 
     // 2. Revenue Data (Last 6 Months)
     // We can use Prisma groupBy or queryRaw. To be safe across DBs, we'll fetch only date & amount for web orders

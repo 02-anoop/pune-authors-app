@@ -14,7 +14,7 @@ import { NavBar } from './NavBar';
 import { Footer } from './Footer';
 import { QueryThreadDisplay } from './QueryThreadDisplay';
 import { AuthorDonationsTab } from './AuthorDonationsTab';
-
+import { checkIsPastEvent } from '../utils/eventUtils';
 export function AuthorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -3660,31 +3660,38 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 
 function EventsDashboard({ registrations }: any) {
   const [isOptInModalOpen, setIsOptInModalOpen] = useState(false);
+  const [isSubmittingOptIn, setIsSubmittingOptIn] = useState(false);
   const [selectedInvite, setSelectedInvite] = useState<any>(null);
   const [showProposeEventModal, setShowProposeEventModal] = useState(false);
   const [proposeEventForm, setProposeEventForm] = useState({ name: '', location: '', date: '', duration: '', eventType: 'Book Fair', description: '' });
   const [isProposingEvent, setIsProposingEvent] = useState(false);
   const [optInBooks, setOptInBooks] = useState<any[]>([]);
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const [transactionId, setTransactionId] = useState('');
   const [expandedEventId, setExpandedEventId] = useState<string | number | null>(null);
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
 
   const handleOpenOptIn = (evt: any) => {
     setSelectedInvite(evt);
-    // Initialize all books as included with default stock 10
-    setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: 10, included: true })));
+    // Initialize all books as included with default stock capped by availableStock
+    setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: Math.min(10, b.stock || 0), included: true, availableStock: b.stock || 0 })));
     setPaymentScreenshot(null);
+    setTransactionId('');
     setIsOptInModalOpen(true);
   };
 
   const handleOptInSubmit = async (action: 'approve' | 'reject') => {
     try {
+      setIsSubmittingOptIn(true);
       if (action === 'approve') {
         const fd = new FormData();
         const includedBooks = optInBooks.filter(b => b.included);
         fd.append('booksToLink', JSON.stringify(includedBooks));
         if (paymentScreenshot) {
           fd.append('paymentScreenshot', paymentScreenshot);
+        }
+        if (transactionId) {
+          fd.append('transactionId', transactionId);
         }
         await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/author/events/${selectedInvite.id}/opt-in`, fd, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -3700,6 +3707,8 @@ function EventsDashboard({ registrations }: any) {
       fetchAuthorEvents(); // refresh
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Failed to process event invite');
+    } finally {
+      setIsSubmittingOptIn(false);
     }
   };
   const [activeTab, setActiveTab] = useState('events');
@@ -3850,9 +3859,9 @@ const pe = pastEvents.find(p => p.eventId === eventId);
     
     if (eventFilter === 'UPCOMING' && (evt.isPast || isLegacy)) return false;
     if (eventFilter === 'PAST' && (!evt.isPast || isLegacy)) return false;
-    if (eventFilter === 'INVITES' && (evt.isPast || isLegacy || evt.registration !== 'Pending')) return false;
     if (eventFilter === 'LEGACY ARCHIVE' && !isLegacy) return false;
     if (eventFilter === 'PARTICIPATED' && (evt.registration !== 'Registered' && evt.registration !== 'Approved')) return false;
+    if (eventFilter === 'TODAY' && (isLegacy || new Date(evt.startDate || evt.date).toDateString() !== new Date().toDateString())) return false;
     
     if (bpSearch) {
         return (evt.name || '').toLowerCase().includes(bpSearch.toLowerCase()) ||
@@ -4030,8 +4039,8 @@ const pe = pastEvents.find(p => p.eventId === eventId);
 
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
              <div className="flex flex-wrap gap-2 p-1 bg-white rounded-xl border border-gray-200">
-               {['ALL', 'PARTICIPATED', 'UPCOMING', 'PAST', 'INVITES', 'LEGACY ARCHIVE'].map((f) => (
-                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-paa-navy text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'PARTICIPATED' ? 'Participated' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : 'Invites'))))}</button>
+               {['ALL', 'TODAY', 'PARTICIPATED', 'UPCOMING', 'PAST', 'LEGACY ARCHIVE'].map((f) => (
+                 <button key={f} onClick={() => setEventFilter(f)} className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${eventFilter === f ? 'bg-paa-navy text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>{f === 'ALL' ? 'All Events' : (f === 'PARTICIPATED' ? 'Participated' : (f === 'UPCOMING' ? 'Upcoming & Live' : (f === 'PAST' ? 'Past Events' : (f === 'LEGACY ARCHIVE' ? 'Legacy Archive' : (f === 'TODAY' ? 'Today' : '')))))}</button>
                ))}
              </div>
              <div className="flex items-center gap-4 w-full md:w-auto">
@@ -4128,7 +4137,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                          setExpandedEventId(expandedEventId === evt.id ? null : evt.id);
                          if (expandedEventId !== evt.id && evt.isInvite && evt.registration === 'Pending' && !evt.isPast) {
                             setSelectedInvite(evt);
-                            setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: 10, included: true })));
+                            setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: Math.min(10, b.stock || 0), included: true, availableStock: b.stock || 0 })));
                             setPaymentScreenshot(null);
                          }
                       }}>
@@ -4138,6 +4147,11 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                       </td>
                       <td className="px-4 py-3">
                          <div className="text-sm font-semibold text-paa-navy">{evt.name}</div>
+                         {evt.livePosEnabled && !evt.isPast && (evt.registration === 'Registered' || evt.registration === 'Approved') && (
+                           <button onClick={(e) => { e.stopPropagation(); window.open('/dashboard/pos/' + evt.id, '_blank'); }} className="mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded text-sm font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 w-max">
+                             <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span> Launch POS
+                           </button>
+                         )}
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-paa-gray-text">{new Date(evt.startDate || evt.date).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-sm font-semibold">
@@ -4211,9 +4225,11 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                               }
                               
                               return (
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${statusColors}`}>
-                                  {statusText}
-                                </span>
+                                <div className="flex flex-col items-center gap-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${statusColors}`}>
+                                    {statusText}
+                                  </span>
+                                </div>
                               );
                           })()}
                       </td>
@@ -4224,16 +4240,14 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                              <div className="flex flex-col xl:flex-row gap-8 px-8 py-6 border-l-4 border-indigo-400 ml-6 my-4 bg-white rounded-r-xl shadow-sm mr-6">
                                 <div className="flex-1 min-w-[300px] flex flex-col gap-5">
                                    <div className="flex gap-6">
-                                      <div className="w-40 shrink-0">
-                                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><ImageIcon className="w-3 h-3"/> Event Banner</p>
-                                          {evt.bannerUrl ? (
-                                             <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-video relative group">
-                                               <img src={evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Banner" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                             </div>
-                                          ) : (
-                                             <div className="aspect-video bg-gray-50 rounded-lg border border-gray-200 border-dashed flex items-center justify-center text-[10px] text-gray-400 italic">No Banner</div>
-                                          )}
-                                      </div>
+                                      {evt.bannerUrl && (
+                                        <div className="w-40 shrink-0">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1"><ImageIcon className="w-3 h-3"/> Event Banner</p>
+                                            <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm aspect-video relative group">
+                                              <img src={evt.bannerUrl.startsWith('http') ? evt.bannerUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${evt.bannerUrl}`} alt="Banner" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                            </div>
+                                        </div>
+                                      )}
                                       <div className="flex flex-col gap-4">
                                          <div>
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3"/> Location</p>
@@ -4243,33 +4257,38 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                             <div>
                                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1"><CalendarIcon className="w-3 h-3"/> Date & Timings</p>
                                                <p className="text-sm text-paa-navy font-semibold">{new Date(evt.startDate || evt.date).toLocaleDateString()} • {(evt.startTime && evt.endTime) ? `${evt.startTime}-${evt.endTime}` : 'TBA'}</p>
+                                               {evt.livePosEnabled && (evt.registration === 'Registered' || evt.registration === 'Approved' || evt.registration === 'Participated') && (
+                                                   <div className="mt-5">
+                                                      <button onClick={(e) => { e.stopPropagation(); window.open('/dashboard/pos/' + evt.id + '?summary=true', '_blank'); }} className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2.5 rounded-lg font-black text-[11px] uppercase tracking-widest transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 w-max flex items-center gap-2 border border-indigo-500">
+                                                         Day-Wise Sales Report
+                                                      </button>
+                                                   </div>
+                                                )}
                                             </div>
-                                            <div>
-                                               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1">Fee</p>
-                                               <p className="text-sm text-emerald-700 font-bold">₹{evt.amountPaid || 0}</p>
-                                            </div>
-
                                          </div>
                                       </div>
                                    </div>
                                    <div className="flex gap-3 mt-auto pt-4 border-t border-gray-100">
-                                      {evt.livePosEnabled && !evt.isPast && (
-                                        <button onClick={() => window.open('/pos/' + evt.id, '_blank')} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-sm font-bold transition-colors shadow-sm whitespace-nowrap">
-                                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Launch POS
-                                        </button>
-                                      )}
                                    </div>
                                 </div>
                                 <div className="w-px bg-gray-100 hidden xl:block"></div>
                                 {evt.isInvite && evt.registration === 'Pending' && !evt.isPast ? (
                                     <div className="flex-1 min-w-[300px] flex flex-col animate-fade-in-up">
-                                        <h4 className="font-bold text-sm text-gray-700 mb-3 border-b pb-2 flex items-center gap-2"><BookOpen className="w-4 h-4"/> Opt-In: Select Books</h4>
+                                        <h4 className="font-bold text-sm text-gray-700 mb-2 border-b pb-2 flex items-center gap-2"><BookOpen className="w-4 h-4"/> Opt-In: Select Books</h4>
+                                        <p className="text-[11px] text-gray-500 mb-3 italic bg-gray-50 p-2 rounded border border-gray-100">Check the box to include a book, and input the exact stock you want to list for this event.</p>
                                         <div className="flex-1 overflow-y-auto max-h-[250px] space-y-2 mb-4 pr-2">
                                             {optInBooks.map((b, idx) => (
                                               <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 rounded border border-gray-200">
                                                 <input type="checkbox" checked={b.included} onChange={e => { const newB = [...optInBooks]; newB[idx].included = e.target.checked; setOptInBooks(newB); }} className="text-paa-navy focus:ring-paa-navy rounded" />
                                                 <span className="flex-1 text-sm font-medium text-gray-800 truncate">{b.title}</span>
-                                                <input type="number" disabled={!b.included} value={b.stock} onChange={e => { const newB = [...optInBooks]; newB[idx].stock = parseInt(e.target.value) || 0; setOptInBooks(newB); }} className="w-16 p-1 text-xs border border-gray-300 rounded disabled:bg-gray-100 disabled:text-gray-400" min="0" />
+                                                <input type="number" disabled={!b.included} value={b.stock} onChange={e => { 
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    if (val > b.availableStock) {
+                                                        toast.error(`Stock Exceeded! You only have ${b.availableStock} in inventory. Update total stock in Profile tab first.`);
+                                                        return;
+                                                    }
+                                                    const newB = [...optInBooks]; newB[idx].stock = val; setOptInBooks(newB); 
+                                                }} className="w-16 p-1 text-xs border border-gray-300 rounded disabled:bg-gray-100 disabled:text-gray-400" min="0" />
                                               </div>
                                             ))}
                                         </div>
@@ -4290,9 +4309,15 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                                    <div className="text-[10px] font-bold mb-2 uppercase tracking-widest text-yellow-900">Scan to Pay</div>
                                                    <img src={qrCode} alt="Payment QR" className="w-24 h-24 object-contain bg-white p-1 border border-yellow-300 rounded shadow-sm" />
                                                 </div>
-                                                <div className="flex-1 flex flex-col justify-center">
-                                                   <label className="block text-[10px] font-bold mb-2 uppercase tracking-widest text-yellow-900">Upload Screenshot</label>
-                                                   <input type="file" accept="image/*" onChange={(e) => setPaymentScreenshot(e.target.files?.[0] || null)} className="text-xs bg-white p-2 rounded border border-yellow-300 w-full" />
+                                                <div className="flex-1 flex flex-col justify-center gap-2">
+                                                   <div>
+                                                     <label className="block text-[10px] font-bold mb-1 uppercase tracking-widest text-yellow-900">Transaction ID</label>
+                                                     <input type="text" placeholder="Enter Reference/Txn ID" value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className="text-xs bg-white p-2 rounded border border-yellow-300 w-full focus:outline-none focus:ring-1 focus:ring-yellow-500" />
+                                                   </div>
+                                                   <div>
+                                                     <label className="block text-[10px] font-bold mb-1 uppercase tracking-widest text-yellow-900">Upload Screenshot</label>
+                                                     <input type="file" accept="image/*" onChange={(e) => setPaymentScreenshot(e.target.files?.[0] || null)} className="text-xs bg-white p-1.5 rounded border border-yellow-300 w-full" />
+                                                   </div>
                                                 </div>
                                               </div>
                                             )}
@@ -4300,8 +4325,10 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                           );
                                         })()}
                                         <div className="flex gap-2 shrink-0 mt-auto">
-                                            <button onClick={() => handleOptInSubmit('reject')} className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">Decline</button>
-                                            <button onClick={() => handleOptInSubmit('approve')} className="flex-1 px-4 py-2 bg-paa-navy text-paa-cream rounded-lg text-sm font-bold hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-sm">Submit Opt-In</button>
+                                            <button disabled={isSubmittingOptIn} onClick={() => handleOptInSubmit('reject')} className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50">Decline</button>
+                                            <button disabled={isSubmittingOptIn} onClick={() => handleOptInSubmit('approve')} className="flex-1 px-4 py-2 bg-paa-navy text-paa-cream rounded-lg text-sm font-bold hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-wait">
+                                              {isSubmittingOptIn ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Submitting...</> : 'Submit Opt-In'}
+                                            </button>
                                         </div>
                                     </div>
                                 ) : (
@@ -4342,8 +4369,8 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                                      </div>
                                                   ) : (
                                                      <div className="flex items-center gap-4 text-xs font-mono shrink-0">
-                                                        <span className="text-gray-500" title="Listed">L: {b.listedStock}</span>
-                                                        <span className="text-indigo-600 font-bold" title="Sold">S: {b.soldStock || 0}</span>
+                                                        <span className="text-gray-500" title="Listed">Listed: {b.listedStock}</span>
+                                                        <span className="text-indigo-600 font-bold" title="Sold">Sold: {b.soldStock || 0}</span>
                                                      </div>
                                                   )}
                                                </div>
@@ -5718,7 +5745,7 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
                         (ge.city?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchType = filterType ? ge.type === filterType : true;
     const matchDate = filterDate ? new Date(ge.date).toISOString().startsWith(filterDate) : true;
-    const isPastEvent = new Date(ge.date) <= new Date();
+    const isPastEvent = checkIsPastEvent(ge.date, ge.duration || '1 Day');
     return matchSearch && matchType && matchDate && isPastEvent;
   }).sort((a: any, b: any) => {
     if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();

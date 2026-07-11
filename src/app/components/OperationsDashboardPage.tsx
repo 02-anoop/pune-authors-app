@@ -13,6 +13,7 @@ import {
 import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
 import { QueryThreadDisplay } from './QueryThreadDisplay';
+import { checkIsPastEvent } from '../utils/eventUtils';
 
 // Automatically attach token to all admin requests
 axios.interceptors.request.use((config) => {
@@ -692,6 +693,7 @@ export function OperationsDashboardPage() {
   const [eventTimeFilter, setEventTimeFilter] = useState('All');
   const [viewingRegistrationsEventId, setViewingRegistrationsEventId] = useState<number | null>(null);
   const [eventRegistrations, setEventRegistrations] = useState<any[]>([]);
+  const [eventRegistryFilter, setEventRegistryFilter] = useState('All Events');
   const [loadingRegistrations, setLoadingRegistrations] = useState(false);
   const [registrationsFilter, setRegistrationsFilter] = useState('All');
   const [registrationsPage, setRegistrationsPage] = useState(1);
@@ -3430,7 +3432,14 @@ export function OperationsDashboardPage() {
               fd.append('name', target.name.value);
               fd.append('date', target.date.value);
               fd.append('location', target.location.value);
-              fd.append('duration', target.duration.value);
+              
+              const days = target.durationDays.value;
+              const hours = target.durationHours.value;
+              let durationStr = [];
+              if (days && parseInt(days) > 0) durationStr.push(`${days} Days`);
+              if (hours && parseInt(hours) > 0) durationStr.push(`${hours} Hours`);
+              fd.append('duration', durationStr.length > 0 ? durationStr.join(', ') : '0 Days');
+              
               if (target.startTime?.value) fd.append('startTime', target.startTime.value);
               if (target.endTime?.value) fd.append('endTime', target.endTime.value);
               fd.append('eventType', target.eventType.value === 'Other' ? (target.otherEventType?.value || 'Other') : target.eventType.value);
@@ -3495,7 +3504,17 @@ export function OperationsDashboardPage() {
                     </div>
                   )}
                 </div>
-                <div><label className="dash-label">Duration</label><input required name="duration" type="text" className="dash-input" placeholder="e.g. 3 days" /></div>
+                <div>
+                  <label className="dash-label">Duration</label>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <input required name="durationDays" type="number" min="0" className="dash-input" placeholder="Days" />
+                    </div>
+                    <div className="flex-1">
+                      <input required name="durationHours" type="number" min="0" className="dash-input" placeholder="Hours" />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -4062,6 +4081,7 @@ export function OperationsDashboardPage() {
                         const status = m.optInStatus || 'Unpublished';
                         const hasData = (m.books && m.books.length > 0) || m.manualTotalSold != null;
                         const validScreenshot = a.paymentScreenshot && typeof a.paymentScreenshot === 'string' && a.paymentScreenshot !== 'null' && a.paymentScreenshot !== 'undefined' && a.paymentScreenshot.trim() !== '';
+                        const expectedFee = selectedEventBreakdown.feeType === 'Per Title' ? (m.books?.length || 0) * (selectedEventBreakdown.registrationFee || 0) : (selectedEventBreakdown.registrationFee || 0);
                         return (
                           <React.Fragment key={i}>
                             <tr className="hover:bg-gray-50/50 transition-colors">
@@ -4076,8 +4096,9 @@ export function OperationsDashboardPage() {
                                 <td className="p-3 text-center align-middle">
                                   <div className="flex flex-col items-center justify-center h-full">
                                     {selectedEventBreakdown.status === 'Past' ? (
-                                      <div className="text-sm text-emerald-600 font-bold">
+                                      <div className="text-sm text-emerald-600 font-bold flex flex-col items-center">
                                         {m.amountPaid ? `₹${m.amountPaid}` : <span className="text-gray-400 font-normal">-</span>}
+                                        {m.transactionId && <span className="text-[8px] text-gray-500 font-mono mt-0.5 break-all text-center max-w-[80px]">Txn: {m.transactionId}</span>}
                                       </div>
                                     ) : (
                                       <>
@@ -4086,19 +4107,23 @@ export function OperationsDashboardPage() {
                                             <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
                                           </a>
                                         )}
-                                        {m.amountPaid ? (
-                                          <div className="text-[10px] text-emerald-600 font-bold mt-1">₹{m.amountPaid}</div>
-                                        ) : (
-                                          !validScreenshot && <span className="text-sm text-gray-400 font-bold">-</span>
+                                        {expectedFee > 0 && (
+                                          <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Due: ₹{expectedFee}</div>
                                         )}
-                                        {validScreenshot && status === 'Registered' && (
+                                        {m.amountPaid ? (
+                                          <div className="text-[10px] text-emerald-600 font-bold mt-0.5">Paid: ₹{m.amountPaid}</div>
+                                        ) : (
+                                          !validScreenshot && expectedFee === 0 && <span className="text-sm text-gray-400 font-bold">-</span>
+                                        )}
+                                        {(validScreenshot || m.transactionId) && (
                                           <div className="mt-1">
                                             <input
                                               type="text"
                                               placeholder="Txn ID"
                                               defaultValue={m.transactionId || ''}
+                                              disabled={status === 'Past'}
                                               onBlur={(e) => updateTransactionId(m.eventId, m.authorId, e.target.value)}
-                                              className="w-20 text-[9px] text-center p-0.5 border border-gray-200 bg-gray-50 rounded outline-none focus:border-paa-navy font-mono"
+                                              className="w-20 text-[9px] text-center p-0.5 border border-gray-200 bg-gray-50 rounded outline-none focus:border-paa-navy font-mono disabled:text-gray-500 disabled:bg-gray-100"
                                             />
                                           </div>
                                         )}
@@ -4340,6 +4365,18 @@ export function OperationsDashboardPage() {
       return true;
     });
 
+    if (eventRegistryFilter !== 'All Events') {
+      if (eventRegistryFilter === 'Pending Approval') {
+        filteredTableEvents = filteredTableEvents.filter((e: any) => e.status === 'Pending Approval' || e.eventAuthors?.some((r: any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval'));
+      } else if (eventRegistryFilter === 'Upcoming & Live') {
+        filteredTableEvents = filteredTableEvents.filter((e: any) => e.status === 'Upcoming' || e.status === 'Live' || e.status === 'Ongoing');
+      } else if (eventRegistryFilter === 'Past Events') {
+        filteredTableEvents = filteredTableEvents.filter((e: any) => e.status === 'Past');
+      } else if (eventRegistryFilter === 'Legacy Archive') {
+        filteredTableEvents = filteredTableEvents.filter((e: any) => e.isLegacy || e.status === 'Legacy Archive');
+      }
+    }
+
     if (eventTimeFilter === 'Last 15') {
       filteredTableEvents = filteredTableEvents.slice(0, 15);
     } else if (eventTimeFilter === 'Last Quarter') {
@@ -4464,7 +4501,28 @@ export function OperationsDashboardPage() {
           </div>
         </div>
         <div className="flex justify-between items-center mb-4 mt-8">
-          <h4 className="text-2xl font-serif font-bold text-paa-navy">Events Registry</h4>
+          <div className="flex items-center gap-6">
+             <h4 className="text-2xl font-serif font-bold text-paa-navy">Events Registry</h4>
+             <div className="hidden lg:flex bg-white rounded-lg p-1 border border-paa-navy/10 shadow-sm overflow-x-auto whitespace-nowrap">
+                {['All Events', 'Pending Approval', 'Upcoming & Live', 'Past Events', 'Legacy Archive'].map((st) => {
+                  const pendingCount = st === 'Pending Approval' ? allCombinedEvents.reduce((acc, evt) => acc + (evt.status === 'Pending Approval' ? 1 : 0) + (evt.eventAuthors?.filter((r: any) => r.optInStatus === 'Pending' || r.optInStatus === 'Pending Approval').length || 0), 0) : 0;
+                  return (
+                  <button
+                    key={st}
+                    onClick={() => setEventRegistryFilter(st)}
+                    className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all relative ${eventRegistryFilter === st ? 'bg-paa-navy text-white shadow-sm' : 'text-gray-500 hover:text-paa-navy hover:bg-gray-50'}`}
+                  >
+                    {st}
+                    {pendingCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-orange-500 text-white text-[9px] items-center justify-center font-bold shadow-sm">{pendingCount}</span>
+                      </span>
+                    )}
+                  </button>
+                )})}
+             </div>
+          </div>
           <input
             type="text"
             placeholder="Search events..."
@@ -4479,7 +4537,7 @@ export function OperationsDashboardPage() {
               <thead className="bg-indigo-100 border-b-2 border-indigo-200">
                 <tr>
                   <th className="w-10 px-1 py-3 text-center !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5"></th>
-                  <th className="px-2 py-3 w-[30%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5">Event Name</th>
+                  <th className="px-2 py-3 w-[26%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5">Event Name</th>
                   <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5">Event Type</th>
                   <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Reg Fee</th>
                   <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5">Status</th>
@@ -4487,7 +4545,7 @@ export function OperationsDashboardPage() {
                   <th className="px-2 py-3 w-[8%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Authors</th>
                   <th className="px-2 py-3 w-[8%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Books</th>
                   <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Revenue</th>
-                  <th className="px-2 py-3 w-[10%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Actions</th>
+                  <th className="px-2 py-3 w-[14%] !text-xs font-bold uppercase tracking-widest !text-indigo-900 !bg-transparent border-b border-paa-navy/5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-paa-navy/5 bg-white text-[11px]">
@@ -4538,7 +4596,7 @@ export function OperationsDashboardPage() {
                         <td className="px-4 py-3 text-sm font-bold text-paa-navy text-right">{books}</td>
                         <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">{revenue}</td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex gap-2 justify-center">
+                          <div className="flex gap-2 justify-center flex-wrap min-w-[120px]">
                             {evt.status === 'Pending Approval' ? (
                               <>
                                 <button title="Approve Event" onClick={async () => {
@@ -5211,7 +5269,7 @@ export function OperationsDashboardPage() {
       const matchSearch = (e.name?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase()) || (e.location?.toLowerCase() || '').includes(galleryTabSearchTerm.toLowerCase());
       const matchType = galleryTabFilterType ? e.eventType === galleryTabFilterType : true;
       const matchDate = galleryTabFilterDate ? new Date(e.date).toISOString().startsWith(galleryTabFilterDate) : true;
-      const isPastEvent = new Date(e.date) <= new Date();
+      const isPastEvent = checkIsPastEvent(e.date, e.duration || '1 Day');
       return matchSearch && matchType && matchDate && isPastEvent;
     }).sort((a: any, b: any) => {
 
@@ -5855,7 +5913,22 @@ export function OperationsDashboardPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div><label className="dash-label">Date</label><input required type="date" className="dash-input" value={editingEvent.date ? (!isNaN(new Date(editingEvent.date).getTime()) ? new Date(editingEvent.date).toISOString().substring(0, 10) : editingEvent.date.toString().substring(0, 10)) : ''} onChange={e => setEditingEvent({ ...editingEvent, date: e.target.value })} /></div>
-              <div><label className="dash-label">Duration</label><input required type="text" className="dash-input" value={editingEvent.duration} onChange={e => setEditingEvent({ ...editingEvent, duration: e.target.value })} /></div>
+              <div className="flex gap-2">
+                 <div className="flex-1">
+                   <label className="dash-label">No. of Days</label>
+                   <input required type="number" min="0" className="dash-input" value={editingEvent.duration?.match(/(\d+)\s*Days?/i) ? parseInt(editingEvent.duration.match(/(\d+)\s*Days?/i)[1]) : 0} onChange={e => {
+                     const h = editingEvent.duration?.match(/(\d+)\s*Hours?/i) ? parseInt(editingEvent.duration.match(/(\d+)\s*Hours?/i)[1]) : 0;
+                     setEditingEvent({ ...editingEvent, duration: `${e.target.value} Days ${h} Hours` });
+                   }} />
+                 </div>
+                 <div className="flex-1">
+                   <label className="dash-label">No. of Hours</label>
+                   <input required type="number" min="0" className="dash-input" value={editingEvent.duration?.match(/(\d+)\s*Hours?/i) ? parseInt(editingEvent.duration.match(/(\d+)\s*Hours?/i)[1]) : 0} onChange={e => {
+                     const d = editingEvent.duration?.match(/(\d+)\s*Days?/i) ? parseInt(editingEvent.duration.match(/(\d+)\s*Days?/i)[1]) : 0;
+                     setEditingEvent({ ...editingEvent, duration: `${d} Days ${e.target.value} Hours` });
+                   }} />
+                 </div>
+              </div>
             </div>
             <div><label className="dash-label">Location</label><input required type="text" className="dash-input" value={editingEvent.location} onChange={e => setEditingEvent({ ...editingEvent, location: e.target.value })} /></div>
 
@@ -5914,14 +5987,21 @@ export function OperationsDashboardPage() {
               <div className="flex gap-4 items-center">
                 <button onClick={() => {
                   if (!eventReportData || !eventReportData.authors) return;
-                  let csv = "Author Name,Email,Phone,Book Title,Category,MRP,Listed Stock,Sold Stock,Available Stock,Returned Stock,Revenue\n";
+                  const uniqueDates = eventReportData.uniqueDates || [];
+                  const dateColumns = uniqueDates.map((d: string, i: number) => `Day ${i + 1} Sold (${new Date(d).toLocaleDateString()})`).join(',');
+                  let csv = `Author Name,Email,Phone,Registration Fee,Payment Paid,Transaction ID,Book Title,Category,MRP,Listed Stock,Sold Stock,Available Stock,Returned Stock,Revenue${dateColumns ? ',' + dateColumns : ''}\n`;
                   eventReportData.authors.forEach((author: any) => {
+                    const expectedFee = author.expectedFee || 0;
+                    const amountPaid = author.amountPaid || 0;
+                    const txnId = author.transactionId || '';
                     if (author.books && author.books.length > 0) {
                       author.books.forEach((b: any) => {
-                        csv += `"${author.name}","${author.email}","${author.phone}","${b.title}","${b.category}",${b.mrp},${b.listedStock},${b.soldStock},${b.availableStock},${b.returnedStock},${b.revenue}\n`;
+                        let dateVals = uniqueDates.map((d: string) => b.dayWiseSales ? b.dayWiseSales[d] || 0 : 0).join(',');
+                        csv += `"${author.name}","${author.email}","${author.phone}",${expectedFee},${amountPaid},"${txnId}","${b.title}","${b.category}",${b.mrp},${b.listedStock},${b.soldStock},${b.availableStock},${b.returnedStock},${b.revenue}${dateVals ? ',' + dateVals : ''}\n`;
                       });
                     } else {
-                      csv += `"${author.name}","${author.email}","${author.phone}","No Books Listed",,,,,,,,\n`;
+                      let emptyDates = uniqueDates.map(() => '').join(',');
+                      csv += `"${author.name}","${author.email}","${author.phone}",${expectedFee},${amountPaid},"${txnId}","No Books Listed",,,,,,,,${emptyDates ? ',' + emptyDates : ''}\n`;
                     }
                   });
                   const blob = new Blob([csv], { type: 'text/csv' });

@@ -356,22 +356,21 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
             <div style="font-size: 15px; line-height: 1.8; font-family: system-ui, sans-serif; text-align: justify; display: flex; flex-direction: column; gap: 20px;">
               <div>
                 <h3 style="margin: 0 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Introduction</h3>
-                <p style="margin: 0;">Pune Authors’ Association, a group of authors from Pune was formed in Jan 2025 by Cdr Shiv Mathur, a veteran of the Indian Navy and an author of four books. He realized that there is a need to work in a collaborative way to revive book reading, promote indie authors and sell books through some innovative ways. The group begin with a modest number of about 25 authors and it has been evolving constantly since its inception. Many authors joined and left and many have stayed put. The process will continue as the group evolves further and stablises with a stronger presence and outcomes. As on 17 May 26, we have 53 authors in the group.</p>
+                <p style="margin: 0;">Pune Authors’ Association is an informal group of authors formed in Dec 2024 by Cdr (retd) Shiv Mathur. Most of the authors are from Pune, a few from Mumbai as well from other parts of India. Currently the group has approx. 50 authors. There are 140 titles-books from these authors and the books cover a wide variety of genres.</p>
+                <p style="margin: 10px 0 0 0;">The group maintains a catalogue of books of all the authors. A website is also under development and it is expected to be up by end July 26. This will allow readers to browse the books and even order them directly from the author. It will also allow any new author to join the group through an online joining process.</p>
               </div>
               
               <div>
                 <h3 style="margin: 20px 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Goals</h3>
-                <p style="margin: 0 0 10px 0;">Following are the main goals of the group:</p>
+                <p style="margin: 0 0 10px 0;">The main goals of the group are as follows:</p>
                 <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px;">
-                  <li>a) Collective efforts through collaboration.</li>
-                  <li>b) Participation and passion are a must for the authors in this group</li>
-                  <li>c) Promote indie authors</li>
-                  <li>d) Help authors with all publishing services at a minimal cost. We have authors who can format the manuscripts, edit, proof read, as well as design book covers.</li>
-                  <li>e) We have a few printers who print as low as 50 copies and at a very cost-effective rate.</li>
-                  <li>f) Organise literary events in housing societies and educational institutions as well as corporate offices.</li>
-                  <li>g) Donate book to key libraries like airport libraries as an avenue for promotion.</li>
-                  <li>h) Focus on organizing literary festivals in schools and colleges, where the actual book reading can be revived.</li>
-                  <li>i) Help authors to understand the exploitation by the publishers and how to escape that.</li>
+                  <li>a) Promote and revive book reading as a habit. An effort to keep book reading alive.</li>
+                  <li>b) Showcase the value of knowledge and creativity through books.</li>
+                  <li>c) Provide an avenue in form of a literary activity within the housing societies, educational institutions, and organisations, taking them out of their digital world.</li>
+                  <li>d) A literary activity at the door step, where residents can meet the authors live, interact with them, understand the background about the writing of that book.</li>
+                  <li>e) Promote Indian Authors, Indian culture and literature.</li>
+                  <li>f) They can also buy inked signed copies from the authors directly.</li>
+                  <li>g) Help and guide those who are keen to write and publish a book.</li>
                 </ul>
               </div>
             </div>
@@ -389,27 +388,18 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
             <div style="font-size: 15px; line-height: 1.8; font-family: system-ui, sans-serif; text-align: justify; display: flex; flex-direction: column; gap: 20px;">
               <div>
                 <h3 style="margin: 0 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Achievements</h3>
-                <p style="margin: 0 0 10px 0;">Following has been achieved since Jan 25 till 17 May 26.</p>
                 <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px;">
-                  <li>a) Organised seven events in housing societies, colleges and corporate offices.</li>
-                  <li>b) Participated in three major book fairs organized by the National Book Trust of India in Pune, Goa and Dehradun.</li>
-                  <li>c) More events and book fairs are lined up till Jul 26.</li>
-                  <li>d) Donated and setup libraries at six major airports in India. Donated almost 1400 books for this initiative. Kolkata, Chennai, Pune, Thiruvananthapuram, Mangaluru, and Bhubaneshwar.</li>
-                  <li>e) Maintaining a catalogue of fiction and non-fiction books.</li>
-                  <li>f) All efforts are on cost sharing basis, so the whole initiative remains a low-cost affair and affordable to the authors who participate in literary events and book fairs. Participation in literary events remain free.</li>
-                  <li>g) Created a Linkedin page that currently works as a landing page and also promotes the group amongst professionals.</li>
+                  <li>a) Since inception the group has organised nearly 34 Literary Events in housing societies, educational institutions and corporate offices. Prominent places are like NOFRA Mumbai, AFMC, Tata Motors, HCL technologies, Persistent Systems, a few prominent housing societies, etc.</li>
+                  <li>b) The group has helped setup Flybraries at six of the prominent airports in India and donated till date 1600 copies of books to the airport Flybraries. They are Pune, Chennai, Kolkata, Mangalore, Thiruvananthapuram, & Bhubaneshwar airports.</li>
+                  <li>c) The group also takes part in Book Festivals organised by the National Book Trust of India.</li>
                 </ul>
               </div>
               
               <div>
                 <h3 style="margin: 20px 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Way Ahead</h3>
                 <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px;">
-                  <li>a) Build a web-site for automating the operations and create a system that will become independent of any manual intervention. The rules will be implemented and all activities, transactions, database, tracking, supply chain, all will get rolled up into the web-site. All sales will happen through the website.</li>
-                  <li>b) Marketing of the group through the website and Linkedin page.</li>
-                  <li>c) Start a book shop, cum library cum café in Goa, that will be the authors book shop, café-library and it will be managed by the authors of this group.</li>
-                  <li>d) Engage more with schools and colleges to engage them in literary activities and revival of book reading. Thereby, freeing them for mobile phones, scrolling and social media.</li>
-                  <li>e) Form a foundation for promoting book reading and helping indie authors with publishing services.</li>
-                  <li>f) Welcome authors from across the globe to join this group and take it to great heights.</li>
+                  <li>a) Some of the forthcoming events are at Goa University, Naval Base – Visakhapatnam.</li>
+                  <li>b) The aim is to reach every corner of India.</li>
                 </ul>
               </div>
             </div>

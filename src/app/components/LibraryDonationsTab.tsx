@@ -131,7 +131,7 @@ export function LibraryDonationsTab() {
     try {
       const res = await axios.post(`${API}/api/admin/library-stats-overrides`, {
         drivesOverride: overrideDrives === '' ? null : overrideDrives,
-        booksOverride: overrideBooks === '' ? null : overrideBooks,
+        booksOverride: null,
         authorsOverride: overrideAuthors === '' ? null : overrideAuthors,
         librariesOverride: overrideLibraries === '' ? null : overrideLibraries
       }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
@@ -155,7 +155,7 @@ export function LibraryDonationsTab() {
       const res = await axios.post(`${API}/api/admin/library-stats-overrides/drive/${selectedDriveBreakdown.id}`, {
         authorsOverride: overrideDriveAuthors === '' ? null : overrideDriveAuthors,
         booksOverride: overrideDriveBooks === '' ? null : overrideDriveBooks,
-        dispatchedOverride: overrideDriveDispatched === '' ? null : overrideDriveDispatched
+        dispatchedOverride: null
       }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       setStatsOverrides(res.data);
       setIsEditingDriveStats(false);
@@ -777,7 +777,7 @@ export function LibraryDonationsTab() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <div className={`bg-gray-50 border rounded-xl p-4 shadow-sm ${isEditingDriveStats ? "border-paa-navy/40 ring-1 ring-paa-navy/10" : "border-gray-200"}`}>
             <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Authors Registered</div>
             {isEditingDriveStats ? (
@@ -812,24 +812,6 @@ export function LibraryDonationsTab() {
                 {statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.booksOverride !== undefined && statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.booksOverride !== null
                   ? statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.booksOverride
                   : totalBooks}
-              </div>
-            )}
-          </div>
-          <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm ${isEditingDriveStats ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
-            <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Dispatched Authors</div>
-            {isEditingDriveStats ? (
-              <input
-                type="text"
-                className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0"
-                value={overrideDriveDispatched}
-                placeholder="NA"
-                onChange={e => setOverrideDriveDispatched(e.target.value)}
-              />
-            ) : (
-              <div className="text-xl font-serif text-emerald-800 font-bold">
-                {statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.dispatchedOverride !== undefined && statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.dispatchedOverride !== null
-                  ? statsOverrides.driveOverrides?.[selectedDriveBreakdown.id]?.dispatchedOverride
-                  : totalDispatched}
               </div>
             )}
           </div>
@@ -947,7 +929,7 @@ export function LibraryDonationsTab() {
 
                   return (
                     <React.Fragment key={isRegistered ? reg.id : `not-reg-${author.id}`}>
-                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors animate-in fade-in duration-300`}>
+                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors animate-in fade-in duration-300`}>
                         <td className="p-3">
                           <div className="font-medium text-paa-navy">{author.name}</div>
                           <div className="text-xs text-gray-500">{new Date(author.createdAt || Date.now()).toLocaleDateString()}</div>
@@ -1408,9 +1390,6 @@ export function LibraryDonationsTab() {
                     <tr>
                       <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Book Title</th>
                       <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Committed</th>
-                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Collected</th>
-                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Dispatched</th>
-                      <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase text-center">Received</th>
                       <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Library Conf.</th>
                       <th className="p-3 !text-[14px] font-bold !text-indigo-800 !bg-transparent uppercase">Remarks</th>
                     </tr>
@@ -1425,27 +1404,6 @@ export function LibraryDonationsTab() {
                             <div className="text-xs text-gray-500">₹{originalBook?.book?.price}</div>
                           </td>
                           <td className="p-3 text-center bg-blue-50/30 font-bold text-blue-700">{b.qtyCommitted}</td>
-                          <td className="p-3 text-center bg-amber-50/30">
-                            <input type="number" min="0" className="w-16 text-center text-sm border border-gray-300 rounded p-1" value={b.qtyCollected} onChange={e => {
-                              const newData = [...granularData];
-                              newData[index].qtyCollected = parseInt(e.target.value) || 0;
-                              setGranularData(newData);
-                            }} />
-                          </td>
-                          <td className="p-3 text-center bg-indigo-50/30">
-                            <input type="number" min="0" className="w-16 text-center text-sm border border-gray-300 rounded p-1" value={b.qtyDispatched} onChange={e => {
-                              const newData = [...granularData];
-                              newData[index].qtyDispatched = parseInt(e.target.value) || 0;
-                              setGranularData(newData);
-                            }} />
-                          </td>
-                          <td className="p-3 text-center bg-emerald-50/30">
-                            <input type="number" min="0" className="w-16 text-center text-sm border border-gray-300 rounded p-1" value={b.qtyReceived} onChange={e => {
-                              const newData = [...granularData];
-                              newData[index].qtyReceived = parseInt(e.target.value) || 0;
-                              setGranularData(newData);
-                            }} />
-                          </td>
                           <td className="p-3">
                             <select className="text-sm border border-gray-300 rounded p-1.5 w-28" value={b.libraryConfirmation} onChange={e => {
                               const newData = [...granularData];
@@ -1579,7 +1537,7 @@ export function LibraryDonationsTab() {
       </div>
 
       {/* Dashboard Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className={`bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-indigo-300 ring-offset-1" : "border-none"}`}>
           <div className="text-[10px] font-bold text-indigo-100 uppercase tracking-wider mb-1">Total Drives Organized</div>
           {isEditingStats ? (
@@ -1597,37 +1555,11 @@ export function LibraryDonationsTab() {
             </div>
           )}
         </div>
-        <div className={`bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-rose-300 ring-offset-1" : "border-none"}`}>
+        <div className="bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-xl p-4 shadow-sm border-none">
           <div className="text-[10px] font-bold text-rose-100 uppercase tracking-wider mb-1">Total Books Donated</div>
-          {isEditingStats ? (
-            <input
-              type="text"
-              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
-              value={overrideBooks}
-              placeholder="NA"
-              onChange={e => setOverrideBooks(e.target.value)}
-            />
-          ) : (
-            <div className="text-xl font-serif text-white font-bold">
-              {statsOverrides.booksOverride !== null ? statsOverrides.booksOverride : calculatedBooks}
-            </div>
-          )}
-        </div>
-        <div className={`bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-orange-300 ring-offset-1" : "border-none"}`}>
-          <div className="text-[10px] font-bold text-orange-100 uppercase tracking-wider mb-1">Authors Participated</div>
-          {isEditingStats ? (
-            <input
-              type="text"
-              className="text-xl font-serif text-white font-bold bg-transparent border-0 border-b-2 border-white/30 focus:border-white outline-none w-full p-0 placeholder-white/50"
-              value={overrideAuthors}
-              placeholder="NA"
-              onChange={e => setOverrideAuthors(e.target.value)}
-            />
-          ) : (
-            <div className="text-xl font-serif text-white font-bold">
-              {statsOverrides.authorsOverride !== null ? statsOverrides.authorsOverride : calculatedAuthors}
-            </div>
-          )}
+          <div className="text-xl font-serif text-white font-bold">
+            {calculatedBooks}
+          </div>
         </div>
         <div className={`bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-xl p-4 shadow-sm ${isEditingStats ? "ring-2 ring-emerald-300 ring-offset-1" : "border-none"}`}>
           <div className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider mb-1">Active Libraries</div>
@@ -1800,7 +1732,9 @@ export function LibraryDonationsTab() {
               <tr><td colSpan={7} className="p-12 text-center text-gray-500">Loading donation drives...</td></tr>
             ) : filteredDrives.length === 0 ? (
               <tr><td colSpan={7} className="p-12 text-center text-gray-500">No donation drives found. Click "Create New Drive" to start.</td></tr>
-            ) : filteredDrives.map((drive, idx) => {
+            ) : [...filteredDrives]
+                .sort((a, b) => new Date(b.registrationEndDate || 0).getTime() - new Date(a.registrationEndDate || 0).getTime())
+                .map((drive, idx) => {
               // Calculate books for this drive from globalLogs (since fetchDrives doesn't nest books)
               const driveLogs = globalLogs.filter(l => l.announcementId === drive.id);
               const totalBooks = driveLogs.reduce((sum, log) => sum + (log.books?.reduce((acc: number, b: any) => acc + b.quantityDonated, 0) || 0), 0);
@@ -1817,7 +1751,7 @@ export function LibraryDonationsTab() {
                 : totalBooks;
 
               return (
-                <tr key={drive.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                <tr key={drive.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
                   <td className="p-4 max-w-[200px]">
                     <div className="font-bold text-sm text-paa-navy leading-snug line-clamp-2" title={drive.title}>{drive.title}</div>
                   </td>

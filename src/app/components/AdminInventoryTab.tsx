@@ -274,7 +274,7 @@ export function AdminInventoryTab() {
                 const isPinging = pinging[book.id];
                 const pendingLogs = book.stockHistory ? book.stockHistory.filter((h: any) => h.status === 'Pending') : [];
 
-                const alternatingBg = idx % 2 === 0 ? 'bg-white' : 'bg-sky-50/70';
+                const alternatingBg = idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50';
                 const stockBorder = book.currentStock < 10 
                   ? 'border-l-4 border-l-red-500' 
                   : book.currentStock < 30 

@@ -1837,7 +1837,7 @@ export function OperationsDashboardPage() {
                       <tr><td colSpan={7} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period for the selected filter.</td></tr>
                     )}
                     {(salesData?.tableData?.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter) || []).map((row: any, idx: number) => (
-                      <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                      <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
                         <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
                         <td className="px-5 py-3 text-xs">
@@ -2468,7 +2468,7 @@ export function OperationsDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {pendingFineApprovals.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No pending payments.</td></tr> : pendingFineApprovals.map((a: any, idx: number) => (
-                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                       <td className="px-4 py-3">
                         <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${a.extraData.finePaymentScreenshot}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
@@ -2510,7 +2510,7 @@ export function OperationsDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {activeFines.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No currently fined authors.</td></tr> : activeFines.map((a: any, idx: number) => (
-                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                       <td className="px-4 py-3 font-bold text-red-600">₹{a.extraData.lateFines}</td>
                       <td className="px-4 py-3 text-gray-600">{a.extraData.fineDate ? new Date(a.extraData.fineDate).toLocaleDateString() : 'N/A'}</td>
@@ -2544,7 +2544,7 @@ export function OperationsDashboardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {lateDeliveries.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">No late deliveries currently.</td></tr> : lateDeliveries.map((ld, idx) => (
                     <React.Fragment key={idx}>
-                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-4 py-3 font-bold text-paa-navy flex items-center gap-2">
                           <button onClick={() => setExpandedCustomerRow(expandedCustomerRow === idx ? null : idx)} className="text-gray-400 hover:text-paa-navy transition-colors focus:outline-none">
                             <ChevronDown size={16} className={`transition-transform duration-300 ${expandedCustomerRow === idx ? 'rotate-180' : ''}`} />
@@ -2682,7 +2682,7 @@ export function OperationsDashboardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {historyAuthors.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500 italic">No fine history available.</td></tr> : historyAuthors.flatMap((a: any) =>
                     a.extraData.fineHistory.map((h: any, idx: number) => (
-                      <tr key={`${a.id}-${idx}`} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors`}>
+                      <tr key={`${a.id}-${idx}`} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                         <td className="px-4 py-3 font-bold text-indigo-600">₹{h.amount}</td>
                         <td className="px-4 py-3 text-gray-600">{h.paidAt ? new Date(h.paidAt).toLocaleDateString() : 'N/A'}</td>
@@ -2983,7 +2983,7 @@ export function OperationsDashboardPage() {
                 if (a.status !== 'Pending' && b.status === 'Pending') return 1;
                 return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
               }).map((author, idx) => (
-                <tr key={author.id} className={`${selectedAuthorIds.includes(author.id) ? 'bg-indigo-100' : (idx % 2 === 0 ? 'bg-white' : 'bg-sky-50')} hover:bg-sky-100 transition-colors`}>
+                <tr key={author.id} className={`${selectedAuthorIds.includes(author.id) ? 'bg-indigo-100' : (idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50')} hover:bg-sky-100 transition-colors`}>
                   <td className="text-center">
                     <input
                       type="checkbox"
@@ -3193,7 +3193,7 @@ export function OperationsDashboardPage() {
                 .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }))
                 .map((book, idx) => (
                 <React.Fragment key={book.id}>
-                <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-100'} hover:bg-slate-200/60 transition-colors cursor-pointer`} onClick={() => setExpandedBookId(expandedBookId === book.id ? null : book.id)}>
+                <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors cursor-pointer`} onClick={() => setExpandedBookId(expandedBookId === book.id ? null : book.id)}>
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="flex gap-1.5 flex-shrink-0">
@@ -4471,7 +4471,7 @@ export function OperationsDashboardPage() {
                   const revenue = isPastOrArchive ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
                   return (
                     <React.Fragment key={i}>
-                      <tr className={`hover:bg-indigo-100 transition-colors ${expandedEventIndex === i ? 'bg-indigo-100' : (i % 2 === 0 ? 'bg-white' : 'bg-indigo-50')}`}>
+                      <tr className={`hover:bg-indigo-100 transition-colors ${expandedEventIndex === i ? 'bg-indigo-100' : (i % 2 === 0 ? 'bg-white' : 'bg-emerald-50')}`}>
                         <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => setExpandedEventIndex(expandedEventIndex === i ? null : i)}>
                           <button className="text-gray-400 hover:text-paa-navy transition-colors">
                             {expandedEventIndex === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}

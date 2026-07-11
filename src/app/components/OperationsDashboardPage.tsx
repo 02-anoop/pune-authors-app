@@ -1149,7 +1149,7 @@ export function OperationsDashboardPage() {
 
     const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-    const totalBooksSoldWeb = Object.values(categorySalesMap).reduce((a: number, b: number) => a + b, 0);
+    const totalBooksSoldWeb = (stats?.globalSuccessfulOrders || 0) + (stats?.globalPendingOrders || 0);
     const totalRevenueWeb = orders.reduce((sum: number, o: any) => (o.status === 'Completed' || o.status === 'Dispatched') ? sum + (o.total || 0) : sum, 0);
     const avgOrderValue = completedOrders > 0 ? Math.round(totalRevenueWeb / completedOrders) : 0;
 

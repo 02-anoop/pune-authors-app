@@ -3665,6 +3665,7 @@ router.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('pa
     if (req.file) {
       paymentScreenshot = `/uploads/${req.file.filename}`;
     }
+    const transactionId = req.body.transactionId || null;
 
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -3674,7 +3675,14 @@ router.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('pa
       // Allow if they already have an existing screenshot attached to their EventAuthor profile
       const existingOptIn = await prisma.eventAuthor.findFirst({ where: { eventId, authorId: author.id } });
       if (!existingOptIn || !existingOptIn.paymentScreenshot) {
+        // Wait, if totalFee could be 0 because they selected 0 books? But they are required to select > 0 books to opt in.
         return res.status(400).json({ error: 'Payment screenshot is required for this event.' });
+      }
+    }
+    if (event.registrationFee > 0 && !transactionId) {
+      const existingOptIn = await prisma.eventAuthor.findFirst({ where: { eventId, authorId: author.id } });
+      if (!existingOptIn || !existingOptIn.transactionId) {
+        return res.status(400).json({ error: 'Transaction ID is required for this event.' });
       }
     }
 
@@ -3717,7 +3725,8 @@ router.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('pa
         where: { eventId, authorId: author.id },
         data: { 
           optInStatus: 'Pending Approval',
-          ...(paymentScreenshot && { paymentScreenshot })
+          ...(paymentScreenshot && { paymentScreenshot }),
+          ...(transactionId && { transactionId })
         }
       });
       
@@ -3749,7 +3758,7 @@ router.post('/api/author/events/:eventId/opt-in', verifyToken, upload.single('pa
       }
       // Store for post-transaction processing (transactions cannot use external I/O)
       author._lowStockBooksAfterEvent = lowStockBooksAfterEvent;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     // Fire low-stock alerts after transaction commits (non-blocking)
     if (author._lowStockBooksAfterEvent && author._lowStockBooksAfterEvent.length > 0) {
@@ -3995,6 +4004,7 @@ router.get('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: {
          _count: { select: { eventAuthors: { where: { optInStatus: { not: 'Pending' } } }, eventBooks: true } },
+         eventAuthors: { select: { optInStatus: true } },
          eventBooks: { select: { listedStock: true, soldStock: true, book: { select: { mrp: true } } } },
          galleryEvent: { include: { images: true } }
       }
@@ -4042,6 +4052,8 @@ router.put('/api/admin/events/:id', verifyToken, isAdmin, upload.single('banner'
 router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
     
     const eventBooks = await prisma.eventBook.findMany({
       where: { eventId, listedStock: { gt: 0 } },
@@ -4052,6 +4064,13 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
       where: { eventId },
       include: { author: true }
     });
+
+    const posOrders = await prisma.posOrder.findMany({
+      where: { eventId, paymentStatus: 'CONFIRMED' },
+      include: { items: true }
+    });
+    
+    const uniqueDates = Array.from(new Set(posOrders.map(o => new Date(o.createdAt).toDateString()))).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
 
     const authorsData = [];
     let totalRevenue = 0;
@@ -4083,6 +4102,13 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
         categorySales[cat].revenue += revenue;
         categorySales[cat].sold += sold;
 
+        const bookPosItems = posOrders.flatMap(o => 
+            o.items.filter(i => i.bookId === eb.bookId).map(i => ({ date: new Date(o.createdAt).toDateString(), qty: i.quantity }))
+        );
+        const dayWiseSales = {};
+        uniqueDates.forEach(d => dayWiseSales[d] = 0);
+        bookPosItems.forEach(i => dayWiseSales[i.date] += i.qty);
+
         return {
           id: eb.id,
           title: eb.book.title,
@@ -4090,6 +4116,7 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
           mrp,
           listedStock: eb.listedStock,
           soldStock: sold,
+          dayWiseSales,
           availableStock: eb.listedStock - sold,
           returnedStock: eb.returnedStock,
           revenue
@@ -4100,6 +4127,8 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
       totalBooksSold += authorSold;
       totalBooksListed += authorListed;
 
+      const expectedFee = event.feeType === 'Per Title' ? authorBooks.length * event.registrationFee : event.registrationFee;
+
       authorsData.push({
         id: ea.authorId,
         name: ea.author.name,
@@ -4107,6 +4136,9 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
         phone: ea.author.phone,
         optInStatus: ea.optInStatus,
         paymentScreenshot: ea.paymentScreenshot,
+        transactionId: ea.transactionId,
+        amountPaid: ea.amountPaid,
+        expectedFee,
         totalRevenue: authorRevenue,
         totalSold: authorSold,
         totalListed: authorListed,
@@ -4125,6 +4157,7 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
         totalAuthorsRegistered: authorsData.length
       },
       categorySales,
+      uniqueDates,
       authors: authorsData
     });
 
@@ -4674,7 +4707,13 @@ router.get('/api/pos/events/:eventId/pos-sales-summary', optionalVerifyToken, as
         const eventId = parseInt(req.params.eventId);
         const orders = await prisma.posOrder.findMany({
             where: { eventId, paymentStatus: 'CONFIRMED' },
-            include: { items: { include: { book: true } } }
+            include: { items: { include: { book: true } } },
+            orderBy: { createdAt: 'desc' }
+        });
+        
+        const eventBooks = await prisma.eventBook.findMany({
+            where: { eventId },
+            include: { book: true }
         });
         
         let totalSales = 0;
@@ -4706,7 +4745,19 @@ router.get('/api/pos/events/:eventId/pos-sales-summary', optionalVerifyToken, as
             .sort((a, b) => b.count - a.count)
             .slice(0, 5);
             
-        res.json({ summary: { totalSales, totalRevenue, todaySales, todayRevenue, topSellingBooks } });
+        res.json({ 
+            summary: { 
+                totalSales, 
+                totalRevenue, 
+                todaySales, 
+                todayRevenue, 
+                topSellingBooks,
+                totalTransactions: orders.length,
+                totalBooksSold: totalSales
+            },
+            posOrders: orders,
+            eventBooks
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to load POS summary' });
@@ -4768,7 +4819,7 @@ router.post('/api/pos/events/:eventId/pos-checkout', optionalVerifyToken, async 
                     }
                 }
             });
-        });
+        }, { maxWait: 15000, timeout: 30000 });
         
         res.json({ success: true });
     } catch (err) {
@@ -4787,13 +4838,21 @@ router.post('/api/pos/events/:eventId/add-stock', optionalVerifyToken, async (re
             if (!eventBook) throw new Error('Book not in event');
             
             const book = await tx.book.findUnique({ where: { id: bookId } });
-            if (book.stock < quantity) throw new Error(`Insufficient warehouse stock. Max: ${book.stock}`);
             
-            // [PRE-LAUNCH] Halt Deductions
-            // await tx.book.update({
-            //     where: { id: bookId },
-            //     data: { stock: { decrement: quantity } }
-            // });
+            const updatedBook = await tx.book.update({
+                where: { id: bookId },
+                data: { stock: { increment: quantity } }
+            });
+
+            await tx.stockHistory.create({
+                data: {
+                    bookId: bookId,
+                    changeQty: quantity,
+                    lastStock: book.stock,
+                    currentStock: updatedBook.stock,
+                    status: 'Approved'
+                }
+            });
             
             await tx.eventBook.update({
                 where: { id: eventBook.id },

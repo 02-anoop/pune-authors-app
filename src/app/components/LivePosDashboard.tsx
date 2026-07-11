@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { useParams, useNavigate } from 'react-router';
-import { ShoppingCart, Plus, Minus, ArrowLeft, CheckCircle, QrCode, X } from 'lucide-react';
+import { useParams, useNavigate, useLocation } from 'react-router';
+import { ShoppingCart, Plus, Minus, ArrowLeft, CheckCircle, QrCode, X, ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function LivePosDashboard() {
@@ -10,6 +10,7 @@ export function LivePosDashboard() {
   const [author, setAuthor] = useState<any>(null);
   const [inventory, setInventory] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('UPI');
@@ -21,7 +22,48 @@ export function LivePosDashboard() {
   const [showSummary, setShowSummary] = useState(false);
   const [salesSummary, setSalesSummary] = useState<any>(null);
 
+  const [selectedDay, setSelectedDay] = useState<string>('All');
 
+  const uniqueDates = useMemo(() => {
+    if (!salesSummary?.posOrders) return [];
+    const dates = salesSummary.posOrders.map((o: any) => new Date(o.createdAt).toDateString());
+    return Array.from(new Set(dates)).sort((a: any, b: any) => new Date(a).getTime() - new Date(b).getTime());
+  }, [salesSummary]);
+
+  const filteredOrders = useMemo(() => {
+    if (!salesSummary?.posOrders) return [];
+    if (selectedDay === 'All') return salesSummary.posOrders;
+    return salesSummary.posOrders.filter((o: any) => new Date(o.createdAt).toDateString() === selectedDay);
+  }, [salesSummary, selectedDay]);
+
+  const filteredSummary = useMemo(() => {
+     let rev = 0;
+     let txns = 0;
+     let sold = 0;
+     filteredOrders.forEach((o: any) => {
+       rev += o.totalAmount;
+       txns += 1;
+       o.items.forEach((i: any) => sold += i.quantity);
+     });
+     return { totalRevenue: rev, totalTransactions: txns, totalBooksSold: sold };
+  }, [filteredOrders]);
+
+  const filteredEventBooks = useMemo(() => {
+     if (!salesSummary?.eventBooks) return [];
+     if (selectedDay === 'All') return salesSummary.eventBooks;
+     
+     return salesSummary.eventBooks.map((eb: any) => {
+         let soldForDay = 0;
+         filteredOrders.forEach((o: any) => {
+             o.items.forEach((i: any) => {
+                 if (i.bookId === eb.bookId) {
+                     soldForDay += i.quantity;
+                 }
+             });
+         });
+         return { ...eb, soldStock: soldForDay }; 
+     });
+  }, [salesSummary, filteredOrders, selectedDay]);
   const handleAddStock = async () => {
     if(!addStockBook) return;
     setIsAddingStock(true);
@@ -69,6 +111,10 @@ export function LivePosDashboard() {
 
   useEffect(() => {
     fetchInventory();
+    if (location.search.includes('summary=true')) {
+       fetchSummary();
+       setShowSummary(true);
+    }
   }, [eventId]);
 
   const addToCart = (book: any, maxQty: number) => {
@@ -116,6 +162,7 @@ export function LivePosDashboard() {
       setCart([]);
       setShowPaymentModal(false);
       fetchInventory();
+      fetchSummary();
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Checkout failed');
     } finally {
@@ -195,7 +242,9 @@ export function LivePosDashboard() {
         <div className="flex-1 overflow-y-auto p-4 hide-scrollbar bg-gray-100">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:pb-0">
             {inventory.map((eb: any) => {
-              const available = eb.listedStock - eb.soldStock;
+              const cartItem = cart.find(c => c.bookId === eb.book.id);
+              const cartQty = cartItem ? cartItem.quantity : 0;
+              const available = eb.listedStock - eb.soldStock - cartQty;
               return (
                 <div key={eb.id} className="bg-white border border-paa-navy/5 rounded-xl p-5 flex flex-col shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out h-[300px]">
                   <div className="h-36 bg-gray-100 mb-4 rounded-lg flex items-center justify-center overflow-hidden shrink-0 w-full relative">
@@ -220,7 +269,7 @@ export function LivePosDashboard() {
 </div>
                     </div>
                     <button 
-                      onClick={() => addToCart(eb.book, available)}
+                      onClick={() => addToCart(eb.book, eb.listedStock - eb.soldStock)}
                       disabled={available <= 0}
                       className="w-10 h-10 bg-paa-navy/5 text-paa-navy border border-paa-navy/10 rounded-full flex items-center justify-center hover:bg-paa-navy hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
                     >
@@ -359,7 +408,7 @@ export function LivePosDashboard() {
                <h3 className="font-serif font-bold text-xl text-paa-navy">Add Event Stock</h3>
                <button onClick={() => setShowAddStockModal(false)} className="text-gray-400 hover:text-paa-navy"><X size={20}/></button>
             </div>
-            <p className="text-sm text-gray-500 mb-6">How many copies of <span className="font-bold text-paa-navy">"{addStockBook.title}"</span> would you like to add to this event? (Will be deducted from main inventory).</p>
+            <p className="text-sm text-gray-500 mb-6">How many copies of <span className="font-bold text-paa-navy">"{addStockBook.title}"</span> would you like to add to this event? (This will also be added to your overall inventory log).</p>
             <div className="mb-6">
               <label className="block text-xs font-bold uppercase tracking-widest text-paa-navy mb-2">Quantity</label>
               <input 
@@ -384,58 +433,74 @@ export function LivePosDashboard() {
 
       {showSummary && (
         <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-[90vw] overflow-hidden flex flex-col max-h-[90vh]">
             <div className="bg-paa-navy text-white p-4 flex justify-between items-center shrink-0">
               <h2 className="font-serif font-bold text-xl tracking-tight">Day Summary</h2>
               <button onClick={() => setShowSummary(false)} className="text-white/80 hover:text-white transition-colors"><ArrowLeft size={20} /></button>
             </div>
             <div className="p-6 flex-1 overflow-y-auto">
               {!salesSummary ? (
-                 <div className="text-center py-8">Loading...</div>
+                 <div className="flex flex-col gap-6 animate-pulse">
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                     {[1,2,3,4].map(i => <div key={i} className="h-24 bg-gray-200 rounded"></div>)}
+                   </div>
+                   <div className="h-6 bg-gray-200 w-48 rounded mb-2 mt-4"></div>
+                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                     {[1,2,3].map(i => <div key={i} className="h-16 bg-gray-200 rounded"></div>)}
+                   </div>
+                   <div className="h-6 bg-gray-200 w-48 rounded mb-2 mt-4"></div>
+                   <div className="space-y-3">
+                     {[1,2,3].map(i => <div key={i} className="h-16 bg-gray-200 rounded"></div>)}
+                   </div>
+                 </div>
               ) : (
                  <>
-                   <div className="grid grid-cols-3 gap-3 mb-8">
-                     <div className="bg-[#e4ebf5] p-3 rounded text-center border border-paa-navy/10 shadow-sm">
+                   {uniqueDates.length > 0 && (
+                     <div className="flex flex-wrap gap-2 mb-6 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                       <button onClick={() => setSelectedDay('All')} className={`px-4 py-1.5 rounded text-xs font-bold transition-colors ${selectedDay === 'All' ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'}`}>All Days</button>
+                       {uniqueDates.map((d: any, i: number) => (
+                         <button key={i} onClick={() => setSelectedDay(d)} className={`px-4 py-1.5 rounded text-xs font-bold transition-colors ${selectedDay === d ? 'bg-paa-navy text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'}`}>
+                           Day {i + 1} ({new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})
+                         </button>
+                       ))}
+                     </div>
+                   )}
+
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                     <div className="bg-[#e4ebf5] p-3 rounded text-center border border-paa-navy/10 shadow-sm flex flex-col justify-center">
                         <div className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-1">Revenue</div>
-                        <div className="text-xl font-serif text-paa-navy">₹{salesSummary.summary.totalRevenue}</div>
+                        <div className="text-xl font-serif text-paa-navy">₹{filteredSummary.totalRevenue}</div>
                      </div>
-                     <div className="bg-[#e4ebf5] p-3 rounded text-center border border-paa-navy/10 shadow-sm">
+                     <div className="bg-[#e4ebf5] p-3 rounded text-center border border-paa-navy/10 shadow-sm flex flex-col justify-center">
                         <div className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-1">Txns</div>
-                        <div className="text-xl font-bold text-paa-navy">{salesSummary.summary.totalTransactions}</div>
+                        <div className="text-xl font-bold text-paa-navy">{filteredSummary.totalTransactions}</div>
                      </div>
-                     <div className="bg-[#e4ebf5] p-3 rounded text-center border border-paa-navy/10 shadow-sm">
+                     <div className="bg-[#e4ebf5] p-3 rounded text-center border border-paa-navy/10 shadow-sm flex flex-col justify-center">
                         <div className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-1">Books Sold</div>
-                        <div className="text-xl font-bold text-paa-navy">{salesSummary.summary.totalBooksSold}</div>
+                        <div className="text-xl font-bold text-paa-navy">{filteredSummary.totalBooksSold}</div>
+                        {filteredEventBooks.some((eb: any) => eb.soldStock > 0) && (
+                          <div className="flex flex-wrap justify-center gap-1 mt-2">
+                             {filteredEventBooks.filter((eb: any) => eb.soldStock > 0).map((eb: any, idx: number) => (
+                               <span key={idx} className="bg-white text-paa-navy border border-paa-navy/20 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest">
+                                 {eb.soldStock}x {eb.book.title.length > 10 ? eb.book.title.substring(0, 10) + '...' : eb.book.title}
+                               </span>
+                             ))}
+                          </div>
+                        )}
+                     </div>
+                     <div className="bg-[#e4ebf5] p-3 rounded text-center border border-paa-navy/10 shadow-sm flex flex-col justify-center">
+                        <div className="text-[10px] font-bold text-paa-navy uppercase tracking-widest mb-1">Inventory Left</div>
+                        <div className="text-xl font-bold text-paa-navy">
+                           {filteredEventBooks.reduce((acc: number, eb: any) => acc + Math.max(0, eb.listedStock - eb.soldStock), 0)}
+                        </div>
                      </div>
                    </div>
 
-                   <h3 className="font-bold text-sm uppercase tracking-widest text-gray-500 mb-3 border-b pb-2">Recent Transactions</h3>
-                   <div className="space-y-3">
-                     {salesSummary.posOrders.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-4">No sales recorded yet today.</p>
-                     ) : (
-                       salesSummary.posOrders.map((o: any) => (
-                         <div key={o.id} className="border border-gray-200 p-3 rounded bg-white flex justify-between items-center shadow-sm">
-                           <div>
-                              <div className="text-xs font-bold text-paa-navy uppercase tracking-widest flex items-center gap-1">
-                                #{o.id} • {o.paymentMethod} {o.paymentMethod === 'UPI' && <CheckCircle size={10} className="text-green-600"/>}
-                              </div>
-                              <div className="text-[10px] text-gray-500 font-medium">{new Date(o.createdAt).toLocaleTimeString()}</div>
-                           </div>
-                           <div className="text-right">
-                              <div className="font-bold text-green-700">₹{o.totalAmount}</div>
-                              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{o.items.reduce((acc: number, curr: any) => acc + curr.quantity, 0)} items</div>
-                           </div>
-                         </div>
-                       ))
-                     )}
-                   </div>
-
-                   {salesSummary.eventBooks && salesSummary.eventBooks.length > 0 && (
+                   {filteredEventBooks.length > 0 && (
                      <>
-                       <h3 className="font-bold text-sm uppercase tracking-widest text-gray-500 mt-6 mb-3 border-b pb-2">Inventory Status</h3>
-                       <div className="space-y-3">
-                         {salesSummary.eventBooks.map((eb: any) => (
+                       <h3 className="font-bold text-sm uppercase tracking-widest text-gray-500 mb-3 border-b pb-2">Inventory Status</h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+                         {filteredEventBooks.map((eb: any) => (
                            <div key={eb.id} className="border border-gray-200 p-3 rounded bg-white flex justify-between items-center shadow-sm">
                              <div className="flex-1 pr-2">
                                <div className="text-xs font-bold text-paa-navy line-clamp-1">{eb.book.title}</div>
@@ -456,6 +521,34 @@ export function LivePosDashboard() {
                        </div>
                      </>
                    )}
+
+                   <h3 className="font-bold text-sm uppercase tracking-widest text-gray-500 mb-3 border-b pb-2">All Transactions</h3>
+                   <div className="space-y-3">
+                     {filteredOrders.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-4">No sales recorded yet.</p>
+                     ) : (
+                       filteredOrders.map((o: any) => (
+                         <div key={o.id} className="border border-gray-200 p-3 rounded bg-white flex justify-between items-center shadow-sm">
+                           <div>
+                              <div className="text-xs font-bold text-paa-navy uppercase tracking-widest flex items-center gap-1">
+                                Txn #{o.id} • {o.paymentMethod} {o.paymentMethod === 'UPI' && <CheckCircle size={10} className="text-green-600"/>}
+                              </div>
+                              <div className="text-[10px] text-gray-500 font-medium">{new Date(o.createdAt).toLocaleTimeString()}</div>
+                              {o.transactionId && <div className="text-[9px] text-indigo-500 mt-1 font-mono break-all max-w-[150px]">Ref: {o.transactionId}</div>}
+                           </div>
+                           <div className="text-right flex flex-col items-end gap-1">
+                              <div className="font-bold text-green-700">₹{o.totalAmount}</div>
+                              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{o.items.reduce((acc: number, curr: any) => acc + curr.quantity, 0)} items</div>
+                              {o.paymentProofUrl && (
+                                 <a href={o.paymentProofUrl.startsWith('http') ? o.paymentProofUrl : `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${o.paymentProofUrl}`} target="_blank" rel="noreferrer" className="text-[9px] text-indigo-600 hover:underline border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 rounded flex items-center gap-1 mt-1">
+                                    <ImageIcon className="w-2 h-2" /> Proof
+                                 </a>
+                              )}
+                           </div>
+                         </div>
+                       ))
+                     )}
+                   </div>
                  </>
               )}
             </div>

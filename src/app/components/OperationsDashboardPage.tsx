@@ -1597,7 +1597,7 @@ export function OperationsDashboardPage() {
 
     const insights = [
       { label: 'Order Completion', value: `${orderCompletionRate}%`, desc: 'Of all web orders', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
-      { label: 'Web Books Sold', value: totalBooksSoldWeb, desc: 'Total physical copies sold online', icon: ShoppingCart, color: 'text-purple-600', bg: 'bg-purple-50' },
+      { label: 'Web Orders Received', value: totalBooksSoldWeb, desc: 'Total web orders received online', icon: ShoppingCart, color: 'text-purple-600', bg: 'bg-purple-50' },
     ];
 
     return (

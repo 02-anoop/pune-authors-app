@@ -1,75 +1,106 @@
-import os
+import re
 
-file_path = "server/routes/api.js"
-with open(file_path, "r", encoding="utf-8") as f:
+with open('server/routes/api.js', 'r', encoding='utf-8') as f:
     content = f.read()
 
-# 1. Update author destructuring in register
-content = content.replace(
-    "whyJoining, aadharNumber, address, extraData, transactionId\n    } = req.body;",
-    "whyJoining, aadharNumber, address, district, pincode, extraData, transactionId\n    } = req.body;"
-)
+# 1. Update /api/public-stats to fetch system settings
+public_stats_original = """    const events = await prisma.event.count();
+    const libraries = await prisma.library.count();
+    
+    // Total donated books
+    const donationAgg = await prisma.donationBook.aggregate({
+      _sum: { quantityDonated: true }
+    });
+    const totalDonatedBooks = donationAgg._sum.quantityDonated || 1400; // fallback if null
 
-# 2. Update booksArray mapping to include purpose
-content = content.replace(
-    "edition: req.body.edition, format: req.body.format",
-    "edition: req.body.edition, format: req.body.format, purpose: req.body.purposeOfWriting"
-)
+    // For fairs, if we don't have a specific tag, we can just use 3 or derive it.
+    const fairs = 3; 
+    
+    const stats = { authors: authors, books: books, categories: categories, events: events, fairs: fairs, airportLibraries: libraries, totalDonatedBooks };"""
 
-# 3. Update author creation to include district, pincode, dob, etc
-content = content.replace(
-    "aadharNumber,\n        address,\n        extraData:",
-    "aadharNumber,\n        address,\n        district,\n        pincode,\n        dob,\n        skillsJson: (() => { try { return JSON.parse(skills) } catch(e) { return [] } })(),\n        hobbiesJson: (() => { try { return JSON.parse(hobbies) } catch(e) { return [] } })(),\n        qualificationsJson: qualificationsArray,\n        extraData:"
-)
+public_stats_new = """    const events = await prisma.event.count();
+    const libraries = await prisma.library.count();
+    
+    // Total donated books
+    const donationAgg = await prisma.donationBook.aggregate({
+      _sum: { quantityDonated: true }
+    });
+    const totalDonatedBooks = donationAgg._sum.quantityDonated || 1400; // fallback if null
 
-# 4. Update book creation inside author to include purpose
-content = content.replace(
-    "format: b.format,\n            coverUrl: covers[idx]",
-    "format: b.format,\n            purpose: b.purpose,\n            coverUrl: covers[idx]"
-)
+    // For fairs, if we don't have a specific tag, we can just use 3 or derive it.
+    const fairs = 3; 
 
-# --- REAPPLY ---
-# 5. Update author destructuring in reapply-full
-content = content.replace(
-    "whyJoining, aadharNumber, address, extraData, transactionId\n    } = req.body;",
-    "whyJoining, aadharNumber, address, district, pincode, extraData, transactionId\n    } = req.body;"
-)
+    // Fetch system settings for manual overrides
+    const rawSettings = await prisma.systemSetting.findMany({
+      where: { key: { in: ['manualAuthorsCount', 'manualBooksCount', 'manualEventsCount', 'manualDonatedBooksCount'] } }
+    });
+    const settingsMap = {};
+    rawSettings.forEach(s => settingsMap[s.key] = s.value);
 
-# 6. Update booksArray mapping in reapply-full
-content = content.replace(
-    "edition: req.body.edition, format: req.body.format\n       });",
-    "edition: req.body.edition, format: req.body.format, purpose: req.body.purposeOfWriting\n       });"
-)
+    const stats = { 
+      authors: settingsMap['manualAuthorsCount'] ? parseInt(settingsMap['manualAuthorsCount']) : authors, 
+      books: settingsMap['manualBooksCount'] ? parseInt(settingsMap['manualBooksCount']) : books, 
+      categories: categories, 
+      events: settingsMap['manualEventsCount'] ? parseInt(settingsMap['manualEventsCount']) : events, 
+      fairs: fairs, 
+      airportLibraries: libraries, 
+      totalDonatedBooks: settingsMap['manualDonatedBooksCount'] ? parseInt(settingsMap['manualDonatedBooksCount']) : totalDonatedBooks 
+    };"""
 
-# 7. Update author update in reapply-full
-content = content.replace(
-    "aadharNumber, address, status: 'Pending',",
-    "aadharNumber, address, district, pincode, dob, skillsJson: (() => { try { return JSON.parse(skills) } catch(e) { return [] } })(), hobbiesJson: (() => { try { return JSON.parse(hobbies) } catch(e) { return [] } })(), qualificationsJson: qualificationsArray, status: 'Pending',"
-)
+content = content.replace(public_stats_original, public_stats_new)
 
-# 8. Update book bookData in reapply-full
-content = content.replace(
-    "edition: b.edition, format: b.format\n       };",
-    "edition: b.edition, format: b.format, purpose: b.purpose\n       };"
-)
+# 2. Add /api/admin/settings endpoints
+admin_settings = """
+// ── SYSTEM SETTINGS ────────────────────────────────────────────────────────────
 
-# --- EDIT AUTHOR PROFILE (Admin) ---
-content = content.replace(
-    "whyJoining, books } = req.body;",
-    "whyJoining, books, district, pincode, dob } = req.body;"
-)
+router.get('/api/admin/settings', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const settings = await prisma.systemSetting.findMany();
+    const settingsMap = {};
+    settings.forEach(s => settingsMap[s.key] = s.value);
+    res.json(settingsMap);
+  } catch (error) {
+    console.error("Failed to fetch settings:", error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
 
-content = content.replace(
-    "...(whyJoining !== undefined && { whyJoining }),",
-    "...(whyJoining !== undefined && { whyJoining }),\n        ...(district !== undefined && { district }),\n        ...(pincode !== undefined && { pincode }),\n        ...(dob !== undefined && { dob }),\n        ...(skills !== undefined && { skillsJson: (() => { try { return JSON.parse(skills) } catch(e) { return [] } })() }),\n        ...(hobbies !== undefined && { hobbiesJson: (() => { try { return JSON.parse(hobbies) } catch(e) { return [] } })() }),"
-)
+router.post('/api/admin/settings', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const settings = req.body;
+    
+    // Process each key-value pair and upsert in the database
+    const updates = Object.entries(settings).map(async ([key, value]) => {
+      if (value === null || value === undefined || value === '') {
+        // If empty, delete the setting so it falls back to dynamic
+        return prisma.systemSetting.deleteMany({ where: { key } }).catch(() => {});
+      } else {
+        return prisma.systemSetting.upsert({
+          where: { key },
+          update: { value: String(value) },
+          create: { key, value: String(value) }
+        });
+      }
+    });
+    
+    await Promise.all(updates);
+    
+    // Clear public stats cache
+    deleteCache('public-stats');
 
-content = content.replace(
-    "synopsis: b.synopsis,",
-    "synopsis: b.synopsis,\n              purpose: b.purpose,"
-)
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Failed to save settings:", error);
+    res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
 
-with open(file_path, "w", encoding="utf-8") as f:
+"""
+
+# Insert before "module.exports = router;"
+content = content.replace('module.exports = router;', admin_settings + '\nmodule.exports = router;')
+
+with open('server/routes/api.js', 'w', encoding='utf-8') as f:
     f.write(content)
-
-print("api.js patched.")

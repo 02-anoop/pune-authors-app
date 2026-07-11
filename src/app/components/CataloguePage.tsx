@@ -81,9 +81,9 @@ export async function loadPdfLibs() {
   return { jsPDF: (window as any).jspdf.jsPDF, html2canvas: (window as any).html2canvas };
 }
 
-export async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDownloading: (val: boolean) => void) {
+export async function downloadCataloguePDF(label: string, books: CatalogueBook[], setDownloading: (val: any) => void, stats: any = {}, isPrintable: boolean = false) {
   try {
-    setDownloading(true);
+    setDownloading(isPrintable ? "printable" : "standard");
 
     // Only reject blob:/data: URLs — they can't be rendered cross-origin by html2canvas.
     // All server-hosted relative/absolute URLs are accepted; broken images are handled
@@ -101,6 +101,12 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     });
 
     const { jsPDF, html2canvas } = await loadPdfLibs();
+    const bgColor = isPrintable ? '#f0f9ff' : '#0f172a';
+    const textColor = isPrintable ? '#0f172a' : '#fff';
+    const mutedColor = isPrintable ? '#334155' : '#e2e8f0';
+    const highlightColor = isPrintable ? '#0284c7' : '#b44d28';
+    const invertedFilter = isPrintable ? '' : '${invertedFilter}';
+
     
     // Group books by author
     const byAuthor: Record<string, { name: string; bio: string; photoUrl: string; instagram: string; facebook: string; whatsapp: string; qualification?: string; age?: string; experience?: string; skills?: string; hobbies?: string; books: CatalogueBook[] }> = {};
@@ -209,9 +215,9 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
         const socialHtml = socials.length > 0 ? `<div style="margin-top: 25px; font-size: 11px; display: flex; gap: 10px; flex-wrap: wrap;">${socials.join('')}</div>` : '';
   
         const authorPageHtml = `
-           <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #0f172a; color: #fff; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 60px;">
+           <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: ${bgColor}; color: ${textColor}; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 60px;">
              <div style="position: absolute; top: 40px; right: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; ${invertedFilter}" />
              </div>
              
              <div style="position: absolute; right: -50px; top: -50px; font-size: 400px; color: rgba(255,255,255,0.03); font-family: 'Playfair Display', serif; font-weight: 900; line-height: 1; pointer-events: none;">${author.name.charAt(0)}</div>
@@ -222,8 +228,8 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
                  </div>
                  
                  <div style="flex: 1;">
-                   <div style="display: inline-block; background: #b44d28; color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 3px; padding: 6px 14px; margin-bottom: 20px; font-weight: 800; font-family: system-ui, sans-serif;">Featured Author</div>
-                   <h2 style="margin: 0 0 20px; font-size: 48px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">${author.name}</h2>
+                   <div style="display: inline-block; background: #b44d28; color: ${textColor}; font-size: 12px; text-transform: uppercase; letter-spacing: 3px; padding: 6px 14px; margin-bottom: 20px; font-weight: 800; font-family: system-ui, sans-serif;">Featured Author</div>
+                   <h2 style="margin: 0 0 20px; font-size: 48px; color: ${textColor}; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">${author.name}</h2>
                    
                    <div style="margin: 0 0 20px; font-size: 13px; line-height: 1.8; color: #94a3b8; font-family: system-ui, sans-serif; text-transform: uppercase; letter-spacing: 1px;">
                      ${qualStr !== '—' ? `<div style="margin-bottom: 6px;"><strong>Qual:</strong> <span style="color: #cbd5e1">${qualStr}</span></div>` : ''}
@@ -238,7 +244,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
              </div>
              
              <div style="position: relative; z-index: 2; margin-top: 40px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.1);">
-                <p style="margin: 0; font-size: 16px; line-height: 1.9; color: #e2e8f0; text-align: justify; font-style: italic;">${author.bio}</p>
+                <p style="margin: 0; font-size: 16px; line-height: 1.9; color: ${mutedColor}; text-align: justify; font-style: italic;">${author.bio}</p>
                 ${socialHtml}
              </div>
   
@@ -322,22 +328,22 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
       document.body.appendChild(container);
   
       container.innerHTML = `
-        <div id="pdf-content-wrapper" style="width: 802px; background: #0f172a;">
+        <div id="pdf-content-wrapper" style="width: 802px; background: ${bgColor};">
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&display=swap');
           </style>
           
           <!-- Magazine Cover Page -->
-          <div class="pdf-page" style="position: relative; width: 802px; height: 1120px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: #0f172a; box-sizing: border-box;">
+          <div class="pdf-page" style="position: relative; width: 802px; height: 1120px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; background: ${bgColor}; box-sizing: border-box;">
             <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=1000&auto=format&fit=crop" crossorigin="anonymous" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: grayscale(100%);" />
             <div style="position: relative; z-index: 10; padding: 80px; width: 80%; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box;">
               <div style="margin-bottom: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 250px; filter: brightness(0) invert(1); display: block; margin: 0 auto;" />
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 250px; ${invertedFilter} display: block; margin: 0 auto;" />
               </div>
               <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 6px; color: #b44d28; margin-bottom: 30px; font-weight: 800; font-family: system-ui, sans-serif;">Exclusive Collection</div>
-              <h1 style="color: #fff; font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 900; line-height: 1.1; margin: 0 0 20px; letter-spacing: -1px;">Pune Authors' Association</h1>
+              <h1 style="color: ${textColor}; font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 900; line-height: 1.1; margin: 0 0 20px; letter-spacing: -1px;">Pune Authors' Association</h1>
               <div style="width: 80px; height: 3px; background: #b44d28; margin: 30px auto;"></div>
-              <h2 style="color: #e2e8f0; margin: 0 0 40px; font-size: 32px; font-weight: 400; font-style: italic; font-family: 'Playfair Display', serif;">The ${label} Portfolio</h2>
+              <h2 style="color: ${mutedColor}; margin: 0 0 40px; font-size: 32px; font-weight: 400; font-style: italic; font-family: 'Playfair Display', serif;">The ${label} Portfolio</h2>
               <p style="color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 4px; font-family: system-ui, sans-serif;">
                 Volume &middot; ${new Date().toLocaleDateString("en-US", { month: 'long', year: 'numeric' })} &nbsp;|&nbsp; ${validBooks.length} Curated Title(s)
               </p>
@@ -347,16 +353,16 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
           </div>
 
           <!-- Introduction Page 1 -->
-          <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #0f172a; color: #e2e8f0; box-sizing: border-box; padding: 60px 80px; display: flex; flex-direction: column;">
+          <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: ${bgColor}; color: ${mutedColor}; box-sizing: border-box; padding: 60px 80px; display: flex; flex-direction: column;">
             <div style="position: absolute; top: 40px; right: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; ${invertedFilter}" />
             </div>
-            <h2 style="margin: 40px 0 30px; font-size: 40px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">Introduction & Vision</h2>
+            <h2 style="margin: 40px 0 30px; font-size: 40px; color: ${textColor}; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">Introduction & Vision</h2>
             
             <div style="font-size: 15px; line-height: 1.8; font-family: system-ui, sans-serif; text-align: justify; display: flex; flex-direction: column; gap: 20px;">
               <div>
                 <h3 style="margin: 0 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Introduction</h3>
-                <p style="margin: 0;">Pune Authors’ Association is an informal group of authors formed in Dec 2024 by Cdr (retd) Shiv Mathur. Most of the authors are from Pune, a few from Mumbai as well from other parts of India. Currently the group has approx. 50 authors. There are 140 titles-books from these authors and the books cover a wide variety of genres.</p>
+                <p style="margin: 0;">Pune Authors’ Association is an informal group of authors formed in Dec 2024 by Cdr (retd) Shiv Mathur. Most of the authors are from Pune, a few from Mumbai as well from other parts of India. Currently the group has approx. ${stats?.authors || 50} authors. There are ${stats?.books || 140} titles-books from these authors and the books cover a wide variety of genres.</p>
                 <p style="margin: 10px 0 0 0;">The group maintains a catalogue of books of all the authors. A website is also under development and it is expected to be up by end July 26. This will allow readers to browse the books and even order them directly from the author. It will also allow any new author to join the group through an online joining process.</p>
               </div>
               
@@ -379,18 +385,18 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
           </div>
 
           <!-- Introduction Page 2 -->
-          <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: #0f172a; color: #e2e8f0; box-sizing: border-box; padding: 60px 80px; display: flex; flex-direction: column;">
+          <div class="pdf-page" style="width: 802px; height: 1120px; position: relative; background: ${bgColor}; color: ${mutedColor}; box-sizing: border-box; padding: 60px 80px; display: flex; flex-direction: column;">
             <div style="position: absolute; top: 40px; right: 40px;">
-                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; filter: brightness(0) invert(1);" />
+                <img src="${window.location.origin}/logo.png" crossorigin="anonymous" style="height: 60px; ${invertedFilter}" />
             </div>
-            <h2 style="margin: 40px 0 30px; font-size: 40px; color: #fff; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">Progress & Future</h2>
+            <h2 style="margin: 40px 0 30px; font-size: 40px; color: ${textColor}; font-family: 'Playfair Display', Georgia, serif; line-height: 1.1; letter-spacing: -0.5px;">Progress & Future</h2>
             
             <div style="font-size: 15px; line-height: 1.8; font-family: system-ui, sans-serif; text-align: justify; display: flex; flex-direction: column; gap: 20px;">
               <div>
                 <h3 style="margin: 0 0 15px 0; font-size: 26px; color: #b44d28; font-family: 'Playfair Display', serif;">Achievements</h3>
                 <ul style="margin: 0 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px;">
-                  <li>a) Since inception the group has organised nearly 34 Literary Events in housing societies, educational institutions and corporate offices. Prominent places are like NOFRA Mumbai, AFMC, Tata Motors, HCL technologies, Persistent Systems, a few prominent housing societies, etc.</li>
-                  <li>b) The group has helped setup Flybraries at six of the prominent airports in India and donated till date 1600 copies of books to the airport Flybraries. They are Pune, Chennai, Kolkata, Mangalore, Thiruvananthapuram, & Bhubaneshwar airports.</li>
+                  <li>a) Since inception the group has organised nearly ${stats?.events || 34} Literary Events in housing societies, educational institutions and corporate offices. Prominent places are like NOFRA Mumbai, AFMC, Tata Motors, HCL technologies, Persistent Systems, a few prominent housing societies, etc.</li>
+                  <li>b) The group has helped setup Flybraries at six of the prominent airports in India and donated till date ${stats?.totalDonatedBooks || 1600} copies of books to the airport Flybraries. They are Pune, Chennai, Kolkata, Mangalore, Thiruvananthapuram, & Bhubaneshwar airports.</li>
                   <li>c) The group also takes part in Book Festivals organised by the National Book Trust of India.</li>
                 </ul>
               </div>
@@ -430,7 +436,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
             scale: 1.5, 
             useCORS: true, 
             logging: false,
-            backgroundColor: '#0f172a',
+            backgroundColor: bgColor,
             width: 802,
             height: 1120,
             windowWidth: 802,
@@ -447,10 +453,10 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
     pdf.save(`PAA_${label.replace(/\s+/g, '_')}_Catalogue.pdf`);
     
     document.body.removeChild(container);
-    setDownloading(false);
+    setDownloading(null);
   } catch (err) {
     console.error("PDF Generation failed", err);
-    setDownloading(false);
+    setDownloading(null);
     alert("Failed to generate PDF. Please try again.");
   }
 }
@@ -488,7 +494,16 @@ export function CataloguePage() {
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [tooltip, setTooltip] = useState<{ name: string; bio: string; x: number; y: number } | null>(null);
   const [allBooks, setAllBooks] = useState<CatalogueBook[]>([]);
-  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+  const [downloadingType, setDownloadingType] = useState<"standard" | "printable" | null>(null);
+  const [publicStats, setPublicStats] = useState<any>({});
+
+  useEffect(() => {
+    fetch((import.meta.env.VITE_API_URL || 'http://localhost:3001').trim() + '/api/public-stats')
+      .then(r => r.json())
+      .then(data => setPublicStats(data))
+      .catch(e => console.error(e));
+  }, []);
+
   const [isLoading, setIsLoading] = useState(true);
   const userRole = localStorage.getItem("userRole");
 
@@ -671,12 +686,20 @@ export function CataloguePage() {
           {/* Dynamic PDF Catalogue Download */}
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
             <button
-              disabled={isDownloadingPDF}
-              onClick={() => downloadCataloguePDF(activeCategory === "All" ? "Complete" : activeCategory, filteredBooks, setIsDownloadingPDF)}
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: isDownloadingPDF ? "#475569" : "#1a1a2e", color: "#fff", border: "none", borderRadius: 10, padding: "0.55rem 1.1rem", fontSize: 13, fontWeight: 700, cursor: isDownloadingPDF ? "not-allowed" : "pointer", transition: "background 0.15s" }}
+              disabled={downloadingType !== null}
+              onClick={() => downloadCataloguePDF(activeCategory === "All" ? "Complete" : activeCategory, filteredBooks, setDownloadingType, publicStats, false)}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: downloadingType === "standard" ? "#475569" : "#1a1a2e", color: "#fff", border: "none", borderRadius: 10, padding: "0.55rem 1.1rem", fontSize: 13, fontWeight: 700, cursor: downloadingType !== null ? "not-allowed" : "pointer", transition: "background 0.15s", opacity: downloadingType === "printable" ? 0.5 : 1 }}
             >
-              {isDownloadingPDF ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Download size={13} />} 
-              {isDownloadingPDF ? "Generating PDF..." : `Download ${activeCategory === "All" ? "Complete" : activeCategory} Catalogue (PDF)`}
+              {downloadingType === "standard" ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Download size={13} />} 
+              {downloadingType === "standard" ? "Generating PDF..." : `Download ${activeCategory === "All" ? "Complete" : activeCategory} Catalogue (PDF)`}
+            </button>
+            <button
+              disabled={downloadingType !== null}
+              onClick={() => downloadCataloguePDF(activeCategory === "All" ? "Complete" : activeCategory, filteredBooks, setDownloadingType, publicStats, true)}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: downloadingType === "printable" ? "#e2e8f0" : "#f0f9ff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 10, padding: "0.55rem 1.1rem", fontSize: 13, fontWeight: 700, cursor: downloadingType !== null ? "not-allowed" : "pointer", transition: "background 0.15s", opacity: downloadingType === "standard" ? 0.5 : 1 }}
+            >
+              {downloadingType === "printable" ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div> : <Download size={13} color="#0f172a" />} 
+              {downloadingType === "printable" ? "Generating Printable PDF..." : `Printable ${activeCategory === "All" ? "Complete" : activeCategory} Catalogue (PDF)`}
             </button>
           </div>
 

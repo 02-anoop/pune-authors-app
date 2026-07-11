@@ -83,10 +83,31 @@ router.get('/api/public-stats', async (req, res) => {
     const events = await prisma.event.count();
     const libraries = await prisma.library.count();
     
+    // Total donated books
+    const donationAgg = await prisma.donationBook.aggregate({
+      _sum: { quantityDonated: true }
+    });
+    const totalDonatedBooks = donationAgg._sum.quantityDonated || 1400; // fallback if null
+
     // For fairs, if we don't have a specific tag, we can just use 3 or derive it.
     const fairs = 3; 
-    
-    const stats = { authors: authors, books: books, categories: categories, events: events, fairs: fairs, airportLibraries: libraries };
+
+    // Fetch system settings for manual overrides
+    const rawSettings = await prisma.systemSetting.findMany({
+      where: { key: { in: ['manualAuthorsCount', 'manualBooksCount', 'manualEventsCount', 'manualDonatedBooksCount'] } }
+    });
+    const settingsMap = {};
+    rawSettings.forEach(s => settingsMap[s.key] = s.value);
+
+    const stats = { 
+      authors: settingsMap['manualAuthorsCount'] ? parseInt(settingsMap['manualAuthorsCount']) : authors, 
+      books: settingsMap['manualBooksCount'] ? parseInt(settingsMap['manualBooksCount']) : books, 
+      categories: categories, 
+      events: settingsMap['manualEventsCount'] ? parseInt(settingsMap['manualEventsCount']) : events, 
+      fairs: fairs, 
+      airportLibraries: libraries, 
+      totalDonatedBooks: settingsMap['manualDonatedBooksCount'] ? parseInt(settingsMap['manualDonatedBooksCount']) : totalDonatedBooks 
+    };
     setCache('public-stats', stats, 5 * 60 * 1000); // 5 mins
     res.json(stats);
   } catch (err) {
@@ -5607,4 +5628,50 @@ router.delete('/api/admin/carousel/:filename', verifyToken, isAdmin, (req, res) 
 });
 
 // ----------------------------------------------------
+
+// ── SYSTEM SETTINGS ────────────────────────────────────────────────────────────
+
+router.get('/api/admin/settings', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const settings = await prisma.systemSetting.findMany();
+    const settingsMap = {};
+    settings.forEach(s => settingsMap[s.key] = s.value);
+    res.json(settingsMap);
+  } catch (error) {
+    console.error("Failed to fetch settings:", error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+router.post('/api/admin/settings', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const settings = req.body;
+    
+    // Process each key-value pair and upsert in the database
+    const updates = Object.entries(settings).map(async ([key, value]) => {
+      if (value === null || value === undefined || value === '') {
+        // If empty, delete the setting so it falls back to dynamic
+        return prisma.systemSetting.deleteMany({ where: { key } }).catch(() => {});
+      } else {
+        return prisma.systemSetting.upsert({
+          where: { key },
+          update: { value: String(value) },
+          create: { key, value: String(value) }
+        });
+      }
+    });
+    
+    await Promise.all(updates);
+    
+    // Clear public stats cache
+    invalidateCache('public-stats');
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Failed to save settings:", error);
+    res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
+
+
 module.exports = router;

@@ -1347,13 +1347,55 @@ router.get('/api/admin/dashboard-stats', verifyToken, isAdmin, async (req, res) 
     activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const recentActivities = activities.slice(0, 8);
 
-    // 7. Global Order KPIs for Dashboard Table Header
-    const [globalSuccessfulOrders, globalPendingOrders, globalDispatchedOrders, uniqueCustomersData] = await Promise.all([
-      prisma.order.count({ where: { status: { in: ['Completed', 'Delivered', 'Shipped', 'Dispatched'] } } }),
-      prisma.order.count({ where: { status: { in: ['Pending Verification', 'Processing', 'Pending'] } } }),
-      prisma.order.count({ where: { status: 'Dispatched' } }),
-      prisma.order.groupBy({ by: ['customerEmail'], _count: { id: true }, where: { customerEmail: { not: null } } })
-    ]);
+    // Helper function for aggregate status calculation
+    function getOrderAggregateStatus(ord) {
+      const { status: ordStatus, items } = ord;
+      if (ordStatus === 'Cancelled') return 'Cancelled';
+      if (ordStatus === 'Payment Not Received') return 'Payment Failed';
+
+      if (items && items.length > 0) {
+        const allCompleted = items.every(it => it.status === 'Completed' || it.status === 'Delivered');
+        const anyDispatched = items.some(it => it.status === 'Dispatched' || it.status === 'Completed' || it.status === 'Delivered');
+        const anyAccepted = items.some(it => it.status === 'Accepted');
+        const anyRejected = items.some(it => it.status === 'Rejected');
+
+        if (allCompleted) return 'Delivered';
+        if (anyDispatched) return 'Dispatched';
+        if (anyAccepted) return 'Accepted';
+        if (anyRejected) return 'Rejected';
+      }
+
+      if (ordStatus === 'Pending Verification' || ordStatus === 'Pending') {
+        return 'Pending Verification';
+      }
+
+      return ordStatus || 'Pending';
+    }
+
+    const allOrdersForKPI = await prisma.order.findMany({
+      include: { items: true }
+    });
+
+    let globalSuccessfulOrders = 0;
+    let globalPendingOrders = 0;
+    let globalDispatchedOrders = 0;
+
+    allOrdersForKPI.forEach(ord => {
+      const statusText = getOrderAggregateStatus(ord);
+      if (statusText === 'Delivered') {
+        globalSuccessfulOrders++;
+      } else if (statusText === 'Pending Verification') {
+        globalPendingOrders++;
+      } else if (statusText === 'Dispatched') {
+        globalDispatchedOrders++;
+      }
+    });
+
+    const uniqueCustomersData = await prisma.order.groupBy({
+      by: ['customerEmail'],
+      _count: { id: true },
+      where: { customerEmail: { not: null } }
+    });
     const globalTotalCustomers = uniqueCustomersData.length;
 
     const result = {
@@ -2292,6 +2334,7 @@ router.post('/api/orders', optionalVerifyToken, upload.single('paymentScreenshot
       invalidateCache(`author:dashboard:${authorEmail}`);
     }
 
+    invalidateCache('admin:dashboard-stats');
     res.status(201).json(order);
   } catch (err) {
     console.error(err);
@@ -2393,6 +2436,7 @@ router.put('/api/order-items/:id/author-approve', verifyToken, async (req, res) 
     );
 
     invalidateCache(`author:dashboard:${req.user.email}`);
+    invalidateCache('admin:dashboard-stats');
     res.json({
       ...updated, invoiceData: {
         orderId,
@@ -2485,6 +2529,7 @@ router.put('/api/order-items/:id/author-reject', verifyToken, async (req, res) =
     }
 
     invalidateCache(`author:dashboard:${req.user.email}`);
+    invalidateCache('admin:dashboard-stats');
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -2872,6 +2917,7 @@ router.delete('/api/admin/orders/:id', verifyToken, isAdmin, async (req, res) =>
     const orderId = parseInt(req.params.id);
     await prisma.orderItem.deleteMany({ where: { orderId } });
     await prisma.order.delete({ where: { id: orderId } });
+    invalidateCache('admin:dashboard-stats');
     res.json({ success: true });
   } catch (error) {
     console.error('Delete order error:', error);
@@ -3029,6 +3075,7 @@ router.put('/api/order-items/:id/status', verifyToken, async (req, res) => {
       where: { id: parseInt(req.params.id) },
       data: updateData
     });
+    invalidateCache('admin:dashboard-stats');
     res.json(orderItem);
   } catch (err) {
     console.error(err);
@@ -3131,6 +3178,7 @@ router.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
       await sendNotificationEmail(orderItem.order.customerEmail, 'Order Dispatched', `Your book "${orderItem.book.title}" has been dispatched. Tracking No: ${trackingNumber}`);
     }
 
+    invalidateCache('admin:dashboard-stats');
     res.json(orderItem);
 
   } catch (err) {
@@ -3198,6 +3246,7 @@ router.post('/api/admin/orders/:id/verify', verifyToken, isAdmin, async (req, re
       include: { items: true }
     });
 
+    invalidateCache('admin:dashboard-stats');
     res.json(order);
 
   } catch (err) {
@@ -3213,6 +3262,7 @@ router.post('/api/admin/orders/:id/reject-payment', verifyToken, isAdmin, async 
       where: { id },
       data: { status: 'Payment Not Received' }
     });
+    invalidateCache('admin:dashboard-stats');
     res.json(order);
   } catch (err) {
     console.error(err);

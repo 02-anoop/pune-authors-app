@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Megaphone, MapPin, Calendar, Clock, BookOpen, CheckCircle2, Package, Upload, Download, FileText, Landmark, FileSpreadsheet, ShieldCheck, BadgeAlert, Sparkles, ChevronRight, X, User, Phone, Trash2 } from 'lucide-react';
+import { Megaphone, MapPin, Calendar, Clock, BookOpen, CheckCircle2, Package, Upload, Download, FileText, Landmark, FileSpreadsheet, ShieldCheck, BadgeAlert, Sparkles, ChevronRight, X, User, Phone, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import qrCode from "./data/qr_code.jpeg";
 
@@ -10,6 +10,8 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
   const [loading, setLoading] = useState(true);
   const [isRegistering, setIsRegistering] = useState<number | null>(null);
   const [myRegistrations, setMyRegistrations] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
   
   // For donation form
   const [selectedBooks, setSelectedBooks] = useState<{ bookId: number, qty: number }[]>([]);
@@ -257,6 +259,31 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
     };
   };
 
+  const filteredAnnouncements = announcements.filter(ann => {
+    const term = searchTerm.toLowerCase();
+    const titleMatch = ann.title && ann.title.toLowerCase().includes(term);
+    const descMatch = ann.description && ann.description.toLowerCase().includes(term);
+    const libMatch = ann.library && (
+      (ann.library.name && ann.library.name.toLowerCase().includes(term)) ||
+      (ann.library.city && ann.library.city.toLowerCase().includes(term)) ||
+      (ann.library.state && ann.library.state.toLowerCase().includes(term))
+    );
+    return titleMatch || descMatch || libMatch;
+  });
+
+  const filteredHistoryEntries = myRegistrations.flatMap((reg: any) => 
+    reg.books.map((b: any) => ({ ...b, reg }))
+  ).filter((entry: any) => {
+    const term = historySearchTerm.toLowerCase();
+    const reg = entry.reg;
+    const titleMatch = reg.announcement?.title && reg.announcement.title.toLowerCase().includes(term);
+    const libNameMatch = reg.announcement?.library?.name && reg.announcement.library.name.toLowerCase().includes(term);
+    const cityMatch = reg.announcement?.library?.city && reg.announcement.library.city.toLowerCase().includes(term);
+    const bookTitleMatch = entry.book?.title && entry.book.title.toLowerCase().includes(term);
+    const statusMatch = reg.status && reg.status.toLowerCase().includes(term);
+    return titleMatch || libNameMatch || cityMatch || bookTitleMatch || statusMatch;
+  });
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -312,18 +339,30 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
 
       {/* Campaigns Listing */}
       <div className="space-y-5">
-        <h3 className="text-xl font-bold text-paa-navy font-serif border-b pb-2 flex items-center gap-2">
-          Active Donation Campaigns <Megaphone className="w-5 h-5 text-purple-500" />
-        </h3>
+        <div className="border-b pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <h3 className="text-xl font-bold text-paa-navy font-serif flex items-center gap-2">
+            Donation Campaigns <Megaphone className="w-5 h-5 text-purple-500" />
+          </h3>
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search campaigns..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-1.5 bg-white border border-gray-200 text-xs font-semibold outline-none focus:border-paa-navy transition-colors w-full rounded-full shadow-sm text-gray-700"
+            />
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {announcements.length === 0 ? (
+          {filteredAnnouncements.length === 0 ? (
             <div className="lg:col-span-2 bg-white rounded-2xl p-12 text-center text-gray-500 border border-dashed border-gray-200">
               <Megaphone className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-base font-semibold">No Active Campaigns</p>
-              <p className="text-sm text-gray-400 mt-1">We will notify you here when a new donation drive is launched.</p>
+              <p className="text-base font-semibold">{searchTerm ? 'No campaigns match your search' : 'No Active Campaigns'}</p>
+              <p className="text-sm text-gray-400 mt-1">{searchTerm ? 'Try adjusting your search keywords.' : 'We will notify you here when a new donation drive is launched.'}</p>
             </div>
-          ) : announcements.map(ann => (
+          ) : filteredAnnouncements.map(ann => (
             <div key={ann.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col hover:border-paa-navy/20 transition-all duration-300">
               <div className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-3 gap-3">
@@ -572,10 +611,20 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
 
       {/* Donation History Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h3 className="text-xl font-bold text-paa-navy font-serif">Donation History & Tracker</h3>
             <p className="text-xs text-gray-500 mt-1">Real-time status updates of your library submissions</p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search history..."
+              value={historySearchTerm}
+              onChange={(e) => setHistorySearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-1.5 bg-white border border-gray-200 text-xs font-semibold outline-none focus:border-paa-navy transition-colors w-full rounded-full shadow-sm text-gray-700"
+            />
           </div>
         </div>
         
@@ -592,8 +641,11 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {myRegistrations.flatMap((reg: any) => 
-                reg.books.map((b: any) => (
+              {filteredHistoryEntries.map((entry: any) => {
+                const b = entry;
+                const reg = entry.reg;
+                const pipeline = getPipelineStatus(reg);
+                return (
                   <tr key={`${reg.id}-${b.bookId}`} className="hover:bg-gray-50/40 transition-colors">
                     <td className="p-4 text-sm text-gray-600">{new Date(reg.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td className="p-4">
@@ -606,68 +658,71 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
                     </td>
                     <td className="p-4 text-sm font-bold text-center text-gray-600">{b.quantityDonated}</td>
                     <td className="p-4">
-                      {(() => {
-                        const pipeline = getPipelineStatus(reg);
-                        return (
-                          <div className="flex flex-col gap-2 min-w-[220px]">
-                            {/* Status Badge */}
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-full border ${pipeline.color}`}>
-                                {pipeline.label}
-                              </span>
-                            </div>
-                            
-                            {/* Courier/Tracking Details if In Transit or Completed */}
-                            {reg.courierPartner && (
-                              <div className="text-[10px] text-gray-500 font-semibold bg-gray-50 border border-gray-100 rounded-lg p-1.5 w-max max-w-[200px] truncate">
-                                <span className="text-gray-400">Courier:</span> {reg.courierPartner} 
-                                {reg.trackingNumber && <span className="block font-mono text-[9px] text-gray-400 mt-0.5">ID: {reg.trackingNumber}</span>}
-                              </div>
-                            )}
-                            
-                            {/* Visual Progress Steps */}
-                            {pipeline.step > 0 && (
-                              <div className="flex items-center gap-1.5 mt-1 select-none">
-                                {/* Step 1: Verification */}
-                                <div 
-                                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                                    pipeline.step >= 1 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
-                                  }`} 
-                                  title="1. Verification"
-                                ></div>
-                                <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 2 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
-
-                                {/* Step 2: Awaiting Dispatch */}
-                                <div 
-                                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                                    pipeline.step >= 2 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
-                                  }`} 
-                                  title="2. Awaiting Dispatch"
-                                ></div>
-                                <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 3 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
-
-                                {/* Step 3: Dispatched */}
-                                <div 
-                                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                                    pipeline.step >= 3 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
-                                  }`} 
-                                  title="3. Dispatched"
-                                ></div>
-                                <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 4 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
-
-                                {/* Step 4: Library Reached */}
-                                <div 
-                                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                                    pipeline.step >= 4 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
-                                  }`} 
-                                  title="4. Library Reached"
-                                ></div>
-                              </div>
-                            )}
-                            <div className="text-[10px] text-gray-400 font-medium">{pipeline.description}</div>
+                      <div className="flex flex-col gap-2 min-w-[220px]">
+                        {/* Status Badge */}
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-full border ${pipeline.color}`}>
+                            {pipeline.label}
+                          </span>
+                          {reg.paymentScreenshot && (
+                            <button 
+                              onClick={() => window.open(`${API}${reg.paymentScreenshot}`, '_blank')}
+                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 hover:underline cursor-pointer"
+                            >
+                              <FileText className="w-3 h-3" /> Receipt
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Courier/Tracking Details if In Transit or Completed */}
+                        {reg.courierPartner && (
+                          <div className="text-[10px] text-gray-500 font-semibold bg-gray-50 border border-gray-100 rounded-lg p-1.5 w-max max-w-[200px] truncate">
+                            <span className="text-gray-400">Courier:</span> {reg.courierPartner} 
+                            {reg.trackingNumber && <span className="block font-mono text-[9px] text-gray-400 mt-0.5">ID: {reg.trackingNumber}</span>}
                           </div>
-                        );
-                      })()}
+                        )}
+                        
+                        {/* Visual Progress Steps */}
+                        {pipeline.step >= 1 && (
+                          <div className="flex items-center gap-1 select-none mt-1">
+                            {/* Step 1: Verification */}
+                            <div 
+                              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                pipeline.step >= 1 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                              }`} 
+                              title="1. Awaiting Verification"
+                            ></div>
+                            <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 2 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
+                            
+                            {/* Step 2: Dispatch Ready */}
+                            <div 
+                              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                pipeline.step >= 2 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                              }`} 
+                              title="2. Awaiting Dispatch"
+                            ></div>
+                            <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 3 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
+
+                            {/* Step 3: Dispatched */}
+                            <div 
+                              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                pipeline.step >= 3 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                              }`} 
+                              title="3. Dispatched"
+                            ></div>
+                            <div className={`h-0.5 w-6 transition-all duration-300 ${pipeline.step >= 4 ? 'bg-paa-navy' : 'bg-gray-200'}`}></div>
+
+                            {/* Step 4: Library Reached */}
+                            <div 
+                              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                pipeline.step >= 4 ? 'bg-paa-navy ring-4 ring-blue-50' : 'bg-gray-200'
+                              }`} 
+                              title="4. Library Reached"
+                            ></div>
+                          </div>
+                        )}
+                        <div className="text-[10px] text-gray-400 font-medium">{pipeline.description}</div>
+                      </div>
                     </td>
                     <td className="p-4 text-sm text-right">
                       {reg.status !== 'Approved' ? (
@@ -684,11 +739,13 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
                       )}
                     </td>
                   </tr>
-                ))
-              )}
-              {myRegistrations.length === 0 && (
+                );
+              })}
+              {filteredHistoryEntries.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-400 text-sm">You haven't made any library donations yet. Active campaigns will appear above.</td>
+                  <td colSpan={6} className="p-8 text-center text-gray-400 text-sm">
+                    {historySearchTerm ? 'No donation records match your search' : 'You haven\'t made any library donations yet. Active campaigns will appear above.'}
+                  </td>
                 </tr>
               )}
             </tbody>

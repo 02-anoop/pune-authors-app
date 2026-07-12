@@ -2887,13 +2887,13 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
   };
 
   const handleDispatch = async (id: number) => {
-    const trackingNumber = prompt("Enter tracking number for dispatch:");
-    if (!trackingNumber) return;
+    const trackingNumber = prompt("Enter tracking number for dispatch (optional):");
+    if (trackingNumber === null) return; // Cancelled
 
     setLoadingAction(String(id));
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/dispatch`, { trackingNumber }, {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/order-items/${id}/dispatch`, { trackingNumber: trackingNumber || 'N/A' }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Order Dispatched');
@@ -2925,13 +2925,13 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
       groupedOrdersObj[o.orderId] = {
         ...o,
         itemIds: [o.id],
-        books: [{ title: o.bookTitle || o.title, quantity: o.quantity, amount: o.amount }],
+        books: [{ title: o.bookTitle || o.title, quantity: o.quantity, amount: o.amount, trackingNumber: o.trackingNumber }],
         totalQuantity: o.quantity,
         totalAmount: o.amount,
       };
     } else {
       groupedOrdersObj[o.orderId].itemIds.push(o.id);
-      groupedOrdersObj[o.orderId].books.push({ title: o.bookTitle || o.title, quantity: o.quantity, amount: o.amount });
+      groupedOrdersObj[o.orderId].books.push({ title: o.bookTitle || o.title, quantity: o.quantity, amount: o.amount, trackingNumber: o.trackingNumber });
       groupedOrdersObj[o.orderId].totalQuantity += o.quantity;
       groupedOrdersObj[o.orderId].totalAmount += o.amount;
     }
@@ -3361,6 +3361,11 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                                   </div>
                                 )}
                               </div>
+                              {b.trackingNumber && b.trackingNumber !== 'N/A' && (
+                                <p className="text-[10px] text-indigo-600 font-bold mt-1 bg-indigo-50 px-2 py-1 rounded w-fit border border-indigo-100">
+                                  Tracking: {b.trackingNumber}
+                                </p>
+                              )}
                             </div>
                           );
                         })}

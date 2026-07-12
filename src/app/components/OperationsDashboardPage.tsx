@@ -375,10 +375,20 @@ const WebOrdersTab = ({
                                 <p className="text-sm font-bold text-paa-navy mb-1">{ord.customer}</p>
                                 <p className="text-xs text-gray-500 mb-0.5">{ord.customerEmail}</p>
                                 <p className="text-xs text-gray-500 mb-3">{ord.customerPhone}</p>
-                                <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100 mb-3">
                                   <span className="font-bold text-paa-navy block mb-1">Shipping Address:</span>
                                   {ord.address}
                                 </div>
+                                {ord.items.some((it: any) => it.trackingNumber && it.trackingNumber !== 'N/A') && (
+                                  <div className="text-xs text-indigo-800 bg-indigo-50/50 p-2.5 rounded-lg border border-indigo-100">
+                                    <span className="font-bold block mb-1">Tracking Details:</span>
+                                    <ul className="space-y-1">
+                                      {ord.items.filter((it: any) => it.trackingNumber && it.trackingNumber !== 'N/A').map((it: any, idx: number) => (
+                                        <li key={idx}><strong className="text-paa-navy">{it.title}:</strong> {it.trackingNumber}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -471,7 +481,17 @@ const WebOrdersTab = ({
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-1">Shipping Details</p>
                       <p className="text-xs text-gray-500">{ord.customerEmail} • {ord.customerPhone}</p>
-                      <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2.5 rounded-lg border border-gray-100">{ord.address}</p>
+                      <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2.5 rounded-lg border border-gray-100 mb-2">{ord.address}</p>
+                      {ord.items.some((it: any) => it.trackingNumber && it.trackingNumber !== 'N/A') && (
+                        <div className="text-[11px] text-indigo-800 bg-indigo-50/50 p-2.5 rounded-lg border border-indigo-100">
+                          <span className="font-bold block mb-1">Tracking Numbers:</span>
+                          <ul className="space-y-1">
+                            {ord.items.filter((it: any) => it.trackingNumber && it.trackingNumber !== 'N/A').map((it: any, idx: number) => (
+                              <li key={idx}><strong>{it.title}:</strong> {it.trackingNumber}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-1.5 text-xs">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-2">Bill Summary</p>

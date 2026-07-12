@@ -2174,7 +2174,7 @@ router.put('/api/orders/:id/cancel', verifyToken, async (req, res) => {
     await prisma.orderItem.updateMany({ where: { orderId: id }, data: { status: 'Cancelled' } });
 
     for (const item of order.items) {
-      if (item.status === 'Accepted') {
+      if (item.status !== 'Dispatched' && item.status !== 'Completed') {
         await prisma.book.update({
           where: { id: item.bookId },
           data: { stock: { increment: item.quantity } }
@@ -2252,6 +2252,14 @@ router.post('/api/orders', optionalVerifyToken, upload.single('paymentScreenshot
       },
       include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } }
     });
+
+    // Deduct stock immediately to prevent overselling
+    for (const item of parsedItems) {
+      await prisma.book.update({
+        where: { id: parseInt(item.bookId) },
+        data: { stock: { decrement: parseInt(item.quantity) } }
+      });
+    }
 
     const orderId = `PAA-${String(order.id).padStart(4, '0')}`;
     const orderDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -2510,6 +2518,10 @@ router.put('/api/order-items/:id/author-reject', verifyToken, async (req, res) =
     });
     if (!orderItem || orderItem.book.authorId !== author.id) {
       return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    if (orderItem.status !== 'Pending Verification') {
+      return res.status(400).json({ error: 'Order is no longer pending verification.' });
     }
 
     const updated = await prisma.orderItem.update({
@@ -3089,7 +3101,18 @@ router.put('/api/order-items/:id/status', verifyToken, async (req, res) => {
 router.put('/api/order-items/:id/reject', verifyToken, async (req, res) => {
   try {
     const { reason } = req.body;
-    const existing = await prisma.orderItem.findUnique({ where: { id: parseInt(req.params.id) } });
+    const existing = await prisma.orderItem.findUnique({ where: { id: parseInt(req.params.id) }, include: { book: true } });
+
+    if (!existing || existing.status !== 'Pending Verification') {
+      return res.status(400).json({ error: 'Order is no longer pending verification.' });
+    }
+
+    if (req.user.role !== 'Admin') {
+      const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+      if (!author || existing.book.authorId !== author.id) {
+        return res.status(403).json({ error: 'Not authorized to reject this order' });
+      }
+    }
 
     const orderItem = await prisma.orderItem.update({
       where: { id: parseInt(req.params.id) },
@@ -3097,11 +3120,11 @@ router.put('/api/order-items/:id/reject', verifyToken, async (req, res) => {
       include: { order: true, book: true }
     });
 
-    // Bug Fix #9: Restore stock if the order was already accepted
-    if (existing && (existing.status === 'Accepted' || existing.status === 'Dispatched')) {
+    // Refund stock since item was rejected
+    if (orderItem.book) {
       await prisma.book.update({
-        where: { id: existing.bookId },
-        data: { stock: { increment: existing.quantity } }
+        where: { id: orderItem.bookId },
+        data: { stock: { increment: orderItem.quantity } }
       });
     }
 
@@ -3124,6 +3147,14 @@ router.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
     if (!existing || existing.status !== 'Pending Verification') {
       return res.status(400).json({ error: 'Order is not pending verification.' });
     }
+    
+    if (req.user.role !== 'Admin') {
+      const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+      if (!author || existing.book.authorId !== author.id) {
+        return res.status(403).json({ error: 'Not authorized to accept this order' });
+      }
+    }
+
     if (existing.book.stock < existing.quantity) {
       return res.status(400).json({ error: 'Insufficient stock' });
     }
@@ -3158,8 +3189,17 @@ router.put('/api/order-items/:id/accept', verifyToken, async (req, res) => {
 router.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
   try {
     const { trackingNumber } = req.body;
-    if (!trackingNumber || trackingNumber.trim() === '') {
-      return res.status(400).json({ error: 'Tracking Number is mandatory for dispatch.' });
+
+    const existing = await prisma.orderItem.findUnique({ where: { id: parseInt(req.params.id) }, include: { book: true } });
+    if (!existing || existing.status !== 'Accepted') {
+      return res.status(400).json({ error: 'Order must be accepted before dispatch.' });
+    }
+
+    if (req.user.role !== 'Admin') {
+      const author = await prisma.author.findUnique({ where: { email: req.user.email } });
+      if (!author || existing.book.authorId !== author.id) {
+        return res.status(403).json({ error: 'Not authorized to dispatch this order' });
+      }
     }
 
     const now = new Date();
@@ -3169,7 +3209,7 @@ router.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
       where: { id: parseInt(req.params.id) },
       data: {
         status: 'Dispatched',
-        trackingNumber,
+        trackingNumber: trackingNumber || 'N/A',
         dispatchedAt: now,
         expectedDeliveryDate
       },
@@ -3177,7 +3217,8 @@ router.put('/api/order-items/:id/dispatch', verifyToken, async (req, res) => {
     });
 
     if (orderItem.order && orderItem.order.customerEmail) {
-      await sendNotificationEmail(orderItem.order.customerEmail, 'Order Dispatched', `Your book "${orderItem.book.title}" has been dispatched. Tracking No: ${trackingNumber}`);
+      const trackingString = (trackingNumber && trackingNumber !== 'N/A') ? ` Tracking No: ${trackingNumber}` : '';
+      await sendNotificationEmail(orderItem.order.customerEmail, 'Order Dispatched', `Your book "${orderItem.book.title}" has been dispatched.${trackingString}`);
     }
 
     invalidateCache('admin:dashboard-stats');
@@ -3242,6 +3283,12 @@ router.put('/api/order-items/:id/acknowledge', verifyToken, async (req, res) => 
 router.post('/api/admin/orders/:id/verify', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const existing = await prisma.order.findUnique({ where: { id } });
+    
+    if (!existing || existing.status !== 'Pending Verification') {
+      return res.status(400).json({ error: 'Order is already processed or not pending verification.' });
+    }
+
     const order = await prisma.order.update({
       where: { id },
       data: { status: 'Completed' },
@@ -3260,10 +3307,28 @@ router.post('/api/admin/orders/:id/verify', verifyToken, isAdmin, async (req, re
 router.post('/api/admin/orders/:id/reject-payment', verifyToken, isAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const existing = await prisma.order.findUnique({ where: { id } });
+
+    if (!existing || existing.status !== 'Pending Verification') {
+      return res.status(400).json({ error: 'Order is already processed or not pending verification.' });
+    }
+
     const order = await prisma.order.update({
       where: { id },
-      data: { status: 'Payment Not Received' }
+      data: { status: 'Payment Not Received' },
+      include: { items: true }
     });
+
+    // Refund stock for all items
+    for (const item of order.items) {
+      if (item.status !== 'Dispatched' && item.status !== 'Completed') {
+        await prisma.book.update({
+          where: { id: item.bookId },
+          data: { stock: { increment: item.quantity } }
+        });
+      }
+    }
+
     invalidateCache('admin:dashboard-stats');
     res.json(order);
   } catch (err) {

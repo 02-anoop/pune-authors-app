@@ -370,7 +370,7 @@ export function LandingPage() {
                 >
                   Browse Books
                 </Link>
-                <Link
+                {/* <Link
                   to="/gallery"
                   style={{
                     display: "inline-flex",
@@ -392,7 +392,7 @@ export function LandingPage() {
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.transform = "translateY(0)"; }}
                 >
                   Gallery
-                </Link>
+                </Link> */}
               </div>
             </FadeIn>
           </div>
@@ -926,7 +926,7 @@ export function LandingPage() {
       {/* ════════════════════════════════════════════
           ABOUT + REVIVING READING
       ════════════════════════════════════════════ */}
-      <section style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: "3rem 2rem" }}>
+      {/* <section style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: "3rem 2rem" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }} className="hero-grid">
           <FadeIn>
             <div style={{ borderRadius: 12, overflow: "hidden" }}>
@@ -973,7 +973,7 @@ export function LandingPage() {
             </div>
           </FadeIn>
         </div>
-      </section>
+      </section> */}
 
       {/* ════════════════════════════════════════════
           CONTACT SECTION

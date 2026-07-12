@@ -32,6 +32,7 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode, delay?: nu
 }
 
 export function AboutPage() {
+  const [isReadMoreOpen, setIsReadMoreOpen] = useState(false);
   return (
     <main style={{ fontFamily: "var(--font-body)", background: "#fafafa", color: "#111", minHeight: "calc(100vh - 64px)", overflowX: "hidden" }}>
       
@@ -91,11 +92,61 @@ export function AboutPage() {
                   Today, a strict group guideline document ensures every author understands our shared agenda and ethical rules. As our success grew, we expanded our invitation to authors from Mumbai, and we are now proudly welcoming talent from across the entire country into our literary ecosystem.
                 </p>
               </div>
+
+              {!isReadMoreOpen && (
+                <button
+                  onClick={() => setIsReadMoreOpen(true)}
+                  style={{
+                    background: "#111",
+                    color: "#fff",
+                    border: "none",
+                    padding: "0.8rem 2rem",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    alignSelf: "flex-start",
+                    marginTop: "1rem"
+                  }}
+                >
+                  Read More
+                </button>
+              )}
             </div>
           </FadeIn>
           
         </div>
       </section>
+
+      {/* ── HIDDEN EXPANDABLE CONTENT ── */}
+      {isReadMoreOpen && (
+        <FadeIn>
+          <section style={{ padding: "4rem 1.5rem", maxWidth: 1100, margin: "0 auto", borderTop: "1px solid #eaeaea" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6rem", alignItems: "center" }} className="about-grid">
+              <div style={{ borderRadius: 12, overflow: "hidden" }}>
+                <img
+                  src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&h=600&fit=crop"
+                  alt="Library"
+                  style={{ width: "100%", height: 380, objectFit: "cover", display: "block" }}
+                />
+              </div>
+
+              <div>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 400, color: "#111", marginBottom: "1.5rem", lineHeight: 1.2 }}>
+                  Reviving the{" "}
+                  <span style={{ fontStyle: "italic", color: "#b44d28" }}>culture of reading.</span>
+                </h2>
+                <div style={{ width: 40, height: 2, background: "#d4a017", marginBottom: "1.5rem" }} />
+                <p style={{ fontSize: 16, color: "#222", lineHeight: 1.8, marginBottom: "1.2rem", fontWeight: 400 }}>
+                  Founded in December 2024, our association operates as a highly refined collaborative ecosystem. We grant independent authors access to premium production and strategic promotion traditionally reserved for corporate publishing.
+                </p>
+                <p style={{ fontSize: 16, color: "#222", lineHeight: 1.8, marginBottom: "2rem", fontWeight: 400 }}>
+                  Through tailored physical touchpoints—from curated airport library shelves to intimate community spaces—we bridge the gap between discerning readers and exceptional independent literature.
+                </p>
+              </div>
+            </div>
+          </section>
+        </FadeIn>
+      )}
 
       <style>{`
         @media (max-width: 800px) {

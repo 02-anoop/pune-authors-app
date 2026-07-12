@@ -794,7 +794,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       >
                         <div
                           className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-1 transition-all duration-300 shadow-sm
-                            ${i < step ? "bg-emerald-500 text-white shadow-emerald-500/20" : i === step ? "bg-paa-gold text-paa-navy shadow-paa-gold/20" : "bg-gray-100 text-gray-400 group-hover:bg-gray-200"}`}
+                            ${i < step ? "bg-[#ebd8c0]0 text-white shadow-emerald-500/20" : i === step ? "bg-paa-gold text-paa-navy shadow-paa-gold/20" : "bg-gray-100 text-gray-400 group-hover:bg-gray-200"}`}
                         >
                           {i < step ? <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-[18px] md:h-[18px]" /> : <span className="scale-[0.6] sm:scale-75 md:scale-100">{s.icon}</span>}
                         </div>
@@ -803,7 +803,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         </span>
                       </div>
                       {i < currentSteps.length - 1 && (
-                        <div className={`flex-1 h-0.5 mx-0.5 sm:mx-1 md:mx-2 min-w-[4px] transition-colors ${i < step ? "bg-emerald-500" : "bg-gray-200"}`} />
+                        <div className={`flex-1 h-0.5 mx-0.5 sm:mx-1 md:mx-2 min-w-[4px] transition-colors ${i < step ? "bg-[#ebd8c0]0" : "bg-gray-200"}`} />
                       )}
                     </Fragment>
                   ))}
@@ -1108,7 +1108,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                       <label className="dash-label">Skills * <span className="font-normal opacity-70">(Press Enter to add)</span></label>
                       <div className={`p-2 border rounded-xl bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all ${errors.skills ? 'border-red-500' : 'border-gray-200'} flex flex-wrap gap-2`}>
                         {form.skills && form.skills.map((s: string, i: number) => (
-                          <div key={i} className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                          <div key={i} className="flex items-center gap-1 bg-[#ebd8c0] text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">
                             {s} <button type="button" onClick={() => update("skills", form.skills.filter((_: any, idx: number) => idx !== i))} className="hover:text-emerald-900"><X size={12}/></button>
                           </div>
                         ))}
@@ -1260,7 +1260,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                           <div className="text-[10px] font-bold uppercase tracking-widest text-paa-gray-text">{b.genre} {b.subcategory && `> ${b.subcategory}`}</div>
                         </div>
                         {(b.coverFileUrl || b.coverUrl) && <img src={b.coverFileUrl || `${import.meta.env.VITE_API_URL || "http://localhost:3001"}${b.coverUrl}`} alt="cover" className="h-12 w-9 object-cover rounded shadow-sm border border-paa-navy/10 flex-shrink-0" />}
-                        <button type="button" onClick={() => handleEditAddedBook(idx)} className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 flex items-center justify-center transition-colors" title="Edit book">
+                        <button type="button" onClick={() => handleEditAddedBook(idx)} className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-50 hover:bg-[#ebd8c0] text-blue-500 hover:text-blue-700 flex items-center justify-center transition-colors" title="Edit book">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button type="button" onClick={() => setBooks(books.filter((_, i2) => i2 !== idx))} className="flex-shrink-0 w-7 h-7 rounded-full bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-600 flex items-center justify-center transition-colors" title="Remove book">
@@ -1588,7 +1588,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         setBackCoverFileUrl(null);
                         setShowAddBookForm(false);
                       }}
-                      className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                      className="px-4 py-2 bg-[#ebd8c0] text-emerald-700 border border-emerald-200 hover:bg-[#ebd8c0] hover:border-emerald-300 transition-colors rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2"
                     >
                       <Plus className="w-3 h-3" /> Save & Add Another Book
                     </button>
@@ -1668,7 +1668,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                     <input type="text" required placeholder="e.g. T23456789012" value={form.transactionId} onChange={(e) => update("transactionId", e.target.value)} className={`dash-input w-full ${errors.transactionId ? '!border-red-500' : ''}`} />
                     {errors.transactionId && <div className="text-red-500 text-xs mt-1 font-medium">{errors.transactionId}</div>}
 
-                    <div className="mt-8 bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800 leading-relaxed shadow-sm">
+                    <div className="mt-8 bg-[#ebd8c0]/50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800 leading-relaxed shadow-sm">
                       <strong className="font-bold text-emerald-900 block mb-1">Application Fee: ₹1000</strong>
                       <span className="opacity-90 text-xs">Your application will be reviewed within 5-7 business days. You will be notified via email once approved.</span>
                     </div>
@@ -2069,7 +2069,7 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
         ) : (
           /* Success state */
           <div className="bg-white rounded-3xl-2xl border border-paa-navy/5 p-10 md:p-14 text-center shadow-premium animate-in fade-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
+            <div className="w-20 h-20 bg-[#ebd8c0] rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
               <CheckCircle className="w-10 h-10 text-emerald-500" />
             </div>
             <h2 className="font-serif text-3xl font-medium text-paa-navy mb-3">{isReapply ? "Application Resubmitted!" : "Application Submitted!"}</h2>

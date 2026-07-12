@@ -274,7 +274,7 @@ export function AdminInventoryTab() {
                 const isPinging = pinging[book.id];
                 const pendingLogs = book.stockHistory ? book.stockHistory.filter((h: any) => h.status === 'Pending') : [];
 
-                const alternatingBg = idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50';
+                const alternatingBg = idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]';
                 const stockBorder = book.currentStock < 10 
                   ? 'border-l-4 border-l-red-500' 
                   : book.currentStock < 30 
@@ -303,7 +303,7 @@ export function AdminInventoryTab() {
                           <div className="font-bold text-paa-navy flex-1 min-w-0 flex flex-col gap-1 items-start justify-center">
                             <span className="line-clamp-2 leading-tight" title={book.title}>{book.title}</span>
                             {book.hasPending && (
-                              <span className="shrink-0 bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0.5 rounded border border-amber-200">Pending</span>
+                              <span className="shrink-0 bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded shadow-sm font-bold">Pending</span>
                             )}
                           </div>
                         </div>
@@ -337,8 +337,8 @@ export function AdminInventoryTab() {
                                   {log.changeQty > 0 ? `+${log.changeQty}` : log.changeQty} copies
                                 </span>
                                 <div className="flex gap-2 ml-auto">
-                                  <button onClick={() => approveStock(log.id, 'approve')} className="flex items-center justify-center p-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors shadow-sm" title="Accept"><Check size={16} strokeWidth={2.5} /></button>
-                                  <button onClick={() => approveStock(log.id, 'reject')} className="flex items-center justify-center p-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors shadow-sm" title="Reject"><X size={16} strokeWidth={2.5} /></button>
+                                  <button onClick={() => approveStock(log.id, 'approve')} className="flex items-center justify-center p-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors shadow-sm" title="Accept"><Check size={16} strokeWidth={2.5} /></button>
+                                  <button onClick={() => approveStock(log.id, 'reject')} className="flex items-center justify-center p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors shadow-sm" title="Reject"><X size={16} strokeWidth={2.5} /></button>
                                 </div>
                               </div>
                             ))}
@@ -398,13 +398,13 @@ export function AdminInventoryTab() {
                                           <div className="flex items-center gap-2">
                                             <button 
                                               onClick={() => approveStock(hist.id, 'approve')}
-                                              className="px-3 py-1 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 rounded text-xs font-bold transition-colors"
+                                              className="px-3 py-1 bg-green-600 text-white hover:bg-green-700 rounded text-xs font-bold transition-colors shadow-sm"
                                             >
                                               Approve
                                             </button>
                                             <button 
                                               onClick={() => approveStock(hist.id, 'reject')}
-                                              className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded text-xs font-bold transition-colors"
+                                              className="px-3 py-1 bg-red-600 text-white hover:bg-red-700 rounded text-xs font-bold transition-colors shadow-sm"
                                             >
                                               Reject
                                             </button>

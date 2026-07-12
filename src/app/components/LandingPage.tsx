@@ -314,11 +314,11 @@ export function LandingPage() {
                   placeholder="Search books, authors, genres..." 
                   value={heroSearch}
                   onChange={(e) => setHeroSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/catalogue?q=${heroSearch}`)}
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/catalogue?search=${heroSearch}`)}
                   style={{ flex: 1, border: "none", outline: "none", background: "transparent", padding: "0 1.2rem", fontSize: 14, color: "#333" }}
                 />
                 <button 
-                  onClick={() => navigate(`/catalogue?q=${heroSearch}`)}
+                  onClick={() => navigate(`/catalogue?search=${heroSearch}`)}
                   style={{ background: "#f16522", color: "#fff", border: "none", width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "transform 0.2s" }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
                   onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}

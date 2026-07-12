@@ -145,6 +145,30 @@ export function AboutPage() {
               </div>
             </div>
           </section>
+
+          <section style={{ padding: "4rem 1.5rem", maxWidth: 1100, margin: "0 auto", borderTop: "1px solid #eaeaea", background: "linear-gradient(135deg, #111 0%, #2a2215 100%)", color: "#fff", borderRadius: 16, marginBottom: "4rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6rem", alignItems: "center", padding: "0 2rem" }} className="about-grid">
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#d4a017", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "1rem" }}>
+                  Coming Soon
+                </div>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: "2.4rem", fontWeight: 400, color: "#fff", lineHeight: 1.15, marginBottom: "1.5rem" }}>
+                  The Book Shop,{" "}
+                  <span style={{ fontStyle: "italic", color: "#d4a017" }}>Café & Library</span>
+                </h2>
+                <p style={{ fontSize: 16, color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: "2rem", maxWidth: 450 }}>
+                  A curated literary haven where readers can discover, browse, and enjoy books alongside artisanal refreshments in a warm, inviting atmosphere.
+                </p>
+              </div>
+              <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <img
+                  src="https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&h=500&fit=crop"
+                  alt="Book Café & Library"
+                  style={{ width: "100%", height: 340, objectFit: "cover", display: "block" }}
+                />
+              </div>
+            </div>
+          </section>
         </FadeIn>
       )}
 

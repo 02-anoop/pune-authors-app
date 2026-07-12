@@ -874,7 +874,7 @@ export function LandingPage() {
       {/* ════════════════════════════════════════════
           THE BOOK SHOP, CAFÉ & LIBRARY
       ════════════════════════════════════════════ */}
-      <section style={{ background: `linear-gradient(135deg, ${C.dark} 0%, #2a2215 100%)`, padding: "3rem 2rem" }}>
+      {/* <section style={{ background: `linear-gradient(135deg, ${C.dark} 0%, #2a2215 100%)`, padding: "3rem 2rem" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }} className="hero-grid">
           <FadeIn>
             <div>
@@ -888,26 +888,6 @@ export function LandingPage() {
               <p style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: "2rem", maxWidth: 450 }}>
                 A curated literary haven where readers can discover, browse, and enjoy books alongside artisanal refreshments in a warm, inviting atmosphere.
               </p>
-              {/* <Link
-                to="/book-cafe"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  background: "rgba(212,160,23,0.15)",
-                  border: `1px solid rgba(212,160,23,0.3)`,
-                  color: C.gold,
-                  padding: "0.75rem 1.8rem",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  borderRadius: 6,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Explore <ArrowRight size={14} />
-              </Link> */}
             </div>
           </FadeIn>
           <FadeIn delay={200}>
@@ -920,7 +900,7 @@ export function LandingPage() {
             </div>
           </FadeIn>
         </div>
-      </section>
+      </section> */}
 
       {/* ════════════════════════════════════════════
           ABOUT + REVIVING READING

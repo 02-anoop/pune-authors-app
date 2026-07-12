@@ -225,7 +225,7 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
       return {
         step: 4,
         label: 'Library Reached',
-        color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        color: 'bg-[#ebd8c0] text-emerald-700 border-emerald-200',
         description: 'Books confirmed and received at library'
       };
     }

@@ -279,7 +279,7 @@ export function AuthorDashboardPage() {
           <NavBar />
           <main className="flex-1 flex items-center justify-center p-6 py-20">
             <div className="bg-white max-w-md w-full p-10 rounded-3xl shadow-premium border border-paa-navy/5 text-center">
-              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-emerald-100">
+              <div className="w-16 h-16 bg-[#ebd8c0] rounded-full flex items-center justify-center mx-auto mb-5 border border-emerald-100">
                 <Check className="w-8 h-8 text-emerald-500" />
               </div>
               <h2 className="font-serif text-2xl font-medium text-paa-navy mb-3">Reapplication Submitted!</h2>
@@ -1541,7 +1541,7 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
               {filteredTitles.length === 0 ? (
                 <tr><td colSpan={10} className="text-center py-10 text-paa-gray-text italic text-sm">No titles for this filter.</td></tr>
               ) : filteredTitles.map((row: any, idx: number) => (
-                <tr key={row.id} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200`}>
+                <tr key={row.id} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-[#ebd8c0]`}>
                   <td className="text-paa-gray-text text-xs text-center">{idx + 1}</td>
                   <td>{authorBooks.find((b: any) => b.id === row.id)?.coverUrl
                     ? <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${authorBooks.find((b: any) => b.id === row.id)?.coverUrl}`} alt="cover" className="w-9 h-12 object-cover rounded-lg shadow-sm" />
@@ -2148,7 +2148,7 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                     <React.Fragment key={book.id}>
                       <tr
                         onClick={() => handleRowClick(book)}
-                        className={`cursor-pointer transition-colors hover:bg-blue-200 border-b border-black/5 ${isSelected ? 'bg-blue-300 ring-2 ring-blue-500 ring-inset' : idx % 2 === 0 ? 'bg-white' : 'bg-blue-100'}`}
+                        className={`cursor-pointer transition-colors hover:bg-[#ebd8c0] border-b border-black/5 ${isSelected ? 'bg-blue-300 ring-2 ring-blue-500 ring-inset' : idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'}`}
                       >
                       {/* S.No */}
                       <td className="px-2 py-2 text-center text-sm font-bold text-gray-500">{idx + 1}</td>
@@ -2315,7 +2315,7 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                     <div key={i} className={`flex justify-between items-center p-3 rounded-xl border ${item.type === 'airport' ? 'bg-blue-50/50 border-blue-100' : 'bg-purple-50/50 border-purple-100'}`}>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className={`text-[9px] font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${item.type === 'airport' ? 'text-blue-600 bg-blue-100' : 'text-purple-600 bg-purple-100'}`}>
+                          <span className={`text-[9px] font-bold uppercase tracking-widest rounded px-1.5 py-0.5 ${item.type === 'airport' ? 'text-blue-600 bg-[#ebd8c0]' : 'text-purple-600 bg-purple-100'}`}>
                             {item.type === 'airport' ? '✈ Airport' : '📚 Book Fair'}
                           </span>
                         </div>
@@ -2539,7 +2539,7 @@ function ActivityRegistration({ activities, books, onRefresh, registrations }: {
                 const statusColor = row.type.includes('Event') ? 'bg-[#4a90e2]' : row.type.includes('Fair') ? 'bg-[#e74c3c]' : 'bg-[#43a047]';
 
                 return (
-                  <tr key={row.id} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200 border-b border-paa-navy/5`}>
+                  <tr key={row.id} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-[#ebd8c0] border-b border-paa-navy/5`}>
                     <td className="p-3 border-r border-paa-navy/5 text-center">{index + 1}</td>
                     <td className="p-3 border-r border-paa-navy/5 font-medium">{row.name}</td>
                     <td className="p-3 border-r border-paa-navy/5 text-xs">{row.type}</td>
@@ -3330,7 +3330,7 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                 const orderDate = new Date(ord.createdAt || ord.date);
                 const isSlaBreached = (new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60) > 24 && ['Pending Verification', 'Pending'].includes(ord.status);
                 return (
-                  <tr key={idx} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200`}>
+                  <tr key={idx} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-[#ebd8c0]`}>
                     <td className="px-5 py-4">
                       <p className="font-bold text-paa-navy tracking-wide text-xs">ORD-{ord.orderId}</p>
                       <p className="text-[9px] text-gray-400 uppercase tracking-widest mt-1">{ord.date}</p>
@@ -3399,7 +3399,7 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                             {editingStatusOrderId === String(ord.orderId) ? (
                               <select
                                 className={`text-[9px] py-1.5 px-2 uppercase font-bold w-full text-center rounded-full border shadow-sm outline-none cursor-pointer ${ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c]'
-                                    : ord.status === 'Dispatched' ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                    : ord.status === 'Dispatched' ? 'bg-[#ebd8c0] text-blue-800 border-blue-200'
                                       : ord.status === 'Accepted' ? 'bg-[#eef2f6] text-paa-navy border-[#8faadc]'
                                         : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
                                           : 'bg-yellow-50 text-yellow-800 border-yellow-200'
@@ -3426,7 +3426,7 @@ function AuthorOrders({ orders, onRefresh, dashboardData }: { orders: any[], onR
                                 disabled={ord.status === 'Rejected' || ord.status === 'Completed' || ord.status === 'Delivered'}
                                 className={`group flex items-center justify-between w-full px-3 py-1.5 rounded-full border transition-all ${
                                   ord.status === 'Completed' ? 'bg-[#43a047] text-white border-[#4cae4c] cursor-default'
-                                  : ord.status === 'Dispatched' ? 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 cursor-pointer'
+                                  : ord.status === 'Dispatched' ? 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-[#ebd8c0] cursor-pointer'
                                   : ord.status === 'Accepted' ? 'bg-gray-50 text-paa-navy border-gray-200 hover:bg-gray-100 cursor-pointer'
                                   : ord.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200 cursor-default'
                                   : 'bg-yellow-50 text-yellow-800 border-yellow-200 cursor-default'
@@ -4132,7 +4132,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
 
                   return (
                     <React.Fragment key={i}>
-                    <tr className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200 ${expandedEventId === evt.id ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
+                    <tr className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-[#ebd8c0] ${expandedEventId === evt.id ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
                       <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => { 
                          setExpandedEventId(expandedEventId === evt.id ? null : evt.id);
                          if (expandedEventId !== evt.id && evt.isInvite && evt.registration === 'Pending' && !evt.isPast) {
@@ -4148,7 +4148,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                       <td className="px-4 py-3">
                          <div className="text-sm font-semibold text-paa-navy">{evt.name}</div>
                          {evt.livePosEnabled && !evt.isPast && (evt.registration === 'Registered' || evt.registration === 'Approved') && (
-                           <button onClick={(e) => { e.stopPropagation(); window.open('/dashboard/pos/' + evt.id, '_blank'); }} className="mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded text-sm font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 w-max">
+                           <button onClick={(e) => { e.stopPropagation(); window.open('/dashboard/pos/' + evt.id, '_blank'); }} className="mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-[#ebd8c0]0 text-white hover:bg-emerald-600 rounded text-sm font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 w-max">
                              <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span> Launch POS
                            </button>
                          )}
@@ -4194,7 +4194,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                          (evt.isInvite ? getEventBooks(evt.id) : (evt.books || [])).forEach((b: any) => eventRev += (b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0));
                                      }
                                      gain = eventRev - (evt.amountPaid || 0);
-                                     return <span className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm inline-block ${gain >= 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>{gain >= 0 ? '+' : '-'}₹{Math.abs(gain).toLocaleString()}</span>;
+                                     return <span className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-sm inline-block ${gain >= 0 ? 'bg-[#ebd8c0] text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>{gain >= 0 ? '+' : '-'}₹{Math.abs(gain).toLocaleString()}</span>;
                                  }
                                  return <span className="text-gray-400">-</span>;
                              })()}
@@ -4208,11 +4208,11 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                               
                               if (evt.registration === 'Registered' || evt.registration === 'Approved') {
                                   statusText = evt.isPast ? 'Participated' : 'Registered';
-                                  statusColors = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+                                  statusColors = 'bg-[#ebd8c0] text-emerald-700 border border-emerald-200';
                               } else if (evt.status === 'Legacy Archive') {
                                   const isFuture = evt.startDate || evt.date ? new Date(evt.startDate || evt.date) > new Date() : false;
                                   statusText = isFuture ? 'Upcoming' : 'Completed';
-                                  statusColors = isFuture ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-600 border border-gray-200';
+                                  statusColors = isFuture ? 'bg-[#ebd8c0] text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-600 border border-gray-200';
                               } else if (evt.isPast && !evt.isDataUpdated) {
                                   statusText = 'Completed';
                                   statusColors = 'bg-gray-100 text-gray-600 border border-gray-200';
@@ -4365,7 +4365,7 @@ const pe = pastEvents.find(p => p.eventId === eventId);
                                                      <div className="flex items-center gap-3 text-[10px] font-mono shrink-0">
                                                         <div className="flex flex-col items-center"><span className="text-gray-400 font-bold">SENT</span><span className="text-gray-600">{b.listedStock || b.sent || 0}</span></div>
                                                         <div className="flex flex-col items-center"><span className="text-paa-navy font-bold">SOLD</span><span className="text-paa-navy text-xs font-black">{b.soldStock || b.sold || 0}</span></div>
-                                                        <div className="flex flex-col items-end"><span className="text-emerald-600 font-bold">REV</span><span className="text-emerald-600 font-bold bg-emerald-50 px-1 rounded">₹{(b.soldStock || b.sold || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || bDetails?.mrp || 0)}</span></div>
+                                                        <div className="flex flex-col items-end"><span className="text-emerald-600 font-bold">REV</span><span className="text-emerald-600 font-bold bg-[#ebd8c0] px-1 rounded">₹{(b.soldStock || b.sold || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || bDetails?.mrp || 0)}</span></div>
                                                      </div>
                                                   ) : (
                                                      <div className="flex items-center gap-4 text-xs font-mono shrink-0">
@@ -5140,10 +5140,10 @@ function AuthorSalesReport({ data }: { data: any }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
         {/* Card 1: Total Revenue */}
         <div className="dash-kpi-card emerald flex flex-col justify-between p-5 bg-white border border-paa-navy/5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div className="absolute top-0 right-0 w-16 h-16 bg-[#ebd8c0] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
           <div>
             <div className="flex items-start justify-between mb-4 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#ebd8c0] text-emerald-600 flex items-center justify-center shrink-0">
                 <DollarSign className="w-5 h-5" />
               </div>
             </div>
@@ -5279,7 +5279,7 @@ function AuthorSalesReport({ data }: { data: any }) {
           <div className="flex justify-center gap-4 mt-4 flex-wrap">
             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Web</span></div>
             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Events</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Fairs</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#ebd8c0]0"></div><span className="text-[10px] text-gray-500 font-bold uppercase">Fairs</span></div>
           </div>
         </div>
 
@@ -5321,11 +5321,11 @@ function AuthorSalesReport({ data }: { data: any }) {
                 <tr><td colSpan={6} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period for the selected filter.</td></tr>
               )}
               {(tableData.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter)).map((row: any, idx: number) => (
-                <tr key={idx} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-100'} hover:bg-blue-200`}>
+                <tr key={idx} className={`transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-[#ebd8c0]`}>
                   <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
                   <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
                   <td className="px-5 py-3 text-xs">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-50 text-blue-700 border border-blue-100' : row.channel === 'Events' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-50 text-blue-700 border border-blue-100' : row.channel === 'Events' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-[#ebd8c0] text-emerald-700 border border-emerald-100'}`}>
                       {row.channel === 'Web Orders' ? 'Web' : row.channel === 'Events' ? 'Events' : 'Fairs'}
                     </span>
                   </td>
@@ -5517,7 +5517,7 @@ function BundleOffersTab({ data }: { data: any }) {
           <h2 className="text-xl font-serif font-bold text-paa-navy tracking-tight">Dynamic Bundle Offers</h2>
           <p className="text-sm text-gray-500 mt-1">Configure automated discount rules for customers buying multiple books.</p>
         </div>
-        <button onClick={addRule} className="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-colors uppercase tracking-widest flex items-center gap-1">
+        <button onClick={addRule} className="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-full hover:bg-[#ebd8c0] transition-colors uppercase tracking-widest flex items-center gap-1">
           <Plus size={14} /> Add Offer
         </button>
       </div>
@@ -6258,7 +6258,7 @@ function AuthorQueries() {
             {[
               { id: 'All', label: 'All', color: 'bg-gray-800 text-white' },
               { id: 'Pending', label: 'New Unopened Tickets', color: 'bg-orange-100 text-orange-800' },
-              { id: 'Answered', label: 'Opened Tickets', color: 'bg-blue-100 text-blue-800' },
+              { id: 'Answered', label: 'Opened Tickets', color: 'bg-[#ebd8c0] text-blue-800' },
               { id: 'Resolved', label: 'Closed Tickets', color: 'bg-green-100 text-green-800' }
             ].map(t => (
               <button
@@ -6286,14 +6286,14 @@ function AuthorQueries() {
           <div key={q.id} className={`border border-gray-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 group ${q.status === 'Resolved' ? 'bg-green-50' : q.status === 'Pending' ? 'bg-orange-50' : 'bg-blue-50'}`}>
             {/* Row Header */}
             <div 
-              className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${q.status === 'Resolved' ? 'hover:bg-green-100' : q.status === 'Pending' ? 'hover:bg-orange-100' : 'hover:bg-blue-100'}`}
+              className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${q.status === 'Resolved' ? 'hover:bg-green-100' : q.status === 'Pending' ? 'hover:bg-orange-100' : 'hover:bg-[#ebd8c0]'}`}
               onClick={() => setExpandedQueryId(expandedQueryId === q.id ? null : q.id)}
             >
               <div className="flex items-center gap-4 flex-1">
                 <div className={`w-1 h-10 rounded-full ${q.status === 'Resolved' ? 'bg-green-500' : q.status === 'Pending' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                    <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-[#ebd8c0] text-blue-800'}`}>
                       Query #TKT-{q.id.toString().padStart(4, '0')}
                     </span>
                     <h4 className="font-bold text-paa-navy text-sm line-clamp-1">{q.subject}</h4>
@@ -6303,7 +6303,7 @@ function AuthorQueries() {
               </div>
               
               <div className="flex items-center gap-4">
-                <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-[#ebd8c0] text-blue-800'}`}>
                   {q.status === 'Resolved' ? 'Closed' : q.status === 'Pending' ? 'New' : 'Opened'}
                 </span>
                 <div className="text-gray-400">

@@ -27,8 +27,19 @@ export function NavBar() {
   useEffect(() => {
     const updateCartCount = () => {
       const saved = localStorage.getItem('checkout_cart');
-      if (saved) setCartCount(JSON.parse(saved).length);
-      else setCartCount(0);
+      const savedQ = localStorage.getItem('checkout_quantities');
+      if (saved) {
+        const ids = JSON.parse(saved);
+        if (savedQ) {
+           const qs = JSON.parse(savedQ);
+           const total = ids.reduce((sum: number, id: string) => sum + (qs[id] || 1), 0);
+           setCartCount(total);
+        } else {
+           setCartCount(ids.length);
+        }
+      } else {
+        setCartCount(0);
+      }
     };
     updateCartCount();
     window.addEventListener('cart_updated', updateCartCount);

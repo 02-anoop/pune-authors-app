@@ -463,6 +463,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
 
 // ── Component ────────────────────────────────────────────────────────────────
 export function CataloguePage() {
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<string>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("category") || "All";
@@ -484,27 +485,44 @@ export function CataloguePage() {
     } catch { return []; }
   });
 
-  useEffect(() => {
-    localStorage.setItem('checkout_cart', JSON.stringify(cart));
-  }, [cart]);
+  // Local storage syncing is now handled synchronously in addToCart to prevent race conditions
   const [minPrice, setMinPrice] = useState<number | ''>('');
   const [maxPrice, setMaxPrice] = useState<number | ''>('');
   const [formatFilter, setFormatFilter] = useState<string>("All");
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [showFilters, setShowFilters] = useState<boolean>(false);
-  const [tooltip, setTooltip] = useState<{ name: string; bio: string; x: number; y: number } | null>(null);
-  const [allBooks, setAllBooks] = useState<CatalogueBook[]>([]);
+  const [allBooks, setAllBooks] = useState<CatalogueBook[]>(() => {
+    const w = window as any;
+    return w.__apiCache?.catalogueBooks || [];
+  });
   const [downloadingType, setDownloadingType] = useState<"standard" | "printable" | null>(null);
-  const [publicStats, setPublicStats] = useState<any>({});
+  const [publicStats, setPublicStats] = useState<any>(() => {
+    const w = window as any;
+    return w.__apiCache?.publicStats || {};
+  });
 
   useEffect(() => {
+    const w = window as any;
+    w.__apiCache = w.__apiCache || {};
+    
+    if (w.__apiCache.publicStats) {
+      setPublicStats(w.__apiCache.publicStats);
+      return;
+    }
+
     fetch((import.meta.env.VITE_API_URL || 'http://localhost:3001').trim() + '/api/public-stats')
       .then(r => r.json())
-      .then(data => setPublicStats(data))
+      .then(data => {
+        w.__apiCache.publicStats = data;
+        setPublicStats(data);
+      })
       .catch(e => console.error(e));
   }, []);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    const w = window as any;
+    return !(w.__apiCache && w.__apiCache.catalogueBooks && w.__apiCache.publicStats);
+  });
   const userRole = localStorage.getItem("userRole");
 
   useEffect(() => {
@@ -519,9 +537,13 @@ export function CataloguePage() {
     window.addEventListener('storage', (e) => {
       if (e.key === 'checkout_cart') handleCartUpdate();
     });
+    window.addEventListener('pageshow', handleCartUpdate);
+    window.addEventListener('focus', handleCartUpdate);
     return () => {
       window.removeEventListener('cart_updated', handleCartUpdate);
       window.removeEventListener('storage', handleCartUpdate);
+      window.removeEventListener('pageshow', handleCartUpdate);
+      window.removeEventListener('focus', handleCartUpdate);
     };
   }, []);
 
@@ -570,6 +592,7 @@ export function CataloguePage() {
         }));
         w.__apiCache.catalogueBooks = mapped;
         setAllBooks(mapped);
+        setCart(prev => prev.filter(id => mapped.some(b => b.id === id)));
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -647,12 +670,40 @@ export function CataloguePage() {
     return list;
   }, [activeCategory, activeSubcategory, activeSubSubcategory, searchQuery, sortBy, allBooks, minPrice, maxPrice, formatFilter, ratingFilter]);
 
-  const addToCart = (id: string) =>
-    setCart((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const addToCart = (id: string) => {
+    setCart((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      
+      // Update local storage synchronously before dispatching event to prevent BFCache/Listener race conditions
+      localStorage.setItem('checkout_cart', JSON.stringify(next));
 
+      if (prev.includes(id)) {
+         try {
+           const qs = JSON.parse(localStorage.getItem('checkout_quantities') || '{}');
+           delete qs[id];
+           localStorage.setItem('checkout_quantities', JSON.stringify(qs));
+         } catch {}
+      } else {
+         try {
+           const qs = JSON.parse(localStorage.getItem('checkout_quantities') || '{}');
+           qs[id] = 1;
+           localStorage.setItem('checkout_quantities', JSON.stringify(qs));
+         } catch {}
+      }
+      return next;
+    });
+    // Use setTimeout to ensure React state batches properly before event fires
+    setTimeout(() => window.dispatchEvent(new Event('cart_updated')), 0);
+  };
+
+  const parsedQs = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('checkout_quantities') || '{}'); } catch { return {}; }
+  }, [cart]);
+
+  const totalItems = cart.reduce((acc, id) => acc + (parsedQs[id] || 1), 0);
   const cartTotal = cart.reduce((acc, id) => {
     const book = allBooks.find((b) => b.id === id);
-    return acc + (book?.mrp || 0);
+    return acc + (book?.mrp || 0) * (parsedQs[id] || 1);
   }, 0);
 
   const genreLabel = (g: string) => g || "Unknown";
@@ -675,10 +726,10 @@ export function CataloguePage() {
                 {allBooks.length} titles by Pune Authors' Association members
               </p>
             </div>
-            {userRole !== "AUTHOR" && userRole !== "ADMIN" && (
+            {true && (
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#1a1a2e", color: "#fff", padding: "0.6rem 1.1rem", borderRadius: 10 }}>
                 <ShoppingCart size={15} />
-                <span style={{ fontSize: 14, fontWeight: 600 }}>{cart.length} in cart</span>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>{totalItems} in cart</span>
               </div>
             )}
           </div>
@@ -944,7 +995,7 @@ export function CataloguePage() {
       </div>
 
       {/* Books Grid */}
-      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "1.5rem 1.5rem 4rem" }}>
+      <section style={{ maxWidth: 1320, margin: "0 auto", padding: "1.5rem 1.5rem 10rem" }}>
         {isLoading ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -972,20 +1023,20 @@ export function CataloguePage() {
               Clear Filters
             </button>
             <button
-                onClick={() => downloadCataloguePDF(activeCategory === "All" ? "Complete" : activeCategory, filteredBooks, setIsDownloadingPDF)}
-                disabled={isDownloadingPDF}
+                onClick={() => downloadCataloguePDF(activeCategory === "All" ? "Complete" : activeCategory, filteredBooks, setDownloadingType, publicStats, false)}
+                disabled={downloadingType !== null}
                 style={{
                   display: "flex", alignItems: "center", gap: "0.4rem",
                   padding: "0.6rem 1.1rem",
-                  background: isDownloadingPDF ? "#475569" : (activeCategory !== "All" ? getCategoryColor(activeCategory).color : "#1a1a2e"),
+                  background: downloadingType === "standard" ? "#475569" : (activeCategory !== "All" ? getCategoryColor(activeCategory).color : "#1a1a2e"),
                   color: "#fff", border: "none", borderRadius: 10,
-                  fontSize: 13, fontWeight: 700, cursor: isDownloadingPDF ? "not-allowed" : "pointer",
+                  fontSize: 13, fontWeight: 700, cursor: downloadingType !== null ? "not-allowed" : "pointer",
                   fontFamily: "var(--font-body)", whiteSpace: "nowrap",
-                  marginTop: "1rem", transition: "background 0.15s"
+                  marginTop: "1rem", transition: "background 0.15s", opacity: downloadingType === "printable" ? 0.5 : 1
                 }}
               >
-              {isDownloadingPDF ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Download size={14} />} 
-              {isDownloadingPDF ? "Generating PDF..." : `Download ${activeCategory === "All" ? "Complete" : activeCategory} Catalogue (PDF)`}
+              {downloadingType === "standard" ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Download size={14} />} 
+              {downloadingType === "standard" ? "Generating PDF..." : `Download ${activeCategory === "All" ? "Complete" : activeCategory} Catalogue (PDF)`}
             </button>
           </div>
         ) : (
@@ -1043,22 +1094,14 @@ export function CataloguePage() {
 
                   {/* Body */}
                   <div style={{ padding: "1.2rem", flex: 1, display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                    {/* Author row with bio tooltip trigger */}
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}
-                      onMouseEnter={(e) => {
-                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                        setTooltip({ name: book.authorName, bio: book.authorBio, x: rect.left, y: rect.bottom + 8 });
-                      }}
-                      onMouseLeave={() => setTooltip(null)}
-                    >
+                    {/* Author row */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       <div style={{ width: 30, height: 30, borderRadius: "50%", background: meta.bg, border: `2px solid ${meta.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: meta.color }}>
                           {book.authorName.charAt(0)}
                         </span>
                       </div>
                       <span style={{ fontSize: 12, color: "#6b6b80", fontWeight: 500 }}>{book.authorName}</span>
-                      <Info size={12} color={meta.color} style={{ marginLeft: "auto", flexShrink: 0, opacity: 0.6 }} />
                     </div>
 
                     {/* Title */}
@@ -1109,20 +1152,42 @@ export function CataloguePage() {
                           <span style={{ fontSize: 12, color: "#9ca3af" }}>{book.mrpRaw || "Price TBD"}</span>
                         )}
                       </div>
-                      {userRole !== "AUTHOR" && userRole !== "ADMIN" && book.mrp != null && (
-                        <button
-                          onClick={() => addToCart(book.id)}
-                          style={{
-                            display: "flex", alignItems: "center", gap: "0.35rem",
-                            background: inCart ? meta.color : "#1a1a2e",
-                            color: "#fff", border: "none", padding: "0.5rem 1rem",
-                            borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                            fontFamily: "var(--font-body)", transition: "background 0.15s",
-                          }}
-                        >
-                          <ShoppingCart size={12} />
-                          {inCart ? "In Cart" : "Buy"}
-                        </button>
+                      {book.mrp != null && (
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button
+                            onClick={() => addToCart(book.id)}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "0.35rem",
+                              background: inCart ? meta.color : "#f1f5f9",
+                              color: inCart ? "#fff" : "#1e293b", border: inCart ? "none" : "1px solid #cbd5e1", 
+                              padding: "0.4rem 0.6rem",
+                              borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                              fontFamily: "var(--font-body)", transition: "all 0.15s",
+                            }}
+                          >
+                            <ShoppingCart size={12} />
+                            {inCart ? "In Cart" : "Add to Cart"}
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              if (!inCart) {
+                                addToCart(book.id);
+                              }
+                              // Timeout to let React state and localStorage settle
+                              setTimeout(() => navigate('/checkout'), 30);
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "0.35rem",
+                              background: "#1a1a2e",
+                              color: "#fff", border: "none", padding: "0.4rem 0.8rem",
+                              borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                              fontFamily: "var(--font-body)", transition: "background 0.15s",
+                            }}
+                          >
+                            Buy Now
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1133,31 +1198,8 @@ export function CataloguePage() {
         )}
       </section>
 
-      {/* Author Bio Tooltip */}
-      {tooltip && (
-        <div
-          style={{
-            position: "fixed",
-            left: Math.min(tooltip.x, window.innerWidth - 340),
-            top: tooltip.y,
-            width: 320,
-            background: "#1a1a2e",
-            color: "#fff",
-            padding: "1rem 1.25rem",
-            borderRadius: 12,
-            fontSize: 12,
-            lineHeight: 1.65,
-            zIndex: 2000,
-            boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
-            pointerEvents: "none",
-          }}
-        >
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: "0.5rem", color: "#f59e0b" }}>{tooltip.name}</div>
-          <div style={{ opacity: 0.85, maxHeight: 180, overflow: "hidden" }}>{tooltip.bio}</div>
-        </div>
-      )}
 
-      {/* Floating Cart */}
+
       {cart.length > 0 && (
         <div style={{
           position: "fixed", bottom: "1.5rem", right: "1.5rem",
@@ -1166,10 +1208,10 @@ export function CataloguePage() {
           display: "flex", alignItems: "center", gap: "1rem", zIndex: 100,
         }}>
           <div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700 }}>{cart.length} book{cart.length > 1 ? "s" : ""} selected</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700 }}>{totalItems} book{totalItems > 1 ? "s" : ""} selected</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>₹{cartTotal} total</div>
           </div>
-          <Link to="/checkout" state={{ cart }}
+          <Link to="/checkout"
             style={{ background: "#b44d28", color: "#fff", padding: "0.5rem 1.1rem", borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: "none", whiteSpace: "nowrap" }}>
             Checkout <ChevronRight size={14} style={{ display: "inline", verticalAlign: "middle" }} />
           </Link>

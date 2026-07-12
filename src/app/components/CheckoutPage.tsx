@@ -1,33 +1,48 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router";
 import axios from "axios";
-import { CheckCircle, Circle, Package, MessageSquare, Truck, CheckSquare, BarChart2, CreditCard, MapPin, Minus, Plus, User, Phone, Mail } from "lucide-react";
+import { CheckCircle, Circle, Package, MessageSquare, Truck, CheckSquare, BarChart2, CreditCard, MapPin, Minus, Plus, User, Phone, Mail, ArrowLeft } from "lucide-react";
 
 export function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const cartIds: number[] = useMemo(() => {
-    let ids = location.state?.cart;
-    if (ids) {
-      localStorage.setItem('checkout_cart', JSON.stringify(ids));
-    } else {
-      const saved = localStorage.getItem('checkout_cart');
-      ids = saved ? JSON.parse(saved) : [];
-    }
-    return ids.map(Number);
-  }, [location.state?.cart]);
+  // Read ONLY from localStorage, completely ignoring router state to prevent stale BFCache ghosts
+  const cartIds = useMemo(() => {
+    const saved = localStorage.getItem('checkout_cart');
+    return saved ? JSON.parse(saved).map(Number) : [];
+  }, []);
 
-  const [books, setBooks] = useState<any[]>([]);
-  const [quantities, setQuantities] = useState<Record<number, number>>(
-    cartIds.reduce((acc, id) => ({ ...acc, [id]: 1 }), {})
-  );
+  const [books, setBooks] = useState<any[]>(() => {
+    const w = window as any;
+    if (w.__apiCache && w.__apiCache.catalogueBooks) {
+        return w.__apiCache.catalogueBooks.filter((b: any) => cartIds.includes(Number(b.id)));
+    }
+    return [];
+  });
+  const [quantities, setQuantities] = useState<Record<number, number>>(() => {
+    try {
+      const saved = localStorage.getItem('checkout_quantities');
+      const parsed = saved ? JSON.parse(saved) : {};
+      return cartIds.reduce((acc, id) => ({ ...acc, [id]: parsed[id] || 1 }), {});
+    } catch {
+      return cartIds.reduce((acc, id) => ({ ...acc, [id]: 1 }), {});
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('checkout_quantities', JSON.stringify(quantities));
+    window.dispatchEvent(new Event('cart_updated'));
+  }, [quantities]);
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", pincode: "", address: "", city: "", state: "", landmark: "", houseNo: "" });
   const [pincodeOptions, setPincodeOptions] = useState<string[]>([]);
   const [districtOptions, setDistrictOptions] = useState<string[]>([]);
   const [fetchingLoc, setFetchingLoc] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    const w = window as any;
+    return !(w.__apiCache && w.__apiCache.catalogueBooks);
+  });
   const [paymentFile, setPaymentFile] = useState<File | null>(null);
   const [transactionId, setTransactionId] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -101,28 +116,68 @@ export function CheckoutPage() {
         });
     }
 
+    const w = window as any;
+    w.__apiCache = w.__apiCache || {};
+
+    if (w.__apiCache.catalogueBooks) {
+        const cartBooks = w.__apiCache.catalogueBooks.filter((b: any) => cartIds.includes(Number(b.id)));
+        setBooks(cartBooks);
+        
+        const validIds = cartBooks.map((b: any) => Number(b.id));
+        if (validIds.length !== cartIds.length) {
+            localStorage.setItem('checkout_cart', JSON.stringify(validIds));
+            window.dispatchEvent(new Event('cart_updated'));
+        }
+        setIsLoading(false);
+        return;
+    }
+
     axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/books`)
       .then(res => {
-        const cartBooks = res.data.filter((b: any) => cartIds.includes(b.id));
+        // Cache the result for CataloguePage too
+        const mapped = res.data.map((b: any) => ({
+          ...b,
+          id: b.id.toString(),
+          authorName: b.author?.name || 'Unknown Author',
+          coverUrl: b.coverUrl ? (b.coverUrl.startsWith('http') ? b.coverUrl : `${(import.meta.env.VITE_API_URL || 'http://localhost:3001').trim()}${b.coverUrl}`) : null
+        }));
+        w.__apiCache.catalogueBooks = mapped;
+
+        const cartBooks = mapped.filter((b: any) => cartIds.includes(Number(b.id)));
         setBooks(cartBooks);
+        
+        // Clean up ghost items from localStorage to ensure cart count stays perfectly synced
+        const validIds = cartBooks.map((b: any) => Number(b.id));
+        if (validIds.length !== cartIds.length) {
+            localStorage.setItem('checkout_cart', JSON.stringify(validIds));
+            window.dispatchEvent(new Event('cart_updated'));
+        }
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [navigate, cartIds]);
 
   const updateQty = (id: number, delta: number) => {
-    setQuantities(prev => {
-      const newQty = (prev[id] || 1) + delta;
-      if (newQty <= 0) {
-        setBooks(curr => curr.filter(b => b.id !== id));
-        const newCartIds = cartIds.filter(cId => cId !== id);
-        localStorage.setItem('checkout_cart', JSON.stringify(newCartIds));
+    const currentQty = quantities[id] || 1;
+    const newQty = currentQty + delta;
+
+    if (newQty <= 0) {
+      setBooks(curr => curr.filter(b => b.id !== id));
+      // Always read latest cart to avoid stale state bugs when removing multiple items
+      const saved = localStorage.getItem('checkout_cart');
+      const currentCartIds = saved ? JSON.parse(saved).map(Number) : [];
+      const newCartIds = currentCartIds.filter((cId: number) => cId !== id);
+      localStorage.setItem('checkout_cart', JSON.stringify(newCartIds));
+      window.dispatchEvent(new Event('cart_updated'));
+      
+      setQuantities(prev => {
         const next = { ...prev };
         delete next[id];
         return next;
-      }
-      return { ...prev, [id]: newQty };
-    });
+      });
+    } else {
+      setQuantities(prev => ({ ...prev, [id]: newQty }));
+    }
   };
 
   const handleSaveAddressToProfile = async () => {
@@ -242,9 +297,23 @@ export function CheckoutPage() {
   return (
     <main style={{ fontFamily: "var(--font-body)", minHeight: "100vh" }}>
       <section style={{ background: "#fafafa", borderBottom: "1px solid #eaeaea", padding: "2rem 1.5rem" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#666", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.4rem" }}>Secure Checkout</div>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 4vw, 3rem)", margin: 0, letterSpacing: "-0.01em", fontWeight: 400, color: "#111" }}>Complete Your Order</h1>
+        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#666", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.4rem" }}>Secure Checkout</div>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 4vw, 3rem)", margin: 0, letterSpacing: "-0.01em", fontWeight: 400, color: "#111" }}>Complete Your Order</h1>
+          </div>
+          <button 
+            onClick={() => navigate("/catalogue")} 
+            style={{ 
+              background: "#fff", border: "1px solid #eaeaea", 
+              color: "#111", padding: "0.6rem 1rem", borderRadius: 8, 
+              display: "flex", alignItems: "center", gap: "0.5rem", 
+              cursor: "pointer", fontSize: 13, fontWeight: 600,
+              boxShadow: "0 1px 2px rgba(0,0,0,0.03)", transition: "all 0.15s"
+            }}
+          >
+            <ArrowLeft size={16} /> Back to Catalogue
+          </button>
         </div>
       </section>
 

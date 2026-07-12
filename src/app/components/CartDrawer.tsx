@@ -42,10 +42,18 @@ export function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () =
     setCartIds(newIds);
     setBooks(prev => prev.filter(b => b.id !== id));
     localStorage.setItem('checkout_cart', JSON.stringify(newIds));
+    try {
+       const savedQ = JSON.parse(localStorage.getItem('checkout_quantities') || '{}');
+       delete savedQ[id];
+       localStorage.setItem('checkout_quantities', JSON.stringify(savedQ));
+    } catch {}
     window.dispatchEvent(new Event('cart_updated'));
   };
 
-  const subtotal = books.reduce((sum, b) => sum + (b.mrp || 428), 0);
+  const qs = (() => {
+    try { return JSON.parse(localStorage.getItem('checkout_quantities') || '{}'); } catch { return {}; }
+  })();
+  const subtotal = books.reduce((sum, b) => sum + (b.mrp || 428) * (qs[b.id] || 1), 0);
 
   return (
     <>
@@ -106,7 +114,7 @@ export function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                     <span style={{ fontSize: 12, color: "#666", marginBottom: "auto" }}>by {book.authorName || book.author?.name}</span>
                     
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 700, color: "#b44d28" }}>₹{book.mrp || 428}</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 700, color: "#b44d28" }}>₹{book.mrp || 428} {(qs[book.id] || 1) > 1 ? `x ${qs[book.id]}` : ""}</span>
                       <button onClick={() => removeItem(book.id)} style={{ background: "none", border: "none", color: "#999", cursor: "pointer", padding: "0.25rem", display: "flex" }}>
                         <Trash2 size={16} />
                       </button>

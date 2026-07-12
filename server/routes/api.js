@@ -108,9 +108,11 @@ router.get('/api/public-stats', async (req, res) => {
       airportLibraries: libraries,
       totalDonatedBooks: settingsMap['manualDonatedBooksCount'] ? parseInt(settingsMap['manualDonatedBooksCount']) : totalDonatedBooks
     };
+    // Force nodemon restart to pick up generated Prisma Client
     setCache('public-stats', stats, 5 * 60 * 1000); // 5 mins
     res.json(stats);
   } catch (err) {
+    console.error("public-stats error:", err);
     res.status(500).json({ error: 'Failed to fetch public stats' });
   }
 });
@@ -2264,7 +2266,7 @@ router.post('/api/orders', optionalVerifyToken, upload.single('paymentScreenshot
       </tr>`).join('');
 
     await sendNotificationEmail(
-      req.user.email,
+      emailToUse,
       `Order Confirmed #${orderId} — Pune Authors' Association`,
       emailWrap(`Order Placed Successfully! 🎉`, `
         <p>Hi <strong>${customerName}</strong>, your order has been received and is now awaiting author approval.</p>

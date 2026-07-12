@@ -495,7 +495,7 @@ export function LandingPage() {
                      <h3 style={{ color: stats.landingConfig?.titleColor || "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Featured <span style={{color: stats.landingConfig?.highlightColor || "#f16522"}}>Categories</span></h3>
                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
                        {availableGenres.filter(g => stats.landingConfig.featuredCategories.includes(g.name)).map((g, i) => (
-                         <Link key={i} to="/catalogue" style={{ padding: "0.6rem 1.2rem", fontSize: 13, background: "#ffffff", borderRadius: 50, color: stats.landingConfig?.titleColor || "#1e293b", textDecoration: "none", fontWeight: 700, border: "1px solid rgba(0,0,0,0.05)", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }} onMouseEnter={(e) => { e.currentTarget.style.background = stats.landingConfig?.highlightColor || "#f16522"; e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = stats.landingConfig?.titleColor || "#1e293b"; }}>
+                         <Link key={i} to={`/catalogue?category=${encodeURIComponent(g.name)}`} style={{ padding: "0.6rem 1.2rem", fontSize: 13, background: "#ffffff", borderRadius: 50, color: stats.landingConfig?.titleColor || "#1e293b", textDecoration: "none", fontWeight: 700, border: "1px solid rgba(0,0,0,0.05)", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }} onMouseEnter={(e) => { e.currentTarget.style.background = stats.landingConfig?.highlightColor || "#f16522"; e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = stats.landingConfig?.titleColor || "#1e293b"; }}>
                            {g.name}
                          </Link>
                        ))}
@@ -509,14 +509,14 @@ export function LandingPage() {
             {/* Slider Controls Area */}
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "4rem", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", gap: "2rem", zIndex: 10 }}>
               <button 
-                onClick={() => setCurrentSlide(p => (p - 1 + 3) % 3)}
+                onClick={() => setCurrentSlide(p => (p - 1 + totalSlides) % totalSlides)}
                 style={{ background: "transparent", border: "none", color: "#1e293b", cursor: "pointer", display: "flex", alignItems: "center", padding: "0.5rem" }}
               >
                 <ChevronLeft size={20} />
               </button>
               
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                {[0, 1, 2].map(idx => (
+                {Array.from({ length: totalSlides }).map((_, idx) => (
                   <button 
                     key={idx}
                     onClick={() => setCurrentSlide(idx)}
@@ -535,7 +535,7 @@ export function LandingPage() {
               </div>
 
               <button 
-                onClick={() => setCurrentSlide(p => (p + 1) % 3)}
+                onClick={() => setCurrentSlide(p => (p + 1) % totalSlides)}
                 style={{ background: "transparent", border: "none", color: "#1e293b", cursor: "pointer", display: "flex", alignItems: "center", padding: "0.5rem" }}
               >
                 <ChevronRight size={20} />

@@ -140,6 +140,15 @@ export function LandingPage() {
   const [isLoadingBooks, setIsLoadingBooks] = useState(true);
   const [stats, setStats] = useState({
     events: 0, fairs: 0, airportLibraries: 0, authors: 0, books: 0, categories: 0,
+    landingConfig: {
+      heroTitle: "Helping indie authors publish, promote and sell.",
+      heroHighlight: "authors",
+      heroSubtitle: "We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels.",
+      titleColor: "#1e293b",
+      highlightColor: "#f16522",
+      subtitleColor: "#475569",
+      featuredCategories: [] as string[]
+    }
   });
   const [heroSearch, setHeroSearch] = useState("");
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -293,18 +302,35 @@ export function LandingPage() {
                   fontFamily: "var(--font-display)",
                   fontSize: "clamp(2.2rem, 3.5vw, 3.2rem)",
                   fontWeight: 800,
-                  color: "#1e293b",
+                  color: stats.landingConfig?.titleColor || "#1e293b",
                   lineHeight: 1.1,
                   marginBottom: "0.5rem",
                   letterSpacing: "-0.02em",
                 }}
               >
-                Helping indie <br/>
-                <span style={{ color: "#f16522" }}>authors</span> publish, promote and sell.
+                {(() => {
+                  const title = stats.landingConfig?.heroTitle || "Helping indie authors publish, promote and sell.";
+                  const highlight = stats.landingConfig?.heroHighlight || "authors";
+                  const titleColor = stats.landingConfig?.titleColor || "#1e293b";
+                  const highlightColor = stats.landingConfig?.highlightColor || "#f16522";
+
+                  if (!highlight) return <span style={{ color: titleColor }}>{title}</span>;
+                  
+                  const parts = title.split(new RegExp(`(${highlight})`, 'gi'));
+                  return (
+                    <>
+                      {parts.map((part, i) => 
+                        part.toLowerCase() === highlight.toLowerCase() 
+                          ? <span key={i} style={{ color: highlightColor }}>{part}</span>
+                          : <span key={i} style={{ color: titleColor }}>{part}</span>
+                      )}
+                    </>
+                  );
+                })()}
               </h1>
 
-              <p style={{ fontSize: 15, color: "#475569", lineHeight: 1.5, marginBottom: "1.2rem", maxWidth: 450, fontWeight: 500 }}>
-                We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels.
+              <p style={{ fontSize: 15, color: stats.landingConfig?.subtitleColor || "#475569", lineHeight: 1.5, marginBottom: "1.2rem", maxWidth: 450, fontWeight: 500 }}>
+                {stats.landingConfig?.heroSubtitle || "We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels."}
               </p>
 
               {/* Search Bar */}
@@ -319,7 +345,7 @@ export function LandingPage() {
                 />
                 <button 
                   onClick={() => navigate(`/catalogue?search=${heroSearch}`)}
-                  style={{ background: "#f16522", color: "#fff", border: "none", width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "transform 0.2s" }}
+                  style={{ background: stats.landingConfig?.highlightColor || "#f16522", color: "#fff", border: "none", width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "transform 0.2s" }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
                   onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                 >
@@ -352,7 +378,7 @@ export function LandingPage() {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "0.5rem",
-                    background: "#f16522",
+                    background: stats.landingConfig?.highlightColor || "#f16522",
                     color: "#ffffff",
                     padding: "1rem 2.5rem",
                     fontSize: 14,
@@ -460,10 +486,13 @@ export function LandingPage() {
 
                 {/* SLIDE 3: Categories */}
                 <div className="hero-slide-content" style={{ width: "33.333%", height: "100%", background: "rgba(255,255,255,0.3)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                   <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Featured <span style={{color: "#f16522"}}>Categories</span></h3>
+                   <h3 style={{ color: stats.landingConfig?.titleColor || "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Featured <span style={{color: stats.landingConfig?.highlightColor || "#f16522"}}>Categories</span></h3>
                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
-                     {availableGenres.slice(0, 8).map((g, i) => (
-                       <Link key={i} to="/catalogue" style={{ padding: "0.6rem 1.2rem", fontSize: 13, background: "#ffffff", borderRadius: 50, color: "#1e293b", textDecoration: "none", fontWeight: 700, border: "1px solid rgba(0,0,0,0.05)", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#f16522"; e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#1e293b"; }}>
+                     {(stats.landingConfig?.featuredCategories && stats.landingConfig.featuredCategories.length > 0 
+                        ? availableGenres.filter(g => stats.landingConfig.featuredCategories.includes(g.name)) 
+                        : availableGenres.slice(0, 8)
+                     ).map((g, i) => (
+                       <Link key={i} to="/catalogue" style={{ padding: "0.6rem 1.2rem", fontSize: 13, background: "#ffffff", borderRadius: 50, color: stats.landingConfig?.titleColor || "#1e293b", textDecoration: "none", fontWeight: 700, border: "1px solid rgba(0,0,0,0.05)", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }} onMouseEnter={(e) => { e.currentTarget.style.background = stats.landingConfig?.highlightColor || "#f16522"; e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = stats.landingConfig?.titleColor || "#1e293b"; }}>
                          {g.name}
                        </Link>
                      ))}

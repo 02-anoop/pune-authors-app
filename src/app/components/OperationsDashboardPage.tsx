@@ -14,6 +14,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
 import { QueryThreadDisplay } from './QueryThreadDisplay';
 import { checkIsPastEvent } from '../utils/eventUtils';
+import { bookCategories } from '../data/categories';
 
 // Automatically attach token to all admin requests
 axios.interceptors.request.use((config) => {
@@ -4719,7 +4720,14 @@ export function OperationsDashboardPage() {
       manualAuthorsCount: '',
       manualBooksCount: '',
       manualEventsCount: '',
-      manualDonatedBooksCount: ''
+      manualDonatedBooksCount: '',
+      landing_hero_title: '',
+      landing_hero_highlight: '',
+      landing_hero_subtitle: '',
+      landing_title_color: '',
+      landing_highlight_color: '',
+      landing_subtitle_color: '',
+      landing_featured_categories: ''
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -4792,6 +4800,100 @@ export function OperationsDashboardPage() {
                 placeholder="Leave blank for dynamic count"
                 className="w-full border border-paa-navy/20 bg-gray-50 rounded-lg p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" 
               />
+            </div>
+          </div>
+
+          <div className="border-b border-paa-navy/5 pb-4 mb-8 mt-12">
+            <h2 className="text-xl font-serif font-medium text-paa-navy mb-1">Landing Page Content</h2>
+            <p className="text-paa-gray-text text-sm">Configure the hero text, colors, and featured categories dynamically.</p>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Hero Title</label>
+              <input 
+                type="text" 
+                value={settings.landing_hero_title || ''} 
+                onChange={(e) => setSettings({...settings, landing_hero_title: e.target.value})}
+                placeholder="e.g. Helping indie authors publish, promote and sell."
+                className="w-full border border-paa-navy/20 bg-gray-50 rounded-lg p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Highlighted Word(s) in Title</label>
+              <input 
+                type="text" 
+                value={settings.landing_hero_highlight || ''} 
+                onChange={(e) => setSettings({...settings, landing_hero_highlight: e.target.value})}
+                placeholder="e.g. authors"
+                className="w-full border border-paa-navy/20 bg-gray-50 rounded-lg p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors" 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Hero Subtitle</label>
+              <textarea 
+                value={settings.landing_hero_subtitle || ''} 
+                onChange={(e) => setSettings({...settings, landing_hero_subtitle: e.target.value})}
+                placeholder="e.g. We provide independent authors with refined publishing assistance..."
+                className="w-full border border-paa-navy/20 bg-gray-50 rounded-lg p-3 text-sm outline-none focus:border-paa-navy focus:bg-white transition-colors h-24 resize-none" 
+              />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Title Color</label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={settings.landing_title_color || '#0f172a'} onChange={(e) => setSettings({...settings, landing_title_color: e.target.value})} className="h-10 w-10 p-0 border-0 rounded cursor-pointer" />
+                  <input type="text" value={settings.landing_title_color || ''} onChange={(e) => setSettings({...settings, landing_title_color: e.target.value})} placeholder="#0f172a" className="w-full border border-paa-navy/20 bg-gray-50 rounded-lg p-2 text-sm outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Highlight Color</label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={settings.landing_highlight_color || '#f16522'} onChange={(e) => setSettings({...settings, landing_highlight_color: e.target.value})} className="h-10 w-10 p-0 border-0 rounded cursor-pointer" />
+                  <input type="text" value={settings.landing_highlight_color || ''} onChange={(e) => setSettings({...settings, landing_highlight_color: e.target.value})} placeholder="#f16522" className="w-full border border-paa-navy/20 bg-gray-50 rounded-lg p-2 text-sm outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Subtitle Color</label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={settings.landing_subtitle_color || '#334155'} onChange={(e) => setSettings({...settings, landing_subtitle_color: e.target.value})} className="h-10 w-10 p-0 border-0 rounded cursor-pointer" />
+                  <input type="text" value={settings.landing_subtitle_color || ''} onChange={(e) => setSettings({...settings, landing_subtitle_color: e.target.value})} placeholder="#334155" className="w-full border border-paa-navy/20 bg-gray-50 rounded-lg p-2 text-sm outline-none" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Featured Categories (Select multiple)</label>
+              <div className="border border-paa-navy/20 rounded-lg p-4 bg-gray-50 max-h-64 overflow-y-auto grid grid-cols-2 gap-2">
+                {bookCategories.map(cat => {
+                  let selectedCategories: string[] = [];
+                  try {
+                    selectedCategories = settings.landing_featured_categories ? JSON.parse(settings.landing_featured_categories) : [];
+                  } catch(e) {}
+                  const isSelected = selectedCategories.includes(cat.name);
+                  
+                  return (
+                    <label key={cat.name} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={(e) => {
+                          let updated = [...selectedCategories];
+                          if (e.target.checked) {
+                            updated.push(cat.name);
+                          } else {
+                            updated = updated.filter(c => c !== cat.name);
+                          }
+                          setSettings({...settings, landing_featured_categories: JSON.stringify(updated)});
+                        }}
+                        className="rounded border-paa-navy/30 text-paa-navy focus:ring-paa-navy/50"
+                      />
+                      {cat.name}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
           

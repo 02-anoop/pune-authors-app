@@ -92,9 +92,18 @@ router.get('/api/public-stats', async (req, res) => {
     // For fairs, if we don't have a specific tag, we can just use 3 or derive it.
     const fairs = 3;
 
-    // Fetch system settings for manual overrides
+    // Fetch system settings for manual overrides and landing page config
     const rawSettings = await prisma.systemSetting.findMany({
-      where: { key: { in: ['manualAuthorsCount', 'manualBooksCount', 'manualEventsCount', 'manualDonatedBooksCount'] } }
+      where: { 
+        key: { 
+          in: [
+            'manualAuthorsCount', 'manualBooksCount', 'manualEventsCount', 'manualDonatedBooksCount',
+            'landing_hero_title', 'landing_hero_highlight', 'landing_hero_subtitle',
+            'landing_title_color', 'landing_highlight_color', 'landing_subtitle_color',
+            'landing_featured_categories'
+          ] 
+        } 
+      }
     });
     const settingsMap = {};
     rawSettings.forEach(s => settingsMap[s.key] = s.value);
@@ -106,7 +115,16 @@ router.get('/api/public-stats', async (req, res) => {
       events: settingsMap['manualEventsCount'] ? parseInt(settingsMap['manualEventsCount']) : events,
       fairs: fairs,
       airportLibraries: libraries,
-      totalDonatedBooks: settingsMap['manualDonatedBooksCount'] ? parseInt(settingsMap['manualDonatedBooksCount']) : totalDonatedBooks
+      totalDonatedBooks: settingsMap['manualDonatedBooksCount'] ? parseInt(settingsMap['manualDonatedBooksCount']) : totalDonatedBooks,
+      landingConfig: {
+        heroTitle: settingsMap['landing_hero_title'] || "Helping indie authors publish, promote and sell.",
+        heroHighlight: settingsMap['landing_hero_highlight'] || "authors",
+        heroSubtitle: settingsMap['landing_hero_subtitle'] || "We provide independent authors with refined publishing assistance, strategic promotion, and curated distribution channels.",
+        titleColor: settingsMap['landing_title_color'] || "#0f172a",
+        highlightColor: settingsMap['landing_highlight_color'] || "#f16522",
+        subtitleColor: settingsMap['landing_subtitle_color'] || "#334155",
+        featuredCategories: settingsMap['landing_featured_categories'] ? JSON.parse(settingsMap['landing_featured_categories']) : []
+      }
     };
     // Force nodemon restart to pick up generated Prisma Client
     setCache('public-stats', stats, 5 * 60 * 1000); // 5 mins

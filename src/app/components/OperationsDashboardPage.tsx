@@ -120,7 +120,8 @@ const WebOrdersTab = ({
   const filteredOrders = orders.filter((ord: any) => {
     if (statusFilter !== 'All') {
       const statusText = getAggregateStatus(ord).text;
-      if (statusFilter === 'Pending' && !['Pending Verification', 'Pending', 'Accepted'].includes(statusText)) return false;
+      if (statusFilter === 'Pending' && !['Pending Verification', 'Pending'].includes(statusText)) return false;
+      if (statusFilter === 'Accepted' && statusText !== 'Accepted') return false;
       if (statusFilter === 'Dispatched' && statusText !== 'Dispatched') return false;
       if (statusFilter === 'Completed' && statusText !== 'Delivered') return false;
       if (statusFilter === 'Cancelled' && !['Cancelled', 'Rejected', 'Payment Failed'].includes(statusText)) return false;
@@ -286,7 +287,7 @@ const WebOrdersTab = ({
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex bg-white rounded-lg p-1 border border-paa-navy/10 shadow-sm overflow-x-auto whitespace-nowrap">
-              {['All', 'Pending', 'Dispatched', 'Completed'].map((st) => (
+              {['All', 'Pending', 'Accepted', 'Dispatched', 'Completed'].map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
@@ -1765,7 +1766,7 @@ export function OperationsDashboardPage() {
                   {topBooksData.length > 0 ? topBooksData.map((b, idx) => (
                     <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
                       <div className="flex items-center gap-3 min-w-0 pr-4">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold shrink-0">#{idx + 1}</div>
+                        <div className="w-8 h-8 rounded-full bg-[#ebd8c0] text-emerald-600 flex items-center justify-center text-xs font-bold shrink-0">#{idx + 1}</div>
                         <p className="text-sm font-bold text-paa-navy line-clamp-1">{b.name}</p>
                       </div>
                       <div className="text-right shrink-0">
@@ -1823,7 +1824,7 @@ export function OperationsDashboardPage() {
                 {!localDismissed.includes('orders') && pendingOrders > 0 && (
                   <div className="group relative flex items-center justify-between p-3 rounded-xl border border-paa-navy/10 hover:bg-paa-navy/5 transition-colors text-left cursor-pointer" onClick={() => setActiveTab('web_orders')}>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-[#ebd8c0] text-emerald-600 flex items-center justify-center shrink-0">
                         <ShoppingCart size={18} />
                       </div>
                       <div>
@@ -2244,7 +2245,7 @@ export function OperationsDashboardPage() {
                 </div>
                 <div className="flex justify-center gap-6 mt-4 flex-wrap">
                   <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">Web</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">Fairs</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#ebd8c0]0 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">Fairs</span></div>
                   <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-sm"></div><span className="text-xs text-gray-600 font-bold tracking-wide uppercase">Events</span></div>
                 </div>
               </div>
@@ -2287,11 +2288,11 @@ export function OperationsDashboardPage() {
                       <tr><td colSpan={7} className="text-center py-10 text-sm text-gray-400 font-medium italic">No sales recorded in this period for the selected filter.</td></tr>
                     )}
                     {(salesData?.tableData?.filter((r: any) => tableChannelFilter === 'All' || r.channel === tableChannelFilter) || []).map((row: any, idx: number) => (
-                      <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
+                      <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-5 py-3 text-xs font-semibold text-paa-navy truncate">{row.date}</td>
                         <td className="px-5 py-3 text-xs text-gray-500 font-mono truncate">{row.orderId}</td>
                         <td className="px-5 py-3 text-xs">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-blue-100 text-blue-800 border-transparent shadow-sm' : row.channel === 'Events' ? 'bg-amber-100 text-amber-800 border-transparent shadow-sm' : 'bg-green-100 text-green-800 border-transparent shadow-sm'}`}>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${row.channel === 'Web Orders' ? 'bg-[#ebd8c0] text-blue-800 border-transparent shadow-sm' : row.channel === 'Events' ? 'bg-amber-100 text-amber-800 border-transparent shadow-sm' : 'bg-green-100 text-green-800 border-transparent shadow-sm'}`}>
                             {row.channel === 'Web Orders' ? 'Web' : row.channel === 'Events' ? 'Events' : 'Fairs'}
                           </span>
                         </td>
@@ -2503,7 +2504,7 @@ export function OperationsDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {pendingFineApprovals.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No pending payments.</td></tr> : pendingFineApprovals.map((a: any, idx: number) => (
-                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-slate-200/60 transition-colors`}>
                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                       <td className="px-4 py-3">
                         <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${a.extraData.finePaymentScreenshot}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
@@ -2545,7 +2546,7 @@ export function OperationsDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {activeFines.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">No currently fined authors.</td></tr> : activeFines.map((a: any, idx: number) => (
-                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
+                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-slate-200/60 transition-colors`}>
                       <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                       <td className="px-4 py-3 font-bold text-red-600">₹{a.extraData.lateFines}</td>
                       <td className="px-4 py-3 text-gray-600">{a.extraData.fineDate ? new Date(a.extraData.fineDate).toLocaleDateString() : 'N/A'}</td>
@@ -2579,7 +2580,7 @@ export function OperationsDashboardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {lateDeliveries.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">No late deliveries currently.</td></tr> : lateDeliveries.map((ld, idx) => (
                     <React.Fragment key={idx}>
-                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
+                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-4 py-3 font-bold text-paa-navy flex items-center gap-2">
                           <button onClick={() => setExpandedCustomerRow(expandedCustomerRow === idx ? null : idx)} className="text-gray-400 hover:text-paa-navy transition-colors focus:outline-none">
                             <ChevronDown size={16} className={`transition-transform duration-300 ${expandedCustomerRow === idx ? 'rotate-180' : ''}`} />
@@ -2645,7 +2646,7 @@ export function OperationsDashboardPage() {
                                     } catch (err) {
                                       toast.error('Failed to notify author');
                                     }
-                                  }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors shadow-sm border border-blue-100" title="Send 1-Day Warning">
+                                  }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-[#ebd8c0] transition-colors shadow-sm border border-blue-100" title="Send 1-Day Warning">
                                     <Bell size={14} />
                                   </button>
                                   <button onClick={() => handleOpenFineModal(ld.authorId, ld.authorName, ld)} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 font-bold text-xs shadow-sm border border-red-100 transition-colors" title="Charge Fine">
@@ -2717,7 +2718,7 @@ export function OperationsDashboardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {historyAuthors.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500 italic">No fine history available.</td></tr> : historyAuthors.flatMap((a: any) =>
                     a.extraData.fineHistory.map((h: any, idx: number) => (
-                      <tr key={`${a.id}-${idx}`} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
+                      <tr key={`${a.id}-${idx}`} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-slate-200/60 transition-colors`}>
                         <td className="px-4 py-3 font-medium text-paa-navy">{a.name}</td>
                         <td className="px-4 py-3 font-bold text-indigo-600">₹{h.amount}</td>
                         <td className="px-4 py-3 text-gray-600">{h.paidAt ? new Date(h.paidAt).toLocaleDateString() : 'N/A'}</td>
@@ -3018,7 +3019,7 @@ export function OperationsDashboardPage() {
                 if (a.status !== 'Pending' && b.status === 'Pending') return 1;
                 return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
               }).map((author, idx) => (
-                <tr key={author.id} className={`${selectedAuthorIds.includes(author.id) ? 'bg-indigo-100' : (idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50')} hover:bg-sky-100 transition-colors`}>
+                <tr key={author.id} className={`${selectedAuthorIds.includes(author.id) ? 'bg-indigo-100' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]')} hover:bg-sky-100 transition-colors`}>
                   <td className="text-center">
                     <input
                       type="checkbox"
@@ -3228,7 +3229,7 @@ export function OperationsDashboardPage() {
                 .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }))
                 .map((book, idx) => (
                 <React.Fragment key={book.id}>
-                <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors cursor-pointer`} onClick={() => setExpandedBookId(expandedBookId === book.id ? null : book.id)}>
+                <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-slate-200/60 transition-colors cursor-pointer`} onClick={() => setExpandedBookId(expandedBookId === book.id ? null : book.id)}>
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="flex gap-1.5 flex-shrink-0">
@@ -3807,7 +3808,7 @@ export function OperationsDashboardPage() {
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" /> PUBLISHED &bull; Click to Unpublish
                     </button>
                   )}
-                  <button onClick={handleDownloadEventReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm font-bold flex items-center gap-2">
+                  <button onClick={handleDownloadEventReport} className="dash-btn bg-[#ebd8c0] text-emerald-700 hover:bg-[#ebd8c0] border border-emerald-200 transition-colors shadow-sm font-bold flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Download Report
                   </button>
                 </>
@@ -3869,7 +3870,7 @@ export function OperationsDashboardPage() {
               )}
             </div>
 
-            <div className={`bg-emerald-50 border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
+            <div className={`bg-[#ebd8c0] border rounded-xl p-4 shadow-sm flex flex-col justify-between ${isEditingKPIs ? "border-emerald-400 ring-1 ring-emerald-100" : "border-emerald-200"}`}>
               <div>
                 <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Sale</div>
                 {isEditingKPIs ? (<div className="flex items-center gap-0.5"><span className="text-xl font-serif text-emerald-800 font-bold">₹</span><input type="text" className="text-xl font-serif text-emerald-800 font-bold bg-transparent border-0 border-b-2 border-emerald-300 focus:border-emerald-600 outline-none w-full p-0" value={selectedEventBreakdown.aggRevenue == null ? "" : selectedEventBreakdown.aggRevenue} placeholder="NA" onChange={e => { const val = e.target.value; setSelectedEventBreakdown({ ...selectedEventBreakdown, aggRevenue: (val.toUpperCase() === "NA" || val === "") ? null : parseFloat(val) || 0 }) }} /></div>) : (<div className="text-xl font-serif text-emerald-800 font-bold">₹{selectedEventBreakdown.aggRevenue != null ? selectedEventBreakdown.aggRevenue : (totalSale || "-")}</div>)}
@@ -3921,7 +3922,7 @@ export function OperationsDashboardPage() {
                 {managePaymentStatus === 'Paid' && (
                   <div>
                     <label className="block text-xs font-bold text-emerald-600 mb-1">Amount Paid (₹)</label>
-                    <input type="number" className="w-full border border-emerald-300 bg-emerald-50 text-emerald-800 rounded p-2 text-sm font-bold" value={manageAmountPaid} onChange={(e) => setManageAmountPaid(parseFloat(e.target.value) || 0)} />
+                    <input type="number" className="w-full border border-emerald-300 bg-[#ebd8c0] text-emerald-800 rounded p-2 text-sm font-bold" value={manageAmountPaid} onChange={(e) => setManageAmountPaid(parseFloat(e.target.value) || 0)} />
                   </div>
                 )}
               </div>
@@ -3943,7 +3944,7 @@ export function OperationsDashboardPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-emerald-600 mb-1 uppercase tracking-wider">Total Revenue (₹)</label>
-                    <input type="number" className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-2 font-mono font-bold" value={globalRevenue} onChange={(e) => setGlobalRevenue(parseInt(e.target.value) || 0)} />
+                    <input type="number" className="w-full border border-emerald-200 bg-[#ebd8c0] text-emerald-700 rounded p-2 font-mono font-bold" value={globalRevenue} onChange={(e) => setGlobalRevenue(parseInt(e.target.value) || 0)} />
                   </div>
                 </div>
               ) : (
@@ -4140,7 +4141,7 @@ export function OperationsDashboardPage() {
                               )}
                               <td className="p-3">
                                 {status === 'Registered' ? (
-                                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3" /> {selectedEventBreakdown.isLegacy ? 'Participated' : (hasData ? 'Published' : 'Registered')}</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3" /> {selectedEventBreakdown.isLegacy ? 'Participated' : (hasData ? 'Published' : 'Registered')}</span>
                                 ) : (status === 'Pending' || status === 'Pending Approval' || status === 'Unpublished') ? (
                                   <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max">Pending</span>
                                 ) : status === 'Declined' ? (
@@ -4562,7 +4563,7 @@ export function OperationsDashboardPage() {
                   const revenue = isPastOrArchive ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
                   return (
                     <React.Fragment key={i}>
-                      <tr className={`hover:bg-indigo-100 transition-colors ${expandedEventIndex === i ? 'bg-indigo-100' : (i % 2 === 0 ? 'bg-white' : 'bg-emerald-50')}`}>
+                      <tr className={`hover:bg-indigo-100 transition-colors ${expandedEventIndex === i ? 'bg-indigo-100' : (i % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]')}`}>
                         <td className="pl-6 pr-2 py-3 text-center cursor-pointer" onClick={() => setExpandedEventIndex(expandedEventIndex === i ? null : i)}>
                           <button className="text-gray-400 hover:text-paa-navy transition-colors">
                             {expandedEventIndex === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -4579,7 +4580,7 @@ export function OperationsDashboardPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1.5 items-start">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest shadow-sm ${evt.isLegacy ? 'bg-slate-500 text-white' : (evt.status === 'Pending Approval' ? 'bg-orange-500 text-white' : evt.status === 'Upcoming' ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white')}`}>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest shadow-sm ${evt.isLegacy ? 'bg-slate-500 text-white' : (evt.status === 'Pending Approval' ? 'bg-orange-500 text-white' : evt.status === 'Upcoming' ? 'bg-blue-500 text-white' : 'bg-[#ebd8c0]0 text-white')}`}>
                               {evt.isLegacy ? 'Legacy Archive' : evt.status}
                             </span>
                             <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
@@ -7010,7 +7011,7 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
             {[
               { id: 'All', label: 'All', color: 'bg-gray-800 text-white' },
               { id: 'Pending', label: 'New Unopened Tickets', color: 'bg-orange-100 text-orange-800' },
-              { id: 'Answered', label: 'Opened Tickets', color: 'bg-blue-100 text-blue-800' },
+              { id: 'Answered', label: 'Opened Tickets', color: 'bg-[#ebd8c0] text-blue-800' },
               { id: 'Resolved', label: 'Closed Tickets', color: 'bg-green-100 text-green-800' },
               { id: 'Message', label: 'Messages', color: 'bg-gray-800 text-white' }
             ].map(t => (
@@ -7043,7 +7044,7 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
                 <div className={`w-1 h-10 rounded-full ${q.itemType === 'Message' ? 'bg-blue-500' : q.status === 'Resolved' ? 'bg-green-500' : q.status === 'Pending' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.itemType === 'Message' ? 'bg-blue-100 text-blue-800' : q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                    <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.itemType === 'Message' ? 'bg-[#ebd8c0] text-blue-800' : q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-[#ebd8c0] text-blue-800'}`}>
                       {q.itemType} {q.itemType === 'Query' ? `#TKT-${q.id.toString().padStart(4, '0')}` : ''}
                     </span>
                     <h4 className="font-bold text-paa-navy text-sm line-clamp-1">{q.subject}</h4>
@@ -7072,7 +7073,7 @@ const HelpdeskTab = ({ refreshTrigger }: any) => {
                   <Trash2 size={16} />
                 </button>
                 {q.itemType !== 'Message' && (
-                  <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                  <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${q.status === 'Resolved' ? 'bg-green-100 text-green-800' : q.status === 'Pending' ? 'bg-orange-100 text-orange-800' : 'bg-[#ebd8c0] text-blue-800'}`}>
                     {q.status === 'Resolved' ? 'Closed' : q.status === 'Pending' ? 'New' : 'Opened'}
                   </span>
                 )}

@@ -36,6 +36,33 @@ export function NavBar() {
     }, 200);
   };
 
+  const [hasBooks, setHasBooks] = useState<{ main: Record<string, boolean>, sub: Record<string, boolean> }>({ main: {}, sub: {} });
+
+  useEffect(() => {
+    const processBooks = (books: any[]) => {
+      const main: Record<string, boolean> = {};
+      const sub: Record<string, boolean> = {};
+      books.forEach(b => {
+        if (b.genre) main[b.genre] = true;
+        if (b.subGenre) {
+          const parts = b.subGenre.split(b.subGenre.includes(" > ") ? " > " : ">").map((s: string) => s.trim());
+          if (parts[0]) sub[parts[0]] = true;
+        }
+      });
+      setHasBooks({ main, sub });
+    };
+
+    const w = window as any;
+    if (w.__apiCache?.catalogueBooks) {
+      processBooks(w.__apiCache.catalogueBooks);
+    } else {
+      fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/books`)
+        .then(res => res.json())
+        .then(data => processBooks(data))
+        .catch(console.error);
+    }
+  }, []);
+
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("userRole");
 
@@ -359,49 +386,55 @@ export function NavBar() {
             <div style={{ flex: 3, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '2.5rem 1.5rem', gap: '2rem' }}>
               
               {/* Column 1: Fiction */}
-              <div>
-                <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Fiction`} style={{ color: '#b44d28', fontWeight: 700, fontSize: 15, textDecoration: 'none', marginBottom: '1.2rem', display: 'block' }}>Fiction</Link>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                  {Object.keys(bookCategories["Fiction"]).slice(0, 6).map(sub => (
-                    <li key={sub}>
-                      <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Fiction&subcategory=${encodeURIComponent(sub)}`} style={{ color: '#4b5563', fontSize: 13, textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#b44d28')} onMouseLeave={(e) => (e.currentTarget.style.color = '#4b5563')}>{sub}</Link>
+              {hasBooks.main["Fiction"] && (
+                <div>
+                  <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Fiction`} style={{ color: '#b44d28', fontWeight: 700, fontSize: 15, textDecoration: 'none', marginBottom: '1.2rem', display: 'block' }}>Fiction</Link>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                    {Object.keys(bookCategories["Fiction"]).filter(sub => hasBooks.sub[sub]).slice(0, 6).map(sub => (
+                      <li key={sub}>
+                        <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Fiction&subcategory=${encodeURIComponent(sub)}`} style={{ color: '#4b5563', fontSize: 13, textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#b44d28')} onMouseLeave={(e) => (e.currentTarget.style.color = '#4b5563')}>{sub}</Link>
+                      </li>
+                    ))}
+                    <li style={{ marginTop: '0.2rem' }}>
+                      <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Fiction`} style={{ color: '#b44d28', fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>See All &rarr;</Link>
                     </li>
-                  ))}
-                  <li style={{ marginTop: '0.2rem' }}>
-                    <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Fiction`} style={{ color: '#b44d28', fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>See All &rarr;</Link>
-                  </li>
-                </ul>
-              </div>
+                  </ul>
+                </div>
+              )}
 
               {/* Column 2: Non-Fiction */}
-              <div>
-                <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Non-Fiction`} style={{ color: '#b44d28', fontWeight: 700, fontSize: 15, textDecoration: 'none', marginBottom: '1.2rem', display: 'block' }}>Non-Fiction</Link>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                  {Object.keys(bookCategories["Non-Fiction"]).slice(0, 6).map(sub => (
-                    <li key={sub}>
-                      <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Non-Fiction&subcategory=${encodeURIComponent(sub)}`} style={{ color: '#4b5563', fontSize: 13, textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#b44d28')} onMouseLeave={(e) => (e.currentTarget.style.color = '#4b5563')}>{sub}</Link>
+              {hasBooks.main["Non-Fiction"] && (
+                <div>
+                  <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Non-Fiction`} style={{ color: '#b44d28', fontWeight: 700, fontSize: 15, textDecoration: 'none', marginBottom: '1.2rem', display: 'block' }}>Non-Fiction</Link>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                    {Object.keys(bookCategories["Non-Fiction"]).filter(sub => hasBooks.sub[sub]).slice(0, 6).map(sub => (
+                      <li key={sub}>
+                        <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Non-Fiction&subcategory=${encodeURIComponent(sub)}`} style={{ color: '#4b5563', fontSize: 13, textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#b44d28')} onMouseLeave={(e) => (e.currentTarget.style.color = '#4b5563')}>{sub}</Link>
+                      </li>
+                    ))}
+                    <li style={{ marginTop: '0.2rem' }}>
+                      <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Non-Fiction`} style={{ color: '#b44d28', fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>See All &rarr;</Link>
                     </li>
-                  ))}
-                  <li style={{ marginTop: '0.2rem' }}>
-                    <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=Non-Fiction`} style={{ color: '#b44d28', fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>See All &rarr;</Link>
-                  </li>
-                </ul>
-              </div>
+                  </ul>
+                </div>
+              )}
 
               {/* Column 3: Children's Books */}
-              <div>
-                <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=${encodeURIComponent("Children's Books")}`} style={{ color: '#b44d28', fontWeight: 700, fontSize: 15, textDecoration: 'none', marginBottom: '1.2rem', display: 'block' }}>Children's Books</Link>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                  {Object.keys(bookCategories["Children's Books"]).slice(0, 6).map(sub => (
-                    <li key={sub}>
-                      <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=${encodeURIComponent("Children's Books")}&subcategory=${encodeURIComponent(sub)}`} style={{ color: '#4b5563', fontSize: 13, textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#b44d28')} onMouseLeave={(e) => (e.currentTarget.style.color = '#4b5563')}>{sub}</Link>
+              {hasBooks.main["Children's Books"] && (
+                <div>
+                  <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=${encodeURIComponent("Children's Books")}`} style={{ color: '#b44d28', fontWeight: 700, fontSize: 15, textDecoration: 'none', marginBottom: '1.2rem', display: 'block' }}>Children's Books</Link>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                    {Object.keys(bookCategories["Children's Books"]).filter(sub => hasBooks.sub[sub]).slice(0, 6).map(sub => (
+                      <li key={sub}>
+                        <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=${encodeURIComponent("Children's Books")}&subcategory=${encodeURIComponent(sub)}`} style={{ color: '#4b5563', fontSize: 13, textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#b44d28')} onMouseLeave={(e) => (e.currentTarget.style.color = '#4b5563')}>{sub}</Link>
+                      </li>
+                    ))}
+                    <li style={{ marginTop: '0.2rem' }}>
+                      <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=${encodeURIComponent("Children's Books")}`} style={{ color: '#b44d28', fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>See All &rarr;</Link>
                     </li>
-                  ))}
-                  <li style={{ marginTop: '0.2rem' }}>
-                    <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=${encodeURIComponent("Children's Books")}`} style={{ color: '#b44d28', fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>See All &rarr;</Link>
-                  </li>
-                </ul>
-              </div>
+                  </ul>
+                </div>
+              )}
 
             </div>
 
@@ -409,7 +442,7 @@ export function NavBar() {
             <div style={{ flex: 1, background: '#fff9f5', padding: '2.5rem 2rem', borderLeft: '1px solid #f3e8e0', display: 'flex', flexDirection: 'column' }}>
               <span style={{ color: '#1e293b', fontWeight: 700, fontSize: 15, marginBottom: '1.2rem', display: 'block' }}>Also Explore</span>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {["Academic & Educational", "Arts & Entertainment", "Comics & Graphic Novels", "Lifestyle", "Poetry", "Reference", "Sports & Outdoors", "Regional & Language Literature"].map(cat => (
+                {["Academic & Educational", "Arts & Entertainment", "Comics & Graphic Novels", "Lifestyle", "Poetry", "Reference", "Sports & Outdoors", "Regional & Language Literature"].filter(cat => hasBooks.main[cat]).map(cat => (
                   <li key={cat}>
                     <Link onClick={() => setMegaMenuOpen(false)} to={`/catalogue?category=${encodeURIComponent(cat)}`} style={{ color: '#c2410c', fontSize: 13, textDecoration: 'none', fontWeight: 600, transition: 'color 0.2s' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#7c2d12')} onMouseLeave={(e) => (e.currentTarget.style.color = '#c2410c')}>{cat}</Link>
                   </li>

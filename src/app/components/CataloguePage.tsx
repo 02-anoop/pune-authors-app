@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 import { bookCategories } from "../data/categories";
 import { ShoppingCart, Search, SlidersHorizontal, Star, ChevronRight, X, BookOpen, Info, Download } from "lucide-react";
 // ── Category config ─────────────────────────────────────────────────────────
@@ -464,6 +464,7 @@ export async function downloadCataloguePDF(label: string, books: CatalogueBook[]
 // ── Component ────────────────────────────────────────────────────────────────
 export function CataloguePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeCategory, setActiveCategory] = useState<string>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("category") || "All";
@@ -500,6 +501,18 @@ export function CataloguePage() {
     const w = window as any;
     return w.__apiCache?.publicStats || {};
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const cat = params.get("category");
+    if (cat) setActiveCategory(cat);
+    
+    const subCat = params.get("subcategory");
+    if (subCat) setActiveSubcategory(subCat);
+    
+    const search = params.get("search");
+    if (search !== null) setSearchQuery(search);
+  }, [location.search]);
 
   useEffect(() => {
     const w = window as any;

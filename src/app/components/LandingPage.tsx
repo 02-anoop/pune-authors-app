@@ -331,7 +331,6 @@ export function LandingPage() {
               <div className="hero-stats-row" style={{ display: "flex", gap: "1.2rem", marginBottom: "1.2rem", flexWrap: "wrap" }}>
                 {[
                   { icon: <Book size={24}/>, count: stats.books, label: "Books" },
-                  { icon: <User size={24}/>, count: stats.authors, label: "Authors" },
                   { icon: <Calendar size={24}/>, count: stats.events, label: "Events" },
                   { icon: <Users size={24}/>, count: stats.categories, label: "Categories" }
                 ].map((s, i) => (

@@ -74,7 +74,7 @@ export function LibraryDonationsTab() {
       return {
         step: 4,
         label: 'Received at Library',
-        color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        color: 'bg-[#ebd8c0] text-emerald-700 border-emerald-200',
         description: 'Books confirmed and received at library'
       };
     }
@@ -731,7 +731,7 @@ export function LibraryDonationsTab() {
             )}
           </div>
           <div className="flex gap-2">
-            <button onClick={handleExportCampaignReport} className="dash-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-sm flex items-center gap-2">
+            <button onClick={handleExportCampaignReport} className="dash-btn bg-[#ebd8c0] text-emerald-700 hover:bg-[#ebd8c0] border border-emerald-200 transition-colors shadow-sm flex items-center gap-2">
               <Download className="w-4 h-4" /> Download Report
             </button>
             <button onClick={() => {
@@ -929,7 +929,7 @@ export function LibraryDonationsTab() {
 
                   return (
                     <React.Fragment key={isRegistered ? reg.id : `not-reg-${author.id}`}>
-                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors animate-in fade-in duration-300`}>
+                      <tr className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-slate-200/60 transition-colors animate-in fade-in duration-300`}>
                         <td className="p-3">
                           <div className="font-medium text-paa-navy">{author.name}</div>
                           <div className="text-xs text-gray-500">{new Date(author.createdAt || Date.now()).toLocaleDateString()}</div>
@@ -1067,7 +1067,7 @@ export function LibraryDonationsTab() {
                                       <span className="font-semibold text-gray-400">Library Reached:</span>
                                       <select
                                         className={`text-[10px] font-bold rounded-md px-1.5 py-0.5 border-0 focus:ring-1 outline-none cursor-pointer ${
-                                          reg.receivedStatus === 'Received' || reg.receivedStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'
+                                          reg.receivedStatus === 'Received' || reg.receivedStatus === 'Delivered' ? 'bg-[#ebd8c0] text-emerald-700' : 'bg-gray-100 text-gray-700'
                                         }`}
                                         value={reg.receivedStatus || 'Pending'}
                                         onChange={(e) => updateReceivedStatus(reg.id, e.target.value)}
@@ -1143,7 +1143,7 @@ export function LibraryDonationsTab() {
                                   </button>
                                 </div>
                                 {reg.broadcastStatus === 'Published' && (
-                                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 rounded px-2 py-0.5 border border-emerald-100 uppercase tracking-wide">
+                                  <span className="text-[9px] font-bold text-emerald-600 bg-[#ebd8c0] rounded px-2 py-0.5 border border-emerald-100 uppercase tracking-wide">
                                     PUBLISHED
                                   </span>
                                 )}
@@ -1204,13 +1204,13 @@ export function LibraryDonationsTab() {
                                           <span className="text-[9px] uppercase font-bold text-amber-600 mb-0.5">Dispatched</span>
                                           <span className="font-mono font-extrabold text-amber-700 text-sm">{b.qtyDispatched || 0}</span>
                                         </div>
-                                        <div className="flex flex-col items-center px-3 py-1 bg-emerald-50/40 rounded-lg shadow-sm border border-emerald-100/40">
+                                        <div className="flex flex-col items-center px-3 py-1 bg-[#ebd8c0]/40 rounded-lg shadow-sm border border-emerald-100/40">
                                           <span className="text-[9px] uppercase font-bold text-emerald-600 mb-0.5">Received</span>
                                           <span className="font-mono font-extrabold text-emerald-700 text-sm">{b.qtyReceived || 0}</span>
                                         </div>
                                         <div className="flex flex-col items-center px-3 py-1 bg-white rounded-lg shadow-sm border border-gray-200/40 col-span-2 sm:col-span-1 justify-center">
                                           <span className="text-[9px] uppercase font-bold text-gray-400 mb-1">Confirm</span>
-                                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${b.libraryConfirmation === 'Approved' || b.libraryConfirmation === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' :
+                                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${b.libraryConfirmation === 'Approved' || b.libraryConfirmation === 'Confirmed' ? 'bg-[#ebd8c0] text-emerald-700' :
                                               b.libraryConfirmation === 'Rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
                                             }`}>{b.libraryConfirmation || 'Pending'}</span>
                                         </div>
@@ -1297,7 +1297,7 @@ export function LibraryDonationsTab() {
 
                 {/* Payment Details */}
                 {selectedDriveBreakdown.feeType !== 'Free' && (
-                  <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                  <div className="bg-[#ebd8c0]/50 p-4 rounded-xl border border-emerald-100">
                     <h4 className="font-semibold text-paa-navy mb-3">3. Payment Details</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-3 mb-2">
@@ -1751,7 +1751,7 @@ export function LibraryDonationsTab() {
                 : totalBooks;
 
               return (
-                <tr key={drive.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50'} hover:bg-slate-200/60 transition-colors`}>
+                <tr key={drive.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]'} hover:bg-slate-200/60 transition-colors`}>
                   <td className="p-4 max-w-[200px]">
                     <div className="font-bold text-sm text-paa-navy leading-snug line-clamp-2" title={drive.title}>{drive.title}</div>
                   </td>
@@ -1764,7 +1764,7 @@ export function LibraryDonationsTab() {
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border ${drive.visibility === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border ${drive.visibility === 'Published' ? 'bg-[#ebd8c0] text-emerald-600 border-emerald-200' :
                         drive.visibility === 'Closed' ? 'bg-gray-100 text-gray-600 border-gray-200' :
                           'bg-yellow-50 text-yellow-600 border-yellow-200'
                       }`}>
@@ -1792,7 +1792,7 @@ export function LibraryDonationsTab() {
                         <X className="w-4 h-4" />
                       </button>
                     ) : (
-                      <button onClick={() => publishCampaign(drive.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-200 transition-colors" title="Publish to All Authors">
+                      <button onClick={() => publishCampaign(drive.id)} className="p-1.5 text-emerald-600 hover:bg-[#ebd8c0] rounded border border-emerald-200 transition-colors" title="Publish to All Authors">
                         <CheckCircle className="w-4 h-4" />
                       </button>
                     )}

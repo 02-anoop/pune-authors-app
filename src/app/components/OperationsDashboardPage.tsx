@@ -4716,6 +4716,28 @@ export function OperationsDashboardPage() {
   };
 
   const SettingsTab = () => {
+    const activeCategories = React.useMemo(() => {
+      const catMap = new Map<string, number>();
+      
+      books.forEach((b: any) => {
+        let cat = "";
+        if (b.subGenre && b.subGenre.trim() !== "All" && b.subGenre.trim() !== "") {
+          const parts = b.subGenre.split(">").map((s: string) => s.trim());
+          cat = parts[0];
+        } else if (b.originalGenre) {
+          cat = b.originalGenre;
+        }
+        
+        if (cat) {
+          catMap.set(cat, (catMap.get(cat) || 0) + 1);
+        }
+      });
+      
+      return Array.from(catMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }, [books]);
+
     const [settings, setSettings] = useState({
       manualAuthorsCount: '',
       manualBooksCount: '',
@@ -4866,42 +4888,33 @@ export function OperationsDashboardPage() {
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-paa-navy mb-2">Featured Categories (Select multiple)</label>
               <div className="border border-paa-navy/20 rounded-lg p-4 bg-gray-50 max-h-64 overflow-y-auto grid grid-cols-2 gap-2">
-                {(() => {
-                  const allAvailableCategories: string[] = [];
-                  Object.entries(bookCategories).forEach(([mainCat, subCatsObj]) => {
-                    allAvailableCategories.push(mainCat);
-                    Object.keys(subCatsObj as Record<string, any>).forEach(subCat => {
-                      allAvailableCategories.push(subCat);
-                    });
-                  });
-                  return Array.from(new Set(allAvailableCategories)).sort().map(catName => {
-                    let selectedCategories: string[] = [];
-                    try {
-                      selectedCategories = settings.landing_featured_categories ? JSON.parse(settings.landing_featured_categories) : [];
-                    } catch(e) {}
-                    const isSelected = selectedCategories.includes(catName);
-                    
-                    return (
-                      <label key={catName} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
-                        <input 
-                          type="checkbox" 
-                          checked={isSelected}
-                          onChange={(e) => {
-                            let updated = [...selectedCategories];
-                            if (e.target.checked) {
-                              updated.push(catName);
-                            } else {
-                              updated = updated.filter(c => c !== catName);
-                            }
-                            setSettings({...settings, landing_featured_categories: JSON.stringify(updated)});
-                          }}
-                          className="rounded border-paa-navy/30 text-paa-navy focus:ring-paa-navy/50"
-                        />
-                        {catName}
-                      </label>
-                    );
-                  });
-                })()}
+                {activeCategories.map(cat => {
+                  let selectedCategories: string[] = [];
+                  try {
+                    selectedCategories = settings.landing_featured_categories ? JSON.parse(settings.landing_featured_categories) : [];
+                  } catch(e) {}
+                  const isSelected = selectedCategories.includes(cat.name);
+                  
+                  return (
+                    <label key={cat.name} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={(e) => {
+                          let updated = [...selectedCategories];
+                          if (e.target.checked) {
+                            updated.push(cat.name);
+                          } else {
+                            updated = updated.filter(c => c !== cat.name);
+                          }
+                          setSettings({...settings, landing_featured_categories: JSON.stringify(updated)});
+                        }}
+                        className="rounded border-paa-navy/30 text-paa-navy focus:ring-paa-navy/50"
+                      />
+                      <span>{cat.name} <span className="text-xs text-gray-500">({cat.count})</span></span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>

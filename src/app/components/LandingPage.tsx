@@ -154,12 +154,15 @@ export function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
 
+  const hasFeaturedCategories = stats.landingConfig?.featuredCategories && stats.landingConfig.featuredCategories.length > 0;
+  const totalSlides = hasFeaturedCategories ? 3 : 2;
+
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 3);
+      setCurrentSlide((prev) => (prev + 1) % totalSlides);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [totalSlides]);
 
   // Contact State
   const [contactName, setContactName] = useState("");
@@ -310,13 +313,15 @@ export function LandingPage() {
               >
                 {(() => {
                   const title = stats.landingConfig?.heroTitle || "Helping indie authors publish, promote and sell.";
-                  const highlight = stats.landingConfig?.heroHighlight || "authors";
+                  const highlight = (stats.landingConfig?.heroHighlight || "authors").trim();
                   const titleColor = stats.landingConfig?.titleColor || "#1e293b";
                   const highlightColor = stats.landingConfig?.highlightColor || "#f16522";
 
                   if (!highlight) return <span style={{ color: titleColor }}>{title}</span>;
                   
-                  const parts = title.split(new RegExp(`(${highlight})`, 'gi'));
+                  const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  const parts = title.split(new RegExp(`(${escapedHighlight})`, 'gi'));
+                  
                   return (
                     <>
                       {parts.map((part, i) => 
@@ -430,14 +435,14 @@ export function LandingPage() {
               <div 
                 style={{ 
                   display: "flex", 
-                  width: "300%", 
+                  width: `${totalSlides * 100}%`, 
                   height: "100%", 
-                  transform: `translateX(-${currentSlide * 33.333}%)`, 
+                  transform: `translateX(-${currentSlide * (100 / totalSlides)}%)`, 
                   transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)" 
                 }}
               >
                 {/* SLIDE 1: Top Books */}
-                <div className="hero-slide-content" style={{ width: "33.333%", height: "100%", background: "rgba(255, 255, 255, 0.5)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <div className="hero-slide-content" style={{ width: `${100 / totalSlides}%`, height: "100%", background: "rgba(255, 255, 255, 0.5)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                    <h3 style={{ color: "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Trending <span style={{color: "#f16522"}}>Books</span></h3>
                    <div style={{ display: "flex", gap: "1rem" }}>
                      {galleryItems.filter(b => b.coverUrl && b.coverUrl.trim() !== "").slice(0, 3).map((book, i) => (
@@ -465,7 +470,7 @@ export function LandingPage() {
                 </div>
 
                 {/* SLIDE 2: Pillars */}
-                <div className="hero-slide-content" style={{ width: "33.333%", height: "100%", background: "transparent", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <div className="hero-slide-content" style={{ width: `${100 / totalSlides}%`, height: "100%", background: "transparent", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                     {[
                       { icon: <PenTool size={24} />, label: "We Publish", color: "#f16522" },
@@ -485,19 +490,18 @@ export function LandingPage() {
                 </div>
 
                 {/* SLIDE 3: Categories */}
-                <div className="hero-slide-content" style={{ width: "33.333%", height: "100%", background: "rgba(255,255,255,0.3)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                   <h3 style={{ color: stats.landingConfig?.titleColor || "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Featured <span style={{color: stats.landingConfig?.highlightColor || "#f16522"}}>Categories</span></h3>
-                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
-                     {(stats.landingConfig?.featuredCategories && stats.landingConfig.featuredCategories.length > 0 
-                        ? availableGenres.filter(g => stats.landingConfig.featuredCategories.includes(g.name)) 
-                        : availableGenres.slice(0, 8)
-                     ).map((g, i) => (
-                       <Link key={i} to="/catalogue" style={{ padding: "0.6rem 1.2rem", fontSize: 13, background: "#ffffff", borderRadius: 50, color: stats.landingConfig?.titleColor || "#1e293b", textDecoration: "none", fontWeight: 700, border: "1px solid rgba(0,0,0,0.05)", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }} onMouseEnter={(e) => { e.currentTarget.style.background = stats.landingConfig?.highlightColor || "#f16522"; e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = stats.landingConfig?.titleColor || "#1e293b"; }}>
-                         {g.name}
-                       </Link>
-                     ))}
-                   </div>
-                </div>
+                {hasFeaturedCategories && (
+                  <div className="hero-slide-content" style={{ width: `${100 / totalSlides}%`, height: "100%", background: "rgba(255,255,255,0.3)", padding: "2rem 2rem 4rem 6rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                     <h3 style={{ color: stats.landingConfig?.titleColor || "#1e293b", fontSize: "1.8rem", fontWeight: 700, marginBottom: "1.5rem" }}>Featured <span style={{color: stats.landingConfig?.highlightColor || "#f16522"}}>Categories</span></h3>
+                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
+                       {availableGenres.filter(g => stats.landingConfig.featuredCategories.includes(g.name)).map((g, i) => (
+                         <Link key={i} to="/catalogue" style={{ padding: "0.6rem 1.2rem", fontSize: 13, background: "#ffffff", borderRadius: 50, color: stats.landingConfig?.titleColor || "#1e293b", textDecoration: "none", fontWeight: 700, border: "1px solid rgba(0,0,0,0.05)", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }} onMouseEnter={(e) => { e.currentTarget.style.background = stats.landingConfig?.highlightColor || "#f16522"; e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = stats.landingConfig?.titleColor || "#1e293b"; }}>
+                           {g.name}
+                         </Link>
+                       ))}
+                     </div>
+                  </div>
+                )}
 
               </div>
             </div>

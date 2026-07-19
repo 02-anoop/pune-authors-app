@@ -1,0 +1,18 @@
+{
+  "drivesOverride": 3,
+  "booksOverride": 16,
+  "authorsOverride": 3,
+  "librariesOverride": 8,
+  "driveOverrides": {
+    "5": {
+      "authorsOverride": 33,
+      "booksOverride": 60,
+      "dispatchedOverride": 0
+    },
+    "9": {
+      "authorsOverride": 23,
+      "booksOverride": 32,
+      "dispatchedOverride": 23
+    }
+  }
+}

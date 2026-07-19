@@ -1,0 +1,198 @@
+html,
+body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Global scrollbar polish */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Smooth transitions across interactive elements */
+a,
+button {
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+/* Remove default button styles */
+button {
+  font-family: var(--font-body);
+}
+
+/* Smooth page transitions */
+main {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Custom Utilities */
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Premium Overrides */
+::selection {
+  background: var(--color-paa-gold);
+  color: #fff;
+}
+
+body {
+  background-color: var(--color-paa-cream);
+  color: var(--color-paa-navy);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Stunning custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(24, 24, 27, 0.1);
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(24, 24, 27, 0.2);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.skeleton-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Responsive Hero Layout */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 320px;
+}
+
+.hero-section-bg {
+  background: url(/bridge_bg.png) no-repeat 10% center / 60% auto, linear-gradient(to right, #e3f1f8, #eef7fc);
+}
+
+.hero-slider-container {
+  position: relative;
+  background: transparent;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 450px;
+  align-self: center;
+  margin: 1.5rem 1.5rem 1.5rem 0;
+  box-shadow: none;
+}
+
+@media (max-width: 992px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-section-bg {
+    background: linear-gradient(to bottom, #e3f1f8, #eef7fc);
+  }
+
+  .hero-slider-container {
+    border-radius: 2rem;
+    margin: 0 1rem 2rem 1rem;
+    height: auto;
+    min-height: 360px;
+  }
+
+  .hero-slide-content {
+    padding: 2rem !important;
+  }
+
+  .hero-stats-row {
+    gap: 0.8rem !important;
+  }
+
+  .hero-stats-item {
+    width: calc(50% - 0.5rem);
+  }
+
+  .hero-title {
+    font-size: 2.2rem !important;
+  }
+}

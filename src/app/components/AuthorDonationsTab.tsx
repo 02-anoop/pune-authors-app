@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Megaphone, MapPin, Calendar, Clock, BookOpen, CheckCircle2, Package, Upload, Download, FileText, Landmark, FileSpreadsheet, ShieldCheck, BadgeAlert, Sparkles, ChevronRight, X, User, Phone, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import qrCode from "./data/qr_code.jpeg";
 
 export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData?: any, onRefresh?: () => void }) {
@@ -161,41 +163,144 @@ export function AuthorDonationsTab({ dashboardData, onRefresh }: { dashboardData
     }
   };
 
-  // CSV Report Generator
-  const handleExportMyDonationReport = () => {
+  // Helper to format dates for donations Excel
+  const formatDonationDate = (dateStr: string) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const dateObj = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`);
+      if (isNaN(dateObj.getTime())) return dateStr;
+      return dateObj.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  // Excel Report Generator
+  const handleExportMyDonationReport = async () => {
     const regs = myRegistrations;
     if (regs.length === 0) {
       toast.error('No donation records found to export');
       return;
     }
 
-    let csvContent = 'Date,Campaign,Library Name,Book Title,MRP (₹),Qty Committed,Status,Dispatch Status,Received Status\n';
-    
+    const authorName = dashboardData?.authorProfile?.name || dashboardData?.name || 'Author';
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('My Donations');
+
+    // Title Row (Merged A to F)
+    sheet.mergeCells('A1:F1');
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = 'PUNE AUTHORS ASSOCIATION - LIBRARY DONATION REPORT';
+    titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2A4B6B' } }; // Deep Steel Blue
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(1).height = 30;
+
+    // Subtitle Row (Merged A to F)
+    sheet.mergeCells('A2:F2');
+    const subtitleCell = sheet.getCell('A2');
+    const todayStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    subtitleCell.value = `Author: ${authorName}  |  Report Purpose: Personal Library Donation Tracking  |  Generated: ${todayStr}`;
+    subtitleCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FFFFFFFF' } };
+    subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B6290' } }; // Muted Blue
+    subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(2).height = 20;
+
+    // Blank row
+    sheet.addRow([]);
+
+    // Table Headers (6 columns) - Bright Yellow with Black Text like the reference
+    const headers = [
+      'Date',
+      'Campaign',
+      'Library Name',
+      'Book Title',
+      'MRP (₹)',
+      'Qty Committed'
+    ];
+    const headerRow = sheet.addRow(headers);
+    headerRow.height = 24;
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Arial', bold: true, color: { argb: '000000' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF00' } }; // Bright Yellow
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+
+    // Data Rows
     regs.forEach((reg: any) => {
-      const date = new Date(reg.createdAt).toLocaleDateString();
-      const campaign = reg.announcement?.title?.replace(/,/g, ' ') || 'Unknown';
-      const libraryName = reg.announcement?.library?.name?.replace(/,/g, ' ') || 'Unknown';
-      
+      const dateStr = formatDonationDate(reg.createdAt);
+      const campaign = reg.announcement?.title || 'N/A';
+      const libraryName = reg.announcement?.library?.name || 'N/A';
+
       reg.books.forEach((b: any) => {
-        const title = b.book?.title?.replace(/,/g, ' ') || 'Unknown';
+        const title = b.book?.title || 'N/A';
         const mrp = b.book?.mrp || 0;
         const qty = b.quantityDonated || 0;
-        const status = reg.status || 'Pending';
-        const dispatchStatus = reg.dispatchStatus || 'Pending';
-        const receivedStatus = reg.receivedStatus || 'Pending';
 
-        csvContent += `"${date}","${campaign}","${libraryName}","${title}",${mrp},${qty},"${status}","${dispatchStatus}","${receivedStatus}"\n`;
+        const rowData = [
+          dateStr,
+          campaign,
+          libraryName,
+          title,
+          mrp,
+          qty
+        ];
+        const newRow = sheet.addRow(rowData);
+        newRow.height = 20;
+
+        newRow.eachCell((cell, colNumber) => {
+          // Border (Thin Black like the reference)
+          cell.border = {
+            top: { style: 'thin', color: { argb: '000000' } },
+            left: { style: 'thin', color: { argb: '000000' } },
+            bottom: { style: 'thin', color: { argb: '000000' } },
+            right: { style: 'thin', color: { argb: '000000' } }
+          };
+
+          cell.font = { name: 'Arial', size: 10, color: { argb: '000000' } };
+          
+          if (colNumber === 1) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          } else if (colNumber === 5 || colNumber === 6) {
+            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          } else {
+            cell.alignment = { horizontal: 'left', vertical: 'middle' };
+          }
+
+          // Distinct Solid Colors for columns based on the reference:
+          let colBgColor = 'FFFFFF';
+          if (colNumber === 1) colBgColor = 'FF8B8B'; // Solid light red
+          else if (colNumber === 2) colBgColor = 'FFD2A3'; // Solid light orange
+          else if (colNumber === 3) colBgColor = 'D4D8DD'; // Solid light gray/slate
+          else if (colNumber === 4) colBgColor = 'B3E5FC'; // Solid light cyan/blue
+          else if (colNumber === 5) colBgColor = 'C8E6C9'; // Solid light emerald green
+          else if (colNumber === 6) colBgColor = 'E1BEE7'; // Solid light purple
+
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colBgColor } };
+        });
       });
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'my_library_donations_report.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Auto-fit Columns (avoiding title and subtitle rows for width calculation)
+    sheet.columns.forEach(column => {
+      let maxLen = 12; // Min width to prevent date columns showing ###
+      column.eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+        if (rowNumber > 3 && cell.value) {
+          const len = cell.value.toString().length;
+          if (len > maxLen) maxLen = len;
+        }
+      });
+      column.width = Math.min(maxLen + 4, 45); // Limit maximum width to 45
+    });
+
+    // Write to Buffer and Download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `Library_Donations_Report_${authorName.replace(/\s+/g, '_')}.xlsx`);
   };
 
   // Stats Calculations

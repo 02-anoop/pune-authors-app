@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "sonner";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
+import { BlockedScreen } from "./components/BlockedScreen";
 import { NavBar } from "./components/NavBar";
 import { Footer } from "./components/Footer";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -85,6 +86,18 @@ function AppContent() {
 }
 
 export default function App() {
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  useEffect(() => {
+    const handleBlock = () => setIsBlocked(true);
+    window.addEventListener('rate-limit-exceeded', handleBlock);
+    return () => window.removeEventListener('rate-limit-exceeded', handleBlock);
+  }, []);
+
+  if (isBlocked) {
+    return <BlockedScreen />;
+  }
+
   return (
     <BrowserRouter>
       <Toaster richColors position="top-right" />

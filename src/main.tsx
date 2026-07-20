@@ -12,10 +12,7 @@ axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 429) {
-      toast.error('Security Alert: You are loading too many pages too quickly! You have been temporarily blocked for 15 minutes to prevent attacks.', { 
-        duration: 15000,
-        style: { background: '#ef4444', color: '#fff', border: 'none', fontWeight: 'bold' }
-      });
+      window.dispatchEvent(new Event('rate-limit-exceeded'));
     }
     return Promise.reject(error);
   }

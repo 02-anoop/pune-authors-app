@@ -18,6 +18,7 @@ import { saveAs } from 'file-saver';
 import { QueryThreadDisplay } from './QueryThreadDisplay';
 import { checkIsPastEvent } from '../utils/eventUtils';
 import { bookCategories } from '../data/categories';
+import html2canvas from 'html2canvas';
 
 // Automatically attach token to all admin requests
 axios.interceptors.request.use((config) => {
@@ -1188,6 +1189,10 @@ export function OperationsDashboardPage() {
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const posterRef = useRef<HTMLDivElement>(null);
+  const [posterData, setPosterData] = useState<{name: string, date: string, location: string} | null>(null);
+  const [generatedPoster, setGeneratedPoster] = useState<File | null>(null);
+  const [generatedPosterPreview, setGeneratedPosterPreview] = useState<string | null>(null);
 
   const [showAuthorDataModal, setShowAuthorDataModal] = useState(false);
   const [showAllPlatformAuthors, setShowAllPlatformAuthors] = useState(false);
@@ -4456,6 +4461,40 @@ export function OperationsDashboardPage() {
       }
     };
 
+    const handleGeneratePoster = async () => {
+      const form = document.getElementById('create-event-form') as HTMLFormElement;
+      if (!form) return;
+      const name = (form.elements.namedItem('name') as HTMLInputElement)?.value;
+      const date = (form.elements.namedItem('date') as HTMLInputElement)?.value;
+      const location = (form.elements.namedItem('location') as HTMLInputElement)?.value;
+      
+      if (!name || !date || !location) {
+          toast.error("Please enter Event Name, Date, and Location to generate poster");
+          return;
+      }
+      
+      setPosterData({ name, date, location });
+      
+      setTimeout(async () => {
+          if (!posterRef.current) return;
+          try {
+              toast.loading("Generating poster...", { id: 'poster-toast' });
+              const canvas = await html2canvas(posterRef.current, { scale: 2, useCORS: true });
+              canvas.toBlob((blob) => {
+                  if (blob) {
+                      const file = new File([blob], 'event-poster.png', { type: 'image/png' });
+                      setGeneratedPoster(file);
+                      setGeneratedPosterPreview(URL.createObjectURL(file));
+                      toast.success("Poster generated and set as banner!", { id: 'poster-toast' });
+                  }
+              });
+          } catch (err) {
+              console.error("Poster generation error:", err);
+              toast.error("Failed to generate poster", { id: 'poster-toast' });
+          }
+      }, 500);
+    };
+
     if (isEventModalOpen) {
       const isPastEvent = createEventStatus === 'Past' || createEventStatus === 'Legacy Archive';
       return (
@@ -4465,153 +4504,243 @@ export function OperationsDashboardPage() {
             <button onClick={() => setIsEventModalOpen(false)} className="dash-btn bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors shadow-sm">Cancel & Go Back</button>
           </div>
           <FocusTrap focusTrapOptions={{ initialFocus: false, escapeDeactivates: true, clickOutsideDeactivates: true }}>
-            <form className="space-y-4" onSubmit={async (e) => {
-              e.preventDefault();
-              const target = e.target as any;
-              setIsSubmittingEvent(true);
-              try {
-                const fd = new FormData();
-                fd.append('name', target.name.value);
-                fd.append('date', target.date.value);
-                fd.append('location', target.location.value);
+            <div>
+              <form id="create-event-form" className="space-y-4" onSubmit={async (e) => {
+                e.preventDefault();
+                const target = e.target as any;
+                setIsSubmittingEvent(true);
+                try {
+                  const fd = new FormData();
+                  fd.append('name', target.name.value);
+                  fd.append('date', target.date.value);
+                  fd.append('location', target.location.value);
 
-                const days = target.durationDays.value;
-                const hours = target.durationHours.value;
-                let durationStr = [];
-                if (days && parseInt(days) > 0) durationStr.push(`${days} Days`);
-                if (hours && parseInt(hours) > 0) durationStr.push(`${hours} Hours`);
-                fd.append('duration', durationStr.length > 0 ? durationStr.join(', ') : '0 Days');
+                  const days = target.durationDays.value;
+                  const hours = target.durationHours.value;
+                  let durationStr = [];
+                  if (days && parseInt(days) > 0) durationStr.push(`${days} Days`);
+                  if (hours && parseInt(hours) > 0) durationStr.push(`${hours} Hours`);
+                  fd.append('duration', durationStr.length > 0 ? durationStr.join(', ') : '0 Days');
 
-                if (target.startTime?.value) fd.append('startTime', target.startTime.value);
-                if (target.endTime?.value) fd.append('endTime', target.endTime.value);
-                fd.append('eventType', target.eventType.value);
-                fd.append('category', target.category.value);
-                fd.append('registrationFee', target.registrationFee.value);
-                fd.append('feeType', target.feeType.value);
-                if (target.description.value) fd.append('description', target.description.value);
-                fd.append('livePosEnabled', target.livePosEnabled?.checked ? 'true' : 'false');
-                fd.append('notifyAllAuthors', target.notifyAllAuthors?.checked ? 'true' : 'false');
-                if (target.banner.files[0]) fd.append('banner', target.banner.files[0]);
+                  if (target.startTime?.value) fd.append('startTime', target.startTime.value);
+                  if (target.endTime?.value) fd.append('endTime', target.endTime.value);
+                  fd.append('eventType', target.eventType.value);
+                  fd.append('category', target.category.value);
+                  fd.append('registrationFee', target.registrationFee.value);
+                  fd.append('feeType', target.feeType.value);
+                  if (target.description.value) fd.append('description', target.description.value);
+                  fd.append('livePosEnabled', target.livePosEnabled?.checked ? 'true' : 'false');
+                  fd.append('notifyAllAuthors', target.notifyAllAuthors?.checked ? 'true' : 'false');
+                  if (target.banner.files[0]) {
+                    fd.append('banner', target.banner.files[0]);
+                  } else if (generatedPoster) {
+                    fd.append('banner', generatedPoster);
+                  }
 
-                if (!hasGranularData) {
-                  fd.append('aggAuthors', target.aggAuthors?.value || '0');
-                  fd.append('aggSent', target.aggSent?.value || '0');
-                  fd.append('aggSold', target.aggSold?.value || '0');
-                  fd.append('aggRevenue', target.aggRevenue?.value || '0');
-                  fd.append('aggEligibleAuthors', target.aggEligibleAuthors?.value || '0');
+                  if (!hasGranularData) {
+                    fd.append('aggAuthors', target.aggAuthors?.value || '0');
+                    fd.append('aggSent', target.aggSent?.value || '0');
+                    fd.append('aggSold', target.aggSold?.value || '0');
+                    fd.append('aggRevenue', target.aggRevenue?.value || '0');
+                    fd.append('aggEligibleAuthors', target.aggEligibleAuthors?.value || '0');
+                  }
+
+                  await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                  toast.success('Event Created Successfully!');
+                  setIsEventModalOpen(false);
+                } catch (err: any) {
+                  toast.error(err.response?.data?.error || err.message);
+                } finally {
+                  setIsSubmittingEvent(false);
                 }
-
-                await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events`, fd, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                toast.success('Event Created Successfully!');
-                setIsEventModalOpen(false);
-              } catch (err: any) {
-                toast.error(err.response?.data?.error || err.message);
-              } finally {
-                setIsSubmittingEvent(false);
-              }
-            }}>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-2"><label className="dash-label">Event Name</label><input required name="name" type="text" className="dash-input" /></div>
-                  <div>
-                    <label className="dash-label">Event Status</label>
-                    <select name="status" className="dash-input" value={createEventStatus} onChange={(e) => setCreateEventStatus(e.target.value)}>
-                      <option value="Upcoming">Upcoming</option>
-                      <option value="Past">Past (Granular Data)</option>
-                      <option value="Legacy Archive">Legacy Archive (Aggregate Data)</option>
-                    </select>
-                  </div>
-                  <div><label className="dash-label">Event Banner (Optional)</label><input name="banner" type="file" accept="image/*" className="dash-input" /></div>
-                </div>
-
-                <div><label className="dash-label">Event Description</label><textarea name="description" rows={3} className="dash-input resize-y" placeholder="Short details about the event..."></textarea></div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="dash-label">Format</label>
-                    <select name="eventType" className="dash-input">
-                      <option value="" disabled hidden>Select Format</option>
-                      <option value="Meet the Authors">Meet the Authors</option>
-                      <option value="Stall">Stall</option>
-                      <option value="Others">Others</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="dash-label">Category</label>
-                    <select name="category" className="dash-input">
-                      <option value="" disabled hidden>Select Category</option>
-                      <option value="Housing Society">Housing Society</option>
-                      <option value="College">College</option>
-                      <option value="Book Fair">Book Fair</option>
-                      <option value="Corporate Office">Corporate Office</option>
-                      <option value="University">University</option>
-                      <option value="Others">Others</option>
-                    </select>
-                  </div>
-                  <div><label className="dash-label">Location (Venue)</label><input required name="location" type="text" className="dash-input" /></div>
-                  <div>
-                    <label className="dash-label">Date</label>
-                    <input required name="date" type="date" className="dash-input" value={createEventDate || ''} onChange={(e) => setCreateEventDate(e.target.value)} />
-                    {createEventDate && (
-                      <div className={`text-[10px] mt-1 font-bold ${isPastEvent ? 'text-orange-500' : 'text-emerald-500'}`}>
-                        {isPastEvent ? '— Past Event' : '— Upcoming Event'}
+              }}>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="md:col-span-2"><label className="dash-label">Event Name</label><input required name="name" type="text" className="dash-input" /></div>
+                    <div>
+                      <label className="dash-label">Event Status</label>
+                      <select name="status" className="dash-input" value={createEventStatus} onChange={(e) => setCreateEventStatus(e.target.value)}>
+                        <option value="Upcoming">Upcoming</option>
+                        <option value="Past">Past (Granular Data)</option>
+                        <option value="Legacy Archive">Legacy Archive (Aggregate Data)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="dash-label">Event Banner (Optional)</label>
+                      <div className="flex flex-col gap-2">
+                        <input name="banner" type="file" accept="image/*" className="dash-input" />
+                        <button type="button" onClick={handleGeneratePoster} className="px-3 py-1.5 bg-paa-gold text-paa-navy text-xs font-bold uppercase rounded border border-paa-gold hover:bg-white transition-colors">
+                          Generate Event Poster
+                        </button>
                       </div>
-                    )}
+                      {generatedPosterPreview && (
+                        <div className="mt-3 p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+                          <span className="text-[10px] text-paa-navy font-bold uppercase tracking-wider block mb-2">Generated Poster:</span>
+                          <div className="relative group inline-block">
+                            <a href={generatedPosterPreview} target="_blank" rel="noreferrer" title="Click to view full poster">
+                              <img src={generatedPosterPreview} alt="Generated Poster" className="w-full max-w-[150px] h-auto object-contain border-2 border-white shadow-sm rounded hover:shadow-md transition-shadow cursor-pointer" />
+                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded pointer-events-none">
+                                <span className="text-white text-[10px] font-bold uppercase tracking-wider bg-black/50 px-2 py-1 rounded">View</span>
+                              </div>
+                            </a>
+                            <button 
+                              type="button" 
+                              onClick={() => { setGeneratedPoster(null); setGeneratedPosterPreview(null); }} 
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600 transition-colors z-10"
+                              title="Remove Poster"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="dash-label">Duration</label>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <input required name="durationDays" type="number" min="0" className="dash-input" placeholder="Days" />
+
+                  <div><label className="dash-label">Event Description</label><textarea name="description" rows={3} className="dash-input resize-y" placeholder="Short details about the event..."></textarea></div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="dash-label">Format</label>
+                      <select name="eventType" className="dash-input">
+                        <option value="" disabled hidden>Select Format</option>
+                        <option value="Meet the Authors">Meet the Authors</option>
+                        <option value="Stall">Stall</option>
+                        <option value="Others">Others</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="dash-label">Category</label>
+                      <select name="category" className="dash-input">
+                        <option value="" disabled hidden>Select Category</option>
+                        <option value="Housing Society">Housing Society</option>
+                        <option value="College">College</option>
+                        <option value="Book Fair">Book Fair</option>
+                        <option value="Corporate Office">Corporate Office</option>
+                        <option value="University">University</option>
+                        <option value="Others">Others</option>
+                      </select>
+                    </div>
+                    <div><label className="dash-label">Location (Venue)</label><input required name="location" type="text" className="dash-input" /></div>
+                    <div>
+                      <label className="dash-label">Date</label>
+                      <input required name="date" type="date" className="dash-input" value={createEventDate || ''} onChange={(e) => setCreateEventDate(e.target.value)} />
+                      {createEventDate && (
+                        <div className={`text-[10px] mt-1 font-bold ${isPastEvent ? 'text-orange-500' : 'text-emerald-500'}`}>
+                          {isPastEvent ? '— Past Event' : '— Upcoming Event'}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="dash-label">Duration</label>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <input required name="durationDays" type="number" min="0" className="dash-input" placeholder="Days" />
+                        </div>
+                        <div className="flex-1">
+                          <input required name="durationHours" type="number" min="0" className="dash-input" placeholder="Hours" />
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <input required name="durationHours" type="number" min="0" className="dash-input" placeholder="Hours" />
-                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div><label className="dash-label">From Timing</label><input name="startTime" type="time" className="dash-input" /></div>
+                    <div><label className="dash-label">To Timing</label><input name="endTime" type="time" className="dash-input" /></div>
+                    <div><label className="dash-label">Registration Fee (₹)</label><input required name="registrationFee" type="number" defaultValue={0} className="dash-input" /></div>
+                    <div>
+                      <label className="dash-label">Fee Type</label>
+                      <select name="feeType" className="dash-input">
+                        <option value="Per Author">Per Author</option>
+                        <option value="Per Title">Per Title</option>
+                        <option value="Flat Fee">Flat Fee</option>
+                      </select>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div><label className="dash-label">From Timing</label><input name="startTime" type="time" className="dash-input" /></div>
-                  <div><label className="dash-label">To Timing</label><input name="endTime" type="time" className="dash-input" /></div>
-                  <div><label className="dash-label">Registration Fee (₹)</label><input required name="registrationFee" type="number" defaultValue={0} className="dash-input" /></div>
-                  <div>
-                    <label className="dash-label">Fee Type</label>
-                    <select name="feeType" className="dash-input">
-                      <option value="Per Author">Per Author</option>
-                      <option value="Per Title">Per Title</option>
-                      <option value="Flat Fee">Flat Fee</option>
-                    </select>
+                <div className="flex items-center gap-2 mt-4 p-4 bg-amber-50/50 rounded-xl border border-amber-200">
+                  <input type="checkbox" name="notifyAllAuthors" id="notifyAllAuthors" className="w-4 h-4 text-amber-600 focus:ring-amber-500 rounded border-gray-300" defaultChecked={true} />
+                  <label htmlFor="notifyAllAuthors" className="text-sm font-medium text-amber-900">Notify all authors about this event via email (Uncheck to save as Draft/Unpublished)</label>
+                </div>
+
+                <div className="flex items-center gap-2 mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                  <input type="checkbox" name="livePosEnabled" id="livePosEnabled" className="w-4 h-4 text-paa-navy focus:ring-paa-navy rounded border-gray-300" defaultChecked={!isPastEvent} />
+                  <label htmlFor="livePosEnabled" className="text-sm font-medium text-paa-navy">Enable Live POS tracking for this event</label>
+                </div>
+
+                <div className="border-t border-gray-200 pt-6 mt-6">
+                  {createEventStatus !== 'Legacy Archive' && (
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm text-blue-800">
+                      * You can manage granular data for each author from the Event Breakdown view after creating this event.
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+                  <button type="button" onClick={() => setIsEventModalOpen(false)} className="dash-btn dash-btn-ghost">Cancel</button>
+                  <button type="submit" disabled={isSubmittingEvent} className="dash-btn dash-btn-primary min-w-[120px]">
+                    {isSubmittingEvent ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span> : 'Save Event Details'}
+                  </button>
+                </div>
+              </form>
+
+              <div style={{ position: 'absolute', top: '0', left: '0', zIndex: -999, opacity: 0, pointerEvents: 'none' }}>
+                <div ref={posterRef} className="w-[800px] h-[1200px] p-12 flex flex-col items-center justify-between relative overflow-hidden font-serif" style={{ background: 'linear-gradient(to bottom right, #0B1A2E, #312e81, #000000)', color: '#ffffff' }}>
+                  {/* Background decorative elements */}
+                  <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                    <div className="absolute top-10 left-10 w-64 h-64 rounded-full mix-blend-overlay filter blur-3xl" style={{ backgroundColor: '#D4AF37' }}></div>
+                    <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full mix-blend-overlay filter blur-3xl" style={{ backgroundColor: '#3b82f6' }}></div>
+                  </div>
+
+                  <div className="relative z-10 w-full flex flex-col items-center">
+                    <div className="mb-8 w-40 h-40 rounded-full p-4 flex items-center justify-center" style={{ backgroundColor: '#ffffff', border: '4px solid #D4AF37' }}>
+                      <img src="/logo.png" alt="PAA Logo" className="max-w-full max-h-full object-contain" crossOrigin="anonymous" />
+                    </div>
+                    
+                    <h2 className="text-2xl font-bold tracking-widest uppercase mb-2" style={{ color: '#D4AF37' }}>Pune Authors Association</h2>
+                    <div className="w-24 h-1 mb-16" style={{ backgroundColor: '#D4AF37' }}></div>
+
+                    <h1 className="text-6xl font-black text-center mb-8 leading-tight" style={{ color: '#ffffff', textShadow: '0 4px 6px rgba(0,0,0,0.5)' }}>
+                      {posterData?.name || 'LITERARY EVENT'}
+                    </h1>
+                  </div>
+
+                  <div className="relative z-10 w-full backdrop-blur-md rounded-3xl p-10" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                    <div className="flex flex-col gap-8">
+                      <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#D4AF37' }}>
+                          <CalendarIcon className="w-8 h-8" style={{ color: '#0B1A2E' }} />
+                        </div>
+                        <div>
+                          <p className="font-bold tracking-widest text-sm uppercase mb-1" style={{ color: '#D4AF37' }}>Date & Time</p>
+                          <p className="text-3xl font-bold" style={{ color: '#ffffff' }}>
+                            {posterData?.date ? new Date(posterData.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'To Be Announced'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#D4AF37' }}>
+                          <MapPin className="w-8 h-8" style={{ color: '#0B1A2E' }} />
+                        </div>
+                        <div>
+                          <p className="font-bold tracking-widest text-sm uppercase mb-1" style={{ color: '#D4AF37' }}>Venue</p>
+                          <p className="text-3xl font-bold leading-snug" style={{ color: '#ffffff' }}>
+                            {posterData?.location || 'Venue TBA'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 w-full text-center mt-12">
+                    <p className="text-xl font-medium italic mb-6" style={{ color: '#d1d5db' }}>"Empowering voices, inspiring readers."</p>
+                    <p className="text-lg font-bold tracking-wider" style={{ color: '#ffffff' }}>WWW.PUNEAUTHORS.COM</p>
                   </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 mt-4 p-4 bg-amber-50/50 rounded-xl border border-amber-200">
-                <input type="checkbox" name="notifyAllAuthors" id="notifyAllAuthors" className="w-4 h-4 text-amber-600 focus:ring-amber-500 rounded border-gray-300" defaultChecked={true} />
-                <label htmlFor="notifyAllAuthors" className="text-sm font-medium text-amber-900">Notify all authors about this event via email (Uncheck to save as Draft/Unpublished)</label>
-              </div>
-
-              <div className="flex items-center gap-2 mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                <input type="checkbox" name="livePosEnabled" id="livePosEnabled" className="w-4 h-4 text-paa-navy focus:ring-paa-navy rounded border-gray-300" defaultChecked={!isPastEvent} />
-                <label htmlFor="livePosEnabled" className="text-sm font-medium text-paa-navy">Enable Live POS tracking for this event</label>
-              </div>
-
-              <div className="border-t border-gray-200 pt-6 mt-6">
-
-                {createEventStatus !== 'Legacy Archive' && (
-                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-sm text-blue-800">
-                    * You can manage granular data for each author from the Event Breakdown view after creating this event.
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 pt-6 border-t mt-6">
-                <button type="button" onClick={() => setIsEventModalOpen(false)} className="dash-btn dash-btn-ghost">Cancel</button>
-                <button type="submit" disabled={isSubmittingEvent} className="dash-btn dash-btn-primary min-w-[120px]">
-                  {isSubmittingEvent ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span> : 'Save Event Details'}
-                </button>
-              </div>
-            </form>
+            </div>
           </FocusTrap>
         </div>
       );

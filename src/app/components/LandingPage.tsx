@@ -346,7 +346,7 @@ export function LandingPage() {
           display: "flex", 
           alignItems: "center", 
           overflow: "hidden", 
-          backgroundImage: "url('/hero-bg.webp'), url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2000&auto=format&fit=crop')",
+          backgroundImage: "url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2000&auto=format&fit=crop')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat"

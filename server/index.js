@@ -18,20 +18,20 @@ app.use(helmet({
 // Security: Rate Limiting (Prevents DDoS and brute-force guessing)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // TEMPORARY for testing!
+  max: 1000, // TEMPORARY for testing!
   message: 'Too many requests from this IP, please try again later.'
 });
 
 // Security: Strict CORS (Only allows requests from your Website)
 const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow localhost and vercel domains. We will add your custom domain here later!
-        if (!origin || origin.includes('localhost') || origin.includes('vercel.app') || origin.includes('puneauthors.com')) {
-            callback(null, true);
-        } else {
-            callback(new Error('Blocked by CORS policy'));
-        }
+  origin: function (origin, callback) {
+    // Allow localhost and vercel domains. We will add your custom domain here later!
+    if (!origin || origin.includes('localhost') || origin.includes('vercel.app') || origin.includes('puneauthors.com')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS policy'));
     }
+  }
 };
 app.set('trust proxy', 1); // Trust Nginx reverse proxy to get real user IPs
 app.use(cors(corsOptions)); // CORS MUST BE ABOVE LIMITER
@@ -95,7 +95,7 @@ setInterval(async () => {
 
     for (const order of unverifiedOrders) {
       if (!order.items || order.items.length === 0) continue;
-      
+
       const hasDeliveredItems = order.items.some(item => item.status === 'Delivered');
       const isReadyForVerify = order.items.every(item => {
         if (item.status === 'Rejected') return true;
@@ -130,7 +130,7 @@ setInterval(async () => {
         const authorEmail = item.book.author.email;
         const bookTitle = item.book ? item.book.title : 'Unknown Book';
         const orderId = item.orderId || (item.order && item.order.id);
-        
+
         const emailContent = `
           <p>Dear ${item.book.author.name},</p>
           <p>You have a pending order for <strong>${bookTitle}</strong> (Order #${orderId}) that has been waiting for your acceptance for over 24 hours.</p>
@@ -138,10 +138,10 @@ setInterval(async () => {
           <p>Failure to accept orders in a timely manner will result in a penalty fine and temporary suspension of your account for receiving new orders.</p>
           <p>Thank you for your prompt attention to this matter.</p>
         `;
-        
+
         await sendNotificationEmail(authorEmail, 'Action Required: Order Pending Acceptance > 24 Hours', emailWrap('Urgent Order Acceptance Required', emailContent))
           .catch(e => console.error('Failed to send late author warning', e));
-          
+
         await prisma.orderItem.update({
           where: { id: item.id },
           data: { authorWarnedAt: now }
@@ -167,7 +167,7 @@ setInterval(async () => {
         const authorEmail = item.book.author.email;
         const bookTitle = item.book ? item.book.title : 'Unknown Book';
         const orderId = item.orderId || (item.order && item.order.id);
-        
+
         const emailContent = `
           <p>Dear ${item.book.author.name},</p>
           <p>You have an accepted order for <strong>${bookTitle}</strong> (Order #${orderId}) that has been waiting for you to dispatch it for over 48 hours.</p>
@@ -175,10 +175,10 @@ setInterval(async () => {
           <p>Failure to dispatch orders in a timely manner will result in a penalty fine and temporary suspension of your account for receiving new orders.</p>
           <p>Thank you for your prompt attention to this matter.</p>
         `;
-        
+
         await sendNotificationEmail(authorEmail, 'Action Required: Order Pending Dispatch > 48 Hours', emailWrap('Urgent Order Dispatch Required', emailContent))
           .catch(e => console.error('Failed to send late dispatch warning', e));
-          
+
         await prisma.orderItem.update({
           where: { id: item.id },
           data: { authorDispatchWarnedAt: now }
@@ -196,7 +196,7 @@ setInterval(async () => {
         },
         include: { author: true, order: true, book: true }
       });
-      
+
       const actuallyLate = lateItems.filter(it => {
         const hours = (now.getTime() - new Date(it.createdAt).getTime()) / (1000 * 3600);
         if ((it.status === 'Pending Verification' || it.status === 'Pending') && hours > 24) return true;
@@ -210,7 +210,7 @@ setInterval(async () => {
           html += `<li><strong>Order ${it.orderId || (it.order && it.order.id)}</strong> - Author: ${it.authorName || (it.author && it.author.name) || 'Unknown'} - Item: ${it.book ? it.book.title : 'Unknown'} - Status: ${it.status}</li>`;
         });
         html += `</ul><p>Please check the Operations Dashboard to issue warnings or fines.</p>`;
-        
+
         const adminEmail = process.env.ADMIN_EMAIL || 'admin@puneauthors.com';
         await sendNotificationEmail(adminEmail, 'Daily Late Authors Report', emailWrap('Late Authors Report', html))
           .catch(e => console.error('Failed to send daily report', e));

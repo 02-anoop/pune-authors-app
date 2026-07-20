@@ -18,23 +18,23 @@ app.use(helmet({
 // Security: Rate Limiting (Prevents DDoS and brute-force guessing)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 requests per window
+  max: 1000, // Increased limit
   message: 'Too many requests from this IP, please try again later.'
 });
-app.use(limiter);
 
 // Security: Strict CORS (Only allows requests from your Website)
 const corsOptions = {
     origin: function (origin, callback) {
         // Allow localhost and vercel domains. We will add your custom domain here later!
-        if (!origin || origin.includes('localhost') || origin.includes('vercel.app')) {
+        if (!origin || origin.includes('localhost') || origin.includes('vercel.app') || origin.includes('puneauthors.com')) {
             callback(null, true);
         } else {
             callback(new Error('Blocked by CORS policy'));
         }
     }
 };
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); // CORS MUST BE ABOVE LIMITER
+app.use(limiter);
 
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

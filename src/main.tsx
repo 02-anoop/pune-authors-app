@@ -3,7 +3,23 @@ import ReactDOM from 'react-dom/client'
 import App from './app/App'
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/react"
+import axios from 'axios'
+import { toast } from 'sonner'
 import './styles/index.css'
+
+// Global interceptor to catch Rate Limit (429) errors from the backend
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 429) {
+      toast.error('Security Alert: You are loading too many pages too quickly! You have been temporarily blocked for 15 minutes to prevent attacks.', { 
+        duration: 15000,
+        style: { background: '#ef4444', color: '#fff', border: 'none', fontWeight: 'bold' }
+      });
+    }
+    return Promise.reject(error);
+  }
+);
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

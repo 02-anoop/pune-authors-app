@@ -5650,13 +5650,13 @@ export function OperationsDashboardPage() {
                               )}
                               <td className="p-3">
                                 {isLateJoiner ? (
-                                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[9px] font-bold uppercase flex items-center gap-1 w-max"><XCircle className="w-3 h-3" /> Joined After Event</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[9px] font-bold uppercase flex items-center gap-1 w-max shadow-sm"><XCircle className="w-3 h-3" /> Joined After Event</span>
                                 ) : status === 'Registered' ? (
-                                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max">
-                                    {!m.optInStatus?.includes('-Draft') ? <CheckCircle className="w-3.5 h-3.5 fill-emerald-600 text-white" /> : <Check className="w-3 h-3" />} Participated
+                                  <span className="px-2 py-0.5 rounded-full bg-green-500 text-white text-[10px] font-bold uppercase flex items-center gap-1 w-max shadow-sm">
+                                    {!m.optInStatus?.includes('-Draft') ? <CheckCircle className="w-3.5 h-3.5" /> : <Check className="w-3 h-3" />} Participated
                                   </span>
                                 ) : (selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.status === 'Legacy Archive') ? (
-                                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><XCircle className="w-3 h-3" /> Not Participated</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-bold uppercase flex items-center gap-1 w-max shadow-sm"><XCircle className="w-3 h-3" /> Not Participated</span>
                                 ) : (status === 'Pending' || status === 'Pending Approval' || status === 'Unpublished') ? (
                                   <span className="px-3 py-1 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider flex items-center gap-1 w-max shadow-md ring-2 ring-yellow-400/30 animate-pulse">Pending Approval</span>
                                 ) : status === 'Declined' ? (

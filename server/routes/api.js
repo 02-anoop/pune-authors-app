@@ -4716,6 +4716,16 @@ router.post('/api/admin/events/:eventId/publish-all', verifyToken, isAdmin, asyn
       where: { id: eventId },
       data: { broadcastStatus: 'Published' }
     });
+    
+    // Also publish any drafts
+    const drafts = await prisma.eventAuthor.findMany({ where: { eventId, optInStatus: { endsWith: '-Draft' } } });
+    for (const d of drafts) {
+      await prisma.eventAuthor.update({
+        where: { id: d.id },
+        data: { optInStatus: d.optInStatus.replace('-Draft', '') }
+      });
+    }
+    
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -4745,7 +4755,8 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
     const tx = prisma;
     // Upsert EventAuthor to update status
     const existingAuthor = await tx.eventAuthor.findFirst({ where: { eventId, authorId } });
-    const statusValue = (registrationStatus === 'Participated' || registrationStatus === 'Registered') ? 'Registered' : 'Declined';
+    let statusValue = (registrationStatus === 'Participated' || registrationStatus === 'Registered') ? 'Registered' : 'Declined';
+    if (isDraft) statusValue += '-Draft';
     const manualSold = useGlobalOverride ? parseInt(globalSold) || 0 : null;
     const manualRevenue = useGlobalOverride ? parseFloat(globalRevenue) || 0 : null;
 

@@ -2530,8 +2530,8 @@ function InventoryPage({ onRefresh, dashboardData }: { onRefresh: () => void, da
                             {book.currentStock}
                           </span>
                           {book.isLowStock && (
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 animate-pulse">
-                              ⚠ LOW STOCK
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 animate-pulse flex items-center gap-1">
+                              <AlertCircle size={10} /> LOW STOCK
                             </span>
                           )}
                         </div>
@@ -4916,26 +4916,26 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
           
 
           <div className="bg-white rounded-xl shadow-premium border border-paa-navy/5 overflow-x-auto mb-8">
-            <table className="w-full min-w-[900px] text-left border-collapse">
+            <table className="w-full text-left border-collapse">
               <thead className="bg-indigo-50 border-b-2 border-indigo-100">
                 <tr>
-                  <th className="px-6 py-4 w-20 text-center !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">S.No</th>
-                  <th className="px-4 py-4 w-1/4 !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Event Name</th>
-                  <th className="px-4 py-4 w-32 !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Date</th>
-                  <th className="px-4 py-4 !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Format</th>
-                  <th className="px-4 py-4 !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Category</th>
-                  <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Part. %</th>
-                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Books Sold</th>
-                  <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Revenue</th>
+                  <th className="px-2 py-3 w-12 text-center !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">S.No</th>
+                  <th className="px-2 py-3 !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Event Name</th>
+                  <th className="px-2 py-3 w-24 !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Date</th>
+                  <th className="px-2 py-3 !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Format</th>
+                  <th className="px-2 py-3 !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Category</th>
+                  <th className="px-2 py-3 text-center !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Part. %</th>
+                  <th className="px-2 py-3 text-right !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Books Sold</th>
+                  <th className="px-2 py-3 text-right !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Revenue</th>
                   {eventFilter === 'LEGACY ARCHIVE' ? (
-                    <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Authors</th>
+                    <th className="px-2 py-3 text-center !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Authors</th>
                   ) : (
                     <>
-                      <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Investment / Registration Fee</th>
-                      <th className="px-4 py-4 text-right !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Event Profitability</th>
+                      <th className="px-2 py-3 text-right !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Fee / Invest</th>
+                      <th className="px-2 py-3 text-right !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Profit</th>
                     </>
                   )}
-                  <th className="px-4 py-4 text-center !text-[14px] font-bold uppercase tracking-widest !text-cyan-700 !bg-transparent">Status</th>
+                  <th className="px-2 py-3 text-center !text-[11px] font-bold uppercase tracking-wider !text-cyan-700 !bg-transparent">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -4969,11 +4969,15 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
                       id={`event-row-${evt.id}`}
                       className={`cursor-pointer ${catRowColorAuthor} ${expandedEventId === evt.id ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
                       onClick={() => { 
-                         setExpandedEventId(expandedEventId === evt.id ? null : evt.id);
-                         if (expandedEventId !== evt.id && evt.isInvite && evt.registration === 'Pending' && !evt.isPast) {
-                            setSelectedInvite(evt);
-                            setOptInBooks(books.map((b: any) => ({ bookId: b.id.toString(), title: b.title, stock: Math.min(10, b.stock || 0), included: true, availableStock: b.stock || 0 })));
-                            setPaymentScreenshot(null);
+                         if (expandedEventId === evt.id) {
+                            setExpandedEventId(null);
+                         } else {
+                            const isReapply = evt.registration === 'Rejected' || evt.registration === 'Declined';
+                            if (isReapply || (evt.isInvite && evt.registration === 'Pending' && !evt.isPast)) {
+                               handleOpenRegistrationForm(evt, isReapply);
+                            } else {
+                               setExpandedEventId(evt.id);
+                            }
                          }
                       }}
                     >
@@ -5072,33 +5076,34 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
                               } else if (evt.registration === 'Rejected' || evt.registration === 'Declined') {
                                   statusText = evt.registration === 'Declined' ? 'Declined' : 'Rejected';
                                   statusColors = 'bg-red-500 text-white border-red-600 shadow-sm';
-                              } else if (evt.status === 'Legacy Archive') {
-                                  const isFuture = evt.startDate || evt.date ? new Date(evt.startDate || evt.date) > new Date() : false;
-                                  statusText = isFuture ? 'Upcoming' : 'Completed';
-                                  statusColors = isFuture ? 'bg-blue-500/85 text-white border-blue-600 shadow-sm' : 'bg-gray-500 text-white border-gray-600 shadow-sm';
-                              } else if (evt.isPast && !evt.isDataUpdated) {
-                                  statusText = 'Completed';
-                                  statusColors = 'bg-gray-500 text-white border-gray-600 shadow-sm';
                               } else if (evt.registration === 'Pending Approval') {
-                                  statusText = 'Wait for Approval';
+                                  statusText = 'Pending Admin Approval';
                                   statusColors = 'bg-yellow-500 text-white border-yellow-600 shadow-sm';
-                              } else if (evt.registration === 'Pending' && !evt.isPast) {
-                                  return (
-                                     <div className="flex flex-col items-center gap-2">
-                                       <button 
-                                          onClick={(e) => {
-                                             e.stopPropagation();
-                                             handleOpenRegistrationForm(evt, false);
-                                          }} 
-                                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95 flex items-center gap-1"
-                                       >
-                                         REGISTER NOW <ChevronRight className="w-3 h-3" />
-                                       </button>
-                                     </div>
-                                  );
-                              } else if (evt.registration === 'Pending') {
-                                  statusText = 'Pending Registration';
-                                  statusColors = 'bg-rose-500/85 text-white border-rose-600 shadow-sm';
+                              } else if (!evt.registration || evt.registration === 'Unpublished' || evt.registration === 'Pending') {
+                                  if (evt.isPast || evt.status === 'Legacy Archive' || evt.status === 'Past') {
+                                      statusText = 'Not Participated';
+                                      statusColors = 'bg-gray-500 text-white border-gray-600 shadow-sm';
+                                  } else {
+                                      return (
+                                         <div className="flex flex-col items-center gap-2">
+                                           <button 
+                                              onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 handleOpenRegistrationForm(evt, false);
+                                              }} 
+                                              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95 flex items-center gap-1"
+                                           >
+                                             REGISTER NOW <ChevronRight className="w-3 h-3" />
+                                           </button>
+                                         </div>
+                                      );
+                                  }
+                              } else {
+                                  // Fallback for any unhandled statuses on past events
+                                  if (evt.isPast || evt.status === 'Legacy Archive' || evt.status === 'Past') {
+                                      statusText = 'Not Participated';
+                                      statusColors = 'bg-gray-500 text-white border-gray-600 shadow-sm';
+                                  }
                               }
                               
                               return (
@@ -5167,9 +5172,19 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
                                    </div>
                                 </div>
                                 <div className="w-px bg-gray-100 hidden xl:block"></div>
-                                {(evt.isInvite && (evt.registration === 'Pending' || evt.registration === 'Rejected' || evt.registration === 'Declined') && !evt.isPast) ? (
+                                {((evt.isInvite && evt.registration === 'Pending' && !evt.isPast) || evt.registration === 'Rejected' || evt.registration === 'Declined') ? (
                                     <div className="flex-1 min-w-[300px] flex flex-col animate-fade-in-up">
-                                        <h4 className="font-bold text-sm text-gray-700 mb-2 border-b pb-2 flex items-center gap-2"><BookOpen className="w-4 h-4"/> Opt-In: Select Books</h4>
+                                        <h4 className="font-bold text-sm text-gray-700 mb-2 border-b pb-2 flex items-center gap-2">
+                                          <BookOpen className="w-4 h-4"/> 
+                                          {evt.registration === 'Pending' ? 'Opt-In: Select Books' : 'Reapply: Update Your Books'}
+                                        </h4>
+                                        
+                                        {(evt.registration === 'Rejected' || evt.registration === 'Declined') && (
+                                            <div className="text-red-600 font-bold text-xs mb-3 flex items-center gap-1.5 uppercase tracking-wide">
+                                              <AlertCircle className="w-4 h-4" /> REASON: {evt.rejectionReason || 'Declined by administrator.'}
+                                            </div>
+                                        )}
+                                        
                                         <p className="text-[11px] text-gray-500 mb-3 italic bg-gray-50 p-2 rounded border border-gray-100">Check the box to include a book, and input the exact stock you want to list for this event.</p>
                                         <div className="flex-1 overflow-y-auto max-h-[250px] space-y-2 mb-4 pr-2">
                                             {optInBooks.map((b, idx) => (
@@ -5220,14 +5235,14 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
                                           );
                                         })()}
                                         <div className="flex gap-2 shrink-0 mt-auto">
-                                            <button disabled={isSubmittingOptIn} onClick={() => handleOptInSubmit('reject')} className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50">Decline</button>
+                                            <button disabled={isSubmittingOptIn} onClick={() => handleOptInSubmit('reject')} className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50">Cancel</button>
                                             <button disabled={isSubmittingOptIn} onClick={() => handleOptInSubmit('approve')} className="flex-1 px-4 py-2 bg-paa-navy text-paa-cream rounded-lg text-sm font-bold hover:bg-paa-gold hover:text-paa-navy transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-wait">
                                               {isSubmittingOptIn ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Submitting...</> : 'Submit Opt-In'}
                                             </button>
                                         </div>
                                     </div>
                                 ) : (
-                                <div className="flex-1 min-w-[300px] flex flex-col">
+                                <div className="flex-1 min-w-[300px] flex flex-col animate-fade-in-up">
                                    <h4 className="font-bold text-sm text-gray-700 mb-4 flex items-center gap-2 border-b pb-2">
                                       {evt.isPast ? <><Package className="w-4 h-4" /> Sales Breakdown</> : <><BookOpen className="w-4 h-4" /> Book Inventory</>}
                                    </h4>

@@ -1272,9 +1272,12 @@ export function OperationsDashboardPage() {
   const [createEventStatus, setCreateEventStatus] = useState('Upcoming');
   const [manageAuthorBooks, setManageAuthorBooks] = useState<any[]>([]);
   const [manageRegStatus, setManageRegStatus] = useState('Registered');
-  const [managePaymentStatus, setManagePaymentStatus] = useState('Paid');
+  const [managePaymentStatus, setManagePaymentStatus] = useState('Unpaid');
   const [manageAmountPaid, setManageAmountPaid] = useState<number>(0);
   const [isPublishingData, setIsPublishingData] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isManageDataDirty, setIsManageDataDirty] = useState(false);
+  const [currentOptInStatus, setCurrentOptInStatus] = useState<string | null>(null);
   const [useGlobalOverride, setUseGlobalOverride] = useState(false);
   const [globalSold, setGlobalSold] = useState(0);
   const [globalRevenue, setGlobalRevenue] = useState(0);
@@ -4825,9 +4828,11 @@ export function OperationsDashboardPage() {
     const handleEditAuthorData = (m: any) => {
       const authorProfile = m.author || m;
       setSelectedAuthorForData(authorProfile);
-      setManageRegStatus(m.optInStatus === 'Declined' ? 'Declined' : 'Registered');
-      setManagePaymentStatus(m.paymentStatus || 'Paid');
-      setManageAmountPaid(m.amountPaid || 0);
+      setCurrentOptInStatus(m.optInStatus || null);
+      setManageRegStatus(m.optInStatus?.startsWith('Declined') ? 'Declined' : 'Registered');
+      setManagePaymentStatus(m.paymentStatus || 'Unpaid');
+      const expectedFee = selectedEventBreakdown?.feeType === 'Per Title' ? (m.books?.length || 0) * (selectedEventBreakdown.registrationFee || 0) : (selectedEventBreakdown?.registrationFee || 0);
+      setManageAmountPaid(m.amountPaid || ((m.paymentStatus === 'Paid' || m.optInStatus?.startsWith('Registered')) ? expectedFee : 0));
       const isLegacyEvent = selectedEventBreakdown?.status === 'Legacy Archive' || selectedEventBreakdown?.isLegacy;
       setUseGlobalOverride(isLegacyEvent || (m.manualTotalSold !== null && m.manualTotalSold !== undefined));
       setGlobalSold(m.manualTotalSold || 0);
@@ -4849,6 +4854,7 @@ export function OperationsDashboardPage() {
           returnedStock: evb ? (evb.returnedStock || 0) : 0
         };
       }));
+      setIsManageDataDirty(false);
     };
 
     const handlePublishData = async () => {
@@ -4866,6 +4872,7 @@ export function OperationsDashboardPage() {
         fetchEventRegistrations(selectedEventBreakdown.id);
         toast.success('Data Published! The author will now see these metrics in their dashboard.');
         setIsPublishingData(false);
+        setIsManageDataDirty(false);
       } catch (err: any) {
         toast.error(err.response?.data?.error || 'Failed to publish data.');
         if (err.response?.data?.stack) console.error(err.response.data.stack);
@@ -4875,7 +4882,7 @@ export function OperationsDashboardPage() {
 
     const handleSaveDraft = async () => {
       try {
-        setIsPublishingData(true);
+        setIsSavingDraft(true);
         await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/admin/events/${selectedEventBreakdown.id}/author/${selectedAuthorForData.id}/publish`, {
           registrationStatus: manageRegStatus,
           paymentStatus: managePaymentStatus,
@@ -4888,10 +4895,10 @@ export function OperationsDashboardPage() {
         }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
         await fetchEventRegistrations(selectedEventBreakdown.id);
         toast.success('Draft Saved! Data instantly reflected on the table.');
-        setIsPublishingData(false);
+        setIsSavingDraft(false);
       } catch (err: any) {
         toast.error(err.response?.data?.error || 'Failed to save draft.');
-        setIsPublishingData(false);
+        setIsSavingDraft(false);
       }
     };
     const handleDownloadEventReport = () => {
@@ -4919,7 +4926,7 @@ export function OperationsDashboardPage() {
       const totalBooksSold = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : (a.manualTotalSold || 0)), 0);
       const totalSalesRevenue = eventRegistrations.reduce((acc: number, a: any) => acc + ((a.books && a.books.length > 0) ? a.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (parseFloat(b.overrideMrp || b.book?.mrp || b.mrp) || 0)), 0) : (a.manualTotalRevenue || 0)), 0);
       const totalFeesReceived = eventRegistrations.reduce((acc: number, a: any) => {
-        const fee = a.amountPaid != null ? parseFloat(a.amountPaid) : (a.paymentStatus === 'Paid' ? parseFloat(selectedEventBreakdown.registrationFee || 0) : 0);
+        const fee = a.amountPaid != null ? parseFloat(a.amountPaid) : ((a.paymentStatus === 'Paid' || a.optInStatus?.startsWith('Registered')) ? parseFloat(selectedEventBreakdown.registrationFee || 0) : 0);
         return acc + (!isNaN(fee) ? fee : 0);
       }, 0);
 
@@ -4975,7 +4982,7 @@ export function OperationsDashboardPage() {
       authors.forEach((author: any) => {
         const reg = eventRegistrations.find((r: any) => r.author?.id === author.id || r.authorId === author.id || r.id === author.id);
         const isParticipating = reg ? 'Yes' : 'No';
-        const amountPaid = reg?.amountPaid != null ? reg.amountPaid : (reg?.paymentStatus === 'Paid' ? (selectedEventBreakdown.registrationFee || 0) : 0);
+        const amountPaid = reg?.amountPaid != null ? reg.amountPaid : ((reg?.paymentStatus === 'Paid' || reg?.optInStatus?.startsWith('Registered')) ? (selectedEventBreakdown.registrationFee || 0) : 0);
         const paymentStatus = reg?.paymentStatus || 'NA';
         const authorName = author.name || '';
         const phone = author.phone || 'NA';
@@ -5287,15 +5294,34 @@ export function OperationsDashboardPage() {
               <h4 className="font-semibold text-paa-navy mb-4 border-b border-gray-200 pb-2">Author Registration & Logistics</h4>
               <div className="grid grid-cols-2 gap-4 mb-8">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">{selectedEventBreakdown.isLegacy ? 'Mark Attendance' : 'Publish to Author Dashboard'}</label>
-                  <select className="w-full border border-gray-300 rounded p-2 text-sm font-semibold text-paa-navy" value={manageRegStatus} onChange={(e) => setManageRegStatus(e.target.value)}>
-                    <option value="Registered">{selectedEventBreakdown.isLegacy ? 'Yes, Mark Participated' : 'Yes, Publish Data'}</option>
-                    <option value="Declined">{selectedEventBreakdown.isLegacy ? 'No, Did Not Participate' : 'No, Keep Hidden'}</option>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Event Participation</label>
+                  <select className="w-full border border-gray-300 rounded p-2 text-sm font-semibold text-paa-navy" value={manageRegStatus} onChange={(e) => {
+                    const newStatus = e.target.value;
+                    setManageRegStatus(newStatus);
+                    setIsManageDataDirty(true);
+                    if (newStatus === 'Registered') {
+                      setManagePaymentStatus('Paid');
+                      if (manageAmountPaid === 0) {
+                        const expectedFee = selectedEventBreakdown?.feeType === 'Per Title' ? (manageAuthorBooks.length || 0) * (selectedEventBreakdown.registrationFee || 0) : (selectedEventBreakdown?.registrationFee || 0);
+                        setManageAmountPaid(expectedFee);
+                      }
+                    }
+                  }}>
+                    <option value="Registered">Participated</option>
+                    <option value="Declined">Did Not Participate</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Payment Status</label>
-                  <select className="w-full border border-gray-300 rounded p-2 text-sm" value={managePaymentStatus} onChange={(e) => setManagePaymentStatus(e.target.value)}>
+                  <select className="w-full border border-gray-300 rounded p-2 text-sm" value={managePaymentStatus} onChange={(e) => {
+                    const newStatus = e.target.value;
+                    setManagePaymentStatus(newStatus);
+                    setIsManageDataDirty(true);
+                    if (newStatus === 'Paid' && manageAmountPaid === 0) {
+                      const expectedFee = selectedEventBreakdown?.feeType === 'Per Title' ? (manageAuthorBooks.length || 0) * (selectedEventBreakdown.registrationFee || 0) : (selectedEventBreakdown?.registrationFee || 0);
+                      setManageAmountPaid(expectedFee);
+                    }
+                  }}>
                     <option value="Paid">Paid</option>
                     <option value="Unpaid">Unpaid</option>
                     <option value="-">-</option>
@@ -5304,7 +5330,7 @@ export function OperationsDashboardPage() {
                 {managePaymentStatus === 'Paid' && (
                   <div>
                     <label className="block text-xs font-bold text-emerald-600 mb-1">Amount Paid (₹)</label>
-                    <input type="number" className="w-full border border-emerald-300 bg-[#ebd8c0] text-emerald-800 rounded p-2 text-sm font-bold" value={manageAmountPaid} onChange={(e) => setManageAmountPaid(parseFloat(e.target.value) || 0)} />
+                    <input type="number" className="w-full border border-emerald-300 bg-[#ebd8c0] text-emerald-800 rounded p-2 text-sm font-bold" value={manageAmountPaid} onChange={(e) => { setManageAmountPaid(parseFloat(e.target.value) || 0); setIsManageDataDirty(true); }} />
                   </div>
                 )}
               </div>
@@ -5313,7 +5339,7 @@ export function OperationsDashboardPage() {
 
               <div className="mb-4">
                 <label className="flex items-center gap-2 text-sm font-bold text-paa-navy cursor-pointer bg-paa-gold/10 p-3 rounded-lg border border-paa-gold/30">
-                  <input type="checkbox" className="w-4 h-4 rounded text-paa-navy" checked={useGlobalOverride} onChange={(e) => setUseGlobalOverride(e.target.checked)} />
+                  <input type="checkbox" className="w-4 h-4 rounded text-paa-navy" checked={useGlobalOverride} onChange={(e) => { setUseGlobalOverride(e.target.checked); setIsManageDataDirty(true); }} />
                   Use Global Override (No book-wise breakdown available)
                 </label>
               </div>
@@ -5322,11 +5348,11 @@ export function OperationsDashboardPage() {
                 <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Total Books Sold (Overall)</label>
-                    <input type="number" className="w-full border border-gray-300 rounded p-2 font-mono" value={globalSold} onChange={(e) => setGlobalSold(parseInt(e.target.value) || 0)} />
+                    <input type="number" className="w-full border border-gray-300 rounded p-2 font-mono" value={globalSold} onChange={(e) => { setGlobalSold(parseInt(e.target.value) || 0); setIsManageDataDirty(true); }} />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-emerald-600 mb-1 uppercase tracking-wider">Total Revenue (₹)</label>
-                    <input type="number" className="w-full border border-emerald-200 bg-[#ebd8c0] text-emerald-700 rounded p-2 font-mono font-bold" value={globalRevenue} onChange={(e) => setGlobalRevenue(parseInt(e.target.value) || 0)} />
+                    <input type="number" className="w-full border border-emerald-200 bg-[#ebd8c0] text-emerald-700 rounded p-2 font-mono font-bold" value={globalRevenue} onChange={(e) => { setGlobalRevenue(parseInt(e.target.value) || 0); setIsManageDataDirty(true); }} />
                   </div>
                 </div>
               ) : (
@@ -5346,6 +5372,7 @@ export function OperationsDashboardPage() {
                                 const newBooks = [...manageAuthorBooks];
                                 newBooks[idx].overrideMrp = e.target.value;
                                 setManageAuthorBooks(newBooks);
+                                setIsManageDataDirty(true);
                               }} />)
                             </div>
                           </div>
@@ -5354,6 +5381,7 @@ export function OperationsDashboardPage() {
                               const newBooks = [...manageAuthorBooks];
                               newBooks[idx].isSelected = e.target.checked;
                               setManageAuthorBooks(newBooks);
+                              setIsManageDataDirty(true);
                             }} className="rounded text-paa-navy w-4 h-4" /> Listed for this event
                           </label>
                         </div>
@@ -5366,6 +5394,7 @@ export function OperationsDashboardPage() {
                               if (newBooks[idx].listedStock > 0) newBooks[idx].isSelected = true;
                               if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
                               setManageAuthorBooks(newBooks);
+                              setIsManageDataDirty(true);
                             }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
                           </div>
                           <div>
@@ -5376,6 +5405,7 @@ export function OperationsDashboardPage() {
                               if (newBooks[idx].soldStock > 0) newBooks[idx].isSelected = true;
                               if (newBooks[idx].listedStock > 0 && newBooks[idx].soldStock > 0) newBooks[idx].returnedStock = Math.max(0, newBooks[idx].listedStock - newBooks[idx].soldStock);
                               setManageAuthorBooks(newBooks);
+                              setIsManageDataDirty(true);
                             }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
                           </div>
                           <div>
@@ -5384,6 +5414,7 @@ export function OperationsDashboardPage() {
                               const newBooks = [...manageAuthorBooks];
                               newBooks[idx].returnedStock = parseInt(e.target.value) || 0;
                               setManageAuthorBooks(newBooks);
+                              setIsManageDataDirty(true);
                             }} className="w-full border border-gray-300 rounded p-2 text-sm font-mono" />
                           </div>
                           <div>
@@ -5405,8 +5436,12 @@ export function OperationsDashboardPage() {
               )}
               <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 items-center">
                 <span className="text-xs text-gray-500 mr-auto font-medium">* Explicit publish required for authors to see past data in their dashboard.</span>
-                <button onClick={handleSaveDraft} disabled={isPublishingData} className="px-6 py-2.5 text-sm text-paa-navy border border-paa-navy rounded-lg font-bold hover:bg-paa-navy hover:text-white transition-colors">{isPublishingData ? 'SAVING...' : 'Save Draft'}</button>
-                <button onClick={handlePublishData} disabled={isPublishingData} className="px-8 py-2.5 text-sm bg-paa-gold text-paa-navy rounded-lg font-black hover:brightness-110 transition-all shadow-md">{isPublishingData ? 'PUBLISHING...' : 'PUBLISH TO AUTHOR'}</button>
+                <button onClick={handleSaveDraft} disabled={isPublishingData || isSavingDraft || (!isManageDataDirty && currentOptInStatus?.includes('-Draft'))} className="px-6 py-2.5 text-sm text-paa-navy border border-paa-navy rounded-lg font-bold hover:bg-paa-navy hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSavingDraft ? 'SAVING...' : (currentOptInStatus?.includes('-Draft') ? (isManageDataDirty ? 'RESAVE DRAFT' : 'SAVED AS DRAFT') : 'SAVE DRAFT')}
+                </button>
+                <button onClick={handlePublishData} disabled={isPublishingData || isSavingDraft || (!isManageDataDirty && currentOptInStatus && !currentOptInStatus.includes('-Draft') && currentOptInStatus !== 'Pending Approval' && currentOptInStatus !== 'Pending')} className="px-8 py-2.5 text-sm bg-paa-gold text-paa-navy rounded-lg font-black hover:brightness-110 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isPublishingData ? 'PUBLISHING...' : (currentOptInStatus && !currentOptInStatus.includes('-Draft') && currentOptInStatus !== 'Pending Approval' && currentOptInStatus !== 'Pending' ? (isManageDataDirty ? 'REPUBLISH DATA' : 'PUBLISHED') : 'PUBLISH TO AUTHOR')}
+                </button>
               </div>
             </div>
           ) : (
@@ -5458,7 +5493,10 @@ export function OperationsDashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {(showAllPlatformAuthors ? authors : eventRegistrations).filter((a: any) => (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase()))
+                    {(showAllPlatformAuthors ? authors : eventRegistrations).filter((a: any) => {
+                      const nameMatches = (a.author?.name || a.name || '').toLowerCase().includes(authorSearch.toLowerCase());
+                      return nameMatches;
+                    })
                       .map((a: any) => {
                         const showAllAuthors = showAllPlatformAuthors;
                         let m = a;
@@ -5466,7 +5504,17 @@ export function OperationsDashboardPage() {
                           const reg = eventRegistrations.find(r => r.authorId === a.id);
                           if (reg) m = { ...a, ...reg, author: a, id: a.id };
                         }
-                        return { a, m, showAllAuthors };
+                        
+                        let isLateJoiner = false;
+                        if (showAllAuthors && selectedEventBreakdown.date && a.groupJoiningDate) {
+                          const eventDate = new Date(selectedEventBreakdown.date);
+                          const joinDate = new Date(a.groupJoiningDate);
+                          const hasRegistration = eventRegistrations.some(r => r.authorId === a.id);
+                          if (joinDate > eventDate && !hasRegistration) {
+                            isLateJoiner = true;
+                          }
+                        }
+                        return { a, m, showAllAuthors, isLateJoiner };
                       })
                       .sort((rowA: any, rowB: any) => {
                         // 1. Pending Approval always floats to the top
@@ -5486,14 +5534,14 @@ export function OperationsDashboardPage() {
                         if (nameA > nameB) return 1;
                         return 0;
                       })
-                      .slice(0, 50).map(({ a, m, showAllAuthors }, i: number) => {
+                      .slice(0, 50).map(({ a, m, showAllAuthors, isLateJoiner }, i: number) => {
                         const authorData = showAllAuthors ? m : m.author;
                         const hasBooks = m.books && m.books.length > 0;
                         const listed = hasBooks ? m.books.reduce((s: number, b: any) => s + (b.listedStock || 0), 0) : 0;
                         const sold = hasBooks ? m.books.reduce((s: number, b: any) => s + (b.soldStock || 0), 0) : ((m.manualTotalSold !== null && m.manualTotalSold !== undefined) ? m.manualTotalSold : 0);
                         const rev = hasBooks ? m.books.reduce((s: number, b: any) => s + ((b.soldStock || 0) * (b.overrideMrp || b.mrp || b.book?.mrp || 0)), 0) : ((m.manualTotalRevenue !== null && m.manualTotalRevenue !== undefined) ? m.manualTotalRevenue : 0);
                         const isExpanded = expandedAuthorId === (showAllAuthors ? m.id : m.authorId);
-                        const status = m.optInStatus || 'Unpublished';
+                        const status = (m.optInStatus || 'Unpublished').replace('-Draft', '');
                         const hasData = (m.books && m.books.length > 0) || m.manualTotalSold != null;
                         const validScreenshot = a.paymentScreenshot && typeof a.paymentScreenshot === 'string' && a.paymentScreenshot !== 'null' && a.paymentScreenshot !== 'undefined' && a.paymentScreenshot.trim() !== '';
                         const expectedFee = selectedEventBreakdown.feeType === 'Per Title' ? (m.books?.length || 0) * (selectedEventBreakdown.registrationFee || 0) : (selectedEventBreakdown.registrationFee || 0);
@@ -5522,11 +5570,13 @@ export function OperationsDashboardPage() {
                                             <img src={`${a.paymentScreenshot.startsWith('http') ? a.paymentScreenshot : API + a.paymentScreenshot}`} className="w-full h-full object-cover" alt="Proof" />
                                           </a>
                                         )}
-                                        {expectedFee > 0 && (
+                                        {expectedFee > 0 && status !== 'Registered' && (
                                           <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Due: ₹{expectedFee}</div>
                                         )}
                                         {m.amountPaid ? (
                                           <div className="text-[10px] text-emerald-600 font-bold mt-0.5">Paid: ₹{m.amountPaid}</div>
+                                        ) : status === 'Registered' && expectedFee > 0 ? (
+                                          <div className="text-[10px] text-emerald-600 font-bold mt-0.5">Paid: ₹{expectedFee}</div>
                                         ) : (
                                           !validScreenshot && expectedFee === 0 && <span className="text-sm text-gray-400 font-bold">-</span>
                                         )}
@@ -5548,8 +5598,14 @@ export function OperationsDashboardPage() {
                                 </td>
                               )}
                               <td className="p-3">
-                                {status === 'Registered' ? (
-                                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><Check className="w-3 h-3" /> {selectedEventBreakdown.isLegacy ? 'Participated' : (hasData ? 'Published' : 'Registered')}</span>
+                                {isLateJoiner ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[9px] font-bold uppercase flex items-center gap-1 w-max"><XCircle className="w-3 h-3" /> Joined After Event</span>
+                                ) : status === 'Registered' ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase flex items-center gap-1 w-max">
+                                    {!m.optInStatus?.includes('-Draft') ? <CheckCircle className="w-3.5 h-3.5 fill-emerald-600 text-white" /> : <Check className="w-3 h-3" />} Participated
+                                  </span>
+                                ) : (selectedEventBreakdown.isLegacy || selectedEventBreakdown.status === 'Past' || selectedEventBreakdown.status === 'Legacy Archive') ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold uppercase flex items-center gap-1 w-max"><XCircle className="w-3 h-3" /> Not Participated</span>
                                 ) : (status === 'Pending' || status === 'Pending Approval' || status === 'Unpublished') ? (
                                   <span className="px-3 py-1 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider flex items-center gap-1 w-max shadow-md ring-2 ring-yellow-400/30 animate-pulse">Pending Approval</span>
                                 ) : status === 'Declined' ? (
@@ -5576,7 +5632,7 @@ export function OperationsDashboardPage() {
                                         setUseGlobalOverride(true);
                                         setGlobalSold(m.manualTotalSold || 0);
                                         setGlobalRevenue(m.manualTotalRevenue || 0);
-                                        setManageRegStatus(m.optInStatus === 'Registered' ? 'Registered' : 'Declined');
+                                        setManageRegStatus(m.optInStatus?.startsWith('Registered') ? 'Registered' : 'Declined');
                                       }
                                     }} className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-bold border border-indigo-200 transition-colors shadow-sm whitespace-nowrap">
                                       Manage Data
@@ -5610,7 +5666,7 @@ export function OperationsDashboardPage() {
                                                   {!selectedEventBreakdown.isLegacy && (
                                                     <div className="flex flex-col items-center md:items-end">
                                                       <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Fee</span>
-                                                      <span className="font-bold text-indigo-700">₹{selectedEventBreakdown.feeType === 'Per Title' ? selectedEventBreakdown.registrationFee : (j === 0 ? selectedEventBreakdown.registrationFee : 0)}</span>
+                                                      <span className="font-bold text-indigo-700">₹{(selectedEventBreakdown.feeType === 'Per Title' && (status === 'Registered' || status === 'Pending Approval')) ? (selectedEventBreakdown.registrationFee || 0) : 0}</span>
                                                     </div>
                                                   )}
                                                   <div className="flex flex-col items-center md:items-end">

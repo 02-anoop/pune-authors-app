@@ -6167,21 +6167,22 @@ export function OperationsDashboardPage() {
               <tbody className="divide-y divide-paa-navy/5 bg-white text-[11px]">
                 {filteredTableEvents.map((evt: any, i: number) => {
                   const isPastOrArchive = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
-                  const evtAuthors = isPastOrArchive ? (evt.aggAuthors != null ? evt.aggAuthors : 'NA') : (evt._count?.eventAuthors || 0);
+                  const evtAuthors = evt.aggAuthors != null ? evt.aggAuthors : (evt.isLegacy ? 'NA' : (evt._count?.eventAuthors || 0));
                   
                   // Use stored eligible count if available (verified ground truth), else compute dynamically
                   const eligibleAuthorsCount = (evt.aggEligibleAuthors != null)
                     ? evt.aggEligibleAuthors
-                    : authors.filter((a: any) => {
+                    : (evt.isLegacy ? 'NA' : authors.filter((a: any) => {
                         const joinDate = a.groupJoiningDate ? new Date(a.groupJoiningDate) : new Date(a.createdAt);
                         joinDate.setHours(0, 0, 0, 0);
                         return parseEventDateHelper(evt.date || evt.startDate).getTime() >= joinDate.getTime();
-                      }).length;
-                  const participationPercentage = eligibleAuthorsCount === 0 || evtAuthors === 'NA' ? 0 : Math.round((Number(evtAuthors) / eligibleAuthorsCount) * 100);
+                      }).length);
+                  const participationPercentage = eligibleAuthorsCount === 'NA' || eligibleAuthorsCount === 0 || evtAuthors === 'NA' ? 0 : Math.round((Number(evtAuthors) / Number(eligibleAuthorsCount)) * 100);
 
-                  const books = isPastOrArchive ? (evt.aggSold != null ? evt.aggSold : 'NA') : (evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0) || 0);
+                  const books = evt.aggSold != null ? evt.aggSold : (evt.isLegacy ? 'NA' : (evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0) || 0));
                   const catRowColor = i % 2 === 0 ? 'bg-white' : 'bg-[#ebd8c0]';
-                  const revenue = isPastOrArchive ? (evt.aggRevenue != null ? `₹${evt.aggRevenue}` : 'NA') : `₹${evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0}`;
+                  const revenueVal = evt.aggRevenue != null ? evt.aggRevenue : (evt.isLegacy ? 'NA' : (evt.eventBooks?.reduce((s: number, eb: any) => s + ((eb.soldStock || 0) * (parseFloat(eb.book?.mrp) || 0)), 0) || 0));
+                  const revenue = revenueVal === 'NA' ? 'NA' : `₹${revenueVal}`;
                   return (
                     <React.Fragment key={i}>
                       <tr className={`${expandedEventIndex === i ? 'bg-indigo-50' : catRowColor}`}>

@@ -2865,23 +2865,30 @@ export function OperationsDashboardPage() {
         sheet.mergeCells('A1:H1');
         const titleCell = sheet.getCell('A1');
         titleCell.value = `SALES REPORT (${startDate} to ${endDate})`;
-        titleCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1A2E' } }; // Navy Blue
+        titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2A4B6B' } }; // Deep Steel Blue
         titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        sheet.getRow(1).height = 30;
         
-        // Add headers
+        // Add headers (Bright Yellow with Black Text)
         const headers = ['Date', 'Order ID', 'Channel', 'Event', 'Author', 'Title', 'Quantity', 'Revenue'];
         const headerRow = sheet.addRow(headers);
+        headerRow.height = 24;
         headerRow.eachCell((cell) => {
-          cell.font = { bold: true, color: { argb: 'FF000000' } };
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4AF37' } }; // Gold
+          cell.font = { name: 'Arial', bold: true, color: { argb: '000000' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF00' } }; // Bright Yellow
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
-          cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          cell.border = {
+            top: { style: 'thin', color: { argb: '000000' } },
+            left: { style: 'thin', color: { argb: '000000' } },
+            bottom: { style: 'thin', color: { argb: '000000' } },
+            right: { style: 'thin', color: { argb: '000000' } }
+          };
         });
         
         // Add data
         salesData.tableData.forEach((r: any) => {
-          const row = sheet.addRow([
+          const rowData = [
             r.date,
             r.orderId,
             r.channel,
@@ -2890,22 +2897,61 @@ export function OperationsDashboardPage() {
             r.title,
             r.qty,
             r.revenue
-          ]);
-          row.eachCell((cell) => {
-            cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          ];
+          const newRow = sheet.addRow(rowData);
+          newRow.height = 20;
+
+          newRow.eachCell((cell, colNumber) => {
+            // Border (Thin Black)
+            cell.border = {
+              top: { style: 'thin', color: { argb: '000000' } },
+              left: { style: 'thin', color: { argb: '000000' } },
+              bottom: { style: 'thin', color: { argb: '000000' } },
+              right: { style: 'thin', color: { argb: '000000' } }
+            };
+
+            cell.font = { name: 'Arial', size: 10, color: { argb: '000000' } };
+
+            // Alignments
+            if (colNumber === 1 || colNumber === 2) {
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            } else if (colNumber === 3 || colNumber === 4 || colNumber === 5) {
+              cell.alignment = { horizontal: 'left', vertical: 'middle' };
+            } else if (colNumber === 6) {
+              cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+            } else {
+              cell.alignment = { horizontal: 'right', vertical: 'middle' };
+            }
+
+            // Column Background Colors
+            let colBgColor = 'FFFFFF';
+            if (colNumber === 1) colBgColor = 'FF8B8B'; // Solid light red
+            else if (colNumber === 2) colBgColor = 'FFD2A3'; // Solid light orange
+            else if (colNumber === 3) colBgColor = 'D4D8DD'; // Solid light gray/slate
+            else if (colNumber === 4) colBgColor = 'FFDCA8'; // Solid light orange/peach
+            else if (colNumber === 5) colBgColor = 'B3E5FC'; // Solid light cyan
+            else if (colNumber === 6) colBgColor = 'C7D2FE'; // Solid light lavender
+            else if (colNumber === 7) colBgColor = 'C8E6C9'; // Solid light green
+            else if (colNumber === 8) colBgColor = 'E1BEE7'; // Solid light purple
+
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colBgColor } };
           });
         });
         
         // Auto-fit columns
-        sheet.columns.forEach(column => {
+        sheet.columns.forEach((column, colIndex) => {
           let maxLen = 10;
-          column.eachCell({ includeEmpty: true }, cell => {
-            if (cell.value) {
+          column.eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+            if (rowNumber > 1 && cell.value) { // Skip title row
               const len = cell.value.toString().length;
               if (len > maxLen) maxLen = len;
             }
           });
-          column.width = Math.min(maxLen + 2, 40);
+          if (colIndex === 6) {
+            column.width = Math.min(maxLen + 4, 30);
+          } else {
+            column.width = Math.min(maxLen + 4, 45);
+          }
         });
 
         const buffer = await workbook.xlsx.writeBuffer();
@@ -3742,8 +3788,19 @@ export function OperationsDashboardPage() {
         });
         
         const addedRow = sheet.addRow(rowData);
-        addedRow.eachCell((cell) => {
+        addedRow.eachCell((cell, colNumber) => {
           cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          cell.font = { name: 'Arial', size: 10, color: { argb: '000000' } };
+          
+          let colBgColor = 'FFFFFF';
+          if (colNumber === 1) colBgColor = 'FF8B8B'; // Light red
+          else if (colNumber === 2) colBgColor = 'FFD2A3'; // Light orange
+          else if (colNumber === 3) colBgColor = 'D4D8DD'; // Light gray
+          else if (colNumber === 4) colBgColor = 'B3E5FC'; // Light cyan
+          else if (colNumber === allHeaders.length) colBgColor = 'C8E6C9'; // Light green
+          else colBgColor = 'DDA0DD'; // Lavender/Plum
+          
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colBgColor } };
         });
       });
       
@@ -4385,8 +4442,18 @@ export function OperationsDashboardPage() {
         rowData.push(numEventsParticipated, literaryParticipated, bookFairs, 'No');
         
         const addedRow = sheet.addRow(rowData);
-        addedRow.eachCell((cell) => {
+        addedRow.eachCell((cell, colNumber) => {
           cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          cell.font = { name: 'Arial', size: 10, color: { argb: '000000' } };
+          
+          let colBgColor = 'FFFFFF';
+          if (colNumber === 2) colBgColor = 'FF8B8B'; // Light red (Author Name)
+          else if (colNumber === 3) colBgColor = 'FFD2A3'; // Light orange (City)
+          else if (colNumber === 4) colBgColor = 'D4D8DD'; // Light gray (Registration Date)
+          else if (colNumber >= 9 && colNumber <= 8 + events.length) colBgColor = 'DDA0DD'; // Lavender (Events Participated)
+          else if (colNumber > 8 + events.length) colBgColor = 'B3E5FC'; // Cyan for final columns
+          
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colBgColor } };
         });
       });
 
@@ -7152,7 +7219,7 @@ export function OperationsDashboardPage() {
         <div className="p-4 md:p-6 h-20 flex items-center justify-between shrink-0 border-b border-paa-navy/5">
           <div className="flex items-center gap-2">
             <img
-              src="/logo.png"
+              src="/logo.webp"
               alt="PAA Logo"
               className="h-8 w-auto object-contain"
               onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
@@ -7224,7 +7291,7 @@ export function OperationsDashboardPage() {
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden p-2 text-paa-navy rounded-lg hover:bg-black/5 transition-colors mr-1">
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-            <img src="/logo.png" alt="PAA Logo" className="h-6 w-auto object-contain md:hidden mr-1" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+            <img src="/logo.webp" alt="PAA Logo" className="h-6 w-auto object-contain md:hidden mr-1" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
             <div className="hidden md:hidden w-6 h-6 rounded-full bg-[#b44d28] items-center justify-center text-white text-[10px] font-bold mr-1">P</div>
             <div className="flex items-center gap-2 text-xs font-medium">
               <span className="text-paa-gray-text">Admin Portal</span>

@@ -35,10 +35,12 @@ const corsOptions = {
 };
 app.set('trust proxy', 1); // Trust Nginx reverse proxy to get real user IPs
 app.use(cors(corsOptions)); // CORS MUST BE ABOVE LIMITER
-app.use(limiter);
 
-app.use(express.json());
+// Serve static images BEFORE the rate limiter so images don't count towards the limit!
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.use(limiter);
+app.use(express.json());
 
 // Routes
 const authRoutes = require('./routes/auth');

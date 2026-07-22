@@ -5094,8 +5094,7 @@ router.get('/api/admin/events/:id/report', verifyToken, isAdmin, async (req, res
 
 router.get('/api/admin/events/export', verifyToken, isAdmin, async (req, res) => {
   try {
-    const events = await prisma.event.findMany({
-      orderBy: { date: 'asc' },
+    const rawEvents = await prisma.event.findMany({
       include: {
         eventAuthors: true,
         posOrders: {
@@ -5103,6 +5102,14 @@ router.get('/api/admin/events/export', verifyToken, isAdmin, async (req, res) =>
           include: { items: true }
         }
       }
+    });
+
+    const events = rawEvents.sort((a, b) => {
+      let da = new Date(a.date).getTime();
+      let db = new Date(b.date).getTime();
+      if (isNaN(da)) da = new Date(a.createdAt).getTime();
+      if (isNaN(db)) db = new Date(b.createdAt).getTime();
+      return da - db;
     });
 
     const ExcelJS = require('exceljs');

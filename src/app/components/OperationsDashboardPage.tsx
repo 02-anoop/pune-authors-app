@@ -5953,13 +5953,128 @@ export function OperationsDashboardPage() {
       };
     }).filter(evt => evt.participationPercentage > 0).sort((a, b) => b.participationPercentage - a.participationPercentage);
 
+    const handleDownloadParticipantsList = async () => {
+      const toastId = toast.loading('Generating Participants List...');
+      try {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Participants List');
+
+        const sortedEvents = [...allCombinedEvents].sort((a, b) => {
+          let da = new Date(a.date).getTime();
+          let db = new Date(b.date).getTime();
+          if (isNaN(da)) da = new Date(a.createdAt).getTime();
+          if (isNaN(db)) db = new Date(b.createdAt).getTime();
+          return da - db;
+        });
+
+        const headers = ['S.No', 'Author Name'];
+        sortedEvents.forEach(e => headers.push(e.name));
+        
+        const headerRow = sheet.addRow(headers);
+        headerRow.eachCell((cell, colNumber) => {
+          cell.font = { bold: true, color: { argb: 'FF000000' } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          
+          if (colNumber <= 2) {
+             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4AF37' } };
+          } else {
+             const evt = sortedEvents[colNumber - 3];
+             const catLower = (evt.category || evt.eventType || evt.name || '').toLowerCase();
+             let catColor = 'FFFFFFFF';
+             if (catLower.includes('housing') || catLower.includes('college')) catColor = 'FFF4C2C2';
+             else if (catLower.includes('corporate') || catLower.includes('university')) catColor = 'FFFFFF00';
+             else if (catLower.includes('book fair')) catColor = 'FF00FF00';
+             else if (catLower.includes('fair')) catColor = 'FF90EE90';
+             else catColor = 'FFB0C4DE';
+             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: catColor } };
+          }
+        });
+
+        const columnSums = new Array(sortedEvents.length).fill(0);
+
+        const authorsRes = await axios.get(`${API}/api/admin/authors?limit=10000`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        const allAuthors = authorsRes.data.data || [];
+
+        allAuthors.forEach((author: any, idx: number) => {
+          const rowData = [idx + 1, author.name];
+          
+          const participatedEventIds = author.eventParticipation ? author.eventParticipation.filter((r: any) => r.status !== 'Pending' && r.status !== 'Declined' && !r.status?.endsWith('-Draft')).map((r: any) => r.eventId) : [];
+          
+          sortedEvents.forEach((evt, eIdx) => {
+             const isRegistered = participatedEventIds.includes(evt.id) || (evt.eventAuthors && evt.eventAuthors.some((ea: any) => ea.authorId === author.id && ea.optInStatus !== 'Pending' && ea.optInStatus !== 'Declined' && !ea.optInStatus?.endsWith('-Draft')));
+             
+             if (isRegistered) {
+                rowData.push('PARTICIPATED');
+                columnSums[eIdx]++;
+             } else {
+                rowData.push('');
+             }
+          });
+
+          const addedRow = sheet.addRow(rowData);
+          addedRow.eachCell((cell, colNumber) => {
+            cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+            if (colNumber > 2 && cell.value === 'PARTICIPATED') {
+               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FF00' } };
+               cell.font = { bold: true };
+               cell.alignment = { horizontal: 'center' };
+            } else if (colNumber === 2) {
+               cell.font = { bold: true };
+            }
+          });
+        });
+
+        const sumRowData: any[] = ['-', 'TOTAL PARTICIPANTS'];
+        columnSums.forEach(sum => sumRowData.push(sum));
+        const sumRow = sheet.addRow(sumRowData);
+        sumRow.eachCell((cell, colNumber) => {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: 'center' };
+          cell.border = { top: { style: 'thick' }, bottom: { style: 'thick' }, left: { style: 'thin' }, right: { style: 'thin' } };
+          if (colNumber > 2) {
+             const evt = sortedEvents[colNumber - 3];
+             const catLower = (evt.category || evt.eventType || evt.name || '').toLowerCase();
+             let catColor = 'FFFFFFFF';
+             if (catLower.includes('housing') || catLower.includes('college')) catColor = 'FFF4C2C2';
+             else if (catLower.includes('corporate') || catLower.includes('university')) catColor = 'FFFFFF00';
+             else if (catLower.includes('book fair')) catColor = 'FF00FF00';
+             else if (catLower.includes('fair')) catColor = 'FF90EE90';
+             else catColor = 'FFB0C4DE';
+             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: catColor } };
+          } else {
+             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4AF37' } };
+          }
+        });
+
+        sheet.getColumn(1).width = 8;
+        sheet.getColumn(2).width = 25;
+        for (let i = 0; i < sortedEvents.length; i++) {
+           sheet.getColumn(i + 3).width = 18;
+        }
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, 'participants_list.xlsx');
+        toast.dismiss(toastId);
+        toast.success('Participants List generated successfully!');
+      } catch (err) {
+        toast.dismiss(toastId);
+        toast.error('Failed to generate Participants List');
+        console.error(err);
+      }
+    };
+
     return (
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-paa-navy/5 pb-4 gap-4">
           <h3 className="text-3xl font-serif font-bold text-paa-navy">Events & Fairs Ecosystem</h3>
           <div className="flex flex-wrap gap-3">
+            <button onClick={handleDownloadParticipantsList} className="dash-btn dash-btn-ghost flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+              <Download className="w-4 h-4" /> Download Participants List
+            </button>
             <button onClick={handleExportEventsExcel} className="dash-btn dash-btn-ghost flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50">
-              <Download className="w-4 h-4" /> Export Events (Excel)
+              <Download className="w-4 h-4" /> Event Summary
             </button>
             <button onClick={() => setIsEventModalOpen(true)} className="dash-btn dash-btn-primary bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
               <Plus className="w-4 h-4" /> Create New Event

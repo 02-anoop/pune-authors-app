@@ -6,6 +6,7 @@ import charterPdf from "./data/Group Activities and Charter.pdf";
 import pastEvents from "./data/past_events.json";
 import { bookCategories } from "../data/categories";
 import { CheckCircle, Upload, CreditCard, User, BookOpen, FileText, Shield, ChevronRight, ChevronLeft, Plus, Eye, EyeOff, X, Edit, Instagram, Facebook, Linkedin, Youtube, Link as LinkIcon, ArrowLeft, Info, CalendarDays, Briefcase, MapPin, Clock, LogOut } from "lucide-react";
+import { compressImage } from "../utils/imageUtils";
 
 const indianStates = [
   "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
@@ -2001,14 +2002,33 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         };
                       })));
 
-                      if (authorBlob) formData.append("photo", authorBlob);
-                      finalBooks.forEach((b, idx) => {
-                        if (b.coverBlob) formData.append(`cover_${idx}`, b.coverBlob);
-                        if (b.backCoverBlob) formData.append(`backCover_${idx}`, b.backCoverBlob);
-                      });
+                      // Compress all images before upload to prevent 413 errors
+                      const compressOpts = { maxWidth: 1920, maxHeight: 1920, quality: 0.82, outputType: 'image/jpeg' as const };
 
-                      if (paymentBlob) formData.append("paymentScreenshot", paymentBlob);
-                      if (qrCodeBlob) formData.append("qrCode", qrCodeBlob);
+                      if (authorBlob) {
+                        const compressed = await compressImage(authorBlob, compressOpts);
+                        formData.append("photo", compressed, compressed.name);
+                      }
+
+                      await Promise.all(finalBooks.map(async (b, idx) => {
+                        if (b.coverBlob) {
+                          const c = await compressImage(b.coverBlob, compressOpts);
+                          formData.append(`cover_${idx}`, c, c.name);
+                        }
+                        if (b.backCoverBlob) {
+                          const bc = await compressImage(b.backCoverBlob, compressOpts);
+                          formData.append(`backCover_${idx}`, bc, bc.name);
+                        }
+                      }));
+
+                      if (paymentBlob) {
+                        const compressed = await compressImage(paymentBlob, compressOpts);
+                        formData.append("paymentScreenshot", compressed, compressed.name);
+                      }
+                      if (qrCodeBlob) {
+                        const compressed = await compressImage(qrCodeBlob, compressOpts);
+                        formData.append("qrCode", compressed, compressed.name);
+                      }
                       
                       formData.append("qualifications", JSON.stringify(qualifications.map(q => ({
                         id: q.id,
@@ -2017,9 +2037,12 @@ export function AuthorRegistrationPage({ initialData, isReapply = false, onReapp
                         subject: q.subject,
                         mode: q.mode
                       }))));
-                      qualifications.forEach(q => {
-                        if (q.certificateBlob) formData.append(`certificate_${q.id}`, q.certificateBlob);
-                      });
+                      await Promise.all(qualifications.map(async q => {
+                        if (q.certificateBlob) {
+                          const c = await compressImage(q.certificateBlob, compressOpts);
+                          formData.append(`certificate_${q.id}`, c, c.name);
+                        }
+                      }));
 
                       if (Object.keys(extraDataState).length > 0) {
                         formData.append("extraData", JSON.stringify(extraDataState));

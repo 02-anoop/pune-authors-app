@@ -10562,6 +10562,10 @@ const totalAuthorsBase = eventRegistrations.length;
                   books={books}
                   authorsMeta={authorsMeta}
                   authorsPage={authorsPage}
+                  selectedPendingAuthor={selectedPendingAuthor}
+                  setSelectedPendingAuthor={setSelectedPendingAuthor}
+                  selectedAuthor={selectedAuthor}
+                  setSelectedAuthor={setSelectedAuthor}
                 />
               </Suspense>
             )}

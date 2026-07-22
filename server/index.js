@@ -9,11 +9,15 @@ const PORT = process.env.PORT || 3001;
 // Security Imports
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 
 // Security: Helmet (Configured to allow Vercel to read your images)
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
+// Gzip/Brotli compression for all responses (reduces payload size significantly)
+app.use(compression());
 
 // Security: Rate Limiting (Prevents DDoS and brute-force guessing)
 const limiter = rateLimit({
@@ -42,7 +46,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads', (req, res) => res.status(404).send('Image not found locally'));
 
 app.use(limiter);
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Routes
 const authRoutes = require('./routes/auth');

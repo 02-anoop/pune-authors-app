@@ -6100,10 +6100,10 @@ export function OperationsDashboardPage() {
               </div>
               <div className="overflow-y-auto" style={{ maxHeight: '520px' }}>
                 {(() => {
-                  const pastEvents = allCombinedEvents.filter((e: any) =>
-                    e.isLegacy || e.status === 'Past' || e.status === 'Legacy Archive'
+                  const validEvents = allCombinedEvents.filter((e: any) =>
+                    e.isLegacy || e.status === 'Past' || e.status === 'Legacy Archive' || e.status === 'Live' || e.status === 'Ongoing' || e.status === 'Upcoming'
                   );
-                  const ranked = pastEvents.map((evt: any) => {
+                  const ranked = validEvents.map((evt: any) => {
                     const books = evt.aggSold ?? (evt.eventBooks?.reduce((s: number, eb: any) => s + (eb.soldStock || 0), 0) || 0);
                     const participated = evt.aggAuthors ?? (evt._count?.eventAuthors || 0);
                     const eligible = evt.aggEligibleAuthors ?? 0;

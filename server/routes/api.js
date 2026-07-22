@@ -3179,7 +3179,11 @@ router.get('/api/admin/reports/chart', verifyToken, isAdmin, async (req, res) =>
 // 7. Operations/Author Dashboard - Get all orders
 router.get('/api/admin/orders/export', verifyToken, isAdmin, async (req, res) => {
   try {
+    const { type } = req.query;
+    const whereClause = type === 'bulk' ? { isBulk: true } : type === 'web' ? { isBulk: false } : {};
+
     const orders = await prisma.order.findMany({
+      where: whereClause,
       include: { items: { include: { book: { include: { author: true, reviews: { select: { rating: true } } } } } } },
       orderBy: { createdAt: 'desc' }
     });
@@ -3225,10 +3229,11 @@ router.get('/api/admin/orders/export', verifyToken, isAdmin, async (req, res) =>
 
     worksheet.mergeCells('A1:M1');
     const titleCell = worksheet.getCell('A1');
-    titleCell.value = 'ORDERS EXPORT';
-    titleCell.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+    const titleText = req.query.type === 'bulk' ? 'BULK ORDERS SUMMARY' : 'WEB ORDERS SUMMARY';
+    titleCell.value = titleText;
+    titleCell.font = { bold: true, size: 14, color: { argb: 'FF000000' } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1A2E' } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00FFFF' } };
 
     const headerRow = worksheet.addRow({
       OrderId: 'Order ID',
@@ -3248,15 +3253,32 @@ router.get('/api/admin/orders/export', verifyToken, isAdmin, async (req, res) =>
 
     headerRow.eachCell((cell) => {
       cell.font = { bold: true, color: { argb: 'FF000000' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4AF37' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
       cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
 
     flatData.forEach((row) => {
       const addedRow = worksheet.addRow(row);
-      addedRow.eachCell((cell) => {
+      addedRow.eachCell((cell, colNumber) => {
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        
+        const header = worksheet.getRow(2).getCell(colNumber).value;
+        if (header === 'Payment Status') {
+          if (cell.value === 'Paid') cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+          else if (cell.value === 'Unpaid') cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7CE' } };
+        } else if (header === 'Order Status') {
+          if (cell.value === 'Delivered' || cell.value === 'Completed') cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+          else if (cell.value === 'Dispatched') cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9BC2E6' } };
+          else if (['Rejected', 'Cancelled', 'Payment Failed'].includes(cell.value)) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7CE' } };
+          else cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEB9C' } };
+        } else if (header === 'Amount' || header === 'Quantity') {
+           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+        } else if (header === 'Order ID' || header === 'Date') {
+           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4D6' } };
+        } else {
+           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+        }
       });
     });
 

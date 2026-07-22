@@ -83,6 +83,7 @@ const WebOrdersTab = ({
   fetchOrders,
   API,
   handleExportCSV,
+  handleExportBulkCSV,
   ordersMeta,
   ordersPage,
   setOrdersPage,
@@ -92,6 +93,7 @@ const WebOrdersTab = ({
   fetchOrders: (background?: boolean) => Promise<void>;
   API: string;
   handleExportCSV: () => Promise<void>;
+  handleExportBulkCSV: () => Promise<void>;
   ordersMeta: any;
   ordersPage: number;
   setOrdersPage: React.Dispatch<React.SetStateAction<number>>;
@@ -100,8 +102,10 @@ const WebOrdersTab = ({
   const [fineAmount, setFineAmount] = useState('500');
   const [isSubmittingFine, setIsSubmittingFine] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
-  const [localSearchTerm, setLocalSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [webSearchTerm, setWebSearchTerm] = useState('');
+  const [webStatusFilter, setWebStatusFilter] = useState('All');
+  const [bulkSearchTerm, setBulkSearchTerm] = useState('');
+  const [bulkStatusFilter, setBulkStatusFilter] = useState('All');
   const [showAllBulkOrders, setShowAllBulkOrders] = useState(false);
 
   const getAggregateStatus = (ord: any) => {
@@ -128,32 +132,38 @@ const WebOrdersTab = ({
     return { text: ordStatus || 'Pending', style: 'bg-gray-500 text-white border-transparent shadow-md' };
   };
 
-  const filteredOrders = orders.filter((ord: any) => {
-    if (statusFilter !== 'All') {
-      const statusText = getAggregateStatus(ord).text;
-      if (statusFilter === 'Pending' && !['Pending Verification', 'Pending'].includes(statusText)) return false;
-      if (statusFilter === 'Accepted' && statusText !== 'Accepted') return false;
-      if (statusFilter === 'Dispatched' && statusText !== 'Dispatched') return false;
-      if (statusFilter === 'Completed' && statusText !== 'Delivered') return false;
-      if (statusFilter === 'Cancelled' && !['Cancelled', 'Rejected', 'Payment Failed'].includes(statusText)) return false;
-    }
-    if (!localSearchTerm) return true;
-    const term = localSearchTerm.toLowerCase();
-    return (
-      (ord.id && ord.id.toLowerCase().includes(term)) ||
-      (ord.customer && ord.customer.toLowerCase().includes(term)) ||
-      (ord.customerEmail && ord.customerEmail.toLowerCase().includes(term)) ||
-      (ord.customerPhone && ord.customerPhone.toLowerCase().includes(term)) ||
-      (ord.address && ord.address.toLowerCase().includes(term)) ||
-      (ord.items && ord.items.some((it: any) =>
-        (it.title && it.title.toLowerCase().includes(term)) ||
-        (it.authorName && it.authorName.toLowerCase().includes(term))
-      ))
-    );
-  });
+  const filterOrders = (sourceOrders: any[], term: string, statFilter: string) => {
+    return sourceOrders.filter((ord: any) => {
+      if (statFilter !== 'All') {
+        const statusText = getAggregateStatus(ord).text;
+        if (statFilter === 'Pending' && !['Pending Verification', 'Pending', 'Bulk Request Pending', 'Approved - Pending Payment'].includes(statusText)) return false;
+        if (statFilter === 'Accepted' && !['Accepted', 'Payment Confirmed'].includes(statusText)) return false;
+        if (statFilter === 'Dispatched' && statusText !== 'Dispatched') return false;
+        if (statFilter === 'Completed' && statusText !== 'Delivered') return false;
+        if (statFilter === 'Cancelled' && !['Cancelled', 'Rejected', 'Payment Failed'].includes(statusText)) return false;
+      }
+      if (!term) return true;
+      const t = term.toLowerCase();
+      return (
+        (ord.id && ord.id.toLowerCase().includes(t)) ||
+        (ord.customer && ord.customer.toLowerCase().includes(t)) ||
+        (ord.customerEmail && ord.customerEmail.toLowerCase().includes(t)) ||
+        (ord.customerPhone && ord.customerPhone.toLowerCase().includes(t)) ||
+        (ord.address && ord.address.toLowerCase().includes(t)) ||
+        (ord.items && ord.items.some((it: any) =>
+          (it.title && it.title.toLowerCase().includes(t)) ||
+          (it.authorName && it.authorName.toLowerCase().includes(t))
+        ))
+      );
+    });
+  };
 
   const webOrders = orders.filter((o: any) => !o.isBulk);
   const bulkOrders = orders.filter((o: any) => o.isBulk);
+
+  const filteredWebOrders = filterOrders(webOrders, webSearchTerm, webStatusFilter);
+  const filteredBulkOrders = filterOrders(bulkOrders, bulkSearchTerm, bulkStatusFilter);
+  const filteredOrders = [...filteredWebOrders, ...filteredBulkOrders];
 
   const successfulWeb = webOrders.filter((o: any) => getAggregateStatus(o).text === 'Delivered').length;
   const successfulBulk = bulkOrders.filter((o: any) => getAggregateStatus(o).text === 'Delivered').length;
@@ -340,7 +350,7 @@ const WebOrdersTab = ({
         </div>
       </div>
 
-      {[{ title: 'Bulk Orders', data: filteredOrders.filter((o: any) => o.isBulk), showFilters: false, isBulkSection: true }, { title: 'Web Orders', data: filteredOrders.filter((o: any) => !o.isBulk), showFilters: true, isBulkSection: false }].map((section, sectionIdx) => {
+      {[{ title: 'Bulk Orders', data: filteredBulkOrders, showFilters: true, isBulkSection: true, searchTerm: bulkSearchTerm, setSearchTerm: setBulkSearchTerm, statusFilter: bulkStatusFilter, setStatusFilter: setBulkStatusFilter }, { title: 'Web Orders', data: filteredWebOrders, showFilters: true, isBulkSection: false, searchTerm: webSearchTerm, setSearchTerm: setWebSearchTerm, statusFilter: webStatusFilter, setStatusFilter: setWebStatusFilter }].map((section, sectionIdx) => {
         const displayData = (section.isBulkSection && !showAllBulkOrders) ? section.data.slice(0, 5) : section.data;
         return (
       <div key={sectionIdx} className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover transition-all duration-500 ease-out flex flex-col mb-8">
@@ -354,8 +364,8 @@ const WebOrdersTab = ({
                 {['All', 'Pending', 'Accepted', 'Dispatched', 'Completed'].map((st) => {
                   const tabCount = st === 'All' ? section.data.length : section.data.filter((ord: any) => {
                     const statusText = getAggregateStatus(ord).text;
-                    if (st === 'Pending' && ['Pending Verification', 'Pending'].includes(statusText)) return true;
-                    if (st === 'Accepted' && statusText === 'Accepted') return true;
+                    if (st === 'Pending' && ['Pending Verification', 'Pending', 'Bulk Request Pending', 'Approved - Pending Payment'].includes(statusText)) return true;
+                    if (st === 'Accepted' && ['Accepted', 'Payment Confirmed'].includes(statusText)) return true;
                     if (st === 'Dispatched' && statusText === 'Dispatched') return true;
                     if (st === 'Completed' && statusText === 'Delivered') return true;
                     return false;
@@ -363,10 +373,10 @@ const WebOrdersTab = ({
                   return (
                   <button
                     key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all flex items-center gap-1.5 ${statusFilter === st ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-50'}`}
+                    onClick={() => section.setStatusFilter(st)}
+                    className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-md transition-all flex items-center gap-1.5 ${section.statusFilter === st ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-50'}`}
                   >
-                    {st} <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === st ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-500'}`}>{tabCount}</span>
+                    {st} <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${section.statusFilter === st ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-500'}`}>{tabCount}</span>
                   </button>
                 )})}
               </div>
@@ -375,14 +385,20 @@ const WebOrdersTab = ({
                 <input
                   type="text"
                   placeholder="SEARCH ORDErs..."
-                  value={localSearchTerm}
-                  onChange={(e) => setLocalSearchTerm(e.target.value)}
+                  value={section.searchTerm}
+                  onChange={(e) => section.setSearchTerm(e.target.value)}
                   className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-full sm:w-64 rounded-full"
                 />
               </div>
-              <button onClick={handleExportCSV} className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium rounded-full">
-                <ClipboardList className="w-4 h-4" /> Export Excel
-              </button>
+              {section.isBulkSection ? (
+                <button onClick={handleExportBulkCSV} className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium rounded-full whitespace-nowrap">
+                  <ClipboardList className="w-4 h-4" /> Bulk Orders Summary
+                </button>
+              ) : (
+                <button onClick={handleExportCSV} className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5cb85c] text-white text-xs font-bold tracking-widest uppercase hover:bg-green-600 transition-colors shadow-premium rounded-full whitespace-nowrap">
+                  <ClipboardList className="w-4 h-4" /> Web Orders Summary
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -2199,14 +2215,31 @@ export function OperationsDashboardPage() {
 
   const handleExportCSV = async () => {
     try {
-      const res = await axios.get(`${API}/api/admin/orders/export`, {
+      const res = await axios.get(`${API}/api/admin/orders/export?type=web`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'orders_export.xlsx');
+      link.setAttribute('download', 'web_orders_summary.xlsx');
+      document.body.appendChild(link);
+      link.click();
+    } catch (err) {
+      toast.error('Failed to export Excel');
+    }
+  };
+
+  const handleExportBulkCSV = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/orders/export?type=bulk`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'bulk_orders_summary.xlsx');
       document.body.appendChild(link);
       link.click();
     } catch (err) {
@@ -7769,6 +7802,7 @@ export function OperationsDashboardPage() {
                 fetchOrders={fetchOrders}
                 API={API}
                 handleExportCSV={handleExportCSV}
+                handleExportBulkCSV={handleExportBulkCSV}
                 ordersMeta={ordersMeta}
                 ordersPage={ordersPage}
                 setOrdersPage={setOrdersPage}

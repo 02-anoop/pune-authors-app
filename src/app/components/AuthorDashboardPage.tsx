@@ -7012,7 +7012,9 @@ function AuthorGalleryInner({ dashboardData }: { dashboardData: any }) {
                         (ge.city?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchType = filterType ? ge.type === filterType : true;
     const matchDate = filterDate ? new Date(ge.date).toISOString().startsWith(filterDate) : true;
-    const isPastEvent = checkIsPastEvent(ge.date, ge.duration || '1 Day');
+    const isPastEvent =
+      ge.type === 'Airport Library' ||
+      checkIsPastEvent(ge.date, ge.duration || '1 Day');
     return matchSearch && matchType && matchDate && isPastEvent;
   }).sort((a: any, b: any) => {
     if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();

@@ -13,7 +13,12 @@ router.get('/api/admin/libraries', verifyToken, isAdmin, async (req, res) => {
   try {
     const libraries = await prisma.library.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { galleryEvent: { include: { images: true } } }
+      include: { 
+        galleryEvent: { include: { images: true } },
+        announcements: {
+          orderBy: { registrationEndDate: 'asc' }
+        }
+      }
     });
     res.json(libraries);
   } catch (err) {
@@ -27,7 +32,12 @@ router.get('/api/public/libraries', async (req, res) => {
   try {
     const libraries = await prisma.library.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { galleryEvent: { include: { images: true } } }
+      include: { 
+        galleryEvent: { include: { images: true } },
+        announcements: {
+          orderBy: { registrationEndDate: 'asc' }
+        }
+      }
     });
     res.json(libraries);
   } catch (err) {

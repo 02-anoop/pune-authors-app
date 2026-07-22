@@ -8955,13 +8955,21 @@ const totalAuthorsBase = eventRegistrations.length;
       ...events.map((e: any) => ({ ...e, itemType: "Event" })),
       ...libraries
         .filter((l) => l.type === "Airport Library")
-        .map((l: any) => ({
-          ...l,
-          itemType: "Library",
-          eventType: l.type,
-          date: l.createdAt,
-          location: l.city,
-        })),
+        .map((l: any) => {
+          // Use the oldest drive's registrationEndDate as the gallery date.
+          // announcements are returned sorted asc by registrationEndDate from the backend.
+          const oldestDriveDate =
+            l.announcements && l.announcements.length > 0
+              ? l.announcements[0].registrationEndDate
+              : l.createdAt;
+          return {
+            ...l,
+            itemType: "Library",
+            eventType: l.type,
+            date: oldestDriveDate || l.createdAt,
+            location: l.city,
+          };
+        }),
     ];
 
     const filteredEvents = combinedGalleryItems
@@ -8979,7 +8987,11 @@ const totalAuthorsBase = eventRegistrations.length;
         const matchDate = galleryTabFilterDate
           ? new Date(e.date).toISOString().startsWith(galleryTabFilterDate)
           : true;
-        const isPastEvent = checkIsPastEvent(e.date, e.duration || "1 Day");
+        // Libraries are permanent installations — always show them regardless of date.
+        // Events must be past their end date to appear in the gallery.
+        const isPastEvent =
+          e.itemType === "Library" ||
+          checkIsPastEvent(e.date, e.duration || "1 Day");
         return matchSearch && matchType && matchDate && isPastEvent;
       })
       .sort((a: any, b: any) => {

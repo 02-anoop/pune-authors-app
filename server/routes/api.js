@@ -5619,16 +5619,36 @@ router.get('/api/gallery/events', async (req, res) => {
   try {
     let events = await prisma.galleryEvent.findMany({
       orderBy: { date: 'desc' },
-      include: { images: true, event: true, library: true }
+      include: {
+        images: true,
+        event: true,
+        library: {
+          include: {
+            announcements: {
+              orderBy: { registrationEndDate: 'asc' },
+              take: 1
+            }
+          }
+        }
+      }
     });
 
     // Filter out Future (Upcoming), Pending Approval, and Rejected events, as well as any future dates
     const now = new Date();
     events = events.filter(e => {
+      if (e.library) return true; // Libraries always show
       if (new Date(e.date) > now) return false;
-      if (e.library) return true;
       if (!e.event) return true;
       return !['Upcoming', 'Pending Approval', 'Rejected'].includes(e.event.status);
+    });
+
+    // Override date on library-linked GalleryEvents to use oldest drive date
+    events = events.map(e => {
+      if (e.library && e.library.announcements && e.library.announcements.length > 0) {
+        const oldestDriveDate = e.library.announcements[0].registrationEndDate;
+        return { ...e, date: oldestDriveDate || e.library.createdAt };
+      }
+      return e;
     });
 
     const existingEventIds = events.map(e => e.eventId).filter(Boolean);
@@ -5646,11 +5666,16 @@ router.get('/api/gallery/events', async (req, res) => {
       where: {
         id: { notIn: existingLibraryIds },
         bannerUrl: { not: null, not: "" }
+      },
+      include: {
+        announcements: {
+          orderBy: { registrationEndDate: 'asc' },
+          take: 1
+        }
       }
     });
 
     const virtualEvents = extraEvents.map(e => {
-      const d = new Date(e.date);
       return {
         id: `virtual-evt-${e.id}`,
         eventId: e.id,
@@ -5663,16 +5688,23 @@ router.get('/api/gallery/events', async (req, res) => {
       };
     }).filter(e => new Date(e.date) <= now);
 
-    const virtualLibraries = extraLibraries.map(l => ({
-      id: `virtual-lib-${l.id}`,
-      libraryId: l.id,
-      date: l.createdAt,
-      location: `${l.airportName || ''}, ${l.city}`.trim().replace(/^,/, '').trim(),
-      type: l.type || 'Airport Library',
-      photoUrl: l.bannerUrl,
-      library: l,
-      images: []
-    })).filter(l => new Date(l.date) <= now);
+    const virtualLibraries = extraLibraries.map(l => {
+      // Use the oldest drive's registrationEndDate as the canonical date
+      const oldestDriveDate =
+        l.announcements && l.announcements.length > 0
+          ? l.announcements[0].registrationEndDate
+          : null;
+      return ({
+        id: `virtual-lib-${l.id}`,
+        libraryId: l.id,
+        date: oldestDriveDate || l.createdAt,
+        location: `${l.airportName || ''}, ${l.city}`.trim().replace(/^,/, '').trim(),
+        type: l.type || 'Airport Library',
+        photoUrl: l.bannerUrl,
+        library: l,
+        images: []
+      });
+    }); // Libraries always show — no date filter
 
     events = [...events, ...virtualEvents, ...virtualLibraries];
     events.sort((a, b) => new Date(b.date) - new Date(a.date));

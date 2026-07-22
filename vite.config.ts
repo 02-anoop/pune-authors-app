@@ -21,6 +21,7 @@ export default defineConfig({
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
   build: {
+    sourcemap: true,
     rollupOptions: {
       output: {
         // Only pin synchronous baseline dependencies into named chunks.

@@ -803,6 +803,11 @@ router.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
+    const allSystemEvents = await prisma.event.findMany({
+      where: { broadcastStatus: { not: 'Draft' } },
+      select: { id: true, date: true, status: true }
+    });
+
     const [authors, total] = await Promise.all([
       prisma.author.findMany({
         skip,
@@ -818,6 +823,7 @@ router.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
           createdAt: true,
           groupJoiningDate: true,
           extraData: true,
+          qrCodeUrl: true,
           books: {
             select: {
               id: true,
@@ -835,6 +841,12 @@ router.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
               optInStatus: true,
               event: { select: { name: true, date: true } }
             }
+          },
+          eventRegistrations: {
+            select: {
+              activityId: true,
+              status: true
+            }
           }
         },
         orderBy: { createdAt: 'desc' }
@@ -849,17 +861,51 @@ router.get('/api/admin/authors', verifyToken, isAdmin, async (req, res) => {
       prisma.author.count({ where: { status: 'Suspended' } })
     ]);
 
-    const mapped = authors.map(a => ({
-      ...a,
-      joined: a.createdAt.toISOString().split('T')[0],
-      totalBooks: a._count.books,
-      eventsPart: a._count.eventRegistrations + a._count.eventAuthors,
-      eventParticipation: a.eventAuthors.map(ea => ({
-        ...ea,
-        status: ea.optInStatus === 'Awaiting Approval' ? 'Pending' : ea.optInStatus
-      })),
-      extraData: typeof a.extraData === 'string' ? (() => { try { return JSON.parse(a.extraData || '{}') } catch(e) { return {} } })() : (a.extraData || {})
-    }));
+    const parseEvDate = (dStr) => {
+      if (!dStr) return new Date(0);
+      try {
+        const s = typeof dStr === 'string' ? dStr : String(dStr);
+        const dt = new Date(s.replace(/-/g, ' '));
+        return isNaN(dt.getTime()) ? new Date(0) : dt;
+      } catch(e) { return new Date(0); }
+    };
+
+    const mapped = authors.map(a => {
+      const joinDate = a.groupJoiningDate ? new Date(a.groupJoiningDate) : new Date(a.createdAt);
+      joinDate.setHours(0, 0, 0, 0);
+      
+      let eligibleCount = 0;
+      allSystemEvents.forEach(e => {
+        const eTime = parseEvDate(e.date || e.startDate).getTime();
+        if (eTime >= joinDate.getTime()) eligibleCount++;
+      });
+      
+      let participatedCount = 0;
+      if (a.eventAuthors) {
+        participatedCount += a.eventAuthors.filter(ei => ei.optInStatus === 'Registered' || ei.optInStatus === 'Approved' || ei.optInStatus === 'Pending Approval').length;
+      }
+      if (a.eventRegistrations) {
+        const inviteEventIds = new Set(a.eventAuthors ? a.eventAuthors.map(ei => ei.eventId) : []);
+        participatedCount += a.eventRegistrations.filter(er => {
+           if (er.activityId && inviteEventIds.has(er.activityId)) return false; 
+           return er.status === 'Registered' || er.status === 'Approved' || er.status === 'Pending Approval';
+        }).length;
+      }
+
+      return {
+        ...a,
+        joined: a.createdAt.toISOString().split('T')[0],
+        totalBooks: a._count.books,
+        eventsPart: a._count.eventRegistrations + a._count.eventAuthors,
+        eventParticipation: a.eventAuthors.map(ea => ({
+          ...ea,
+          status: ea.optInStatus === 'Awaiting Approval' ? 'Pending' : ea.optInStatus
+        })),
+        aggEligibleEvents: eligibleCount,
+        aggParticipatedEvents: participatedCount,
+        extraData: typeof a.extraData === 'string' ? (() => { try { return JSON.parse(a.extraData || '{}') } catch(e) { return {} } })() : (a.extraData || {})
+      };
+    });
 
     res.json({
       data: mapped,
@@ -985,6 +1031,7 @@ router.put('/api/admin/authors/:id/full-update-and-approve', verifyToken, isAdmi
           if (agreedToGuidelines !== undefined) parsed.agreedToGuidelines = agreedToGuidelines === 'true' || agreedToGuidelines === true;
           if (agreedToInfoDoc !== undefined) parsed.agreedToInfoDoc = agreedToInfoDoc === 'true' || agreedToInfoDoc === true;
           parsed.hasPendingEdits = false;
+          parsed.isReapplied = false;
           return parsed;
         })()
       }
@@ -1059,7 +1106,7 @@ router.post('/api/admin/authors/:id/approve', verifyToken, isAdmin, async (req, 
 
   const author = await prisma.author.update({
     where: { id },
-    data: { status: 'Active', rejectionReason: null, extraData: JSON.stringify(extraData) }
+    data: { status: 'Active', rejectionReason: null, extraData: extraData }
   });
   // Approve their pending books too
   await prisma.book.updateMany({

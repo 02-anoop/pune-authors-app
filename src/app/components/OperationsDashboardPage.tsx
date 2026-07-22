@@ -4071,7 +4071,7 @@ export function OperationsDashboardPage() {
                 </th>
                 <th className="!text-[14px] !text-indigo-800 !bg-transparent">Author Details</th>
                 <th className="!text-[14px] !text-indigo-800 !bg-transparent">Contact</th>
-                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Payment Info</th>
+                <th className="!text-[14px] !text-indigo-800 !bg-transparent">Location</th>
                 <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Status</th>
                 <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Participation</th>
                 <th style={{ textAlign: 'center' }} className="!text-[14px] !text-indigo-800 !bg-transparent">Books</th>
@@ -4143,20 +4143,17 @@ export function OperationsDashboardPage() {
                     <p className="text-paa-navy font-medium">{author.email}</p>
                     <p className="text-paa-gray-text text-xs mt-0.5 font-medium">{author.phone}</p>
                   </td>
-                  <td>
-                    {author.transactionId ? (
-                      <div>
-                        <p className="text-[10px] font-bold text-paa-navy uppercase bg-gray-100 inline-block px-1 mb-1">TXN: {author.transactionId}</p>
-                        <br />
-                        {author.paymentScreenshot ? (
-                          <a href={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + author.paymentScreenshot : "http://localhost:3001" + author.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline font-medium mt-1 inline-block hover:text-blue-800">View Receipt</a>
-                        ) : (
-                          <span className="text-[10px] text-red-500 font-bold uppercase block mt-1">No Receipt</span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-gray-400 font-bold uppercase">No Payment Info</span>
-                    )}
+                  <td className="align-middle">
+                    <div className="flex flex-col gap-2">
+                      {author.city || author.state ? (
+                        <div className="flex items-center gap-1.5 text-[11px] text-paa-navy font-bold">
+                          <MapPin className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <span className="truncate max-w-[140px] uppercase tracking-wider">{[author.city, author.state].filter(Boolean).join(', ')}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">No Location Info</span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     {(() => {
@@ -4267,6 +4264,112 @@ export function OperationsDashboardPage() {
     const [bookSearchTerm, setBookSearchTerm] = useState('');
     const [expandedBookId, setExpandedBookId] = useState<number | null>(null);
 
+    const handleExportBookCatalogue = async () => {
+      try {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Book Catalogue');
+
+        const authorsMap: Record<string, any[]> = {};
+        const activeBooks = books.filter(b => b.status === 'Approved');
+        
+        activeBooks.forEach(b => {
+           const authorName = b.author?.name || b.authorName || 'Unknown Author';
+           if (!authorsMap[authorName]) authorsMap[authorName] = [];
+           authorsMap[authorName].push(b);
+        });
+
+        const authorNames = Object.keys(authorsMap).sort((a, b) => a.localeCompare(b));
+        const maxBooks = Math.max(0, ...authorNames.map(name => authorsMap[name].length));
+
+        const bannerRow = sheet.addRow(['', '', 'LIST OF BOOKS OF AUTHORS REGISTERED IN THIS GROUP']);
+        bannerRow.getCell(3).font = { bold: true };
+        bannerRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
+        bannerRow.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+        bannerRow.getCell(3).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        
+        if (maxBooks > 0) {
+          sheet.mergeCells(1, 3, 1, Math.max(3, maxBooks + 2));
+        }
+
+        const headers = ['S. No', 'AUTHOR NAME'];
+        for (let i = 1; i <= maxBooks; i++) {
+          headers.push(`BOOK-${i}`);
+        }
+        const headerRow = sheet.addRow(headers);
+        headerRow.font = { bold: true };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+        
+        headerRow.eachCell((cell, colNumber) => {
+          cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+          if (colNumber <= 2) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF99' } };
+          } else {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCC99' } };
+          }
+        });
+        
+        authorNames.forEach((authorName, idx) => {
+           const rowData = [idx + 1, authorName];
+           const authorBooks = authorsMap[authorName];
+           const row = sheet.addRow(rowData);
+           
+           row.getCell(1).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+           row.getCell(1).alignment = { horizontal: 'center' };
+           row.getCell(2).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+           
+           authorBooks.forEach((book, bookIdx) => {
+              const cell = row.getCell(3 + bookIdx);
+              cell.value = book.title;
+              cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+              
+              let color = 'FFFFFFFF';
+              const genre = (book.genre || '').toLowerCase();
+              
+              if (genre.includes('non-fiction') || genre.includes('non fiction')) {
+                 color = 'FF00FFFF'; // Blue / Cyan
+              } else if (genre.includes('fiction')) {
+                 color = 'FFFF66CC'; // Pink
+              } else if (genre.includes('poetry') || genre.includes('poem')) {
+                 color = 'FFFFFF00'; // Yellow
+              } else if (genre.includes('children') || genre.includes('academic') || genre.includes('education') || genre.includes('textbook') || genre.includes('school')) {
+                 color = 'FF00FF00'; // Green
+              }
+              
+              if (color !== 'FFFFFFFF') {
+                cell.fill = {
+                   type: 'pattern',
+                   pattern: 'solid',
+                   fgColor: { argb: color }
+                };
+              }
+           });
+           
+           for (let i = authorBooks.length + 3; i <= maxBooks + 2; i++) {
+              row.getCell(i).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+           }
+        });
+        
+        sheet.addRow([]);
+        const legendRow = sheet.addRow(['', 'Colour code is for the Genre. Blue = NF, Pink = F, Yellow = P, Green = C']);
+        legendRow.getCell(2).font = { bold: true };
+        legendRow.getCell(2).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        sheet.mergeCells(legendRow.number, 2, legendRow.number, 5);
+
+        sheet.columns.forEach((col, idx) => {
+          col.width = idx === 1 ? 25 : 35;
+        });
+        sheet.getColumn(1).width = 8;
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `Book_Catalogue_${new Date().toISOString().split('T')[0]}.xlsx`);
+        toast.success('Excel downloaded successfully!');
+      } catch (err) {
+        toast.error('Failed to generate Excel file');
+        console.error(err);
+      }
+    };
+
     return (
       <div className="bg-white border border-paa-navy/5 shadow-premium hover:shadow-premium-hover hover:-translate-y-1 transition-all duration-500 ease-out flex flex-col">
         <div className="p-4 border-b border-paa-navy/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#e6f2eb]">
@@ -4293,9 +4396,9 @@ export function OperationsDashboardPage() {
                 <input type="text" placeholder="SEARCH BOOKS/AUTHORS..." value={bookSearchTerm} onChange={(e) => setBookSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 bg-white border border-paa-navy/20 text-xs font-bold tracking-widest uppercase outline-none focus:border-paa-navy transition-colors w-64" />
               </div>
             </div>
-            {/* <button onClick={() => setIsBookModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-paa-navy text-paa-cream text-xs font-bold tracking-widest uppercase hover:bg-paa-gold hover:text-paa-navy border border-paa-navy hover:border-paa-gold transition-colors">
-               <Plus className="w-4 h-4" /> Add Book
-             </button> */}
+            <button onClick={handleExportBookCatalogue} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all border border-paa-navy/20 text-paa-navy bg-white hover:bg-paa-navy hover:text-white shadow-sm whitespace-nowrap">
+              <Download className="w-4 h-4" /> Export Excel
+            </button>
           </div>
         </div>
 

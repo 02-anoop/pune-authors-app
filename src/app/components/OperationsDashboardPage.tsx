@@ -1690,9 +1690,15 @@ export function OperationsDashboardPage() {
     } else if (events.length > 0 && location.pathname.startsWith('/operations/events/')) {
       const slug = location.pathname.split('/operations/events/')[1];
       if (slug) {
-        if (!selectedEventBreakdown || selectedEventBreakdown.name.replace(/\s+/g, '-').toLowerCase() !== slug) {
-          const evt = events.find((e: any) => e.name.replace(/\s+/g, '-').toLowerCase() === slug);
-          if (evt) {
+        const idMatch = slug.match(/^(\d+)-/);
+        const eventId = idMatch ? parseInt(idMatch[1], 10) : null;
+        
+        let evt = null;
+        if (eventId) evt = events.find((e: any) => e.id === eventId);
+        if (!evt) evt = events.find((e: any) => e.name.replace(/\s+/g, '-').toLowerCase() === slug);
+
+        if (evt) {
+          if (!selectedEventBreakdown || selectedEventBreakdown.id !== evt.id) {
             setActiveTab('events');
             setSelectedEventBreakdown(evt);
             const isPastOrLegacy = evt.isLegacy || evt.status === 'Past' || evt.status === 'Legacy Archive';
@@ -4546,7 +4552,7 @@ export function OperationsDashboardPage() {
       setShowAllPlatformAuthors(isPastOrLegacy);
       fetchEventRegistrations(evt.id);
       fetchAuthors(true);
-      const slug = evt.name.replace(/\s+/g, '-').toLowerCase();
+      const slug = `${evt.id}-${evt.name.replace(/\s+/g, '-').toLowerCase()}`;
       navigate(`/operations/events/${slug}`);
       setTimeout(() => {
         const scrollEl = document.getElementById('admin-dashboard-scroll');
@@ -8001,9 +8007,7 @@ export function OperationsDashboardPage() {
                       <div>
                         <label className="dash-label">Status</label>
                         <select className="dash-input" value={editingEvent.status || ''} onChange={e => setEditingEvent({ ...editingEvent, status: e.target.value })}>
-                          <option value="Pending Approval">Pending Approval</option>
                           <option value="Upcoming">Upcoming</option>
-                          <option value="Ongoing">Ongoing</option>
                           <option value="Past">Past</option>
                           <option value="Legacy Archive">Legacy Archive</option>
                         </select>

@@ -9869,7 +9869,7 @@ const totalAuthorsBase = eventRegistrations.length;
               hasAlert: pendingAlerts.orders,
             },
             { id: "sales_report", label: "Sales Reports", icon: FileText },
-            { id: "documents", label: "Admin Documents", icon: FileText },
+            { id: "documents", label: "Policy Documents", icon: FileText },
             {
               id: "authors",
               label: "Authors Menu",
@@ -10475,7 +10475,7 @@ const totalAuthorsBase = eventRegistrations.length;
             {activeTab === "documents" && (
               <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm animate-fade-in-up">
                 <h2 className="text-xl font-serif text-paa-navy mb-6 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-indigo-500" /> Admin
+                  <FileText className="w-5 h-5 text-indigo-500" /> Policy
                   Documents
                 </h2>
 
@@ -10537,6 +10537,26 @@ const totalAuthorsBase = eventRegistrations.length;
                   const catalogueFile = serverFiles.find(
                     (f: any) => f.name.toLowerCase() === "catalogue.pdf"
                   );
+                  const notificationUrls = new Set(
+                    notifications
+                      .filter((n: any) => n.documentUrl)
+                      .map((n: any) => n.documentUrl.toLowerCase())
+                  );
+                  
+                  const otherServerDocs = serverFiles
+                    .filter((f: any) => {
+                      const lowerUrl = f.url.toLowerCase();
+                      return lowerUrl !== "/uploads/catalogue.pdf" && !notificationUrls.has(lowerUrl);
+                    })
+                    .map((f: any) => ({
+                      id: `sf-${f.name}`,
+                      message: f.name.replace(/[-_]/g, ' ').replace(/\.pdf$/i, ''),
+                      documentName: f.name,
+                      documentUrl: f.url,
+                      createdAt: f.createdAt,
+                      isServerFile: true,
+                    }));
+
                   const unifiedDocs = [
                     ...(catalogueFile
                       ? [
@@ -10560,6 +10580,7 @@ const totalAuthorsBase = eventRegistrations.length;
                         createdAt: n.createdAt,
                         isServerFile: false,
                       })),
+                    ...otherServerDocs,
                   ];
 
                   if (unifiedDocs.length === 0) {

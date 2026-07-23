@@ -85,7 +85,7 @@ export const AuthorFullProfileView = ({ author, onBack }: { author: any, onBack:
               </div>
               <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Full Address</span><span className="text-sm text-paa-navy font-medium">{authorProfile.address || '-'}</span></div>
               <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Aadhar/Voter ID/DL</span><span className="text-sm text-paa-navy font-medium">{authorProfile.aadharNumber || '-'}</span></div>
-              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">DOB</span><span className="text-sm text-paa-navy font-medium">{authorProfile.age || '-'}</span></div>
+              <div><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">DOB</span><span className="text-sm text-paa-navy font-medium">{authorProfile.age ? (() => { try { const d = new Date(authorProfile.age); if (!isNaN(d.getTime())) return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch(e) {} return authorProfile.age; })() : '-'}</span></div>
               <div className="md:col-span-2"><span className="text-xs font-bold text-paa-gray-text uppercase block mb-1">Qualifications</span>
                 {(() => {
                    let qText = authorProfile.qualification || '-';

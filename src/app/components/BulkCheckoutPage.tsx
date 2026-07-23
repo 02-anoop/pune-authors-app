@@ -51,6 +51,20 @@ export function BulkCheckoutPage() {
       return;
     }
 
+    // Phone: must be exactly 10 digits
+    const phoneDigits = customerPhone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10) {
+      toast.error("Phone number must be exactly 10 digits.");
+      return;
+    }
+
+    // Email: must be valid format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail.trim())) {
+      toast.error("Please enter a valid email address (e.g. you@example.com).");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
@@ -161,24 +175,85 @@ export function BulkCheckoutPage() {
             </div>
 
             <div style={{ background: "#fff", padding: "2rem", borderRadius: 16, border: "1px solid #e2e8f0" }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: "1.5rem" }}>Contact Details</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: "0.25rem" }}>Contact Details</h2>
+              <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: "1.5rem" }}>Fields marked with <span style={{ color: "#ef4444", fontWeight: 700 }}>*</span> are required.</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>Full Name</label>
-                  <input required type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} style={{ width: "100%", padding: "0.75rem", borderRadius: 8, border: "1px solid #cbd5e1", outline: "none", fontSize: 15 }} />
+                  <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>
+                    Full Name <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    placeholder="e.g. Rahul Sharma"
+                    style={{ width: "100%", padding: "0.75rem", borderRadius: 8, border: `1px solid ${customerName.trim() ? "#22c55e" : "#cbd5e1"}`, outline: "none", fontSize: 15, boxSizing: "border-box" }}
+                  />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>Email Address</label>
-                  <input required type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} style={{ width: "100%", padding: "0.75rem", borderRadius: 8, border: "1px solid #cbd5e1", outline: "none", fontSize: 15 }} />
+                  <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>
+                    Email Address <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    value={customerEmail}
+                    onChange={e => setCustomerEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                    title="Please enter a valid email address"
+                    style={{ width: "100%", padding: "0.75rem", borderRadius: 8, border: `1px solid ${/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail) ? "#22c55e" : customerEmail.length > 0 ? "#ef4444" : "#cbd5e1"}`, outline: "none", fontSize: 15, boxSizing: "border-box" }}
+                  />
+                  {customerEmail.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail) && (
+                    <p style={{ fontSize: 11, color: "#ef4444", marginTop: 4, fontWeight: 600 }}>Enter a valid email (e.g. you@example.com)</p>
+                  )}
+                  {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail) && (
+                    <p style={{ fontSize: 11, color: "#22c55e", marginTop: 4, fontWeight: 600 }}>✓ Valid</p>
+                  )}
                 </div>
               </div>
               <div style={{ marginBottom: "1.5rem" }}>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>Phone Number</label>
-                <input required type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} style={{ width: "100%", padding: "0.75rem", borderRadius: 8, border: "1px solid #cbd5e1", outline: "none", fontSize: 15 }} />
+                <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>
+                  Phone Number <span style={{ color: "#ef4444" }}>*</span>{" "}
+                  <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 400 }}>(10 digits)</span>
+                </label>
+                <input
+                  required
+                  type="tel"
+                  value={customerPhone}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setCustomerPhone(digits);
+                  }}
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  inputMode="numeric"
+                  placeholder="e.g. 9876543210"
+                  title="Please enter exactly 10 digit phone number"
+                  style={{ width: "100%", padding: "0.75rem", borderRadius: 8, border: `1px solid ${customerPhone.length === 10 ? "#22c55e" : customerPhone.length > 0 ? "#ef4444" : "#cbd5e1"}`, outline: "none", fontSize: 15, boxSizing: "border-box" }}
+                />
+                {customerPhone.length > 0 && customerPhone.length < 10 && (
+                  <p style={{ fontSize: 11, color: "#ef4444", marginTop: 4, fontWeight: 600 }}>
+                    {10 - customerPhone.length} more digit{10 - customerPhone.length !== 1 ? "s" : ""} needed
+                  </p>
+                )}
+                {customerPhone.length === 10 && (
+                  <p style={{ fontSize: 11, color: "#22c55e", marginTop: 4, fontWeight: 600 }}>✓ Valid</p>
+                )}
               </div>
               <div style={{ marginBottom: "2rem" }}>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>Delivery Address</label>
-                <textarea required value={address} onChange={e => setAddress(e.target.value)} rows={3} style={{ width: "100%", padding: "0.75rem", borderRadius: 8, border: "1px solid #cbd5e1", outline: "none", fontSize: 15, resize: "vertical" }} />
+                <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>
+                  Delivery Address <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <textarea
+                  required
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  rows={3}
+                  placeholder="House No., Street, City, State - Pincode"
+                  style={{ width: "100%", padding: "0.75rem", borderRadius: 8, border: `1px solid ${address.trim().length > 10 ? "#22c55e" : address.length > 0 ? "#f59e0b" : "#cbd5e1"}`, outline: "none", fontSize: 15, resize: "vertical", boxSizing: "border-box" }}
+                />
               </div>
 
               <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

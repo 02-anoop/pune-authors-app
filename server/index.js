@@ -29,8 +29,8 @@ const limiter = rateLimit({
 // Security: Strict CORS (Only allows requests from your Website)
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow localhost and vercel domains. We will add your custom domain here later!
-    if (!origin || origin.includes('localhost') || origin.includes('vercel.app') || origin.includes('puneauthors.com')) {
+    // Allow localhost, vercel, and the official custom domain!
+    if (!origin || origin.includes('localhost') || origin.includes('vercel.app') || origin.includes('puneauthorsassociation.com')) {
       callback(null, true);
     } else {
       callback(new Error('Blocked by CORS policy'));

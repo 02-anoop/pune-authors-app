@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -345,6 +346,7 @@ model EventAuthor {
   paymentStatus      String?  @default("Unpaid")
   investment         Float?   @default(0)
   rejectionReason    String?
+  manualDailySales   Json?
   author             Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event              Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
@@ -359,6 +361,7 @@ model EventBook {
   returnedStock Int      @default(0)
   createdAt     DateTime @default(now())
   overrideMrp   Float?
+  manualDailySales Json?
   author        Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)

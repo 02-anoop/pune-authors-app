@@ -1051,6 +1051,7 @@ export function OperationsDashboardPage() {
   const [useGlobalOverride, setUseGlobalOverride] = useState(false);
   const [globalSold, setGlobalSold] = useState(0);
   const [globalRevenue, setGlobalRevenue] = useState(0);
+  const [manualDailySales, setManualDailySales] = useState<Record<string, {sold: number, revenue: number}>>({});
   const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
   const [showBooksSold, setShowBooksSold] = useState(true);
   const [eventGraphFilter, setEventGraphFilter] = useState("All");
@@ -4792,29 +4793,60 @@ const totalAuthorsBase = eventRegistrations.length;
         isLegacyEvent ||
           (m.manualTotalSold !== null && m.manualTotalSold !== undefined),
       );
-      setGlobalSold(m.manualTotalSold || 0);
-      setGlobalRevenue(m.manualTotalRevenue || 0);
-
       const globalBooks = authorProfile.books || [];
       const eventBooks = (m.books || []).filter(
         (b: any) => b.bookId !== undefined,
       );
 
-      setManageAuthorBooks(
-        globalBooks.map((gb: any) => {
-          const evb = eventBooks.find((eb: any) => eb.bookId === gb.id);
-          return {
-            bookId: gb.id,
-            title: gb.title || "Unknown Book",
-            mrp: parseFloat(gb.mrp) || 0,
-            overrideMrp: evb?.overrideMrp || undefined,
-            isSelected: !!evb,
-            listedStock: evb ? evb.listedStock || 0 : 0,
-            soldStock: evb ? evb.soldStock || 0 : 0,
-            returnedStock: evb ? evb.returnedStock || 0 : 0,
-          };
-        }),
-      );
+      const builtAuthorBooks = globalBooks.map((gb: any) => {
+        const evb = eventBooks.find((eb: any) => eb.bookId === gb.id);
+        let prefilledDailySales: Record<string, any> = { ...(evb?.manualDailySales || {}) };
+        
+        let totalPosSold = 0;
+        if (evb?.dailySales) {
+           Object.entries(evb.dailySales).forEach(([posDate, qty]) => {
+              totalPosSold += (qty as number) || 0;
+              const dateKey = new Date(posDate).toDateString();
+              if (!prefilledDailySales[dateKey] || prefilledDailySales[dateKey].sold === undefined) {
+                 const mrp = parseFloat(evb.overrideMrp || evb.book?.mrp || gb.mrp) || 0;
+                 prefilledDailySales[dateKey] = { sold: qty as number, revenue: (qty as number) * mrp };
+              }
+           });
+        }
+        
+        return {
+          bookId: gb.id,
+          title: gb.title || "Unknown Book",
+          mrp: parseFloat(gb.mrp) || 0,
+          overrideMrp: evb?.overrideMrp || undefined,
+          isSelected: eventBooks.length === 0 ? true : !!evb,
+          listedStock: evb ? evb.listedStock || 0 : 0,
+          soldStock: evb ? evb.soldStock || 0 : 0,
+          returnedStock: evb ? evb.returnedStock || 0 : 0,
+          posSold: totalPosSold,
+          manualDailySales: prefilledDailySales
+        };
+      });
+
+      let initialGlobalSold = m.manualTotalSold || 0;
+      let initialGlobalRevenue = m.manualTotalRevenue || 0;
+      
+      let sumS = 0; let sumR = 0;
+      let hasAnyDaily = false;
+      builtAuthorBooks.forEach((b: any) => {
+         if (b.manualDailySales && Object.keys(b.manualDailySales).length > 0) {
+            hasAnyDaily = true;
+            Object.values(b.manualDailySales).forEach((d:any) => { sumS+=(d.sold||0); sumR+=(d.revenue||0); });
+         }
+      });
+      if (hasAnyDaily) {
+          initialGlobalSold = sumS;
+          initialGlobalRevenue = sumR;
+      }
+      
+      setGlobalSold(initialGlobalSold);
+      setGlobalRevenue(initialGlobalRevenue);
+      setManageAuthorBooks(builtAuthorBooks);
       setIsManageDataDirty(false);
     };
 
@@ -4831,6 +4863,7 @@ const totalAuthorsBase = eventRegistrations.length;
             useGlobalOverride,
             globalSold,
             globalRevenue,
+            manualDailySales,
           },
           {
             headers: {
@@ -4864,6 +4897,7 @@ const totalAuthorsBase = eventRegistrations.length;
             useGlobalOverride,
             globalSold,
             globalRevenue,
+            manualDailySales,
             isDraft: true,
           },
           {
@@ -5429,6 +5463,8 @@ const totalAuthorsBase = eventRegistrations.length;
             </div>
           </div>
           {/* KPI Cards */}
+          {!selectedAuthorForData && (
+            <>
           <div className="mb-2 flex flex-wrap justify-between items-center gap-2">
             <span className="text-xs text-gray-400">Event Summary</span>
             {(selectedEventBreakdown.isLegacy ||
@@ -5791,6 +5827,8 @@ const totalAuthorsBase = eventRegistrations.length;
               )}
             </div>
           </div>
+            </>
+          )}
 
           {selectedAuthorForData ? (
             <div className="border border-gray-200 rounded-xl p-6 bg-gray-50 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
@@ -5904,186 +5942,250 @@ const totalAuthorsBase = eventRegistrations.length;
               </div>
 
               {useGlobalOverride ? (
-                <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">
-                      Total Books Sold (Overall)
-                    </label>
-                    <input
-                      type="number"
-                      className="w-full border border-gray-300 rounded p-2 font-mono"
-                      value={globalSold}
-                      onChange={(e) => {
-                        setGlobalSold(parseInt(e.target.value) || 0);
-                        setIsManageDataDirty(true);
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-emerald-600 mb-1 uppercase tracking-wider">
-                      Total Revenue (₹)
-                    </label>
-                    <input
-                      type="number"
-                      className="w-full border border-emerald-200 bg-[#ebd8c0] text-emerald-700 rounded p-2 font-mono font-bold"
-                      value={globalRevenue}
-                      onChange={(e) => {
-                        setGlobalRevenue(parseInt(e.target.value) || 0);
-                        setIsManageDataDirty(true);
-                      }}
-                    />
+                <div className="space-y-4 mb-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">
+                        Total Books Sold (Overall)
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full border border-gray-300 rounded p-2 font-mono"
+                        value={globalSold}
+                        onChange={(e) => {
+                          setGlobalSold(parseInt(e.target.value) || 0);
+                          setIsManageDataDirty(true);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-emerald-600 mb-1 uppercase tracking-wider">
+                        Total Revenue (₹)
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full border border-emerald-200 bg-[#ebd8c0] text-emerald-700 rounded p-2 font-mono font-bold"
+                        value={globalRevenue}
+                        onChange={(e) => {
+                          setGlobalRevenue(parseInt(e.target.value) || 0);
+                          setIsManageDataDirty(true);
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Iterating over authors books */}
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Book</th>
+                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">Listed</th>
+                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">Qty Listed</th>
+                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">Manual Sold</th>
+                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">POS (Auto)</th>
+                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">Returned</th>
+                          <th className="p-3 text-[10px] font-bold text-emerald-600 uppercase tracking-wider w-28">Rev (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {manageAuthorBooks.map((book: any, idx: number) => {
+                          const mrpToUse =
+                            book.overrideMrp !== undefined && book.overrideMrp !== ""
+                              ? parseFloat(book.overrideMrp)
+                              : book.mrp;
+                          const revenue = (mrpToUse || 0) * ((book.soldStock || 0) + (book.posSold || 0));
+                          return (
+                            <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="p-3 align-middle">
+                                <div className="font-medium text-sm text-gray-800">{book.title}</div>
+                                <div className="flex items-center gap-1 text-xs text-gray-500 font-normal mt-1">
+                                  MRP: ₹
+                                  <input
+                                    type="text"
+                                    className="w-12 border border-gray-200 rounded p-0.5 text-xs text-center outline-none focus:border-paa-navy"
+                                    value={
+                                      book.overrideMrp !== undefined
+                                        ? book.overrideMrp
+                                        : book.mrp || ""
+                                    }
+                                    onChange={(e) => {
+                                      const newBooks = [...manageAuthorBooks];
+                                      newBooks[idx].overrideMrp = e.target.value;
+                                      setManageAuthorBooks(newBooks);
+                                      setIsManageDataDirty(true);
+                                    }}
+                                  />
+                                </div>
+                              </td>
+                              <td className="p-3 align-middle text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={book.isSelected}
+                                  onChange={(e) => {
+                                    const newBooks = [...manageAuthorBooks];
+                                    newBooks[idx].isSelected = e.target.checked;
+                                    setManageAuthorBooks(newBooks);
+                                    setIsManageDataDirty(true);
+                                  }}
+                                  className="rounded text-paa-navy w-4 h-4 cursor-pointer"
+                                />
+                              </td>
+                              <td className="p-3 align-middle">
+                                <input
+                                  type="number"
+                                  value={book.listedStock}
+                                  onChange={(e) => {
+                                    const newBooks = [...manageAuthorBooks];
+                                    newBooks[idx].listedStock =
+                                      parseInt(e.target.value) || 0;
+                                    if (newBooks[idx].listedStock > 0)
+                                      newBooks[idx].isSelected = true;
+                                    if (
+                                      newBooks[idx].listedStock > 0 &&
+                                      (newBooks[idx].soldStock > 0 || (newBooks[idx].posSold || 0) > 0)
+                                    )
+                                      newBooks[idx].returnedStock = Math.max(
+                                        0,
+                                        newBooks[idx].listedStock -
+                                          (newBooks[idx].soldStock + (newBooks[idx].posSold || 0)),
+                                      );
+                                    setManageAuthorBooks(newBooks);
+                                    setIsManageDataDirty(true);
+                                  }}
+                                  className="w-full border border-gray-300 rounded p-1.5 text-sm font-mono"
+                                />
+                              </td>
+                              <td className="p-3 align-middle">
+                                <input
+                                  type="number"
+                                  value={book.soldStock}
+                                  onChange={(e) => {
+                                    const newBooks = [...manageAuthorBooks];
+                                    newBooks[idx].soldStock =
+                                      parseInt(e.target.value) || 0;
+                                    if (newBooks[idx].soldStock > 0)
+                                      newBooks[idx].isSelected = true;
+                                    if (
+                                      newBooks[idx].listedStock > 0 &&
+                                      (newBooks[idx].soldStock > 0 || (newBooks[idx].posSold || 0) > 0)
+                                    )
+                                      newBooks[idx].returnedStock = Math.max(
+                                        0,
+                                        newBooks[idx].listedStock -
+                                          (newBooks[idx].soldStock + (newBooks[idx].posSold || 0)),
+                                      );
+                                    setManageAuthorBooks(newBooks);
+                                    setIsManageDataDirty(true);
+                                  }}
+                                  className="w-full border border-gray-300 rounded p-1.5 text-sm font-mono"
+                                />
+                              </td>
+                              <td className="p-3 align-middle">
+                                <input
+                                  type="number"
+                                  value={book.posSold || 0}
+                                  disabled
+                                  className="w-full border border-gray-200 bg-gray-100 text-gray-500 rounded p-1.5 text-sm font-mono"
+                                />
+                              </td>
+                              <td className="p-3 align-middle">
+                                <input
+                                  type="number"
+                                  value={book.returnedStock}
+                                  onChange={(e) => {
+                                    const newBooks = [...manageAuthorBooks];
+                                    newBooks[idx].returnedStock =
+                                      parseInt(e.target.value) || 0;
+                                    setManageAuthorBooks(newBooks);
+                                    setIsManageDataDirty(true);
+                                  }}
+                                  className="w-full border border-gray-300 rounded p-1.5 text-sm font-mono"
+                                />
+                              </td>
+                              <td className="p-3 align-middle">
+                                <div className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-1.5 text-sm font-mono font-bold text-center">
+                                  ₹{revenue}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
 
-                  {manageAuthorBooks.map((book: any, idx: number) => {
-                    const mrpToUse =
-                      book.overrideMrp !== undefined && book.overrideMrp !== ""
-                        ? parseFloat(book.overrideMrp)
-                        : book.mrp;
-                    const revenue = (mrpToUse || 0) * (book.soldStock || 0);
-                    return (
-                      <div
-                        key={idx}
-                        className="border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm hover:shadow transition-shadow"
-                      >
-                        <div className="flex justify-between items-center p-4 bg-white border-b border-gray-100">
-                          <div className="font-medium text-sm text-gray-800 flex items-center gap-2">
-                            {book.title}
-                            <div className="flex items-center gap-1 text-xs text-gray-500 font-normal ml-2">
-                              (MRP: ₹
-                              <input
-                                type="text"
-                                className="w-14 border border-gray-200 rounded p-0.5 text-xs text-center outline-none focus:border-paa-navy"
-                                value={
-                                  book.overrideMrp !== undefined
-                                    ? book.overrideMrp
-                                    : book.mrp || ""
-                                }
-                                onChange={(e) => {
-                                  const newBooks = [...manageAuthorBooks];
-                                  newBooks[idx].overrideMrp = e.target.value;
-                                  setManageAuthorBooks(newBooks);
-                                  setIsManageDataDirty(true);
-                                }}
-                              />
-                              )
+                  <div className="pt-4 border-t border-gray-200 mt-6">
+                    <h5 className="text-xs font-bold text-gray-600 mb-3 uppercase tracking-wider">Day-wise Sales (Manual Entry)</h5>
+                    <div className="space-y-4">
+                      {Array.from({ length: parseInt((selectedEventBreakdown?.duration || '1').toString().match(/\d+/)?.[0] || '1') }).map((_, i) => {
+                        const baseDate = new Date(selectedEventBreakdown?.date || new Date());
+                        baseDate.setDate(baseDate.getDate() + i);
+                        const dateStr = baseDate.toDateString();
+                        const isEven = i % 2 === 0;
+                        const bgClass = isEven ? "bg-[#f5f7ff] border-[#dbe4ff]" : "bg-[#fff9f0] border-[#ffe8cc]";
+                        const headerTextClass = isEven ? "text-[#3b5bdb]" : "text-[#d9480f]";
+                        const borderClass = isEven ? "border-[#dbe4ff]" : "border-[#ffe8cc]";
+                        const titleClass = isEven ? "text-[#4c6ef5]" : "text-[#e8590c]";
+                        
+                        return (
+                          <div key={dateStr} className={`p-4 border rounded-xl shadow-sm ${bgClass}`}>
+                            <div className={`text-xs font-bold mb-3 pb-2 flex justify-between border-b ${borderClass} ${headerTextClass}`}>
+                              <span>Day {i + 1} &bull; <span className="font-normal opacity-80">{dateStr}</span></span>
+                            </div>
+                            <div className="space-y-2">
+                               {manageAuthorBooks.map((book: any, bIdx: number) => {
+                                  if (!book.isSelected) return null;
+                                  const mrpToUse = book.overrideMrp !== undefined && book.overrideMrp !== "" ? parseFloat(book.overrideMrp) : book.mrp;
+                                  return (
+                                  <div key={bIdx} className="flex items-center justify-between gap-3 text-sm">
+                                    <span className={`text-[11px] font-bold truncate flex-1 ${titleClass}`} title={book.title}>{book.title}</span>
+                                    <div className="flex gap-2 shrink-0">
+                                      <div>
+                                        <input type="number" placeholder="Sold" className="dash-input w-16 py-1 px-2 text-xs bg-white/80" 
+                                          value={book.manualDailySales?.[dateStr]?.sold !== undefined ? book.manualDailySales[dateStr].sold : ''}
+                                          onChange={(e) => {
+                                            const newBooks = [...manageAuthorBooks];
+                                            const valStr = e.target.value;
+                                            const val = valStr ? (parseInt(valStr) || 0) : undefined;
+                                            const autoRev = val !== undefined ? (val * (mrpToUse || 0)) : undefined;
+                                            newBooks[bIdx].manualDailySales = { 
+                                                ...(newBooks[bIdx].manualDailySales || {}), 
+                                                [dateStr]: { ...(newBooks[bIdx].manualDailySales?.[dateStr]||{}), sold: val, revenue: autoRev }
+                                            };
+                                            setManageAuthorBooks(newBooks);
+                                            setIsManageDataDirty(true);
+                                            
+                                            let sumS = 0; let sumR = 0;
+                                            newBooks.forEach(b => {
+                                              if (b.manualDailySales) {
+                                                Object.values(b.manualDailySales).forEach((d:any) => { sumS+=(d.sold||0); sumR+=(d.revenue||0); });
+                                              }
+                                            });
+                                            setGlobalSold(sumS); setGlobalRevenue(sumR);
+                                          }} 
+                                        />
+                                      </div>
+                                      <div>
+                                        <input type="number" placeholder="Rev (₹)" className="dash-input w-20 py-1 px-2 text-xs bg-white/50 cursor-not-allowed" 
+                                          value={book.manualDailySales?.[dateStr]?.revenue !== undefined ? book.manualDailySales[dateStr].revenue : ''}
+                                          readOnly
+                                          title="Auto-calculated from MRP/Price and Sold quantity"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                               )})}
+                               {manageAuthorBooks.filter((b:any)=>b.isSelected).length === 0 && (
+                                  <div className={`text-[10px] italic opacity-60 ${headerTextClass}`}>No books listed for this event. Check 'Listed' above.</div>
+                               )}
                             </div>
                           </div>
-                          <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={book.isSelected}
-                              onChange={(e) => {
-                                const newBooks = [...manageAuthorBooks];
-                                newBooks[idx].isSelected = e.target.checked;
-                                setManageAuthorBooks(newBooks);
-                                setIsManageDataDirty(true);
-                              }}
-                              className="rounded text-paa-navy w-4 h-4"
-                            />{" "}
-                            Listed for this event
-                          </label>
-                        </div>
-                        <div className="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-5 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">
-                              Quantities Listed
-                            </label>
-                            <input
-                              type="number"
-                              value={book.listedStock}
-                              onChange={(e) => {
-                                const newBooks = [...manageAuthorBooks];
-                                newBooks[idx].listedStock =
-                                  parseInt(e.target.value) || 0;
-                                if (newBooks[idx].listedStock > 0)
-                                  newBooks[idx].isSelected = true;
-                                if (
-                                  newBooks[idx].listedStock > 0 &&
-                                  newBooks[idx].soldStock > 0
-                                )
-                                  newBooks[idx].returnedStock = Math.max(
-                                    0,
-                                    newBooks[idx].listedStock -
-                                      newBooks[idx].soldStock,
-                                  );
-                                setManageAuthorBooks(newBooks);
-                                setIsManageDataDirty(true);
-                              }}
-                              className="w-full border border-gray-300 rounded p-2 text-sm font-mono"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">
-                              Manual Sold
-                            </label>
-                            <input
-                              type="number"
-                              value={book.soldStock}
-                              onChange={(e) => {
-                                const newBooks = [...manageAuthorBooks];
-                                newBooks[idx].soldStock =
-                                  parseInt(e.target.value) || 0;
-                                if (newBooks[idx].soldStock > 0)
-                                  newBooks[idx].isSelected = true;
-                                if (
-                                  newBooks[idx].listedStock > 0 &&
-                                  newBooks[idx].soldStock > 0
-                                )
-                                  newBooks[idx].returnedStock = Math.max(
-                                    0,
-                                    newBooks[idx].listedStock -
-                                      newBooks[idx].soldStock,
-                                  );
-                                setManageAuthorBooks(newBooks);
-                                setIsManageDataDirty(true);
-                              }}
-                              className="w-full border border-gray-300 rounded p-2 text-sm font-mono"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">
-                              Returned
-                            </label>
-                            <input
-                              type="number"
-                              value={book.returnedStock}
-                              onChange={(e) => {
-                                const newBooks = [...manageAuthorBooks];
-                                newBooks[idx].returnedStock =
-                                  parseInt(e.target.value) || 0;
-                                setManageAuthorBooks(newBooks);
-                                setIsManageDataDirty(true);
-                              }}
-                              className="w-full border border-gray-300 rounded p-2 text-sm font-mono"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-emerald-600 mb-1 uppercase tracking-wider">
-                              Revenue (₹)
-                            </label>
-                            <div className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-2 text-sm font-mono font-bold">
-                              ₹{revenue}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">
-                              POS Sold (Auto)
-                            </label>
-                            <input
-                              type="number"
-                              defaultValue="0"
-                              disabled
-                              className="w-full border border-gray-200 bg-gray-100 text-gray-500 rounded p-2 text-sm font-mono"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
               <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 items-center">

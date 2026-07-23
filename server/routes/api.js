@@ -4860,7 +4860,7 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
   try {
     const eventId = parseInt(req.params.eventId);
     const authorId = parseInt(req.params.authorId);
-    const { booksData, registrationStatus, paymentStatus, amountPaid, useGlobalOverride, globalSold, globalRevenue, isDraft } = req.body;
+    const { booksData, registrationStatus, paymentStatus, amountPaid, useGlobalOverride, globalSold, globalRevenue, isDraft, manualDailySales } = req.body;
 
     // Remove transaction wrapper to prevent timeouts
     const tx = prisma;
@@ -4874,11 +4874,11 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
     if (existingAuthor) {
       await tx.eventAuthor.update({
         where: { id: existingAuthor.id },
-        data: { optInStatus: statusValue, manualTotalSold: manualSold, manualTotalRevenue: manualRevenue, paymentStatus: paymentStatus || null, amountPaid: amountPaid ? parseFloat(amountPaid) : null }
+        data: { optInStatus: statusValue, manualTotalSold: manualSold, manualTotalRevenue: manualRevenue, paymentStatus: paymentStatus || null, amountPaid: amountPaid ? parseFloat(amountPaid) : null, manualDailySales: manualDailySales || null }
       });
     } else {
       await tx.eventAuthor.create({
-        data: { eventId, authorId, optInStatus: statusValue, manualTotalSold: manualSold, manualTotalRevenue: manualRevenue, paymentStatus: paymentStatus || null, amountPaid: amountPaid ? parseFloat(amountPaid) : null }
+        data: { eventId, authorId, optInStatus: statusValue, manualTotalSold: manualSold, manualTotalRevenue: manualRevenue, paymentStatus: paymentStatus || null, amountPaid: amountPaid ? parseFloat(amountPaid) : null, manualDailySales: manualDailySales || null }
       });
     }
 
@@ -4904,7 +4904,8 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
           listedStock: parseInt(b.listedStock) || 0,
           soldStock: parseInt(b.soldStock) || 0,
           returnedStock: parseInt(b.returnedStock) || 0,
-          overrideMrp: b.overrideMrp ? parseFloat(b.overrideMrp) : null
+          overrideMrp: b.overrideMrp ? parseFloat(b.overrideMrp) : null,
+          manualDailySales: b.manualDailySales || null
         });
       }
     }

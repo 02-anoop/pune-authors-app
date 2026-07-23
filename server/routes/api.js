@@ -2414,7 +2414,7 @@ router.put('/api/orders/:id/cancel', verifyToken, async (req, res) => {
     // Only allow cancel if not dispatched or delivered
     const cannotCancel = order.items.some(i => {
       const s = (i.status || '').trim().toLowerCase();
-      return ['dispatched', 'shipped', 'completed', 'delivered', 'cancelled', 'rejected'].includes(s);
+      return ['dispatched', 'shipped', 'completed', 'delivered'].includes(s);
     });
     if (cannotCancel) return res.status(400).json({ error: 'Cannot cancel order once it has been dispatched or delivered.' });
 
@@ -2423,10 +2423,11 @@ router.put('/api/orders/:id/cancel', verifyToken, async (req, res) => {
     }
 
     await prisma.order.update({ where: { id }, data: { status: 'Cancelled' } });
-    await prisma.orderItem.updateMany({ where: { orderId: id }, data: { status: 'Cancelled' } });
+    await prisma.orderItem.updateMany({ where: { orderId: id, status: { notIn: ['Rejected', 'Cancelled'] } }, data: { status: 'Cancelled' } });
 
     for (const item of order.items) {
-      if (item.status !== 'Dispatched' && item.status !== 'Completed') {
+      // Don't refund stock if it was already Dispatched/Completed, OR if it was already Rejected/Cancelled (stock already refunded then)
+      if (item.status !== 'Dispatched' && item.status !== 'Completed' && item.status !== 'Rejected' && item.status !== 'Cancelled') {
         await prisma.book.update({
           where: { id: item.bookId },
           data: { stock: { increment: item.quantity } }
@@ -2434,11 +2435,13 @@ router.put('/api/orders/:id/cancel', verifyToken, async (req, res) => {
       }
       if (item.book && item.book.author && item.book.author.email) {
         await sendNotificationEmail(item.book.author.email, 'Order Cancelled by Customer', `The order #PAA-${id.toString().padStart(4, '0')} for your book "${item.book.title}" was cancelled by the customer.`);
+        invalidateCache(`author:dashboard:${item.book.author.email}`);
       }
     }
 
     // Send email
     await sendNotificationEmail(req.user.email, 'Order Cancelled', `Your order #PAA-${id.toString().padStart(4, '0')} has been cancelled successfully.`);
+    invalidateCache('admin:dashboard-stats');
 
     res.json({ message: 'Order cancelled' });
   } catch (err) {

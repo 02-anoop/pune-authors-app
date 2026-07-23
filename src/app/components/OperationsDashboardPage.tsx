@@ -10499,107 +10499,92 @@ const totalAuthorsBase = eventRegistrations.length;
                 </div>
 
                 <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4">
-                  Previously Sent Documents
+                  Previously Uploaded Docs
                 </h3>
-                {notifications.filter((n: any) => n.documentUrl).length ===
-                0 ? (
-                  <p className="text-gray-500 italic text-sm">
-                    No documents have been shared yet.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {notifications
+                {(() => {
+                  const catalogueFile = serverFiles.find(
+                    (f: any) => f.name.toLowerCase() === "catalogue.pdf"
+                  );
+                  const unifiedDocs = [
+                    ...(catalogueFile
+                      ? [
+                          {
+                            id: "catalogue",
+                            message: "Book Catalogue (Auto-generated)",
+                            documentName: catalogueFile.name,
+                            documentUrl: catalogueFile.url,
+                            createdAt: catalogueFile.createdAt,
+                            isServerFile: true,
+                          },
+                        ]
+                      : []),
+                    ...notifications
                       .filter((n: any) => n.documentUrl)
-                      .map((n: any) => (
+                      .map((n: any) => ({
+                        id: n.id,
+                        message: n.message || "No description",
+                        documentName: n.documentName || "View Document",
+                        documentUrl: n.documentUrl,
+                        createdAt: n.createdAt,
+                        isServerFile: false,
+                      })),
+                  ];
+
+                  if (unifiedDocs.length === 0) {
+                    return (
+                      <p className="text-gray-500 italic text-sm">
+                        No documents have been shared yet.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {unifiedDocs.map((doc: any) => (
                         <div
-                          key={n.id}
+                          key={doc.id}
                           className="p-5 bg-white border border-gray-100 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition-shadow"
                         >
                           <div className="flex-1">
-                            <p className="text-sm font-semibold text-paa-navy mb-3 leading-relaxed">
-                              {n.message || "No description"}
+                            <p className="text-sm font-semibold text-paa-navy mb-3 leading-relaxed flex items-center gap-2">
+                              {doc.message}
+                              {doc.isServerFile && (
+                                <span className="bg-green-100 text-green-700 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded">
+                                  System Gen
+                                </span>
+                              )}
                             </p>
                             <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                               <span className="font-medium flex items-center gap-1">
                                 <CalendarIcon className="w-3 h-3" />{" "}
-                                {new Date(n.createdAt).toLocaleDateString()}
+                                {new Date(doc.createdAt).toLocaleDateString()}
+                                {doc.isServerFile && " (Last updated)"}
                               </span>
                               <a
-                                href={`${API}${n.documentUrl}`}
+                                href={`${API}${doc.documentUrl}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 font-bold uppercase tracking-widest text-[10px] rounded-md hover:bg-indigo-100 transition-colors"
                               >
                                 <FileText className="w-3 h-3" />{" "}
-                                {n.documentName || "View Document"}
+                                {doc.documentName}
                               </a>
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleDeleteNotification(n.id)}
-                            className="p-2.5 text-red-500 bg-white border border-red-100 hover:bg-red-50 rounded-xl transition-colors shadow-sm shrink-0"
-                            title="Delete Document"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                <div className="mt-12 pt-8 border-t border-gray-100">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-paa-navy mb-4">
-                    All Uploaded Docs (Server)
-                  </h3>
-                  <p className="text-xs text-gray-500 mb-6">
-                    These are raw documents stored in the server's uploads
-                    folder (e.g. Catalogue PDF, internal forms).
-                  </p>
-                  {serverFiles.length === 0 ? (
-                    <p className="text-gray-500 italic text-sm">
-                      No raw documents found on the server.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {serverFiles.map((file: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="p-5 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-paa-navy mb-3 leading-relaxed">
-                              {file.name}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                              <span className="font-medium flex items-center gap-1">
-                                <CalendarIcon className="w-3 h-3" />{" "}
-                                {new Date(file.createdAt).toLocaleDateString()}
-                              </span>
-                              <span className="font-medium bg-gray-200 px-2 py-0.5 rounded text-[10px]">
-                                {(file.size / 1024).toFixed(1)} KB
-                              </span>
-                              <a
-                                href={`${API}${file.url}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1.5 px-3 py-1 bg-white border border-gray-200 text-gray-700 font-bold uppercase tracking-widest text-[10px] rounded-md hover:bg-gray-100 transition-colors shadow-sm"
-                              >
-                                <FileText className="w-3 h-3" /> View Raw File
-                              </a>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteServerFile(file.name)}
-                            className="p-2.5 text-red-500 bg-white border border-red-200 hover:bg-red-50 rounded-xl transition-colors shadow-sm shrink-0"
-                            title="Delete Server Document"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {!doc.isServerFile && (
+                            <button
+                              onClick={() => handleDeleteNotification(doc.id)}
+                              className="p-2.5 text-red-500 bg-white border border-red-100 hover:bg-red-50 rounded-xl transition-colors shadow-sm shrink-0"
+                              title="Delete Document"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             )}
             {activeTab === "web_orders" && (

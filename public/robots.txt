@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://puneauthors.com/sitemap.xml
+Sitemap: https://puneauthorsassociation.com/sitemap.xml

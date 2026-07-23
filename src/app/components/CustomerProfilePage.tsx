@@ -493,10 +493,6 @@ export function CustomerProfilePage() {
               
               <div className="border-t border-slate-100 pt-5 space-y-3">
                 <div className="text-[11px] font-extrabold text-slate-400 tracking-widest uppercase mb-2">Account Overview</div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-medium">Role</span>
-                  <span className="font-extrabold bg-emerald-900 text-amber-300 border border-emerald-700 px-2.5 py-0.5 rounded-full text-[10px] uppercase">Reader</span>
-                </div>
                 {isEditing ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", marginBottom: "0.6rem" }}>
                     <span style={{ fontSize: 13, color: "#555" }}>Phone</span>
@@ -524,13 +520,15 @@ export function CustomerProfilePage() {
                   </div>
                 ) : (
                   userData?.address && (
-                    <div className="flex justify-between items-start text-xs gap-2">
-                      <span className="text-slate-500 font-medium">Address</span>
-                      <span className="font-bold text-slate-900 text-right max-w-[65%] leading-tight">{userData.address}</span>
+                    <div className="pt-2 border-t border-slate-100">
+                      <span className="text-slate-500 font-medium text-xs block mb-1.5">Delivery Address</span>
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 leading-relaxed shadow-sm">
+                        {userData.address}
+                      </div>
                     </div>
                   )
                 )}
-                <div className="flex justify-between items-center text-xs">
+                <div className="flex justify-between items-center text-xs pt-1">
                   <span className="text-slate-500 font-medium">Member Since</span>
                   <span className="font-bold text-slate-900">{new Date(userData?.createdAt || Date.now()).getFullYear()}</span>
                 </div>

@@ -227,7 +227,7 @@ const insights = [
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
           {[
             { label: 'Total Authors', value: stats?.totalAuthors || 0, icon: Users, colorClass: 'blue' },
-            { label: 'Books Published', value: stats?.totalBooks || 0, icon: BookOpen, colorClass: 'green' },
+            { label: 'Books Listed', value: stats?.totalBooks || 0, icon: BookOpen, colorClass: 'green' },
             { label: 'No of Events', value: stats?.totalEvents || 0, icon: CalendarIcon, colorClass: 'amber' },
             { label: 'No of Flybraries', value: stats?.totalLibraries || 0, icon: Library, colorClass: 'purple' },
             { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, colorClass: 'red' },

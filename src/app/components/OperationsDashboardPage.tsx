@@ -4771,10 +4771,15 @@ const totalAuthorsBase = eventRegistrations.length;
       const authorProfile = m.author || m;
       setSelectedAuthorForData(authorProfile);
       setCurrentOptInStatus(m.optInStatus || null);
+      const hasPaid = m.paymentStatus === "Paid" || (m.amountPaid && m.amountPaid > 0);
       setManageRegStatus(
-        m.optInStatus?.startsWith("Declined") ? "Declined" : "Registered",
+        hasPaid ? "Registered" :
+        m.optInStatus?.startsWith("Declined") || m.optInStatus?.startsWith("Rejected") ? "Declined" :
+        m.optInStatus?.startsWith("Approved") ? "Approved" :
+        m.optInStatus?.startsWith("Pending") ? "Pending Approval" :
+        m.optInStatus?.startsWith("Registered") ? "Registered" : "Pending"
       );
-      setManagePaymentStatus(m.paymentStatus || "Unpaid");
+      setManagePaymentStatus(m.paymentStatus || (hasPaid ? "Paid" : "Unpaid"));
       const expectedFee =
         selectedEventBreakdown?.feeType === "Per Title"
           ? (m.books?.length || 0) *
@@ -5874,7 +5879,10 @@ const totalAuthorsBase = eventRegistrations.length;
                       }
                     }}
                   >
-                    <option value="Registered">Participated</option>
+                    <option value="Registered">Participated / Registered</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Pending Approval">Pending Approval</option>
+                    <option value="Pending">Pending (Invited)</option>
                     <option value="Declined">Did Not Participate</option>
                   </select>
                 </div>
@@ -5976,147 +5984,70 @@ const totalAuthorsBase = eventRegistrations.length;
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Book</th>
-                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">Listed</th>
-                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">Qty Listed</th>
-                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">Manual Sold</th>
-                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">POS (Auto)</th>
-                          <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">Returned</th>
-                          <th className="p-3 text-[10px] font-bold text-emerald-600 uppercase tracking-wider w-28">Rev (₹)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
-                        {manageAuthorBooks.map((book: any, idx: number) => {
-                          const mrpToUse =
-                            book.overrideMrp !== undefined && book.overrideMrp !== ""
-                              ? parseFloat(book.overrideMrp)
-                              : book.mrp;
-                          const revenue = (mrpToUse || 0) * ((book.soldStock || 0) + (book.posSold || 0));
-                          return (
-                            <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                              <td className="p-3 align-middle">
-                                <div className="font-medium text-sm text-gray-800">{book.title}</div>
-                                <div className="flex items-center gap-1 text-xs text-gray-500 font-normal mt-1">
-                                  MRP: ₹
-                                  <input
-                                    type="text"
-                                    className="w-12 border border-gray-200 rounded p-0.5 text-xs text-center outline-none focus:border-paa-navy"
-                                    value={
-                                      book.overrideMrp !== undefined
-                                        ? book.overrideMrp
-                                        : book.mrp || ""
-                                    }
-                                    onChange={(e) => {
-                                      const newBooks = [...manageAuthorBooks];
-                                      newBooks[idx].overrideMrp = e.target.value;
-                                      setManageAuthorBooks(newBooks);
-                                      setIsManageDataDirty(true);
-                                    }}
-                                  />
-                                </div>
-                              </td>
-                              <td className="p-3 align-middle text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={book.isSelected}
-                                  onChange={(e) => {
-                                    const newBooks = [...manageAuthorBooks];
-                                    newBooks[idx].isSelected = e.target.checked;
-                                    setManageAuthorBooks(newBooks);
-                                    setIsManageDataDirty(true);
-                                  }}
-                                  className="rounded text-paa-navy w-4 h-4 cursor-pointer"
-                                />
-                              </td>
-                              <td className="p-3 align-middle">
-                                <input
-                                  type="number"
-                                  value={book.listedStock}
-                                  onChange={(e) => {
-                                    const newBooks = [...manageAuthorBooks];
-                                    newBooks[idx].listedStock =
-                                      parseInt(e.target.value) || 0;
-                                    if (newBooks[idx].listedStock > 0)
-                                      newBooks[idx].isSelected = true;
-                                    if (
-                                      newBooks[idx].listedStock > 0 &&
-                                      (newBooks[idx].soldStock > 0 || (newBooks[idx].posSold || 0) > 0)
-                                    )
-                                      newBooks[idx].returnedStock = Math.max(
-                                        0,
-                                        newBooks[idx].listedStock -
-                                          (newBooks[idx].soldStock + (newBooks[idx].posSold || 0)),
-                                      );
-                                    setManageAuthorBooks(newBooks);
-                                    setIsManageDataDirty(true);
-                                  }}
-                                  className="w-full border border-gray-300 rounded p-1.5 text-sm font-mono"
-                                />
-                              </td>
-                              <td className="p-3 align-middle">
-                                <input
-                                  type="number"
-                                  value={book.soldStock}
-                                  onChange={(e) => {
-                                    const newBooks = [...manageAuthorBooks];
-                                    newBooks[idx].soldStock =
-                                      parseInt(e.target.value) || 0;
-                                    if (newBooks[idx].soldStock > 0)
-                                      newBooks[idx].isSelected = true;
-                                    if (
-                                      newBooks[idx].listedStock > 0 &&
-                                      (newBooks[idx].soldStock > 0 || (newBooks[idx].posSold || 0) > 0)
-                                    )
-                                      newBooks[idx].returnedStock = Math.max(
-                                        0,
-                                        newBooks[idx].listedStock -
-                                          (newBooks[idx].soldStock + (newBooks[idx].posSold || 0)),
-                                      );
-                                    setManageAuthorBooks(newBooks);
-                                    setIsManageDataDirty(true);
-                                  }}
-                                  className="w-full border border-gray-300 rounded p-1.5 text-sm font-mono"
-                                />
-                              </td>
-                              <td className="p-3 align-middle">
-                                <input
-                                  type="number"
-                                  value={book.posSold || 0}
-                                  disabled
-                                  className="w-full border border-gray-200 bg-gray-100 text-gray-500 rounded p-1.5 text-sm font-mono"
-                                />
-                              </td>
-                              <td className="p-3 align-middle">
-                                <input
-                                  type="number"
-                                  value={book.returnedStock}
-                                  onChange={(e) => {
-                                    const newBooks = [...manageAuthorBooks];
-                                    newBooks[idx].returnedStock =
-                                      parseInt(e.target.value) || 0;
-                                    setManageAuthorBooks(newBooks);
-                                    setIsManageDataDirty(true);
-                                  }}
-                                  className="w-full border border-gray-300 rounded p-1.5 text-sm font-mono"
-                                />
-                              </td>
-                              <td className="p-3 align-middle">
-                                <div className="w-full border border-emerald-200 bg-emerald-50 text-emerald-700 rounded p-1.5 text-sm font-mono font-bold text-center">
-                                  ₹{revenue}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+                    <h5 className="text-xs font-bold text-gray-600 mb-3 uppercase tracking-wider border-b pb-2">Select Books to List</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {manageAuthorBooks.map((book: any, idx: number) => (
+                        <div key={idx} className={`flex items-center p-2 border rounded transition-colors ${book.isSelected ? 'border-paa-navy/30 bg-indigo-50/30' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-50'}`}>
+                          <input
+                            type="checkbox"
+                            checked={book.isSelected}
+                            onChange={(e) => {
+                              const newBooks = [...manageAuthorBooks];
+                              newBooks[idx].isSelected = e.target.checked;
+                              setManageAuthorBooks(newBooks);
+                              setIsManageDataDirty(true);
+                            }}
+                            className="rounded text-paa-navy w-4 h-4 cursor-pointer mr-3 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0 pr-2">
+                            <div className="font-medium text-sm text-gray-800 truncate" title={book.title}>{book.title}</div>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0 ml-auto">
+                            <div className="flex items-center gap-1">
+                              <span title="Quantity Listed">Listed:</span>
+                              <input
+                                type="number"
+                                className="w-12 border border-gray-200 rounded p-0.5 text-xs text-center outline-none focus:border-paa-navy bg-white font-bold text-paa-navy"
+                                value={book.listedStock || ""}
+                                onChange={(e) => {
+                                  const newBooks = [...manageAuthorBooks];
+                                  const val = parseInt(e.target.value) || 0;
+                                  newBooks[idx].listedStock = val;
+                                  if (val > 0) newBooks[idx].isSelected = true;
+                                  
+                                  let bookTotalSold = 0;
+                                  if (newBooks[idx].manualDailySales) {
+                                      Object.values(newBooks[idx].manualDailySales).forEach((d:any) => { bookTotalSold += (d.sold||0); });
+                                  }
+                                  newBooks[idx].returnedStock = Math.max(0, val - bookTotalSold);
+                                  
+                                  setManageAuthorBooks(newBooks);
+                                  setIsManageDataDirty(true);
+                                }}
+                              />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              MRP: ₹
+                              <input
+                                type="text"
+                                className="w-10 border border-gray-200 rounded p-0.5 text-xs text-center outline-none focus:border-paa-navy bg-white"
+                                value={book.overrideMrp !== undefined ? book.overrideMrp : book.mrp || ""}
+                                onChange={(e) => {
+                                  const newBooks = [...manageAuthorBooks];
+                                  newBooks[idx].overrideMrp = e.target.value;
+                                  setManageAuthorBooks(newBooks);
+                                  setIsManageDataDirty(true);
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-200 mt-6">
+                  <div className="pt-2 mt-4">
                     <h5 className="text-xs font-bold text-gray-600 mb-3 uppercase tracking-wider">Day-wise Sales (Manual Entry)</h5>
                     <div className="space-y-4">
                       {Array.from({ length: parseInt((selectedEventBreakdown?.duration || '1').toString().match(/\d+/)?.[0] || '1') }).map((_, i) => {
@@ -6138,12 +6069,23 @@ const totalAuthorsBase = eventRegistrations.length;
                                {manageAuthorBooks.map((book: any, bIdx: number) => {
                                   if (!book.isSelected) return null;
                                   const mrpToUse = book.overrideMrp !== undefined && book.overrideMrp !== "" ? parseFloat(book.overrideMrp) : book.mrp;
+                                  
+                                  let prevSold = 0;
+                                  for (let j = 0; j < i; j++) {
+                                     const dDate = new Date(selectedEventBreakdown?.date || new Date());
+                                     dDate.setDate(dDate.getDate() + j);
+                                     prevSold += (book.manualDailySales?.[dDate.toDateString()]?.sold || 0);
+                                  }
+                                  const startQty = i === 0 ? book.listedStock : Math.max(0, (book.listedStock || 0) - prevSold);
+
                                   return (
-                                  <div key={bIdx} className="flex items-center justify-between gap-3 text-sm">
-                                    <span className={`text-[11px] font-bold truncate flex-1 ${titleClass}`} title={book.title}>{book.title}</span>
-                                    <div className="flex gap-2 shrink-0">
-                                      <div>
-                                        <input type="number" placeholder="Sold" className="dash-input w-16 py-1 px-2 text-xs bg-white/80" 
+                                  <div key={bIdx} className="flex items-center justify-between gap-3 text-sm flex-wrap md:flex-nowrap">
+                                    <span className={`text-[11px] font-bold truncate flex-1 min-w-[120px] ${titleClass}`} title={book.title}>
+                                      {book.title} <span className="text-[10px] font-normal text-gray-500 ml-1">x{startQty}</span>
+                                    </span>
+                                    <div className="flex gap-2 shrink-0 items-center">
+                                      <div className="flex items-center">
+                                        <input type="number" placeholder="Sold" className="dash-input w-16 py-1 px-2 text-xs bg-white/90 shadow-sm border-gray-300 h-7" 
                                           value={book.manualDailySales?.[dateStr]?.sold !== undefined ? book.manualDailySales[dateStr].sold : ''}
                                           onChange={(e) => {
                                             const newBooks = [...manageAuthorBooks];
@@ -6154,6 +6096,14 @@ const totalAuthorsBase = eventRegistrations.length;
                                                 ...(newBooks[bIdx].manualDailySales || {}), 
                                                 [dateStr]: { ...(newBooks[bIdx].manualDailySales?.[dateStr]||{}), sold: val, revenue: autoRev }
                                             };
+                                            
+                                            let bookTotalSold = 0;
+                                            if (newBooks[bIdx].manualDailySales) {
+                                                Object.values(newBooks[bIdx].manualDailySales).forEach((d:any) => { bookTotalSold += (d.sold||0); });
+                                            }
+                                            newBooks[bIdx].soldStock = bookTotalSold;
+                                            newBooks[bIdx].returnedStock = Math.max(0, (newBooks[bIdx].listedStock || 0) - bookTotalSold);
+
                                             setManageAuthorBooks(newBooks);
                                             setIsManageDataDirty(true);
                                             
@@ -6168,7 +6118,7 @@ const totalAuthorsBase = eventRegistrations.length;
                                         />
                                       </div>
                                       <div>
-                                        <input type="number" placeholder="Rev (₹)" className="dash-input w-20 py-1 px-2 text-xs bg-white/50 cursor-not-allowed" 
+                                        <input type="number" placeholder="Rev (₹)" className="dash-input w-20 py-1 px-2 text-xs bg-white/50 cursor-not-allowed text-emerald-700 font-bold h-7" 
                                           value={book.manualDailySales?.[dateStr]?.revenue !== undefined ? book.manualDailySales[dateStr].revenue : ''}
                                           readOnly
                                           title="Auto-calculated from MRP/Price and Sold quantity"
@@ -6178,12 +6128,35 @@ const totalAuthorsBase = eventRegistrations.length;
                                   </div>
                                )})}
                                {manageAuthorBooks.filter((b:any)=>b.isSelected).length === 0 && (
-                                  <div className={`text-[10px] italic opacity-60 ${headerTextClass}`}>No books listed for this event. Check 'Listed' above.</div>
+                                  <div className={`text-[10px] italic opacity-60 ${headerTextClass}`}>No books selected for this event. Check 'Listed' above.</div>
                                )}
                             </div>
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+
+                  {/* Summary Footer for Totals */}
+                  <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-inner">
+                    <h5 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider flex items-center justify-between">
+                      <span>Event Totals Summary</span>
+                      <span className="text-[9px] font-normal lowercase italic text-gray-400">Total Returned Stock auto-calculated</span>
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {manageAuthorBooks.filter((b:any) => b.isSelected).map((book: any, idx: number) => (
+                         <div key={idx} className="bg-white p-2.5 rounded-lg border border-gray-200 text-[10px] flex justify-between items-center shadow-sm">
+                            <span className="font-bold text-paa-navy truncate w-1/2 pr-2" title={book.title}>{book.title}</span>
+                            <div className="flex gap-2.5 text-gray-500">
+                               <span title="Listed Qty">L: <b className="text-gray-800 text-xs">{book.listedStock || 0}</b></span>
+                               <span title="Total Sold">S: <b className="text-emerald-600 text-xs">{book.soldStock || 0}</b></span>
+                               <span title="Total Returned">R: <b className="text-rose-600 text-xs">{book.returnedStock || 0}</b></span>
+                            </div>
+                         </div>
+                      ))}
+                      {manageAuthorBooks.filter((b:any) => b.isSelected).length === 0 && (
+                        <div className="text-[10px] italic text-gray-400 col-span-full">No books selected.</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -6290,11 +6263,8 @@ const totalAuthorsBase = eventRegistrations.length;
                       <th className="!text-[14px] !text-indigo-800 !bg-indigo-50 sticky left-0 z-20 shadow-[1px_0_0_rgba(0,0,0,0.1)] px-4">
                         Author Name
                       </th>
-                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">
+                      <th className="!text-[14px] !text-indigo-800 !bg-transparent min-w-[180px]">
                         Books Listed
-                      </th>
-                      <th className="!text-[14px] !text-indigo-800 !bg-transparent">
-                        Quantities
                       </th>
                       <th className="!text-[14px] !text-indigo-800 !bg-transparent">
                         Books Sold
@@ -6420,9 +6390,13 @@ const totalAuthorsBase = eventRegistrations.length;
                           const isExpanded =
                             expandedAuthorId ===
                             (showAllAuthors ? m.id : m.authorId);
-                          const status = (
+                          const hasPaid = m.paymentStatus === "Paid" || (m.amountPaid && m.amountPaid > 0);
+                          let status = (
                             m.optInStatus || "Unpublished"
                           ).replace("-Draft", "");
+                          if (hasPaid) {
+                            status = "Registered";
+                          }
                           const hasData =
                             (m.books && m.books.length > 0) ||
                             m.manualTotalSold != null;
@@ -6447,11 +6421,19 @@ const totalAuthorsBase = eventRegistrations.length;
                                     {authorData?.name || "Unknown"}
                                   </p>
                                 </td>
-                                <td className="p-3 text-sm text-gray-600">
-                                  {m.books?.length || 0} Books
-                                </td>
-                                <td className="p-3 font-mono text-sm text-gray-600">
-                                  {listed}
+                                <td className="p-3 text-sm text-gray-600 min-w-[180px]">
+                                  {(status !== 'Pending' && status !== 'Unpublished') && m.books && m.books.length > 0 ? (
+                                    <div className="flex flex-col gap-0.5">
+                                      {m.books.map((b: any, bi: number) => (
+                                        <span key={bi} className="text-[11px] text-gray-700 leading-tight">
+                                          <span className="font-medium">{b.book?.title || b.title || 'Book'}</span>
+                                          {' '}<span className="text-paa-navy font-bold">x{b.listedStock || 0}</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400 text-xs italic">—</span>
+                                  )}
                                 </td>
                                 <td className="p-3 font-mono text-sm text-gray-600">
                                   {sold}
@@ -6545,7 +6527,7 @@ const totalAuthorsBase = eventRegistrations.length;
                                     </div>
                                   </td>
                                 )}
-                                <td className="p-3">
+                                <td className="p-3 min-w-[140px]">
                                   {isLateJoiner ? (
                                     <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[9px] font-bold uppercase flex items-center gap-1 w-max shadow-sm">
                                       <XCircle className="w-3 h-3" /> Joined
@@ -6584,11 +6566,9 @@ const totalAuthorsBase = eventRegistrations.length;
                                     </span>
                                   )}
                                 </td>
-                                <td className="p-3 text-center sticky right-0 z-10 bg-inherit shadow-[-1px_0_0_rgba(0,0,0,0.1)]">
+                                <td className="p-3 text-center bg-inherit min-w-[220px]">
                                   <div className="flex gap-2 justify-center items-center">
-                                    {!selectedEventBreakdown.isLegacy &&
-                                      (status === "Pending" ||
-                                        status === "Pending Approval") && (
+                                    {!selectedEventBreakdown.isLegacy && status !== 'Pending' && status !== 'Unpublished' && status !== 'Registered' && (
                                         <>
                                           <button
                                             onClick={(e) => {
@@ -6598,7 +6578,8 @@ const totalAuthorsBase = eventRegistrations.length;
                                                 m.authorId,
                                               );
                                             }}
-                                            className="px-3 py-1.5 text-xs font-black text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm transition-colors whitespace-nowrap"
+                                            disabled={status === 'Declined' || status === 'Rejected'}
+                                            className="px-3 py-1.5 text-xs font-black text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
                                           >
                                             Reject
                                           </button>
@@ -6610,7 +6591,8 @@ const totalAuthorsBase = eventRegistrations.length;
                                                 m.authorId,
                                               );
                                             }}
-                                            className="px-3 py-1.5 text-xs font-black text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg shadow-md transition-colors whitespace-nowrap"
+                                            disabled={status === 'Registered' || status === 'Approved'}
+                                            className="px-3 py-1.5 text-xs font-black text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg shadow-md transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
                                           >
                                             Approve
                                           </button>
@@ -6634,9 +6616,7 @@ const totalAuthorsBase = eventRegistrations.length;
                                         <ChevronDown className="w-4 h-4 mx-auto" />
                                       )}
                                     </button>
-                                    {showAllAuthors ||
-                                    status === "Registered" ? (
-                                      <button
+                                    <button
                                         onClick={() => {
                                           handleEditAuthorData(m);
                                           if (
@@ -6663,7 +6643,6 @@ const totalAuthorsBase = eventRegistrations.length;
                                       >
                                         Manage Data
                                       </button>
-                                    ) : null}
                                   </div>
                                 </td>
                               </tr>
@@ -7327,10 +7306,10 @@ const totalAuthorsBase = eventRegistrations.length;
                           ? evt.aggSold
                           : evt.isLegacy
                             ? 0
-                            : evt.eventBooks?.reduce(
+                            : (evt.eventBooks?.reduce(
                                 (s: number, eb: any) => s + (eb.soldStock || 0),
                                 0,
-                              ) || 0;
+                              ) || 0) + (evt.livePosSold || 0);
                       return acc + (Number(books) || 0);
                     },
                     0,
@@ -7364,13 +7343,13 @@ const totalAuthorsBase = eventRegistrations.length;
                             ? evt.aggRevenue
                             : evt.isLegacy
                               ? 0
-                              : evt.eventBooks?.reduce(
+                              : (evt.eventBooks?.reduce(
                                   (s: number, eb: any) =>
                                     s +
                                     (eb.soldStock || 0) *
                                       (parseFloat(eb.book?.mrp) || 0),
                                   0,
-                                ) || 0;
+                                ) || 0) + (evt.livePosRevenue || 0);
                         return acc + (Number(revenue) || 0);
                       },
                       0,
@@ -7611,11 +7590,11 @@ const totalAuthorsBase = eventRegistrations.length;
                   const ranked = validEvents.map((evt: any) => {
                     const books =
                       evt.aggSold ??
-                      (evt.eventBooks?.reduce(
+                      ((evt.eventBooks?.reduce(
                         (s: number, eb: any) => s + (eb.soldStock || 0),
                         0,
                       ) ||
-                        0);
+                        0) + (evt.livePosSold || 0));
                     const participated =
                       evt.aggAuthors ?? (evt._count?.eventAuthors || 0);
                     const eligible = evt.aggEligibleAuthors ?? 0;
@@ -7857,23 +7836,23 @@ const totalAuthorsBase = eventRegistrations.length;
                       ? evt.aggSold
                       : evt.isLegacy
                         ? "NA"
-                        : evt.eventBooks?.reduce(
+                        : (evt.eventBooks?.reduce(
                             (s: number, eb: any) => s + (eb.soldStock || 0),
                             0,
-                          ) || 0;
+                          ) || 0) + (evt.livePosSold || 0);
                   const catRowColor = i % 2 === 0 ? "bg-white" : "bg-[#ebd8c0]";
                   const revenueVal =
                     evt.aggRevenue != null
                       ? evt.aggRevenue
                       : evt.isLegacy
                         ? "NA"
-                        : evt.eventBooks?.reduce(
+                        : (evt.eventBooks?.reduce(
                             (s: number, eb: any) =>
                               s +
                               (eb.soldStock || 0) *
                                 (parseFloat(eb.book?.mrp) || 0),
                             0,
-                          ) || 0;
+                          ) || 0) + (evt.livePosRevenue || 0);
                   const revenue = revenueVal === "NA" ? "NA" : `₹${revenueVal}`;
                   return (
                     <React.Fragment key={i}>
@@ -7985,12 +7964,12 @@ const totalAuthorsBase = eventRegistrations.length;
                               {evt.isLegacy ? "Legacy Archive" : evt.status}
                             </span>
                             <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                              {evt.broadcastStatus === "Published" ? (
+                              {evt.broadcastStatus === "Published" || evt.broadcastStatus === "CustomersAlso" || evt.broadcastStatus === "AuthorsOnly" ? (
                                 <span
                                   className="text-emerald-600 flex items-center gap-1"
-                                  title="Published to all authors"
+                                  title="Published to authors"
                                 >
-                                  <CheckCircle2 className="w-3 h-3" /> All
+                                  <CheckCircle2 className="w-3 h-3" /> {evt.broadcastStatus === "AuthorsOnly" ? "Authors" : "All"}
                                 </span>
                               ) : evt.registrations?.length > 0 ? (
                                 <span

@@ -4271,7 +4271,7 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
       amountPaid: r.amount || 0,
       isActivity: true
     })),
-    ...invites.map((inv: any) => {
+    ...invites.filter((inv: any) => !inv.optInStatus?.includes('-Draft')).map((inv: any) => {
       const eventBooks = listedBooks.filter((lb: any) => lb.eventId === (inv.eventId || inv.event?.id));
       const hasGranular = eventBooks.some((lb: any) => (lb.soldStock > 0 || lb.returnedStock > 0));
       let calcPaid = 0;
@@ -4306,7 +4306,7 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
       isPast: evt.status === 'Past' || (evt.date && new Date(evt.date) < new Date()),
       isInvite: true
     })),
-    ...pastEvents.filter((pe: any) => pe.broadcastStatus === 'Published' && !invites.some((inv: any) => inv.eventId === pe.id)).map((evt: any) => ({
+    ...pastEvents.filter((pe: any) => pe.broadcastStatus === 'Published' && !invites.some((inv: any) => inv.eventId === pe.id && !inv.optInStatus?.includes('-Draft'))).map((evt: any) => ({
       ...evt,
       registration: 'Not Participated',
       paymentStatus: '-',
@@ -5112,9 +5112,9 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${statusColors}`}>
                                     {statusText}
                                   </span>
-                                  {evt.livePosEnabled && !evt.isPast && (evt.registration === 'Registered' || evt.registration === 'Approved') && (
-                                    <button onClick={(e) => { e.stopPropagation(); window.open('/dashboard/pos/' + evt.id, '_blank'); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white hover:bg-emerald-600 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap" title="Launch Point of Sale System">
-                                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span> Launch POS
+                                  {evt.livePosEnabled && evt.status === 'Live' && (evt.registration === 'Registered' || evt.registration === 'Approved') && (
+                                    <button onClick={(e) => { e.stopPropagation(); window.open('/dashboard/pos/' + evt.id, '_blank'); }} className="mt-1.5 w-full max-w-[110px] flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap" title="Launch Point of Sale System">
+                                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span> LAUNCH POS
                                     </button>
                                   )}
                                   {(evt.registration === 'Rejected' || evt.registration === 'Declined') && (

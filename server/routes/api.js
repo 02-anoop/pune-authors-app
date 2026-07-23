@@ -3975,8 +3975,9 @@ router.get('/api/admin/events/:id/registrations', verifyToken, isAdmin, async (r
 
     const dailySalesMap = {};
     const uniqueDatesSet = new Set();
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
     posOrders.forEach(po => {
-      const dateStr = po.createdAt.toISOString().split('T')[0];
+      const dateStr = formatter.format(po.createdAt);
       uniqueDatesSet.add(dateStr);
       po.items.forEach(poi => {
         if (!dailySalesMap[poi.bookId]) dailySalesMap[poi.bookId] = {};
@@ -4866,7 +4867,9 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
     const tx = prisma;
     // Upsert EventAuthor to update status
     const existingAuthor = await tx.eventAuthor.findFirst({ where: { eventId, authorId } });
-    let statusValue = (registrationStatus === 'Participated' || registrationStatus === 'Registered') ? 'Registered' : 'Declined';
+    const allowedStatuses = ['Registered', 'Approved', 'Pending Approval', 'Pending', 'Declined', 'Rejected'];
+    let statusValue = allowedStatuses.includes(registrationStatus) ? registrationStatus :
+      (registrationStatus === 'Participated' ? 'Registered' : 'Declined');
     if (isDraft) statusValue += '-Draft';
     const manualSold = useGlobalOverride ? parseInt(globalSold) || 0 : null;
     const manualRevenue = useGlobalOverride ? parseFloat(globalRevenue) || 0 : null;
@@ -4984,10 +4987,31 @@ router.get('/api/admin/events', verifyToken, isAdmin, async (req, res) => {
         _count: { select: { eventAuthors: { where: { optInStatus: { not: 'Pending' } } }, eventBooks: true } },
         eventAuthors: { select: { optInStatus: true } },
         eventBooks: { select: { listedStock: true, soldStock: true, book: { select: { mrp: true } } } },
+        posOrders: {
+          where: { paymentStatus: 'CONFIRMED' },
+          include: { items: { select: { quantity: true, price: true } } }
+        },
         galleryEvent: { include: { images: true } }
       }
     });
-    const processed = events.map(e => (e.status === 'Upcoming' && isEventLiveToday(e)) ? { ...e, status: 'Live' } : e);
+    const processed = events.map(e => {
+       let posSold = 0;
+       let posRevenue = 0;
+       if (e.posOrders) {
+          e.posOrders.forEach(po => {
+             if (po.items) {
+               po.items.forEach(poi => {
+                  posSold += poi.quantity;
+                  posRevenue += (poi.quantity * (poi.price || 0));
+               });
+             }
+          });
+       }
+       const isLive = (e.status === 'Upcoming' && isEventLiveToday(e));
+       // Strip posOrders from payload to save bandwidth, just send the totals
+       const { posOrders, ...rest } = e;
+       return { ...rest, status: isLive ? 'Live' : e.status, livePosSold: posSold, livePosRevenue: posRevenue };
+    });
     res.json(processed);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch events' });

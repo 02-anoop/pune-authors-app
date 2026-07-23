@@ -4892,29 +4892,58 @@ router.post('/api/admin/events/:eventId/author/:authorId/publish', async (req, r
       }
     }
 
-    // Clear existing legacy manual entries for this event author
-    await tx.eventBook.deleteMany({
-      where: { eventId, authorId }
-    });
+    if (!useGlobalOverride && booksData) {
+      for (const b of booksData) {
+        const listed = parseInt(b.listedStock) || 0;
+        let sold = parseInt(b.soldStock) || 0;
+        const bId = parseInt(b.bookId);
 
-    const toCreate = [];
-    for (const b of booksData) {
-      if (b.isSelected || parseInt(b.listedStock) > 0 || parseInt(b.soldStock) > 0) {
-        toCreate.push({
-          eventId,
-          authorId,
-          bookId: parseInt(b.bookId),
-          listedStock: parseInt(b.listedStock) || 0,
-          soldStock: parseInt(b.soldStock) || 0,
-          returnedStock: parseInt(b.returnedStock) || 0,
-          overrideMrp: b.overrideMrp ? parseFloat(b.overrideMrp) : null,
-          manualDailySales: b.manualDailySales || null
-        });
+        const existingEb = await tx.eventBook.findFirst({ where: { eventId, authorId, bookId: bId } });
+        
+        // Protect POS sales: Admin manual save should never blindly wipe out real POS transactions
+        const actualSold = Math.max(existingEb ? existingEb.soldStock : 0, sold);
+        let returned = existingEb ? existingEb.returnedStock : 0;
+
+        // Auto-settlement logic: Once the event is published (not draft), automatically return unsold stock!
+        if (!isDraft && listed > 0) {
+            const targetReturned = Math.max(0, listed - actualSold);
+            const difference = targetReturned - returned;
+            
+            if (difference !== 0) {
+                await tx.book.update({
+                    where: { id: bId },
+                    data: { stock: { increment: difference } }
+                });
+                returned = targetReturned;
+            }
+        }
+
+        if (existingEb) {
+          await tx.eventBook.update({
+            where: { id: existingEb.id },
+            data: {
+              listedStock: listed,
+              soldStock: actualSold,
+              returnedStock: returned,
+              overrideMrp: b.overrideMrp ? parseFloat(b.overrideMrp) : null,
+              manualDailySales: b.manualDailySales || existingEb.manualDailySales
+            }
+          });
+        } else if (b.isSelected || listed > 0 || actualSold > 0) {
+          await tx.eventBook.create({
+            data: {
+              eventId,
+              authorId,
+              bookId: bId,
+              listedStock: listed,
+              soldStock: actualSold,
+              returnedStock: returned,
+              overrideMrp: b.overrideMrp ? parseFloat(b.overrideMrp) : null,
+              manualDailySales: b.manualDailySales || null
+            }
+          });
+        }
       }
-    }
-
-    if (toCreate.length > 0 && !useGlobalOverride) {
-      await tx.eventBook.createMany({ data: toCreate });
     }
 
     // Notify the author
@@ -6132,10 +6161,36 @@ router.post('/api/pos/events/:eventId/pos-checkout', optionalVerifyToken, async 
 
         totalAmount += book.mrp * item.quantity;
 
+        const todayDateStr = new Date().toDateString();
+        let currentDailySales = eventBook.manualDailySales || {};
+        if (typeof currentDailySales !== 'object') currentDailySales = {};
+        
+        let todaySales = currentDailySales[todayDateStr] || { sold: 0, revenue: 0 };
+        todaySales.sold = (todaySales.sold || 0) + item.quantity;
+        todaySales.revenue = (todaySales.revenue || 0) + (book.mrp * item.quantity);
+        currentDailySales[todayDateStr] = todaySales;
+
         await tx.eventBook.update({
           where: { id: eventBook.id },
-          data: { soldStock: { increment: item.quantity } }
+          data: { 
+             soldStock: { increment: item.quantity },
+             manualDailySales: currentDailySales
+          }
         });
+
+        const eventAuthor = await tx.eventAuthor.findFirst({
+           where: { eventId, authorId: book.authorId }
+        });
+        
+        if (eventAuthor) {
+            await tx.eventAuthor.update({
+               where: { id: eventAuthor.id },
+               data: {
+                  manualTotalSold: { increment: item.quantity },
+                  manualTotalRevenue: { increment: (book.mrp * item.quantity) }
+               }
+            });
+        }
 
         orderItems.push({
           bookId: item.bookId,
@@ -6163,6 +6218,70 @@ router.post('/api/pos/events/:eventId/pos-checkout', optionalVerifyToken, async 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Checkout failed' });
+  }
+});
+
+router.delete('/api/pos/orders/:orderId', optionalVerifyToken, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.orderId);
+    if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+
+    await prisma.$transaction(async (tx) => {
+      const posOrder = await tx.posOrder.findUnique({
+        where: { id: orderId },
+        include: { items: { include: { book: true } } }
+      });
+
+      if (!posOrder) throw new Error('Order not found');
+
+      const dateStr = new Date(posOrder.createdAt).toDateString();
+
+      for (const item of posOrder.items) {
+        const eventBook = await tx.eventBook.findFirst({
+          where: { eventId: posOrder.eventId, bookId: item.bookId }
+        });
+
+        if (eventBook) {
+          let currentDailySales = eventBook.manualDailySales || {};
+          if (typeof currentDailySales !== 'object') currentDailySales = {};
+          
+          if (currentDailySales[dateStr]) {
+            currentDailySales[dateStr].sold = Math.max(0, (currentDailySales[dateStr].sold || 0) - item.quantity);
+            currentDailySales[dateStr].revenue = Math.max(0, (currentDailySales[dateStr].revenue || 0) - (item.price * item.quantity));
+          }
+
+          await tx.eventBook.update({
+            where: { id: eventBook.id },
+            data: { 
+              soldStock: { decrement: item.quantity },
+              manualDailySales: currentDailySales
+            }
+          });
+        }
+
+        const eventAuthor = await tx.eventAuthor.findFirst({
+          where: { eventId: posOrder.eventId, authorId: item.book.authorId }
+        });
+
+        if (eventAuthor) {
+          await tx.eventAuthor.update({
+             where: { id: eventAuthor.id },
+             data: {
+                manualTotalSold: { decrement: item.quantity },
+                manualTotalRevenue: { decrement: (item.price * item.quantity) }
+             }
+          });
+        }
+      }
+
+      await tx.posOrderItem.deleteMany({ where: { posOrderId: posOrder.id } });
+      await tx.posOrder.delete({ where: { id: posOrder.id } });
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Failed to delete POS order' });
   }
 });
 

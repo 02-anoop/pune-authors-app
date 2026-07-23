@@ -629,7 +629,7 @@ export function AuthorDashboardPage() {
           <Routes>
             <Route path="/" element={<OverviewTab data={dashboardData} onRefresh={() => fetchDashboardData(true)} buttonStates={buttonStates} setButtonStates={setButtonStates} />} />
             <Route path="/orders" element={<AuthorOrders orders={dashboardData.authorOrders} onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
-            <Route path="/sales" element={<AuthorSalesReport data={dashboardData} />} />
+            <Route path="/sales" element={<AuthorSalesReport data={dashboardData} onRefresh={() => fetchDashboardData(true)} />} />
             <Route path="/forms/*" element={<FormsWrapper />} />
             <Route path="/inventory" element={<InventoryPage onRefresh={() => fetchDashboardData(true)} dashboardData={dashboardData} />} />
             <Route path="/events" element={<EventsDashboard initialView="events" registrations={dashboardData.authorProfile.eventRegistrations} dashboardData={dashboardData} />} />
@@ -1221,6 +1221,51 @@ function OverviewTab({ data, onRefresh, buttonStates, setButtonStates }: { data:
           </button>
         </div>
       </div>
+
+      {/* ── CTA: Live POS Events ── */}
+      {(() => {
+         const livePosEvents = (data.eventInvites || [])
+            .filter((inv: any) => inv.event?.livePosEnabled && inv.event?.status === 'Live' && (inv.optInStatus === 'Registered' || inv.optInStatus === 'Approved'))
+            .map((inv: any) => inv.event);
+            
+         if (livePosEvents.length === 0) return null;
+         
+         return (
+           <div className="mb-6 space-y-4 animate-fade-in-up">
+             {livePosEvents.map((evt: any) => (
+                <div key={evt.id} className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-5 border-2 border-emerald-400/30 shadow-[0_8px_30px_-4px_rgba(16,185,129,0.4)] flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden group">
+                   <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:20px_20px]"></div>
+                   <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24 transition-transform duration-700 group-hover:scale-110"></div>
+                   
+                   <div className="relative z-10 flex items-center gap-4 text-center sm:text-left">
+                      <div className="hidden sm:flex h-10 w-10 relative items-center justify-center shrink-0 bg-white/20 rounded-full shadow-inner">
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ccff00] opacity-60"></span>
+                         <ShoppingCart className="w-5 h-5 text-[#ccff00]" />
+                      </div>
+                      <div className="flex flex-col items-center sm:items-start">
+                         <span className="font-black text-lg tracking-wide text-white drop-shadow-sm flex items-center gap-2">
+                            🚀 {evt.name} is Live!
+                         </span>
+                         <span className="text-emerald-100 text-sm font-bold uppercase tracking-widest opacity-90 mt-0.5 flex items-center gap-2">
+                            <span className="w-2 h-2 bg-[#ccff00] rounded-full animate-pulse shadow-[0_0_8px_rgba(204,255,0,0.8)]"></span>
+                            Fast Checkout Enabled
+                         </span>
+                      </div>
+                   </div>
+                   
+                   <div className="relative z-10 w-full sm:w-auto mt-2 sm:mt-0">
+                      <button 
+                         onClick={(e) => { e.stopPropagation(); window.open('/dashboard/pos/' + evt.id, '_blank'); }} 
+                         className="w-full sm:w-auto bg-[#ccff00] text-black hover:bg-[#b3e600] px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(204,255,0,0.4)] hover:shadow-[0_0_25px_rgba(204,255,0,0.7)] hover:-translate-y-0.5 flex items-center justify-center gap-2 border border-[#ccff00]/50"
+                      >
+                         Launch POS
+                      </button>
+                   </div>
+                </div>
+             ))}
+           </div>
+         );
+      })()}
 
       {/* ── CTA: Seeking Registrations ── */}
       <div className="mb-8 relative group cursor-pointer">
@@ -4610,6 +4655,43 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
       {activeTab === 'events' && (
         <div className="space-y-6">
           {(() => {
+             const livePosEvents = allEvents.filter((evt: any) => evt.livePosEnabled && evt.status === 'Live' && (evt.registration === 'Registered' || evt.registration === 'Approved'));
+             if (livePosEvents.length === 0) return null;
+             return (
+               <div className="mb-8 animate-fade-in-up space-y-4">
+                 {livePosEvents.map((evt: any) => (
+                    <div key={evt.id} className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 md:p-8 border-2 border-indigo-400/30 shadow-premium flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">
+                       <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32 transition-transform duration-700 group-hover:scale-110"></div>
+                       <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl -ml-20 -mb-20 transition-transform duration-700 group-hover:scale-110"></div>
+                       
+                       <div className="relative z-10 flex-1 w-full text-center md:text-left">
+                          <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+                             <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+                             <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20">Active Now</span>
+                          </div>
+                          <h3 className="text-2xl md:text-3xl font-serif font-black text-white leading-tight mb-2 drop-shadow-md">{evt.name}</h3>
+                          <p className="text-blue-100/80 text-xs font-bold uppercase tracking-widest flex items-center justify-center md:justify-start gap-3 mt-3">
+                              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5"/> {evt.location || evt.venue || 'TBA'}</span>
+                              <span className="text-blue-500">&bull;</span>
+                              <span className="flex items-center gap-1"><CalendarIcon className="w-3.5 h-3.5"/> {new Date(evt.startDate || evt.date).toLocaleDateString()}</span>
+                          </p>
+                       </div>
+                       
+                       <div className="relative z-10 shrink-0 w-full md:w-auto mt-2 md:mt-0">
+                          <button 
+                             onClick={(e) => { e.stopPropagation(); window.open('/dashboard/pos/' + evt.id, '_blank'); }} 
+                             className="w-full md:w-auto bg-[#ccff00] text-black hover:bg-[#b3e600] px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(204,255,0,0.3)] hover:shadow-[0_0_30px_rgba(204,255,0,0.6)] hover:-translate-y-1 flex items-center justify-center gap-3"
+                          >
+                             <ShoppingCart className="w-5 h-5" />
+                             Launch POS
+                          </button>
+                       </div>
+                    </div>
+                 ))}
+               </div>
+             );
+          })()}
+          {(() => {
              const pendingActionEvents = allEvents.filter((evt: any) => evt.registration === 'Pending' && !evt.isPast);
              if (pendingActionEvents.length === 0) return null;
              return (
@@ -6012,7 +6094,7 @@ function EventsDashboard({ registrations, dashboardData, initialView = 'events' 
   );
 }
 
-function AuthorSalesReport({ data }: { data: any }) {
+function AuthorSalesReport({ data, onRefresh }: { data: any, onRefresh: () => void }) {
   const [filterType, setFilterType] = useState('lifetime'); // today, weekly, monthly, this_month, ytd, select_month, lifetime, custom
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -6089,7 +6171,7 @@ function AuthorSalesReport({ data }: { data: any }) {
     bookFairs: { revenue: 0, books: 0, orders: 0 }
   };
 
-  const processItem = (date: Date, channel: string, eventName: string, title: string, qty: number, price: number, orderId: string, status: string, details: any) => {
+  const processItem = (date: Date, channel: string, eventName: string, title: string, qty: number, price: number, orderId: string, status: string, details: any, rawPosOrderId?: number) => {
     const dateStr = date.toISOString().split('T')[0];
     const rev = qty * price;
     
@@ -6110,7 +6192,8 @@ function AuthorSalesReport({ data }: { data: any }) {
       revenue: rev,
       status,
       customer: details.customer,
-      items: details.items
+      items: details.items,
+      rawPosOrderId
     });
   };
 
@@ -6157,12 +6240,13 @@ function AuthorSalesReport({ data }: { data: any }) {
         i.book?.title || 'Unknown Title',
         qty,
         price,
-        po.event?.name || `POS-${po.id}`,
+        `POS-${po.id}`,
         po.paymentMethod || 'Paid',
         {
           customer: 'Walk-in',
           items: `${i.book?.title || 'Unknown'} (x${qty})`
-        }
+        },
+        po.id
       );
       
       channelDataMap[channelName] += rev;
@@ -6578,7 +6662,8 @@ function AuthorSalesReport({ data }: { data: any }) {
                 <th className="w-[20%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Event / Source</th>
                 <th className="w-[20%] px-5 py-3 !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Book Title</th>
                 <th className="w-[8%] px-5 py-3 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Qty</th>
-                <th className="w-[13%] px-5 py-3 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Rev (₹)</th>
+                <th className="w-[10%] px-5 py-3 text-right !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Rev (₹)</th>
+                <th className="w-[8%] px-5 py-3 text-center !text-[14px] font-bold uppercase tracking-widest !text-indigo-800 !bg-transparent">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 bg-white">
@@ -6598,6 +6683,28 @@ function AuthorSalesReport({ data }: { data: any }) {
                   <td className="px-5 py-3 pr-2 text-xs text-paa-navy truncate" title={row.title}>{row.title}</td>
                   <td className="px-5 py-3 text-xs font-bold text-paa-navy text-right">{row.qty}</td>
                   <td className="px-5 py-3 text-xs font-black text-indigo-600 text-right">₹{row.revenue.toLocaleString('en-IN')}</td>
+                  <td className="px-5 py-3 text-center">
+                    {row.rawPosOrderId && (
+                      <button 
+                        onClick={async () => {
+                          if(window.confirm('Are you sure you want to delete this POS order? The inventory will be restored automatically.')) {
+                            try {
+                              const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/pos/orders/${row.rawPosOrderId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+                              if (!res.ok) throw new Error('Failed to delete');
+                              onRefresh();
+                            } catch(err) {
+                              console.error(err);
+                              alert('Error deleting POS order');
+                            }
+                          }
+                        }}
+                        className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded-md transition-colors"
+                        title="Delete POS Order"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

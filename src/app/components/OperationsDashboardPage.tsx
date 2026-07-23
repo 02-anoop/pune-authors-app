@@ -1671,7 +1671,7 @@ export function OperationsDashboardPage() {
           promises.push(fetchLibraries(isBackground));
         } else if (activeTab === "helpdesk") {
           promises.push(fetchQueriesAlert(true));
-        } else if (activeTab === "broadcasts") {
+        } else if (activeTab === "broadcasts" || activeTab === "documents") {
           promises.push(fetchNotifications());
           promises.push(fetchServerFiles());
         }

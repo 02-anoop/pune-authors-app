@@ -2507,6 +2507,7 @@ router.post('/api/admin/orders/:id/approve-bulk', verifyToken, isAdmin, async (r
     // Mock Email to User
     console.log(`[EMAIL MOCK] To: ${order.customer.email}. Your bulk order #${order.id} has been approved. Please proceed with payment negotiations.`);
 
+    invalidateCache('admin:dashboard-stats');
     res.json({ success: true, order });
   } catch (err) {
     console.error(err);
@@ -2969,6 +2970,8 @@ router.get('/api/admin/sales-report', verifyToken, isAdmin, async (req, res) => 
       }
     });
 
+    const posEventIds = new Set(posOrders.filter(po => po.eventId).map(po => po.eventId));
+
     legacyEvents.forEach(evt => {
       let evtDate = new Date(evt.date);
       if (isNaN(evtDate.getTime())) {
@@ -2976,6 +2979,9 @@ router.get('/api/admin/sales-report', verifyToken, isAdmin, async (req, res) => 
       }
 
       if (evtDate >= start && evtDate <= end) {
+        // Prevent double counting if POS orders already exist for this archived event
+        if (posEventIds.has(evt.id)) return;
+
         const qty = evt.aggSold || 0;
         const rev = evt.aggRevenue || (qty * 200) || 0;
 
@@ -4040,8 +4046,12 @@ router.post('/api/admin/events/:eventId/author/:authorId/approve', verifyToken, 
            <p>You can now see the event details and manage your participation from your Author Dashboard.</p>`
         )
       ).catch(e => console.error('Failed to send approve email:', e));
+      
+      invalidateCache(`author:dashboard:${author.email}`);
+      invalidateCache(`author:events:${author.email}`);
     }
 
+    invalidateCache('admin:dashboard-stats');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to approve' });
@@ -4118,8 +4128,12 @@ router.post('/api/admin/events/:eventId/author/:authorId/reject', verifyToken, i
            <p>If you have any questions, please reach out to our support team.</p>`
         )
       ).catch(e => console.error('Failed to send reject email:', e));
+      
+      invalidateCache(`author:dashboard:${author.email}`);
+      invalidateCache(`author:events:${author.email}`);
     }
 
+    invalidateCache('admin:dashboard-stats');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to reject' });
@@ -6220,6 +6234,18 @@ router.post('/api/pos/events/:eventId/pos-checkout', optionalVerifyToken, async 
       });
     }, { maxWait: 15000, timeout: 30000 });
 
+    invalidateCache('admin:dashboard-stats');
+    
+    // Invalidate caches for all authors involved in this POS sale
+    const authorIds = new Set();
+    for (const item of items) {
+       const book = await prisma.book.findUnique({ where: { id: item.bookId }, include: { author: true }});
+       if (book && book.author && !authorIds.has(book.author.id)) {
+           authorIds.add(book.author.id);
+           invalidateCache(`author:dashboard:${book.author.email}`);
+       }
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -6282,7 +6308,22 @@ router.delete('/api/pos/orders/:orderId', optionalVerifyToken, async (req, res) 
 
       await tx.posOrderItem.deleteMany({ where: { posOrderId: posOrder.id } });
       await tx.posOrder.delete({ where: { id: posOrder.id } });
+      
+      // Pass author IDs out of transaction to invalidate cache
+      const affectedAuthors = new Set();
+      for (const item of posOrder.items) {
+          affectedAuthors.add(item.book.authorId);
+      }
+      req.affectedAuthorIds = Array.from(affectedAuthors);
     });
+
+    invalidateCache('admin:dashboard-stats');
+    if (req.affectedAuthorIds) {
+       for (const authorId of req.affectedAuthorIds) {
+           const author = await prisma.author.findUnique({ where: { id: authorId } });
+           if (author) invalidateCache(`author:dashboard:${author.email}`);
+       }
+    }
 
     res.json({ success: true });
   } catch (err) {
